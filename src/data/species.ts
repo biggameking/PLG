@@ -74,7 +74,7 @@ export const SPECIES: Record<string, Species> = {
     desc: "Penguin pal; waters crops and cools stores.", hostile: 1,
   },
   eikthyrdeer: {
-    id: "eikthyrdeer", name: "Eikthyrdeer", glyph: "e", color: "#b8a468",
+    id: "eikthyrdeer", name: "Eikthyrdeer", glyph: "e", color: "#d4b96e",
     elements: ["neutral"], hp: 95, atk: 80, def: 75, speed: 3.4,
     capturePower: 65, food: 3, san: 80,
     work: { lumbering: 2 },
@@ -119,7 +119,7 @@ export const SPECIES: Record<string, Species> = {
     desc: "Hedgehog pal that crackles with charge.", hostile: 1,
   },
   dumud: {
-    id: "dumud", name: "Dumud", glyph: "d", color: "#8a6d4d",
+    id: "dumud", name: "Dumud", glyph: "d", color: "#b8935f",
     elements: ["ground"], hp: 90, atk: 70, def: 80, speed: 2.0,
     capturePower: 55, food: 3, san: 80,
     work: { watering: 1, mining: 1, transporting: 1 },
@@ -128,7 +128,7 @@ export const SPECIES: Record<string, Species> = {
     desc: "Mud fish; digs and hauls.", hostile: 1,
   },
   depresso: {
-    id: "depresso", name: "Depresso", glyph: "D", color: "#4d6f8a",
+    id: "depresso", name: "Depresso", glyph: "D", color: "#6fa8d1",
     elements: ["dark"], hp: 70, atk: 75, def: 65, speed: 2.6,
     capturePower: 50, food: 1, san: 60,
     work: { handiwork: 1, transporting: 1, mining: 1 },
@@ -146,7 +146,7 @@ export const SPECIES: Record<string, Species> = {
     desc: "Dreamy night pal.", night: true, hostile: 1,
   },
   mau: {
-    id: "mau", name: "Mau", glyph: "m", color: "#6b6f72",
+    id: "mau", name: "Mau", glyph: "m", color: "#a8b5c4",
     elements: ["dark"], hp: 75, atk: 75, def: 70, speed: 2.9,
     capturePower: 65, food: 2, san: 70,
     work: { farming: 1 },
@@ -156,7 +156,7 @@ export const SPECIES: Record<string, Species> = {
     farm: { item: "gold_coin", per: 90 }, night: true, hostile: 1,
   },
   rushoar: {
-    id: "rushoar", name: "Rushoar", glyph: "R", color: "#a0622d",
+    id: "rushoar", name: "Rushoar", glyph: "R", color: "#d1813c",
     elements: ["ground"], hp: 85, atk: 85, def: 75, speed: 3.5,
     capturePower: 60, food: 3, san: 70,
     work: { mining: 1 },
@@ -185,7 +185,7 @@ export const SPECIES: Record<string, Species> = {
     farm: { item: "milk", per: 60 }, hostile: 0,
   },
   penking: {
-    id: "penking", name: "Penking", glyph: "P", color: "#2b5d8a",
+    id: "penking", name: "Penking", glyph: "P", color: "#4d9de0",
     elements: ["water", "ice"], hp: 120, atk: 95, def: 90, speed: 2.4,
     capturePower: 90, food: 4, san: 90,
     work: { handiwork: 2, transporting: 2, watering: 2, cooling: 2, mining: 2 },
