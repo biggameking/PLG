@@ -102,9 +102,13 @@ export class Renderer {
     return t;
   }
 
-  /** Draw a micro glyph into an arbitrary 2d context at pixel coords. */
-  microInto(ctx: CanvasRenderingContext2D, px: number, py: number, ch: string, fg: string): void {
-    ctx.drawImage(this.mtile(ch, fg), Math.round(px), Math.round(py));
+  /** Draw a micro glyph into an arbitrary 2d context at pixel coords,
+   *  optionally stretched to dw x dh (nearest-neighbor — still crisp). */
+  microInto(ctx: CanvasRenderingContext2D, px: number, py: number, ch: string, fg: string, dw = MICRO_W, dh = MICRO_H): void {
+    const old = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.mtile(ch, fg), Math.round(px), Math.round(py), Math.round(dw), Math.round(dh));
+    ctx.imageSmoothingEnabled = old;
   }
 
   /** Draw a micro glyph at world pixel position through the camera. */

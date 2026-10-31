@@ -11,7 +11,10 @@ import { Renderer, CELL_W, CELL_H, MICRO_W, MICRO_H } from "../engine/renderer.t
 import { hash2 } from "../engine/rng.ts";
 
 const W = 24, H = 20;
-const SCALE = 1.0; // sprite pixels are micro cells; 24x20 chars = 96x100px
+// sprite pixels are real characters — bigger micro cells than terrain so
+// each glyph stays readable as a symbol (the "it's all text" zoom test).
+const SMW = 5, SMH = 6;
+const SCALE = 1.0;
 
 // pixel indices: 1 primary, 2 secondary, 3 accent, 4 dark, 5 white
 type Pix = Uint8Array; // W*H
@@ -235,12 +238,12 @@ function dim(hex: string): string { return darken(hex, 0.45); }
 // cache: speciesId -> [frame0, frame1] canvases
 const texCache = new Map<string, [HTMLCanvasElement, HTMLCanvasElement]>();
 
-// luminance ramp: every sprite pixel is drawn as a tiny character, picked
-// by how bright its shaded color is — the sprite IS a block of text.
-const RAMP = ["·", ":", "░", "▒", "▓", "█"];
+// symbol ramp: every sprite pixel is a real, readable character —
+// sparse punctuation for darks, dense letterforms for brights. Picked by
+// shaded luminance + hash jitter so the fur/skin texture looks organic.
+const RAMP = ["'", "·", ":", "-", "=", "x", "o", "0", "%", "#", "@"];
 function rampFor(lum: number, h: number): string {
   const i = Math.max(0, Math.min(RAMP.length - 1, Math.floor(lum / 256 * RAMP.length)));
-  // neighbors in the ramp get swapped by hash for organic texture
   return RAMP[Math.max(0, Math.min(RAMP.length - 1, i + (h < 0.25 ? -1 : h > 0.8 ? 1 : 0)))];
 }
 function lum(col: string): number {
@@ -255,7 +258,7 @@ function buildTex(r: Renderer, id: string, frame: number): HTMLCanvasElement {
   const b = newPix();
   PLANS[def.plan](b, frame);
   const cvs = document.createElement("canvas");
-  cvs.width = W * MICRO_W; cvs.height = H * MICRO_H;
+  cvs.width = W * SMW; cvs.height = H * SMH;
   const c2 = cvs.getContext("2d")!;
   const pal: string[] = [def.colors[0], def.colors[1], def.colors[2], "#1a1d20", "#ffffff"];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -272,8 +275,8 @@ function buildTex(r: Renderer, id: string, frame: number): HTMLCanvasElement {
     else if (openT) col = shade(col, 1.45);            // rim light
     else if (y > H * 0.72) col = shade(col, 0.82);     // ground shade
     else col = shade(col, 0.94 + h * 0.12);            // interior jitter
-    const g = open ? (h < 0.5 ? "░" : "▒") : rampFor(lum(col), h);
-    r.microInto(c2, x * MICRO_W, y * MICRO_H, g, col);
+    const g = open ? (h < 0.5 ? "." : "'") : rampFor(lum(col), h);
+    r.microInto(c2, x * SMW, y * SMH, g, col, SMW, SMH);
   }
   return cvs;
 }
@@ -300,7 +303,7 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
   const frame = moving ? Math.floor(time * 6 + p.uid) % 2 : 0;
   const img = tex(r, p.speciesId, frame)!;
 
-  const dw = W * MICRO_W * SCALE, dh = H * MICRO_H * SCALE;
+  const dw = W * SMW * SCALE, dh = H * SMH * SCALE;
   const bob = moving && frame === 1 ? -3 : (asleep ? 2 : 0);
   const dx = p.x * CELL_W - dw / 2 - camX;
   const dy = p.y * CELL_H - dh + CELL_H - camY + bob;
@@ -326,7 +329,7 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
 export function drawHuman(r: Renderer, x: number, y: number, dir: number, camX: number, camY: number, time: number, moving: boolean): void {
   const frame = moving ? Math.floor(time * 6) % 2 : 0;
   const img = tex(r, "$player", frame)!;
-  const dw = W * MICRO_W * SCALE, dh = H * MICRO_H * SCALE;
+  const dw = W * SMW * SCALE, dh = H * SMH * SCALE;
   const bob = moving && frame === 1 ? -3 : 0;
   const dx = x * CELL_W - dw / 2 - camX;
   const dy = y * CELL_H - dh + CELL_H - camY + bob;
