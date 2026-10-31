@@ -30,8 +30,8 @@ export function updatePlayer(s: GameState, world: World, input: Input, dt: numbe
     const d = Math.hypot(mx, my);
     const nx = p.x + (mx / d) * speed * dt;
     const ny = p.y + (my / d) * speed * dt;
-    if (!world.blocked(nx, p.y)) p.x = nx;
-    if (!world.blocked(p.x, ny)) p.y = ny;
+    if (!world.blocked(nx, p.y, p.x, p.y)) p.x = nx;
+    if (!world.blocked(p.x, ny, p.x, p.y)) p.y = ny;
     p.facing = mx !== 0 ? Math.sign(mx) : p.facing;
     if (sprint) p.stamina = Math.max(0, p.stamina - dt * 12);
   }
@@ -46,8 +46,8 @@ export function updatePlayer(s: GameState, world: World, input: Input, dt: numbe
     const d = Math.hypot(mx, my);
     const nx = p.x + (mx / d) * speed * 2.2 * dt;
     const ny = p.y + (my / d) * speed * 2.2 * dt;
-    if (!world.blocked(nx, p.y)) p.x = nx;
-    if (!world.blocked(p.x, ny)) p.y = ny;
+    if (!world.blocked(nx, p.y, p.x, p.y)) p.x = nx;
+    if (!world.blocked(p.x, ny, p.x, p.y)) p.y = ny;
   }
 
   // hunger

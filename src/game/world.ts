@@ -20,6 +20,8 @@ export class World {
   hp: number[] = new Array(WORLD_W * WORLD_H); // harvest hp for tree/rock/ore
   structures = new Set<number>();              // tile indices blocked by buildings
   spawnZone: number[] = new Array(WORLD_W * WORLD_H); // 0..3 difficulty band
+  elev: Uint8Array = new Uint8Array(WORLD_W * WORLD_H); // 0..3 terrain height
+  ramp: Uint8Array = new Uint8Array(WORLD_W * WORLD_H); // 1 = slope crossing between levels
 
   idx(x: number, y: number): number {
     return x + y * WORLD_W;
@@ -33,9 +35,26 @@ export class World {
   set(x: number, y: number, t: Tile): void {
     if (this.inBounds(x, y)) this.tiles[this.idx(x, y)] = t;
   }
-  blocked(x: number, y: number): boolean {
-    const i = this.idx(Math.floor(x), Math.floor(y));
-    return !this.inBounds(Math.floor(x), Math.floor(y)) || SOLID.has(this.tiles[i]) || this.structures.has(i);
+  elevAt(x: number, y: number): number {
+    return this.inBounds(x, y) ? this.elev[this.idx(x, y)] : 0;
+  }
+  // continuous-position collision; pass from-coords for elevation rules
+  blocked(x: number, y: number, fromX?: number, fromY?: number): boolean {
+    const tx = Math.floor(x), ty = Math.floor(y);
+    const i = this.idx(tx, ty);
+    if (!this.inBounds(tx, ty) || SOLID.has(this.tiles[i]) || this.structures.has(i)) return true;
+    if (fromX === undefined || fromY === undefined) return false;
+    const fi = this.idx(Math.floor(fromX), Math.floor(fromY));
+    // elevation changes block movement unless a ramp is involved
+    if (this.elev[i] !== this.elev[fi] && !this.ramp[i] && !this.ramp[fi]) return true;
+    return false;
+  }
+  // all footprint cells share one elevation (building on cliffs is disallowed)
+  flatAt(x: number, y: number, w: number, h: number): boolean {
+    const e = this.elevAt(x, y);
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++)
+      if (this.elevAt(x + dx, y + dy) !== e) return false;
+    return true;
   }
   zoneAt(x: number, y: number): number {
     return this.inBounds(x, y) ? this.spawnZone[this.idx(x, y)] : 3;
@@ -58,6 +77,10 @@ export class World {
         else if (hash2(x, y, seed + 77) < 0.06) t = "tallgrass";
         this.tiles[i] = t;
         this.hp[i] = t === "tree" ? 30 : t === "rock" ? 60 : t === "ore" ? 90 : 0;
+        // elevation: separate fbm noise quantized to 0..3; water/sand hug level 0
+        const el = hash2(x >> 4, y >> 4, seed + 911) * 0.7 + hash2(x >> 1, y >> 1, seed + 912) * 0.3;
+        this.elev[i] = t === "water" || t === "sand" ? 0 :
+          el < 0.50 ? 1 : el < 0.68 ? 2 : 3;
         // zone by distance from map center
         const dx = x - WORLD_W / 2, dy = y - WORLD_H / 2;
         const d = Math.sqrt(dx * dx + dy * dy);
@@ -68,9 +91,11 @@ export class World {
     const cx = WORLD_W / 2, cy = WORLD_H / 2;
     for (let y = cy - 8; y < cy + 8; y++) {
       for (let x = cx - 8; x < cx + 8; x++) {
-        const t = this.tiles[this.idx(x, y)];
+        const i = this.idx(x, y);
+        const t = this.tiles[i];
         if (t === "water" || t === "rock" || t === "ore") this.set(x, y, "grass");
         if (t === "tree") this.set(x, y, rng.chance(0.5) ? "grass" : "tree");
+        this.elev[i] = 1; // flat spawn plateau
       }
     }
     // scatter wild resource tiles: berry bushes & paldium on sand
@@ -79,6 +104,18 @@ export class World {
         const i = this.idx(x, y);
         if (this.tiles[i] === "tallgrass" && hash2(x, y, seed + 5) < 0.2) this.tiles[i] = "flower"; // flower marks berry bushes visually
         if (this.tiles[i] === "sand" && hash2(x, y, seed + 9) < 0.12) { this.tiles[i] = "ore"; this.hp[i] = 45; } // paldium-ish nodes on sand
+      }
+    }
+    // ramps: slope tiles wherever a land tile borders a different elevation
+    for (let y = 0; y < WORLD_H; y++) {
+      for (let x = 0; x < WORLD_W; x++) {
+        const i = this.idx(x, y);
+        const t = this.tiles[i];
+        if (t === "water") continue;
+        const e0 = this.elev[i];
+        const mix = this.elevAt(x - 1, y) !== e0 || this.elevAt(x + 1, y) !== e0 ||
+          this.elevAt(x, y - 1) !== e0 || this.elevAt(x, y + 1) !== e0;
+        this.ramp[i] = mix && hash2(x, y, seed + 913) < 0.45 ? 1 : 0;
       }
     }
     return { spawnX: cx, spawnY: cy };
@@ -178,6 +215,9 @@ function drawPixTile(ctx: CanvasRenderingContext2D, world: World, x: number, y: 
         B(wx, wy, 3, 1, h(i + 8) < 0.5 ? "#5aa8d8" : "#4a9ccc");
       }
       for (let i = 0; i < 3; i++) P(Math.floor(h(i + 10) * 16), Math.floor(h(i + 13) * 18), "#3d8fd1");
+      // sparkle glints + deep swells
+      for (let i = 0; i < 3; i++) if (h(i + 30) < 0.5) P(Math.floor(h(i + 31) * 16), Math.floor(h(i + 34) * 18), "#9adcf4");
+      for (let i = 0; i < 2; i++) B(Math.floor(h(i + 36) * 12), 6 + Math.floor(h(i + 38) * 8), 4, 1, "#256194");
       // shoreline: foam + light band on edges that touch land
       const L = world.get(x - 1, y) !== "water", R = world.get(x + 1, y) !== "water";
       const U = world.get(x, y - 1) !== "water", D = world.get(x, y + 1) !== "water";
@@ -191,11 +231,17 @@ function drawPixTile(ctx: CanvasRenderingContext2D, world: World, x: number, y: 
       ctx.fillStyle = "#e0c88a"; ctx.fillRect(px, py, CELL_W, CELL_H);
       for (let i = 0; i < 9; i++) P(Math.floor(h(i) * 16), Math.floor(h(i + 4) * 18), h(i + 7) < 0.5 ? "#d0b070" : "#f0dca0");
       for (let i = 0; i < 3; i++) P(Math.floor(h(i + 10) * 16), Math.floor(h(i + 13) * 18), "#b89858");
+      // shells + stones
+      for (let i = 0; i < 2; i++) if (h(i + 30) < 0.35) { const sx = Math.floor(h(i + 31) * 14) + 1, sy = Math.floor(h(i + 33) * 15) + 1; P(sx, sy, "#f4ead0"); P(sx + 1, sy, "#e8d5a8"); }
+      if (h(36) < 0.2) { const rx = Math.floor(h(37) * 13) + 1, ry = Math.floor(h(38) * 14) + 2; B(rx, ry, 2, 1, "#a8926a"); }
       if (landNearWater) { for (let i = 0; i < 16; i += 4) { P(i, 17, "#c8a868"); P(i, 0, "#c8a868"); } }
       break;
     }
     case "grass": {
       grassBase();
+      // occasional wildflowers + pebbles
+      if (h(30) < 0.10) { const fx = Math.floor(h(31) * 13) + 1, fy = Math.floor(h(32) * 13) + 2; P(fx, fy, h(33) < 0.5 ? "#ffd54f" : "#ff9ad5"); P(fx, fy + 1, "#4d9345"); }
+      if (h(34) < 0.15) { const sx = Math.floor(h(35) * 14) + 1, sy = Math.floor(h(36) * 15) + 1; P(sx, sy, "#8a8f96"); P(sx + 1, sy, "#6e767e"); }
       if (landNearWater) { // damp edge
         if (world.get(x, y + 1) === "water") B(0, 16, CELL_W, 2, "#2f5c2e");
         if (world.get(x, y - 1) === "water") B(0, 0, CELL_W, 2, "#2f5c2e");
@@ -277,6 +323,35 @@ function drawPixTile(ctx: CanvasRenderingContext2D, world: World, x: number, y: 
     }
     default: grassBase();
   }
+
+  // ---- elevation: cliff skirts, side faces, slope steps, altitude tint ----
+  const i = world.idx(x, y), e0 = world.elev[i];
+  if (t !== "water") {
+    if (e0 > world.elevAt(x, y + 1)) { // south cliff face
+      B(0, CELL_H - 6, CELL_W, 6, "#37332c");
+      B(0, CELL_H - 6, CELL_W, 1, "#57503f");            // rim highlight
+      B(0, CELL_H - 3, CELL_W, 1, "#2b2822");            // strata line
+      for (let k = 0; k < 3; k++) P(Math.floor(h(k + 26) * 15), CELL_H - 4 + Math.floor(h(k + 29) * 2), "#4a453c");
+    }
+    if (e0 > world.elevAt(x + 1, y)) { // east face
+      B(CELL_W - 2, 0, 2, CELL_H, "#332f28");
+      B(CELL_W - 2, 0, 1, CELL_H, "#4a4436");
+    }
+    if (e0 > world.elevAt(x - 1, y)) { // west face
+      B(0, 0, 2, CELL_H, "#332f28");
+      B(1, 0, 1, CELL_H, "#4a4436");
+    }
+    if (world.ramp[i]) { // dirt stairs: horizontal steps climbing south→north
+      for (let k = 0; k < 4; k++) {
+        B(2 + k * 3, 14 - k * 4, 2, 1, "#8a6f4d");
+        B(2 + k * 3, 15 - k * 4, 2, 3, "#6a5238");
+        P(1 + k * 3, 15 - k * 4, "#4a3a28"); P(4 + k * 3, 15 - k * 4, "#4a3a28");
+      }
+    }
+  }
+  // altitude tint: higher ground reads brighter, basin reads darker
+  if (e0 >= 2) { ctx.fillStyle = "rgba(255,250,230,0.055)"; ctx.fillRect(px, py, CELL_W, CELL_H); }
+  else if (e0 === 0 && t !== "water") { ctx.fillStyle = "rgba(0,20,30,0.05)"; ctx.fillRect(px, py, CELL_W, CELL_H); }
 }
 
 /** Baked 16x16-tile chunk canvas of pixel-art terrain (cached). */

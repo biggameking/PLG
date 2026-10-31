@@ -36,6 +36,7 @@ export function placeStructure(s: GameState, world: World, defId: string, x: num
 
 export function canPlaceAt(world: World, defId: string, x: number, y: number): boolean {
   const def = STRUCTURES[defId];
+  if (!world.flatAt(x, y, def.w, def.h)) return false; // no building across cliff edges
   for (let ty = y; ty < y + def.h; ty++) {
     for (let tx = x; tx < x + def.w; tx++) {
       if (!world.inBounds(tx, ty) || world.blocked(tx, ty) || world.get(tx, ty) === T.water) return false;

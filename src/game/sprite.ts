@@ -9,8 +9,9 @@ import { ELEMENT_COLOR } from "../data/elements.ts";
 import { Renderer, CELL_W, CELL_H } from "../engine/renderer.ts";
 import { hash2 } from "../engine/rng.ts";
 
-const W = 24, H = 20;
-const SCALE = 3; // screen px per sprite pixel
+const W = 40, H = 32;
+const SCALE = 3;      // screen px per sprite pixel (pals)
+const HUMAN_SCALE = 2; // player draws smaller so monsters tower
 
 // pixel indices: 1 primary, 2 secondary, 3 accent, 4 dark, 5 white
 type Pix = Uint8Array; // W*H
@@ -35,165 +36,208 @@ function spikes(b: Pix, x0: number, x1: number, y: number, c: number): void {
   for (let x = x0; x <= x1; x++) { set(b, x, y - ((x - x0) % 2), c); set(b, x, y - 1 - ((x - x0) % 2), c); }
 }
 
-// ---- body plans: each draws into a 24x20 buffer; f = walk frame 0/1 ----
+// ---- body plans: each draws into a 40x32 buffer; f = walk frame 0/1 ----
 // legs get +1/-1 px per frame; heads face right (dir>0), flipped on draw.
 const PLANS: Record<string, (b: Pix, f: number) => void> = {
   quadruped(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 5, 15 + s, 7, 18 + s, 1); rect(b, 9, 15 + (1 - s), 11, 18 + (1 - s), 1);
-    rect(b, 14, 15 + (1 - s), 16, 18 + (1 - s), 1); rect(b, 18, 15 + s, 20, 18 + s, 1);
-    ellipse(b, 11, 12, 7, 5, 1);                    // body
-    disc(b, 17, 8, 4, 1);                           // head
-    rect(b, 16, 4, 17, 6, 3); rect(b, 20, 4, 21, 6, 3); // ears
-    rect(b, 3, 9, 4, 11, 3);                        // tail
-    ellipse(b, 11, 14, 5, 3, 2);                    // belly
-    set(b, 18, 7, 4); set(b, 19, 7, 5);             // eye + glint
-    set(b, 21, 10, 4);                              // nose
+    // legs with hoof accents
+    rect(b, 8, 24 + s, 10, 30 + s, 1); rect(b, 14, 24 + (1 - s), 16, 30 + (1 - s), 1);
+    rect(b, 22, 24 + (1 - s), 24, 30 + (1 - s), 1); rect(b, 28, 24 + s, 30, 30 + s, 1);
+    rect(b, 8, 30 + s, 10, 31 + s, 3); rect(b, 14, 30 + (1 - s), 16, 31 + (1 - s), 3);
+    rect(b, 22, 30 + (1 - s), 24, 31 + (1 - s), 3); rect(b, 28, 30 + s, 30, 31 + s, 3);
+    ellipse(b, 18, 19, 12, 7, 1);                    // body
+    ellipse(b, 17, 22, 8, 4, 2);                     // belly
+    disc(b, 29, 11, 6, 1);                           // head
+    rect(b, 24, 3, 26, 8, 3); rect(b, 25, 5, 25, 7, 4); // ear L + inner
+    rect(b, 32, 3, 34, 8, 3); rect(b, 33, 5, 33, 7, 4); // ear R + inner
+    set(b, 29, 9, 4); set(b, 30, 8, 5); set(b, 30, 10, 4); // eye + glint
+    set(b, 34, 13, 4); set(b, 34, 14, 4);            // nostril + mouth
+    rect(b, 5, 15, 7, 19, 3); set(b, 4, 17, 5);      // tail + tuft tip
+    set(b, 12, 15, 2); set(b, 15, 17, 2); set(b, 10, 20, 2); // flank marks
   },
   kitty(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 7, 15 + s, 8, 18 + s, 1); rect(b, 15, 15 + (1 - s), 16, 18 + (1 - s), 1);
-    ellipse(b, 11, 12, 6, 4, 1);
-    disc(b, 17, 8, 4, 1);
-    set(b, 15, 4, 3); set(b, 16, 5, 3);             // ear L
-    set(b, 20, 4, 3); set(b, 19, 5, 3);             // ear R
-    rect(b, 4, 5, 5, 8, 3); set(b, 4, 4, 3);        // tail up
-    ellipse(b, 11, 14, 4, 2, 2);
-    set(b, 18, 7, 4); set(b, 19, 7, 5); set(b, 21, 9, 4);
+    rect(b, 12, 24 + s, 14, 30 + s, 1); rect(b, 24, 24 + (1 - s), 26, 30 + (1 - s), 1);
+    rect(b, 12, 30 + s, 14, 31 + s, 3); rect(b, 24, 30 + (1 - s), 26, 31 + (1 - s), 3); // paws
+    ellipse(b, 17, 20, 10, 6, 1);                    // body
+    ellipse(b, 17, 22, 7, 3, 2);                     // belly
+    disc(b, 28, 11, 5, 1);                           // head
+    rect(b, 23, 4, 25, 8, 3); set(b, 24, 6, 4);      // ear L (triangle-ish) + inner
+    rect(b, 31, 4, 33, 8, 3); set(b, 32, 6, 4);      // ear R + inner
+    rect(b, 5, 6, 7, 15, 3); set(b, 5, 4, 5); set(b, 6, 4, 3); // upright tail + white tip
+    set(b, 28, 10, 4); set(b, 29, 9, 5); set(b, 29, 11, 4);  // eye + glint
+    set(b, 32, 13, 4); set(b, 33, 13, 4);            // nose
+    set(b, 33, 15, 4);                               // mouth hint
+    set(b, 13, 16, 3); set(b, 16, 15, 3); set(b, 19, 16, 3); // back stripes
   },
   bird(b, f) {
     const s = f ? 1 : 0;
-    set(b, 10, 16 + s, 4); set(b, 11, 16 + s, 4); set(b, 10, 17 + s, 4); // leg L
-    set(b, 14, 16 + (1 - s), 4); set(b, 15, 16 + (1 - s), 4); set(b, 15, 17 + (1 - s), 4); // leg R
-    ellipse(b, 12, 11, 6, 6, 1);                    // round body
-    disc(b, 13, 5, 3, 1);                           // head on top
-    rect(b, 16, 4, 18, 5, 3);                       // beak
-    ellipse(b, 10, 11, 3, 4, 2);                    // wing
-    set(b, 12, 2, 3); set(b, 13, 1, 3);             // tuft
-    ellipse(b, 12, 14, 4, 3, 2);                    // belly
-    set(b, 14, 4, 4); set(b, 15, 4, 5);             // eye
-    set(b, 19, 5, 3);                               // beak tip
+    rect(b, 16, 26 + s, 17, 29 + s, 4); rect(b, 15, 30 + s, 18, 30 + s, 4); // leg L + foot
+    rect(b, 21, 26 + (1 - s), 22, 29 + (1 - s), 4); rect(b, 20, 30 + (1 - s), 23, 30 + (1 - s), 4); // leg R + foot
+    ellipse(b, 19, 18, 9, 9, 1);                     // round body
+    ellipse(b, 19, 21, 6, 5, 2);                     // belly
+    ellipse(b, 14, 17, 4, 6, 2);                     // wing
+    set(b, 13, 21, 3); set(b, 13, 22, 3); set(b, 15, 23, 3);   // wing tip feathers
+    disc(b, 21, 7, 5, 1);                            // head on top
+    rect(b, 26, 6, 30, 9, 3); set(b, 31, 7, 3);      // beak + tip
+    set(b, 21, 6, 4); set(b, 22, 5, 5); set(b, 22, 7, 4); // eye + glint
+    set(b, 19, 1, 3); set(b, 21, 0, 3); set(b, 23, 1, 3); // crown tuft
+    rect(b, 8, 15, 10, 21, 3); set(b, 8, 22, 3);     // tail feathers
   },
   mouse(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 9, 15 + s, 10, 17 + s, 1); rect(b, 14, 15 + (1 - s), 15, 17 + (1 - s), 1);
-    disc(b, 12, 12, 5, 1);
-    disc(b, 17, 9, 3, 1);                           // head
-    disc(b, 15, 5, 2, 3); disc(b, 19, 5, 2, 3);     // big round ears
-    rect(b, 5, 13, 7, 14, 3); set(b, 4, 13, 3);     // thin tail
-    disc(b, 12, 14, 3, 2);
-    set(b, 18, 8, 4); set(b, 19, 8, 5); set(b, 20, 10, 4);
+    rect(b, 14, 26 + s, 16, 29 + s, 1); rect(b, 20, 26 + (1 - s), 22, 29 + (1 - s), 1);
+    rect(b, 14, 29 + s, 16, 30 + s, 3); rect(b, 20, 29 + (1 - s), 22, 30 + (1 - s), 3); // feet
+    disc(b, 18, 20, 8, 1);                           // body
+    disc(b, 18, 23, 5, 2);                           // belly
+    disc(b, 26, 14, 5, 1);                           // head
+    disc(b, 22, 7, 4, 3); disc(b, 22, 7, 2, 4);      // big ear L + inner
+    disc(b, 30, 7, 4, 3); disc(b, 30, 7, 2, 4);      // big ear R + inner
+    rect(b, 8, 22, 11, 24, 3); set(b, 7, 21, 3); set(b, 6, 20, 3); // curling thin tail
+    set(b, 26, 13, 4); set(b, 27, 12, 5);            // eye + glint
+    set(b, 30, 15, 4); set(b, 29, 17, 5);            // nose + bucktooth
+    set(b, 15, 14, 2); set(b, 18, 12, 2);            // back shading marks
   },
   hedgehog(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 7, 16 + s, 9, 18 + s, 2); rect(b, 15, 16 + (1 - s), 17, 18 + (1 - s), 2);
-    ellipse(b, 12, 13, 8, 5, 1);
-    spikes(b, 5, 19, 8, 3);                          // quill row
-    spikes(b, 7, 17, 6, 3);
-    disc(b, 19, 11, 3, 1);                           // snout head
-    ellipse(b, 12, 15, 6, 2, 2);
-    set(b, 20, 10, 4); set(b, 21, 10, 5); set(b, 22, 12, 4);
+    rect(b, 11, 27 + s, 13, 30 + s, 2); rect(b, 22, 27 + (1 - s), 24, 30 + (1 - s), 2); // feet
+    ellipse(b, 19, 21, 13, 7, 1);                    // body
+    ellipse(b, 19, 24, 9, 3, 2);                     // belly
+    // two quill rows along the back
+    for (let x = 8; x <= 30; x++) { set(b, x, 15 - (x % 3), 3); set(b, x, 14 - (x % 3), 3); }
+    for (let x = 11; x <= 27; x++) set(b, x, 11 - (x % 3), 3);
+    disc(b, 31, 19, 5, 1);                           // snout head
+    set(b, 31, 17, 4); set(b, 32, 16, 5);            // eye + glint
+    set(b, 35, 20, 4); set(b, 35, 21, 4);            // nose
+    set(b, 33, 23, 4);                               // mouth
   },
   deer(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 5, 15 + s, 7, 18 + s, 1); rect(b, 9, 15 + (1 - s), 11, 18 + (1 - s), 1);
-    rect(b, 14, 15 + (1 - s), 16, 18 + (1 - s), 1); rect(b, 18, 15 + s, 20, 18 + s, 1);
-    ellipse(b, 11, 12, 7, 5, 1);
-    disc(b, 17, 8, 3, 1);
-    // antlers: two branching strokes
-    rect(b, 15, 3, 15, 5, 3); set(b, 14, 2, 3); set(b, 16, 2, 3); set(b, 13, 3, 3);
-    rect(b, 20, 3, 20, 5, 3); set(b, 19, 2, 3); set(b, 21, 2, 3); set(b, 22, 3, 3);
-    set(b, 3, 10, 3); set(b, 2, 9, 3);               // stub tail
-    ellipse(b, 11, 14, 5, 3, 2);
-    set(b, 17, 7, 4); set(b, 18, 7, 5); set(b, 19, 9, 4);
-    // flank spots
-    set(b, 8, 11, 2); set(b, 12, 10, 2); set(b, 10, 13, 2);
+    rect(b, 8, 24 + s, 10, 30 + s, 1); rect(b, 14, 24 + (1 - s), 16, 30 + (1 - s), 1);
+    rect(b, 23, 24 + (1 - s), 25, 30 + (1 - s), 1); rect(b, 29, 24 + s, 31, 30 + s, 1);
+    rect(b, 8, 30 + s, 10, 31 + s, 4); rect(b, 14, 30 + (1 - s), 16, 31 + (1 - s), 4); // hooves
+    rect(b, 23, 30 + (1 - s), 25, 31 + (1 - s), 4); rect(b, 29, 30 + s, 31, 31 + s, 4);
+    ellipse(b, 18, 19, 11, 7, 1);                    // body
+    ellipse(b, 17, 22, 8, 4, 2);                     // belly
+    disc(b, 29, 11, 5, 1);                           // head
+    rect(b, 32, 12, 34, 14, 2);                      // snout
+    set(b, 34, 13, 4);                               // nose
+    // branching antlers
+    rect(b, 25, 2, 26, 6, 3); set(b, 24, 1, 3); set(b, 23, 2, 3); set(b, 27, 2, 3); set(b, 28, 1, 3);
+    rect(b, 31, 2, 32, 6, 3); set(b, 30, 1, 3); set(b, 33, 2, 3); set(b, 34, 1, 3);
+    set(b, 29, 9, 4); set(b, 30, 8, 5);              // eye + glint
+    set(b, 5, 16, 3); set(b, 4, 15, 3);              // stub tail
+    set(b, 11, 15, 2); set(b, 15, 13, 2); set(b, 19, 15, 2); set(b, 13, 18, 2); // flank spots
   },
   boar(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 5, 15 + s, 7, 18 + s, 1); rect(b, 9, 15 + (1 - s), 11, 18 + (1 - s), 1);
-    rect(b, 14, 15 + (1 - s), 16, 18 + (1 - s), 1); rect(b, 18, 15 + s, 20, 18 + s, 1);
-    ellipse(b, 11, 12, 8, 5, 1);
-    rect(b, 8, 7, 16, 9, 3);                         // mane ridge
-    rect(b, 18, 9, 21, 12, 1);                       // head block
-    rect(b, 21, 11, 22, 12, 2);                      // snout
-    set(b, 19, 13, 5); set(b, 20, 13, 5);            // tusk
-    set(b, 3, 10, 3); set(b, 2, 9, 3);
-    ellipse(b, 10, 14, 6, 3, 2);
-    set(b, 19, 10, 4); set(b, 22, 11, 4);
+    rect(b, 8, 24 + s, 10, 30 + s, 1); rect(b, 14, 24 + (1 - s), 16, 30 + (1 - s), 1);
+    rect(b, 23, 24 + (1 - s), 25, 30 + (1 - s), 1); rect(b, 30, 24 + s, 32, 30 + s, 1);
+    rect(b, 8, 30 + s, 10, 31 + s, 4); rect(b, 14, 30 + (1 - s), 16, 31 + (1 - s), 4); // hooves
+    rect(b, 23, 30 + (1 - s), 25, 31 + (1 - s), 4); rect(b, 30, 30 + s, 32, 31 + s, 4);
+    ellipse(b, 18, 20, 12, 7, 1);                    // body
+    ellipse(b, 17, 23, 9, 4, 2);                     // belly
+    rect(b, 10, 11, 25, 14, 3);                      // mane ridge
+    for (let x = 10; x <= 25; x += 2) set(b, x, 10, 3); // mane spikes
+    rect(b, 27, 13, 34, 20, 1);                      // head block
+    rect(b, 33, 16, 36, 19, 2);                      // snout
+    set(b, 35, 17, 4);                               // nostril
+    set(b, 30, 20, 5); set(b, 31, 20, 5); set(b, 30, 21, 5); // tusk
+    set(b, 30, 14, 4); set(b, 31, 13, 5);            // eye + glint
+    set(b, 28, 12, 3);                               // small ear
+    set(b, 5, 16, 3); set(b, 4, 15, 3); set(b, 5, 14, 3); // curly tail
   },
   cow(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 5, 15 + s, 7, 18 + s, 1); rect(b, 9, 15 + (1 - s), 11, 18 + (1 - s), 1);
-    rect(b, 14, 15 + (1 - s), 16, 18 + (1 - s), 1); rect(b, 18, 15 + s, 20, 18 + s, 1);
-    ellipse(b, 11, 12, 8, 5, 1);
-    disc(b, 18, 8, 3, 1);
-    rect(b, 14, 4, 15, 5, 3); rect(b, 21, 4, 22, 5, 3); // horns
-    rect(b, 19, 10, 21, 12, 2);                       // muzzle
-    set(b, 3, 10, 3); set(b, 2, 11, 3); set(b, 2, 12, 3); // tail tuft
-    ellipse(b, 11, 14, 6, 3, 2);
-    set(b, 18, 7, 4); set(b, 19, 7, 5);
-    // spots
-    disc(b, 8, 10, 2, 2); disc(b, 14, 12, 1, 2);
+    rect(b, 8, 24 + s, 10, 30 + s, 1); rect(b, 14, 24 + (1 - s), 16, 30 + (1 - s), 1);
+    rect(b, 23, 24 + (1 - s), 25, 30 + (1 - s), 1); rect(b, 29, 24 + s, 31, 30 + s, 1);
+    rect(b, 8, 30 + s, 10, 31 + s, 4); rect(b, 14, 30 + (1 - s), 16, 31 + (1 - s), 4); // hooves
+    rect(b, 23, 30 + (1 - s), 25, 31 + (1 - s), 4); rect(b, 29, 30 + s, 31, 31 + s, 4);
+    ellipse(b, 18, 20, 12, 7, 1);                    // body
+    ellipse(b, 17, 23, 9, 4, 2);                     // belly
+    disc(b, 30, 10, 5, 1);                           // head
+    rect(b, 25, 3, 27, 6, 3); rect(b, 33, 3, 35, 6, 3); // horns
+    set(b, 24, 9, 2); set(b, 35, 9, 2);              // ears
+    rect(b, 31, 13, 34, 16, 2);                      // muzzle
+    set(b, 33, 14, 4); set(b, 34, 14, 4);            // nostrils
+    set(b, 30, 9, 4); set(b, 31, 8, 5);              // eye + glint
+    disc(b, 12, 16, 3, 2); disc(b, 20, 21, 2, 2); disc(b, 9, 21, 2, 2); // spots
+    rect(b, 5, 15, 6, 22, 3); set(b, 5, 23, 3); set(b, 6, 23, 3); // tail + tuft
+    set(b, 19, 27, 3); set(b, 21, 27, 3);            // udder hint
   },
   monkey(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 9, 16 + s, 10, 18 + s, 1); rect(b, 13, 16 + (1 - s), 14, 18 + (1 - s), 1);
-    ellipse(b, 12, 11, 5, 5, 1);                     // upright body
-    disc(b, 12, 5, 3, 1);                            // head on top
-    rect(b, 6, 9 + s, 7, 12 + s, 1);                 // arm L
-    rect(b, 17, 9 + (1 - s), 18, 12 + (1 - s), 1);   // arm R
-    disc(b, 9, 4, 1, 3); disc(b, 15, 4, 1, 3);       // round ears
+    rect(b, 15, 26 + s, 17, 30 + s, 1); rect(b, 19, 26 + (1 - s), 21, 30 + (1 - s), 1);
+    rect(b, 15, 30 + s, 17, 31 + s, 3); rect(b, 19, 30 + (1 - s), 21, 31 + (1 - s), 3); // feet
+    ellipse(b, 18, 18, 8, 8, 1);                     // upright body
+    disc(b, 18, 20, 4, 2);                           // belly patch
+    rect(b, 10, 15 + s, 12, 21 + s, 1); set(b, 11, 22 + s, 3);  // arm L + hand
+    rect(b, 25, 15 + (1 - s), 27, 21 + (1 - s), 1); set(b, 26, 22 + (1 - s), 3); // arm R + hand
+    disc(b, 18, 7, 5, 1);                            // head on top
+    disc(b, 18, 8, 3, 2);                            // face mask
+    disc(b, 13, 6, 2, 3); disc(b, 23, 6, 2, 3);      // round ears
+    set(b, 17, 6, 4); set(b, 18, 5, 5); set(b, 20, 6, 4); // eyes + glint
+    set(b, 18, 10, 4);                               // mouth
     // curled tail
-    set(b, 5, 13, 3); set(b, 4, 12, 3); set(b, 4, 11, 3); set(b, 5, 10, 3);
-    disc(b, 12, 12, 2, 2);                           // belly patch
-    disc(b, 12, 6, 1, 2);                            // face patch
-    set(b, 13, 4, 4); set(b, 14, 4, 5); set(b, 14, 6, 4);
+    set(b, 9, 22, 3); set(b, 8, 21, 3); set(b, 8, 19, 3); set(b, 9, 18, 3); set(b, 11, 19, 3); set(b, 10, 20, 3);
   },
   blob(b, f) {
     const s = f ? 1 : 0;
-    ellipse(b, 12, 13 + s, 8, 6, 1);
-    ellipse(b, 12, 10 + s, 6, 5, 1);
-    ellipse(b, 12, 15 + s, 6, 3, 2);                 // belly
-    set(b, 10, 9 + s, 4); set(b, 15, 9 + s, 4);      // eyes
-    set(b, 11, 9 + s, 5); set(b, 16, 9 + s, 5);
-    rect(b, 11, 12 + s, 13, 12 + s, 4);              // mouth
-    set(b, 12, 5 + s, 3); set(b, 13, 4 + s, 3);      // drip on top
+    ellipse(b, 19, 22, 12, 8, 1);                    // wide base
+    ellipse(b, 19, 15 + s, 9, 7, 1);                 // upper dome squishes
+    ellipse(b, 19, 24, 8, 4, 2);                     // belly
+    set(b, 15, 14 + s, 4); set(b, 16, 13 + s, 5);    // eye L + glint
+    set(b, 23, 14 + s, 4); set(b, 24, 13 + s, 5);    // eye R + glint
+    rect(b, 17, 18 + s, 21, 19 + s, 4);              // droopy mouth
+    set(b, 18, 7 + s, 3); set(b, 19, 8 + s, 3); set(b, 19, 6 + s, 3); // top drip
+    set(b, 8, 20, 1); set(b, 7, 19, 1);              // arm stub L
+    set(b, 30, 20, 1); set(b, 31, 19, 1);            // arm stub R
+    set(b, 13, 30, 1); set(b, 19, 30, 1); set(b, 25, 30, 1); // drips at base
   },
   serpent(b, f) {
     // S-curve body: discs along a sine path, thicker at head
-    const pts: [number, number, number][] = [[4, 16, 2], [7, 14 + f, 3], [11, 12, 3], [15, 10 - f, 3], [18, 7, 4]];
+    const pts: [number, number, number][] = [[6, 26, 4], [11, 23 + f, 5], [17, 19, 5], [24, 15 - f, 5], [30, 10, 6]];
     for (const [x, y, r] of pts) disc(b, x, y, r, 1);
-    disc(b, 18, 7, 4, 1);                            // head
-    rect(b, 15, 3, 16, 5, 3); set(b, 20, 3, 3); set(b, 21, 4, 3); // crest
-    set(b, 2, 16, 3); set(b, 1, 15, 3);              // tail tip
-    ellipse(b, 12, 13, 7, 3, 2);                     // belly shade
-    set(b, 19, 6, 4); set(b, 20, 6, 5); set(b, 22, 8, 4); // eye + fang
+    disc(b, 30, 9, 6, 1);                            // head
+    rect(b, 25, 1, 27, 5, 3); set(b, 31, 0, 3); set(b, 32, 1, 3); // crest horns
+    set(b, 30, 7, 4); set(b, 31, 6, 5);              // eye + glint
+    set(b, 34, 10, 4); set(b, 34, 12, 5);            // nostril + fang
+    set(b, 2, 26, 3); set(b, 1, 25, 3);              // tail tip
+    ellipse(b, 17, 21, 10, 4, 2);                    // belly shade
+    set(b, 13, 20, 3); set(b, 26, 13, 3);            // side fins/accents
+    set(b, 10, 24, 2); set(b, 21, 17, 2);            // scale marks
   },
   human(b, f) {
     const s = f ? 1 : 0;
-    rect(b, 9, 15 + s, 11, 18 + s, 2);               // leg L
-    rect(b, 13, 15 + (1 - s), 15, 18 + (1 - s), 2);  // leg R
-    ellipse(b, 12, 11, 5, 5, 1);                     // torso
-    disc(b, 12, 4, 4, 3);                            // head (skin tone)
-    rect(b, 8, 2, 16, 4, 3);                         // hair cap
-    rect(b, 6, 9 + s, 7, 12 + s, 1);                 // arm L
-    rect(b, 17, 9 + (1 - s), 18, 12 + (1 - s), 1);   // arm R
-    ellipse(b, 12, 13, 4, 3, 2);                     // tunic bottom
-    set(b, 14, 4, 4); set(b, 15, 4, 5);              // eye
-    set(b, 11, 6, 4); set(b, 13, 6, 4);              // eyes front? keep one side eye
+    rect(b, 15, 25 + s, 17, 30 + s, 2);              // leg L (pants)
+    rect(b, 21, 25 + (1 - s), 23, 30 + (1 - s), 2);  // leg R
+    rect(b, 15, 30 + s, 17, 31 + s, 4);              // boot L
+    rect(b, 21, 30 + (1 - s), 23, 31 + (1 - s), 4);  // boot R
+    ellipse(b, 19, 17, 7, 7, 1);                     // torso (tunic)
+    ellipse(b, 19, 22, 6, 4, 1);                     // tunic skirt
+    rect(b, 14, 23, 24, 24, 4);                      // belt
+    rect(b, 11, 14 + s, 13, 20 + s, 1); set(b, 12, 21 + s, 3);       // arm L + hand
+    rect(b, 25, 14 + (1 - s), 27, 20 + (1 - s), 1); set(b, 26, 21 + (1 - s), 3); // arm R + hand
+    disc(b, 19, 6, 5, 3);                            // head (skin)
+    rect(b, 14, 0, 24, 4, 4);                        // hair cap
+    set(b, 15, 5, 4); set(b, 14, 6, 4);              // sideburn
+    set(b, 21, 5, 4); set(b, 22, 5, 5);              // eye + glint
+    set(b, 22, 8, 4);                                // mouth hint
   },
   ghost(b, f) {
     const s = f ? 1 : 0;
-    ellipse(b, 12, 10 + s, 7, 7, 1);                 // dome
-    // wavy trailing bottom
-    for (let x = 6; x <= 18; x++) set(b, x, 16 + s + ((x % 2) ? 1 : 0), 1);
-    set(b, 8, 17 + s, 1); set(b, 12, 17 + s, 1); set(b, 16, 17 + s, 1);
-    set(b, 10, 9 + s, 4); set(b, 15, 9 + s, 4);      // eyes
-    set(b, 11, 9 + s, 5); set(b, 16, 9 + s, 5);
-    set(b, 12, 12 + s, 4); set(b, 13, 12 + s, 4);    // mouth
-    set(b, 5, 12 + s, 3); set(b, 4, 11 + s, 3);      // wisp L
-    set(b, 19, 12 + s, 3); set(b, 20, 11 + s, 3);    // wisp R
+    ellipse(b, 19, 14 + s, 11, 9, 1);                // dome
+    // wavy trailing bottom with dangling tips
+    for (let x = 9; x <= 29; x++) set(b, x, 22 + s + ((x % 2) ? 1 : 0), 1);
+    for (let x = 10; x <= 28; x += 2) set(b, x, 23 + s + ((x % 4) ? 1 : 0), 1);
+    set(b, 11, 25 + s, 1); set(b, 19, 25 + s, 1); set(b, 26, 25 + s, 1); // drip tips
+    disc(b, 15, 13 + s, 2, 4); set(b, 16, 12 + s, 5); // big eye L
+    disc(b, 23, 13 + s, 2, 4); set(b, 24, 12 + s, 5); // big eye R
+    set(b, 19, 17 + s, 4); set(b, 20, 17 + s, 4);    // mouth
+    set(b, 13, 16 + s, 2); set(b, 25, 16 + s, 2);    // blush marks
+    set(b, 7, 15 + s, 3); set(b, 6, 14 + s, 3);      // wisp L
+    set(b, 31, 15 + s, 3); set(b, 32, 14 + s, 3);    // wisp R
   },
 };
 
@@ -330,7 +374,7 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
   const img = tex(r, p.speciesId, frame)!;
 
   const dw = W * SCALE, dh = H * SCALE;
-  const bob = moving && frame === 1 ? -3 : (asleep ? 2 : 0);
+  const bob = moving && frame === 1 ? -4 : (asleep ? 3 : 0);
   const dx = p.x * CELL_W - dw / 2 - camX;
   const dy = p.y * CELL_H - dh + CELL_H - camY + bob;
 
@@ -364,7 +408,7 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
 export function drawHuman(r: Renderer, x: number, y: number, dir: number, camX: number, camY: number, time: number, moving: boolean): void {
   const frame = moving ? Math.floor(time * 6) % 2 : 0;
   const img = tex(r, "$player", frame)!;
-  const dw = W * SCALE, dh = H * SCALE;
+  const dw = W * HUMAN_SCALE, dh = H * HUMAN_SCALE;
   const bob = moving && frame === 1 ? -3 : 0;
   const dx = x * CELL_W - dw / 2 - camX;
   const dy = y * CELL_H - dh + CELL_H - camY + bob;

@@ -24,8 +24,8 @@ function moveToward(world: World, p: Pal, tx: number, ty: number, speed: number,
   const nx = p.x + (dx / d) * mv;
   const ny = p.y + (dy / d) * mv;
   p.dir = dx > 0 ? 1 : -1;
-  if (!world.blocked(nx, p.y)) p.x = nx;
-  if (!world.blocked(p.x, ny)) p.y = ny;
+  if (!world.blocked(nx, p.y, p.x, p.y)) p.x = nx;
+  if (!world.blocked(p.x, ny, p.x, p.y)) p.y = ny;
 }
 
 function wander(world: World, p: Pal, dt: number, radius: number): void {
