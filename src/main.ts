@@ -116,14 +116,14 @@ let lastPX: number | null = null, lastPY = 0;
 // ---------- render ----------
 function render(): void {
   r.clear();
-  // terrain: micro-glyph chunks — every tile is 16 tiny characters
+  // terrain: pixel-art tiles baked per 16x16 chunk (cached canvases)
   const CHPX = CHUNK_TILES * CELL_W, CHPY = CHUNK_TILES * CELL_H;
   const ch0x = Math.floor(r.camX / CHPX), ch0y = Math.floor(r.camY / CHPY);
   const ch1x = Math.floor((r.camX + r.w) / CHPX), ch1y = Math.floor((r.camY + r.h) / CHPY);
   for (let cy = ch0y; cy <= ch1y; cy++) {
     for (let cx = ch0x; cx <= ch1x; cx++) {
       if (cx < 0 || cy < 0 || cx * CHUNK_TILES >= WORLD_W || cy * CHUNK_TILES >= WORLD_H) continue;
-      r.ctx.drawImage(chunkCanvas(r, world, seed, cx, cy), cx * CHPX - r.camX, cy * CHPY - r.camY);
+      r.ctx.drawImage(chunkCanvas(world, seed, cx, cy), cx * CHPX - r.camX, cy * CHPY - r.camY);
     }
   }
 

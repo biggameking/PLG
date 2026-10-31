@@ -1,20 +1,16 @@
-// Pal sprites: pixel-art bitmaps — each logical pixel is one glyph cell
-// worth of color (the user's "every character is a pixel" idea). Sprites
-// are generated procedurally: a 24x20 pixel buffer per body plan, filled
-// with ellipse/disc/rect ops, auto-outlined (dark edge like DF premium
-// tilesets), tinted by a 3-tone palette, prerendered to a canvas per
-// species+walk-frame, then blitted ~2x2 tiles on screen.
+// Pal sprites: real pixel art — a 24x20 pixel buffer per body plan,
+// shaded with hue-shifted palette ramps (outline/shade/base/light/spec),
+// checkerboard dithering on fluffy species, baked to a tiny canvas then
+// blitted 3x nearest-neighbor. Silhouette + palette + parts per species
+// keeps 100+ species distinguishable.
 import { Pal } from "./types.ts";
 import { Species } from "../data/species.ts";
 import { ELEMENT_GLYPH, ELEMENT_COLOR } from "../data/elements.ts";
-import { Renderer, CELL_W, CELL_H, MICRO_W, MICRO_H } from "../engine/renderer.ts";
+import { Renderer, CELL_W, CELL_H } from "../engine/renderer.ts";
 import { hash2 } from "../engine/rng.ts";
 
 const W = 24, H = 20;
-// sprite pixels are real characters — bigger micro cells than terrain so
-// each glyph stays readable as a symbol (the "it's all text" zoom test).
-const SMW = 5, SMH = 6;
-const SCALE = 1.0;
+const SCALE = 3; // screen px per sprite pixel
 
 // pixel indices: 1 primary, 2 secondary, 3 accent, 4 dark, 5 white
 type Pix = Uint8Array; // W*H
@@ -201,83 +197,113 @@ const PLANS: Record<string, (b: Pix, f: number) => void> = {
   },
 };
 
-interface SpriteDef { plan: keyof typeof PLANS; colors: [string, string, string]; }
+interface SpriteDef { plan: keyof typeof PLANS; colors: [string, string, string]; fluff?: number }
 
 const SPRITES: Record<string, SpriteDef> = {
-  lamball:     { plan: "quadruped", colors: ["#ede0c8", "#d8c9ab", "#f2a0b5"] },
-  cattiva:     { plan: "kitty",     colors: ["#f2a0b5", "#e085a0", "#ffffff"] },
-  chikipi:     { plan: "bird",      colors: ["#f5f2ea", "#e8e0cc", "#e64533"] },
-  foxparks:    { plan: "kitty",     colors: ["#e8963c", "#c97e2a", "#ffd54f"] },
+  lamball:     { plan: "quadruped", colors: ["#ede0c8", "#d8c9ab", "#f2a0b5"], fluff: 0.55 },
+  cattiva:     { plan: "kitty",     colors: ["#f2a0b5", "#e085a0", "#ffffff"], fluff: 0.3 },
+  chikipi:     { plan: "bird",      colors: ["#f5f2ea", "#e8e0cc", "#e64533"], fluff: 0.25 },
+  foxparks:    { plan: "kitty",     colors: ["#e8963c", "#c97e2a", "#ffd54f"], fluff: 0.3 },
   pengullet:   { plan: "bird",      colors: ["#4d9de0", "#2b5d8a", "#e8d44d"] },
-  penking:     { plan: "bird",      colors: ["#3f94c8", "#2b5d8a", "#ffd54f"] },
+  penking:     { plan: "bird",      colors: ["#3f94c8", "#2b5d8a", "#ffd54f"], fluff: 0.15 },
   eikthyrdeer: { plan: "deer",      colors: ["#d4b96e", "#b8945a", "#8a6d4d"] },
   lifmunk:     { plan: "mouse",     colors: ["#4caf50", "#3d9143", "#9acd32"] },
-  tanzee:      { plan: "monkey",    colors: ["#9acd32", "#7a9d2a", "#d4b96e"] },
-  sparkit:     { plan: "mouse",     colors: ["#e8d44d", "#c9b23a", "#ff9a3c"] },
-  jolthog:     { plan: "hedgehog",  colors: ["#e8e05c", "#c9bf45", "#8a6d4d"] },
+  tanzee:      { plan: "monkey",    colors: ["#9acd32", "#7a9d2a", "#d4b96e"], fluff: 0.2 },
+  sparkit:     { plan: "mouse",     colors: ["#e8d44d", "#c9b23a", "#ff9a3c"], fluff: 0.2 },
+  jolthog:     { plan: "hedgehog",  colors: ["#e8e05c", "#c9bf45", "#8a6d4d"], fluff: 0.4 },
   dumud:       { plan: "serpent",   colors: ["#b8935f", "#96794d", "#8fd1a0"] },
   depresso:    { plan: "blob",      colors: ["#6fa8d1", "#5a8db0", "#4d6f8a"] },
-  daedream:    { plan: "ghost",     colors: ["#c678dd", "#a45ec0", "#e08ee8"] },
+  daedream:    { plan: "ghost",     colors: ["#c678dd", "#a45ec0", "#e08ee8"], fluff: 0.25 },
   mau:         { plan: "kitty",     colors: ["#a8b5c4", "#8a98a8", "#e8d44d"] },
-  rushoar:     { plan: "boar",      colors: ["#d1813c", "#a96a2f", "#f5eee0"] },
-  cremis:      { plan: "kitty",     colors: ["#f5eee0", "#d8d0be", "#e8963c"] },
-  mozzarina:   { plan: "cow",       colors: ["#ede0c8", "#c9b89e", "#e8d44d"] },
-  fuack:       { plan: "bird",      colors: ["#4dd0e1", "#35a8b8", "#e8d44d"] },
+  rushoar:     { plan: "boar",      colors: ["#d1813c", "#a96a2f", "#f5eee0"], fluff: 0.3 },
+  cremis:      { plan: "kitty",     colors: ["#f5eee0", "#d8d0be", "#e8963c"], fluff: 0.45 },
+  mozzarina:   { plan: "cow",       colors: ["#ede0c8", "#c9b89e", "#e8d44d"], fluff: 0.2 },
+  fuack:       { plan: "bird",      colors: ["#4dd0e1", "#35a8b8", "#e8d44d"], fluff: 0.2 },
   $player:     { plan: "human",     colors: ["#d17b3c", "#4d9de0", "#e8c9a0"] },
 };
 
+function darken(hex: string, f: number): string { return shade(hex, f); }
+function dim(hex: string): string { return darken(hex, 0.45); }
 function shade(hex: string, f: number): string {
   const m = /^#(..)(..)(..)$/.exec(hex);
   if (!m) return hex;
   const c = (i: number) => Math.max(0, Math.min(255, Math.floor(parseInt(m[i], 16) * f)));
   return `rgb(${c(1)},${c(2)},${c(3)})`;
 }
-function darken(hex: string, f: number): string { return shade(hex, f); }
-function dim(hex: string): string { return darken(hex, 0.45); }
+
+// ---- palette ramps with hue shifting (shadows → purple, lights → warm) ----
+function hsl(hex: string): [number, number, number] {
+  const m = /^#(..)(..)(..)$/.exec(hex); if (!m) return [0, 0, 0.5];
+  const r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn;
+  const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  const h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function rgb(h: number, s: number, l: number): [number, number, number] {
+  h = ((h % 360) + 360) % 360; s = Math.max(0, Math.min(1, s)); l = Math.max(0, Math.min(1, l));
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+interface Ramp { out: [number, number, number]; shade: [number, number, number]; base: [number, number, number]; light: [number, number, number]; spec: [number, number, number] }
+const rampCache = new Map<string, Ramp>();
+function ramp(hex: string): Ramp {
+  let r = rampCache.get(hex);
+  if (r) return r;
+  const [h, s, l] = hsl(hex);
+  r = {
+    out: rgb(h + 25, Math.min(1, s * 1.1), l * 0.22),
+    shade: rgb(h + 14, Math.min(1, s * 1.15), l * 0.55),
+    base: rgb(h, s, l),
+    light: rgb(h - 12, Math.min(1, s * 1.05), Math.min(0.88, l * 1.3)),
+    spec: rgb(h - 25, s * 0.45, 0.93),
+  };
+  rampCache.set(hex, r);
+  return r;
+}
+const DARK: Ramp = { out: rgb(230, 0.15, 0.06), shade: rgb(230, 0.15, 0.1), base: rgb(25, 0.12, 0.14), light: rgb(25, 0.1, 0.22), spec: rgb(30, 0.1, 0.4) };
+const WHITE: Ramp = { out: rgb(220, 0.25, 0.3), shade: rgb(215, 0.2, 0.72), base: rgb(0, 0, 1), light: rgb(0, 0, 1), spec: rgb(0, 0, 1) };
 
 // cache: speciesId -> [frame0, frame1] canvases
 const texCache = new Map<string, [HTMLCanvasElement, HTMLCanvasElement]>();
 
-// symbol ramp: every sprite pixel is a real, readable character —
-// sparse punctuation for darks, dense letterforms for brights. Picked by
-// shaded luminance + hash jitter so the fur/skin texture looks organic.
-const RAMP = ["'", "·", ":", "-", "=", "x", "o", "0", "%", "#", "@"];
-function rampFor(lum: number, h: number): string {
-  const i = Math.max(0, Math.min(RAMP.length - 1, Math.floor(lum / 256 * RAMP.length)));
-  return RAMP[Math.max(0, Math.min(RAMP.length - 1, i + (h < 0.25 ? -1 : h > 0.8 ? 1 : 0)))];
-}
-function lum(col: string): number {
-  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(col) ?? /^#(..)(..)(..)$/.exec(col);
-  if (!m) return 128;
-  const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
-  return r * 0.3 + g * 0.55 + b * 0.15;
-}
-
-function buildTex(r: Renderer, id: string, frame: number): HTMLCanvasElement {
+function buildTex(_r: Renderer, id: string, frame: number): HTMLCanvasElement {
   const def = SPRITES[id];
   const b = newPix();
   PLANS[def.plan](b, frame);
   const cvs = document.createElement("canvas");
-  cvs.width = W * SMW; cvs.height = H * SMH;
+  cvs.width = W; cvs.height = H;
   const c2 = cvs.getContext("2d")!;
-  const pal: string[] = [def.colors[0], def.colors[1], def.colors[2], "#1a1d20", "#ffffff"];
+  const img = c2.createImageData(W, H);
+  const ramps = [ramp(def.colors[0]), ramp(def.colors[1]), ramp(def.colors[2]), DARK, WHITE];
+  const at = (x: number, y: number) => (x < 0 || x >= W || y < 0 || y >= H ? 0 : b[y * W + x]);
+  const fluff = def.fluff ?? 0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const c = b[y * W + x];
+    const c = at(x, y);
     if (!c) continue;
-    const h = hash2(x, y, 31);
-    // volume shading: dark outline on open edges, rim light on top edges,
-    // belly shade in lower quarter, slight per-pixel jitter inside.
-    const openL = !b[y * W + x - 1], openR = !b[y * W + x + 1];
-    const openT = y === 0 || !b[(y - 1) * W + x], openB = y === H - 1 || !b[(y + 1) * W + x];
-    const open = openL || openR || openT || openB;
-    let col = pal[c - 1];
-    if (open) col = shade(col, 0.5);
-    else if (openT) col = shade(col, 1.45);            // rim light
-    else if (y > H * 0.72) col = shade(col, 0.82);     // ground shade
-    else col = shade(col, 0.94 + h * 0.12);            // interior jitter
-    const g = open ? (h < 0.5 ? "." : "'") : rampFor(lum(col), h);
-    r.microInto(c2, x * SMW, y * SMH, g, col, SMW, SMH);
+    const h = hash2(x * 7 + 3, y * 7 + 1, 31);
+    const open = !at(x - 1, y) || !at(x + 1, y) || !at(x, y - 1) || !at(x, y + 1);
+    const rp = ramps[c - 1];
+    // light field: stronger top & upper-left, dimmer bottom-right
+    const lf = (1 - y / H) * 0.62 + (1 - x / W) * 0.14 + (h - 0.5) * 0.16;
+    let px: [number, number, number];
+    if (open) px = rp.out;
+    else if (lf > 0.8) px = rp.spec;
+    else if (lf > 0.62) px = rp.light;
+    else if (lf < 0.26) px = rp.shade;
+    else {
+      // dithered transitions + fur texture
+      const nearHi = 0.62 - lf < 0.09, nearLo = lf - 0.26 < 0.09;
+      const dither = ((x + y) % 2 === 0) && (nearHi || nearLo || h < fluff);
+      px = dither ? (nearHi ? rp.light : rp.shade) : rp.base;
+    }
+    const o = (y * W + x) * 4;
+    img.data[o] = px[0]; img.data[o + 1] = px[1]; img.data[o + 2] = px[2]; img.data[o + 3] = 255;
   }
+  c2.putImageData(img, 0, 0);
   return cvs;
 }
 
@@ -303,7 +329,7 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
   const frame = moving ? Math.floor(time * 6 + p.uid) % 2 : 0;
   const img = tex(r, p.speciesId, frame)!;
 
-  const dw = W * SMW * SCALE, dh = H * SMH * SCALE;
+  const dw = W * SCALE, dh = H * SCALE;
   const bob = moving && frame === 1 ? -3 : (asleep ? 2 : 0);
   const dx = p.x * CELL_W - dw / 2 - camX;
   const dy = p.y * CELL_H - dh + CELL_H - camY + bob;
@@ -329,7 +355,7 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
 export function drawHuman(r: Renderer, x: number, y: number, dir: number, camX: number, camY: number, time: number, moving: boolean): void {
   const frame = moving ? Math.floor(time * 6) % 2 : 0;
   const img = tex(r, "$player", frame)!;
-  const dw = W * SMW * SCALE, dh = H * SMH * SCALE;
+  const dw = W * SCALE, dh = H * SCALE;
   const bob = moving && frame === 1 ? -3 : 0;
   const dx = x * CELL_W - dw / 2 - camX;
   const dy = y * CELL_H - dh + CELL_H - camY + bob;

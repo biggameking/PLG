@@ -1,6 +1,6 @@
 // Tile world: generation, collision, harvesting, glyph rendering info.
 import { hash2, Rng } from "../engine/rng.ts";
-import { Renderer, CELL_W, CELL_H, MICRO_W, MICRO_H } from "../engine/renderer.ts";
+import { CELL_W, CELL_H } from "../engine/renderer.ts";
 import { WORLD_W, WORLD_H } from "./types.ts";
 
 export type Tile =
@@ -146,97 +146,153 @@ export function tileLook(world: World, x: number, y: number, seed: number): [str
   }
 }
 
-// ---------- micro-glyph terrain: every tile is a 4x4 block of tiny chars ----------
-// The whole map is baked from characters: zoomed out it reads as pixel art,
-// zoomed in you see it's all text — the user's "characters as pixels" model.
+// ---------- pixel-art terrain: hand-tuned 16x18px tiles, baked per chunk ----------
 const CHUNK = 16; // tiles per chunk edge
-const MROWS = 4, MCOLS = 4;
-const MY = CELL_H / MROWS; // 4.5 px row pitch
-
-type MicroSpec = { bg: string; density: number; glyph: (h: number, mx: number, my: number) => string; tone: (h: number) => string };
-
-const MICRO: Record<Tile, MicroSpec> = {
-  water: {
-    bg: "#0e3a54", density: 0.72,
-    glyph: (h, mx, my) => my % 2 ? (h < 0.5 ? "≈" : "-") : (h < 0.5 ? "~" : "≈"),
-    tone: (h) => ["#3d8fd1", "#3590c9", "#4aa3d4", "#2f7bb8"][Math.floor(h * 4)],
-  },
-  sand: {
-    bg: "#4a3f2c", density: 0.62,
-    glyph: (h) => h < 0.5 ? "·" : h < 0.75 ? "," : h < 0.9 ? "\"" : ":",
-    tone: (h) => ["#ead899", "#dfc98a", "#c9b070", "#f2e6ae"][Math.floor(h * 4)],
-  },
-  grass: {
-    bg: "#1c2f16", density: 0.55,
-    glyph: (h) => h < 0.3 ? "'" : h < 0.5 ? "," : h < 0.65 ? "." : h < 0.8 ? "w" : "v",
-    tone: (h) => ["#5da24c", "#4f9140", "#6db85a", "#3d6b35"][Math.floor(h * 4)],
-  },
-  tallgrass: {
-    bg: "#1a2b14", density: 0.8,
-    glyph: (h) => h < 0.3 ? "w" : h < 0.55 ? "v" : h < 0.75 ? "'" : "♣",
-    tone: (h) => ["#6fc464", "#5fae55", "#7fd474", "#4f9140"][Math.floor(h * 4)],
-  },
-  flower: {
-    bg: "#1e3218", density: 0.55,
-    glyph: (h) => h < 0.3 ? "✿" : h < 0.55 ? "❀" : h < 0.8 ? "·" : "'",
-    tone: (h) => ["#e08ee8", "#ff7d6e", "#ffd54f", "#ffffff", "#ff9ad5", "#6db85a"][Math.floor(h * 6)],
-  },
-  tree: {
-    bg: "#14240f", density: 0.9,
-    glyph: (h, mx, my) => my === 3 ? (mx === 1 || mx === 2 ? "│" : "·") : (h < 0.6 ? "♣" : h < 0.85 ? "♠" : "▲"),
-    tone: (h) => ["#3f9140", "#4faa50", "#359138", "#2d7030", "#8a6d4d"][Math.floor(h * 5)],
-  },
-  rock: {
-    bg: "#242b31", density: 0.66,
-    glyph: (h) => h < 0.4 ? "▲" : h < 0.65 ? "^" : h < 0.85 ? "n" : "·",
-    tone: (h) => ["#8a9096", "#7d868e", "#98a0a8", "#5d666e"][Math.floor(h * 4)],
-  },
-  ore: {
-    bg: "#242b31", density: 0.66,
-    glyph: (h) => h < 0.4 ? "▓" : h < 0.7 ? "▒" : h < 0.85 ? "◆" : "·",
-    tone: (h) => ["#ffb347", "#ffd54f", "#ff9a3c", "#8a9096"][Math.floor(h * 4)],
-  },
-  floor: {
-    bg: "#28323a", density: 0.5,
-    glyph: (h) => h < 0.7 ? "·" : "-",
-    tone: (h) => ["#6b7a85", "#5d6a75", "#7a8893"][Math.floor(h * 3)],
-  },
-  dirt: {
-    bg: "#2c2118", density: 0.55,
-    glyph: (h) => h < 0.6 ? "·" : h < 0.85 ? "," : ":",
-    tone: (h) => ["#8a6f4d", "#9a7f5a", "#6f5839"][Math.floor(h * 3)],
-  },
-};
 
 const chunkCache = new Map<string, HTMLCanvasElement>();
 
-function drawMicroTile(r: Renderer, ctx: CanvasRenderingContext2D, world: World, x: number, y: number, seed: number, px: number, py: number): void {
+function drawPixTile(ctx: CanvasRenderingContext2D, world: World, x: number, y: number, seed: number, px: number, py: number): void {
   const t = world.get(x, y);
-  const spec = MICRO[t] ?? MICRO.grass;
-  ctx.fillStyle = spec.bg;
-  ctx.fillRect(px, py, CELL_W, CELL_H);
-  for (let my = 0; my < MROWS; my++) {
-    for (let mx = 0; mx < MCOLS; mx++) {
-      const h = hash2(x * 13 + mx * 3 + 1, y * 13 + my * 5 + 2, seed);
-      if (h >= spec.density) continue;
-      r.microInto(ctx, px + mx * MICRO_W, py + my * MY, spec.glyph(h, mx, my), spec.tone(h));
+  const h = (i: number) => hash2(x * 17 + i, y * 17 + i * 3, seed + i);
+  const P = (dx: number, dy: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(px + dx, py + dy, 1, 1); };
+  const B = (dx: number, dy: number, w: number, hh: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(px + dx, py + dy, w, hh); };
+
+  // grass base shared by land tiles (gives terrain cohesion)
+  const grassBase = () => {
+    ctx.fillStyle = "#3e7c38"; ctx.fillRect(px, py, CELL_W, CELL_H);
+    for (let i = 0; i < 7; i++) P(Math.floor(h(i) * 16), Math.floor(h(i + 3) * 18), h(i + 6) < 0.5 ? "#4d9345" : "#356b30");
+    for (let i = 0; i < 4; i++) { const bx = Math.floor(h(i + 9) * 14) + 1, by = Math.floor(h(i + 12) * 16) + 1; P(bx, by, "#57a24d"); P(bx, by - 1, "#6fbf60"); } // blade tips
+  };
+
+  const landNearWater = t !== "water" && (
+    world.get(x + 1, y) === "water" || world.get(x - 1, y) === "water" ||
+    world.get(x, y + 1) === "water" || world.get(x, y - 1) === "water");
+
+  switch (t) {
+    case "water": {
+      ctx.fillStyle = "#2b6fa8"; ctx.fillRect(px, py, CELL_W, CELL_H);
+      ctx.fillStyle = "#2f7cb8"; ctx.fillRect(px, py, CELL_W, 2);
+      // wave dashes
+      for (let i = 0; i < 4; i++) {
+        const wx = Math.floor(h(i) * 13), wy = 2 + Math.floor(h(i + 4) * 14);
+        B(wx, wy, 3, 1, h(i + 8) < 0.5 ? "#5aa8d8" : "#4a9ccc");
+      }
+      for (let i = 0; i < 3; i++) P(Math.floor(h(i + 10) * 16), Math.floor(h(i + 13) * 18), "#3d8fd1");
+      // shoreline: foam + light band on edges that touch land
+      const L = world.get(x - 1, y) !== "water", R = world.get(x + 1, y) !== "water";
+      const U = world.get(x, y - 1) !== "water", D = world.get(x, y + 1) !== "water";
+      if (L) { B(0, 0, 2, CELL_H, "#8fd4e8"); B(2, 0, 1, CELL_H, "#cfeef4"); for (let i = 0; i < 5; i++) if (h(i + 14) < 0.7) P(3, i * 4 + 1, "#ffffff"); }
+      if (R) { B(14, 0, 2, CELL_H, "#8fd4e8"); B(13, 0, 1, CELL_H, "#cfeef4"); for (let i = 0; i < 5; i++) if (h(i + 17) < 0.7) P(12, i * 4 + 1, "#ffffff"); }
+      if (U) { B(0, 0, CELL_W, 2, "#8fd4e8"); B(0, 2, CELL_W, 1, "#cfeef4"); for (let i = 0; i < 4; i++) if (h(i + 20) < 0.7) P(i * 4 + 1, 3, "#ffffff"); }
+      if (D) { B(0, 16, CELL_W, 2, "#8fd4e8"); B(0, 15, CELL_W, 1, "#cfeef4"); for (let i = 0; i < 4; i++) if (h(i + 23) < 0.7) P(i * 4 + 1, 14, "#ffffff"); }
+      break;
     }
+    case "sand": {
+      ctx.fillStyle = "#e0c88a"; ctx.fillRect(px, py, CELL_W, CELL_H);
+      for (let i = 0; i < 9; i++) P(Math.floor(h(i) * 16), Math.floor(h(i + 4) * 18), h(i + 7) < 0.5 ? "#d0b070" : "#f0dca0");
+      for (let i = 0; i < 3; i++) P(Math.floor(h(i + 10) * 16), Math.floor(h(i + 13) * 18), "#b89858");
+      if (landNearWater) { for (let i = 0; i < 16; i += 4) { P(i, 17, "#c8a868"); P(i, 0, "#c8a868"); } }
+      break;
+    }
+    case "grass": {
+      grassBase();
+      if (landNearWater) { // damp edge
+        if (world.get(x, y + 1) === "water") B(0, 16, CELL_W, 2, "#2f5c2e");
+        if (world.get(x, y - 1) === "water") B(0, 0, CELL_W, 2, "#2f5c2e");
+        if (world.get(x - 1, y) === "water") B(0, 0, 2, CELL_H, "#2f5c2e");
+        if (world.get(x + 1, y) === "water") B(14, 0, 2, CELL_H, "#2f5c2e");
+      }
+      break;
+    }
+    case "tallgrass": {
+      grassBase();
+      for (let i = 0; i < 6; i++) {
+        const bx = 1 + Math.floor(h(i) * 13), by = 6 + Math.floor(h(i + 4) * 11);
+        B(bx, by - 4, 1, 4, "#5fae55"); P(bx, by - 5, "#8fd47a"); P(bx + 1, by - 3, "#4d9345");
+      }
+      if (h(20) < 0.18) { const fx = Math.floor(h(21) * 12) + 2, fy = Math.floor(h(22) * 8) + 3; P(fx, fy, "#ffd54f"); P(fx - 1, fy, "#ff9ad5"); P(fx + 1, fy, "#ff9ad5"); P(fx, fy - 1, "#ff9ad5"); P(fx, fy + 1, "#ff9ad5"); }
+      break;
+    }
+    case "flower": {
+      grassBase();
+      // a small flower cluster
+      const fc = ["#ff9ad5", "#ffd54f", "#ff7d6e", "#e08ee8"][Math.floor(h(1) * 4)];
+      const fx = 5 + Math.floor(h(2) * 6), fy = 6 + Math.floor(h(3) * 6);
+      P(fx, fy - 1, fc); P(fx - 1, fy, fc); P(fx + 1, fy, fc); P(fx, fy + 1, fc); P(fx, fy, "#ffe680");
+      P(fx, fy + 2, "#57a24d"); P(fx, fy + 3, "#4d9345");
+      const f2x = (fx + 5) % 13 + 1, f2y = fy + 4;
+      P(f2x, f2y - 1, "#ffffff"); P(f2x - 1, f2y, "#ffffff"); P(f2x + 1, f2y, "#ffffff"); P(f2x, f2y, "#ffd54f");
+      break;
+    }
+    case "tree": {
+      grassBase();
+      // trunk
+      B(7, 12, 3, 6, "#6f4e2e"); B(7, 12, 1, 6, "#8a6339"); P(9, 13, "#4e3820");
+      // canopy blob: dark rim, mid body, light top-left
+      ctx.fillStyle = "#2d6628";
+      ctx.beginPath(); ctx.ellipse(px + 8, py + 7, 7.5, 6.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#3f9140";
+      ctx.beginPath(); ctx.ellipse(px + 8, py + 7, 6.4, 5.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#57b458";
+      ctx.beginPath(); ctx.ellipse(px + 6.5, py + 5.5, 4, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#79cc74";
+      ctx.beginPath(); ctx.ellipse(px + 6, py + 4.5, 2, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 4; i++) P(3 + Math.floor(h(i) * 10), 3 + Math.floor(h(i + 4) * 8), "#2d6628");
+      break;
+    }
+    case "rock": {
+      ctx.fillStyle = "#4a4f55"; ctx.fillRect(px, py, CELL_W, CELL_H);
+      // boulder facets
+      ctx.fillStyle = "#6e767e";
+      ctx.beginPath(); ctx.moveTo(px + 2, py + 13); ctx.lineTo(px + 5, py + 5); ctx.lineTo(px + 11, py + 4); ctx.lineTo(px + 14, py + 10); ctx.lineTo(px + 13, py + 14); ctx.lineTo(px + 3, py + 14); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#8a929a";
+      ctx.beginPath(); ctx.moveTo(px + 5, py + 5); ctx.lineTo(px + 11, py + 4); ctx.lineTo(px + 12, py + 7); ctx.lineTo(px + 6, py + 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#5d646c";
+      ctx.beginPath(); ctx.moveTo(px + 12, py + 7); ctx.lineTo(px + 14, py + 10); ctx.lineTo(px + 13, py + 14); ctx.lineTo(px + 10, py + 12); ctx.closePath(); ctx.fill();
+      P(5, 6, "#aab2ba"); P(6, 6, "#aab2ba");
+      for (let i = 0; i < 3; i++) P(Math.floor(h(i) * 15), 15 + Math.floor(h(i + 3) * 3), "#3a3f45");
+      break;
+    }
+    case "ore": {
+      ctx.fillStyle = "#4a4f55"; ctx.fillRect(px, py, CELL_W, CELL_H);
+      ctx.fillStyle = "#6e767e";
+      ctx.beginPath(); ctx.moveTo(px + 2, py + 13); ctx.lineTo(px + 5, py + 5); ctx.lineTo(px + 11, py + 4); ctx.lineTo(px + 14, py + 10); ctx.lineTo(px + 13, py + 14); ctx.lineTo(px + 3, py + 14); ctx.closePath(); ctx.fill();
+      // gold veins
+      P(6, 6, "#ffd54f"); P(7, 7, "#ffb347"); P(8, 7, "#ffd54f"); P(9, 9, "#ff9a3c");
+      P(11, 6, "#ffb347"); P(10, 11, "#ffd54f"); P(5, 10, "#ffb347"); P(7, 12, "#ff9a3c");
+      break;
+    }
+    case "floor": {
+      ctx.fillStyle = "#6b5a45"; ctx.fillRect(px, py, CELL_W, CELL_H);
+      for (let i = 0; i < 18; i += 6) B(0, i, CELL_W, 1, "#54462f");
+      B(0, 0, 1, CELL_H, "#54462f"); B(10, 0, 1, CELL_H, "#54462f");
+      for (let i = 0; i < 4; i++) P(2 + Math.floor(h(i) * 12), 2 + Math.floor(h(i + 4) * 14), "#7d6a52");
+      break;
+    }
+    case "dirt": {
+      ctx.fillStyle = "#7a5c3d"; ctx.fillRect(px, py, CELL_W, CELL_H);
+      for (let i = 0; i < 8; i++) P(Math.floor(h(i) * 16), Math.floor(h(i + 4) * 18), h(i + 7) < 0.5 ? "#8a6d4d" : "#6a4e33");
+      for (let i = 0; i < 3; i++) P(Math.floor(h(i + 10) * 15), Math.floor(h(i + 13) * 17), "#96ab68");
+      break;
+    }
+    default: grassBase();
   }
 }
 
-/** Baked 16x16-tile chunk canvas of micro-glyph terrain (cached). */
-export function chunkCanvas(r: Renderer, world: World, seed: number, cx: number, cy: number): HTMLCanvasElement {
+/** Baked 16x16-tile chunk canvas of pixel-art terrain (cached). */
+export function chunkCanvas(world: World, seed: number, cx: number, cy: number): HTMLCanvasElement {
   const key = cx + "," + cy;
   let cvs = chunkCache.get(key);
   if (cvs) return cvs;
   cvs = document.createElement("canvas");
   cvs.width = CHUNK * CELL_W; cvs.height = CHUNK * CELL_H;
   const ctx = cvs.getContext("2d")!;
-  ctx.fillStyle = "#0e3a54";
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#2b6fa8";
   ctx.fillRect(0, 0, cvs.width, cvs.height);
   for (let ty = 0; ty < CHUNK; ty++) {
     for (let tx = 0; tx < CHUNK; tx++) {
-      drawMicroTile(r, ctx, world, cx * CHUNK + tx, cy * CHUNK + ty, seed, tx * CELL_W, ty * CELL_H);
+      drawPixTile(ctx, world, cx * CHUNK + tx, cy * CHUNK + ty, seed, tx * CELL_W, ty * CELL_H);
     }
   }
   chunkCache.set(key, cvs);
