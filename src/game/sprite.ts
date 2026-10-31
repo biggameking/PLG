@@ -5,7 +5,7 @@
 // keeps 100+ species distinguishable.
 import { Pal } from "./types.ts";
 import { Species } from "../data/species.ts";
-import { ELEMENT_GLYPH, ELEMENT_COLOR } from "../data/elements.ts";
+import { ELEMENT_COLOR } from "../data/elements.ts";
 import { Renderer, CELL_W, CELL_H } from "../engine/renderer.ts";
 import { hash2 } from "../engine/rng.ts";
 
@@ -344,11 +344,20 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
   ctx.drawImage(img, dx, dy, dw, dh);
   ctx.restore();
 
-  // element badge floats by the head
+  // element badge: small pixel orb w/ outline + shine, floating by the head
   const el = sp.elements[0];
-  const ex = p.x * CELL_W + (p.dir < 0 ? -dw / 2 - 8 : dw / 2 + 2) - camX;
-  const ey = dy - CELL_H * 0.55;
-  r.glyph(ex, ey, ELEMENT_GLYPH[el], asleep ? dim(ELEMENT_COLOR[el]) : ELEMENT_COLOR[el]);
+  const col = ELEMENT_COLOR[el];
+  const bx = p.x * CELL_W + (p.dir < 0 ? -dw / 2 - 6 : dw / 2 + 4) - camX;
+  const by = dy - CELL_H * 0.55;
+  ctx.save();
+  ctx.globalAlpha = asleep ? 0.55 : 1;
+  ctx.fillStyle = "#1a1d20";
+  ctx.beginPath(); ctx.arc(bx + 5, by + 5, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(bx + 5, by + 5, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = shade(col, 1.5);
+  ctx.beginPath(); ctx.arc(bx + 3.5, by + 3.5, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
 /** Draw the player as a pixel human, anchored bottom-center. */
