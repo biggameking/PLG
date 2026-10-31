@@ -3,6 +3,7 @@
 // Zones: 0 primary (body/head), 1 secondary (legs/belly), 2 accent (ears/horns/tail).
 import { Pal } from "./types.ts";
 import { Species } from "../data/species.ts";
+import { ELEMENT_GLYPH, ELEMENT_COLOR } from "../data/elements.ts";
 import { Renderer, CELL_W, CELL_H } from "../engine/renderer.ts";
 
 interface SpriteDef {
@@ -90,4 +91,9 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
       r.glyph(px + cx * CELL_W, py + ry * CELL_H, ch, asleep ? dim(color) : color);
     }
   }
+  // element badge: tiny element glyph above the head
+  const ex = (p.x - 0.9) * CELL_W + (flip ? 34 : -4) - camX;
+  const ey = py - CELL_H * 0.9;
+  const el = sp.elements[0];
+  r.glyph(ex, ey, ELEMENT_GLYPH[el], asleep ? dim(ELEMENT_COLOR[el]) : ELEMENT_COLOR[el]);
 }
