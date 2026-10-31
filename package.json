@@ -1,0 +1,17 @@
+{
+  "name": "plg",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "PLG — a 2D creature-collecting survival-crafting game in Dwarf-Fortress style",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}

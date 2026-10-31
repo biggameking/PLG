@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PLG</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #0b0d10;
+        color: #c8d3d5;
+        overflow: hidden;
+        height: 100%;
+        font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+      }
+      #game {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        image-rendering: pixelated;
+        cursor: default;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
