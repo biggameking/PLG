@@ -36,6 +36,7 @@ export interface Pal {
   dir: number;      // facing for glyph flip
   skillCd: number;
   mount?: boolean;
+  talent?: number; // hidden IV 0-100 (Palworld TalentBonus): +0..20% hp/atk/def
 }
 
 export function species(p: Pal): Species {
@@ -145,8 +146,8 @@ export interface GameState {
 export const XP_FOR_LEVEL = (lv: number) => 20 + lv * lv * 12;
 export const PAL_XP_FOR_LEVEL = (lv: number) => 15 + lv * lv * 10;
 
-export function statAt(base: number, level: number): number {
-  return Math.floor(base * (1 + (level - 1) * 0.08));
+export function statAt(base: number, level: number, talent = 0): number {
+  return Math.floor(base * (1 + (level - 1) * 0.08) * (1 + talent * 0.002));
 }
 
 export function uid(s: GameState): number {

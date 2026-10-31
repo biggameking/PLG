@@ -91,8 +91,8 @@ export function castSkill(s: GameState, caster: Pal | Player, skill: SkillDef, t
 function atkDefOf(caster: Pal | Player): [number, number] {
   if ("inv" in caster) return [30 + caster.level * 4, 0];
   const sp = SPECIES[(caster as Pal).speciesId];
-  const lv = (caster as Pal).level;
-  return [statAt(sp.atk, lv), statAt(sp.def, lv)];
+  const cp = caster as Pal;
+  return [statAt(sp.atk, cp.level, cp.talent ?? 0), statAt(sp.def, cp.level, cp.talent ?? 0)];
 }
 
 function applyBurst(s: GameState, caster: Pal | Player, skill: SkillDef, byPlayer: boolean): void {
@@ -103,7 +103,7 @@ function applyBurst(s: GameState, caster: Pal | Player, skill: SkillDef, byPlaye
     if (p.mode !== "wild") continue;
     if (Math.hypot(p.x - cx, p.y - cy) > skill.range) continue;
     const mult = effectiveness(skill.element, SPECIES[p.speciesId].elements);
-    const dmg = damage(atk, skill.power, statAt(SPECIES[p.speciesId].def, p.level), mult, rng);
+    const dmg = damage(atk, skill.power, statAt(SPECIES[p.speciesId].def, p.level, p.talent ?? 0), mult, rng);
     hitPal(s, p, dmg, mult, byPlayer, skill.status);
   }
   s.camShake = Math.min(s.camShake + 0.3, 0.6);
@@ -116,7 +116,7 @@ function applyLunge(s: GameState, caster: Pal | Player, skill: SkillDef, tx: num
     if (p.mode !== "wild") continue;
     if (Math.hypot(p.x - tx, p.y - ty) > 1.2) continue;
     const mult = effectiveness(skill.element, SPECIES[p.speciesId].elements);
-    const dmg = damage(atk, skill.power, statAt(SPECIES[p.speciesId].def, p.level), mult, rng);
+    const dmg = damage(atk, skill.power, statAt(SPECIES[p.speciesId].def, p.level, p.talent ?? 0), mult, rng);
     hitPal(s, p, dmg, mult, byPlayer, skill.status);
   }
 }
@@ -140,7 +140,8 @@ export function updateProjectiles(s: GameState, world: World, dt: number): void 
           const partner = activePartner(s);
           if (partner && Math.hypot(partner.x - pr.x, partner.y - pr.y) < 0.5) {
             const mult = effectiveness(skill.element, SPECIES[partner.speciesId].elements);
-            const dmg = damage(statAt(SPECIES[s.pals.find(q=>q.uid===pr.ownerUid)?.speciesId ?? "lamball"].atk, s.pals.find(q=>q.uid===pr.ownerUid)?.level ?? 1), skill.power, statAt(SPECIES[partner.speciesId].def, partner.level), mult, rng);
+            const ownerPal = s.pals.find(q=>q.uid===pr.ownerUid);
+            const dmg = damage(statAt(SPECIES[ownerPal?.speciesId ?? "lamball"].atk, ownerPal?.level ?? 1, ownerPal?.talent ?? 0), skill.power, statAt(SPECIES[partner.speciesId].def, partner.level, partner.talent ?? 0), mult, rng);
             hitPal(s, partner, dmg, mult, true, skill.status);
             dead = true;
           }
@@ -150,9 +151,10 @@ export function updateProjectiles(s: GameState, world: World, dt: number): void 
         for (const p of s.pals) {
           if (p.mode !== "wild") continue;
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.55) {
-            const ownerAtk = pr.owner === "player" ? 30 + s.player.level * 4 : statAt(SPECIES[s.pals.find(q => q.uid === pr.ownerUid)?.speciesId ?? "lamball"].atk, s.pals.find(q => q.uid === pr.ownerUid)?.level ?? 1);
+            const ownerPal = s.pals.find(q => q.uid === pr.ownerUid);
+            const ownerAtk = pr.owner === "player" ? 30 + s.player.level * 4 : statAt(SPECIES[ownerPal?.speciesId ?? "lamball"].atk, ownerPal?.level ?? 1, ownerPal?.talent ?? 0);
             const mult = effectiveness(skill.element, SPECIES[p.speciesId].elements);
-            const dmg = damage(ownerAtk, skill.power, statAt(SPECIES[p.speciesId].def, p.level), mult, rng);
+            const dmg = damage(ownerAtk, skill.power, statAt(SPECIES[p.speciesId].def, p.level, p.talent ?? 0), mult, rng);
             hitPal(s, p, dmg, mult, true, skill.status);
             dead = true;
             break;
@@ -166,7 +168,7 @@ export function updateProjectiles(s: GameState, world: World, dt: number): void 
 
 export function hurtPlayer(s: GameState, power: number, fromUid: number): void {
   const attacker = s.pals.find((p) => p.uid === fromUid);
-  const atk = attacker ? statAt(SPECIES[attacker.speciesId].atk, attacker.level) : 20;
+  const atk = attacker ? statAt(SPECIES[attacker.speciesId].atk, attacker.level, attacker.talent ?? 0) : 20;
   const rng = new Rng(Math.floor(s.t * 1000) + fromUid);
   const def = 20 + s.player.level * 3;
   const dmg = Math.max(1, Math.round(power * (2 * atk) / Math.max(1, atk + 2 * def) * (0.9 + rng.next() * 0.2)));

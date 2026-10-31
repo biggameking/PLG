@@ -59,10 +59,11 @@ export function payCost(s: GameState, cost: [string, number][]): boolean {
 
 export function mkPal(s: GameState, speciesId: string, level: number, x: number, y: number, mode: Pal["mode"]): Pal {
   const sp = SPECIES[speciesId];
-  const maxHp = statAt(sp.hp, level);
+  const talent = Math.floor(Math.random() * 101);
+  const maxHp = statAt(sp.hp, level, talent);
   const p: Pal = {
     uid: uid(s), speciesId, level, xp: 0,
-    hp: maxHp, maxHp,
+    hp: maxHp, maxHp, talent,
     san: sp.san, hunger: 30,
     statuses: [], mode,
     x, y, homeX: x, homeY: y,
@@ -94,7 +95,7 @@ export function palGrantXp(s: GameState, pal: Pal, n: number): void {
     pal.xp -= PAL_XP_FOR_LEVEL(pal.level);
     pal.level++;
     const sp = SPECIES[pal.speciesId];
-    pal.maxHp = statAt(sp.hp, pal.level);
+    pal.maxHp = statAt(sp.hp, pal.level, pal.talent ?? 0);
     pal.hp = pal.maxHp;
     floater(s, pal.x, pal.y - 1, `${sp.name} → Lv${pal.level}`, "#9acd32");
   }

@@ -2,7 +2,7 @@
 export type Work =
   | "kindling" | "watering" | "planting" | "electricity"
   | "handiwork" | "gathering" | "lumbering" | "mining"
-  | "medicine" | "cooling" | "transporting" | "farming";
+  | "medicine" | "cooling" | "transporting" | "farming" | "oilExtraction";
 
 export const WORK_LABEL: Record<Work, string> = {
   kindling: "Kindling",
@@ -17,12 +17,14 @@ export const WORK_LABEL: Record<Work, string> = {
   cooling: "Cooling",
   transporting: "Transporting",
   farming: "Farming",
+  oilExtraction: "Oil Extraction",
 };
 
 export const WORK_GLYPH: Record<Work, string> = {
   kindling: "♦", watering: "≈", planting: "♣", electricity: "ϟ",
   handiwork: "⚒", gathering: "☰", lumbering: "↑", mining: "◙",
   medicine: "✚", cooling: "*", transporting: "►", farming: "♥",
+  oilExtraction: "◉",
 };
 
 // How much work a Lv-suitability pal does per second of effort.

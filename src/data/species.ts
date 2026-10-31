@@ -122,7 +122,7 @@ export const SPECIES: Record<string, Species> = {
     id: "dumud", name: "Dumud", glyph: "d", color: "#b8935f",
     elements: ["ground"], hp: 90, atk: 70, def: 80, speed: 2.0,
     capturePower: 55, food: 3, san: 80,
-    work: { watering: 1, mining: 1, transporting: 1 },
+    work: { watering: 1, mining: 1, transporting: 1, oilExtraction: 1 },
     skills: [[1, "tackle"], [5, "sandBlast"], [12, "stoneShot"]],
     drops: [["pal_fluid", 1, 1]],
     desc: "Mud fish; digs and hauls.", hostile: 1,

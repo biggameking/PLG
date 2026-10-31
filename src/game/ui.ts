@@ -33,7 +33,7 @@ function button(r: Renderer, input: Input, x: number, y: number, w: number, labe
 function palRow(r: Renderer, x: number, y: number, w: number, p: Pal, s: GameState): void {
   const sp = SPECIES[p.speciesId];
   r.glyph(x * CELL_W, y * CELL_H, sp.glyph, sp.color);
-  r.text(x + 2, y, `${sp.name} Lv${p.level}`, C.fg);
+  r.text(x + 2, y, `${sp.name} Lv${p.level} T${p.talent ?? 0}`, C.fg);
   r.bar(x + 2, y, 0, 0, "fg" as never); // noop keep signature
   const hpw = Math.min(6, Math.floor(w * 0.25));
   r.bar(x + w - hpw - 1, y, hpw, p.hp / p.maxHp, "green" as never);
