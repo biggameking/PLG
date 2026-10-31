@@ -11,7 +11,7 @@ import { refreshJobs } from "./game/jobs.ts";
 import { updateStructures, placeStructure, canPlaceAt, structureNear } from "./game/structures.ts";
 import { updatePlayer } from "./game/player.ts";
 import * as ui from "./game/ui.ts";
-import { drawPal } from "./game/sprite.ts";
+import { drawPal, drawHuman } from "./game/sprite.ts";
 import { ITEMS } from "./data/items.ts";
 import { SPECIES } from "./data/species.ts";
 import { SKILLS } from "./data/skills.ts";
@@ -111,6 +111,7 @@ function update(dt: number): void {
   r.camY = Math.max(0, Math.min(WORLD_H * CELL_H - r.h, py - r.h / 2)) + (Math.random() - 0.5) * shake;
 }
 let dayTicked = false;
+let lastPX: number | null = null, lastPY = 0;
 
 // ---------- render ----------
 function render(): void {
@@ -178,20 +179,27 @@ function render(): void {
     drawPal(r, p, sp, r.camX, r.camY, s.t, sleeping);
     // hp bar over damaged pals
     if (p.hp < p.maxHp && p.mode !== "box") {
-      const px = (p.x - 0.5) * CELL_W - r.camX, py = (p.y - 1.5) * CELL_H - r.camY - 4;
+      const px = (p.x - 0.5) * CELL_W - r.camX, py = (p.y - 2.0) * CELL_H - r.camY;
       r.rectPx(px - 4, py, 22, 3, "#330");
       r.ctx.fillStyle = "#e64533";
       r.ctx.fillRect(px - 4, py, 22 * (p.hp / p.maxHp), 3);
     }
     // status icons: sleeping Zzz / working ⚒ / aggro !
-    if (sleeping) r.tileAt(p.x + 0.6, p.y - 1.6, "z", "#8b9a9e");
-    else if (p.mode === "base" && p.jobUid >= 0) r.tileAt(p.x + 0.6, p.y - 1.6, "⚒", "#b0bec5");
-    else if (p.aggroUid >= 0 || p.aggroUid === -2) r.tileAt(p.x + 0.6, p.y - 1.6, "!", "#ff7d6e");
+    if (sleeping) r.tileAt(p.x + 0.6, p.y - 2.2, "z", "#8b9a9e");
+    else if (p.mode === "base" && p.jobUid >= 0) r.tileAt(p.x + 0.6, p.y - 2.2, "⚒", "#b0bec5");
+    else if (p.aggroUid >= 0 || p.aggroUid === -2) r.tileAt(p.x + 0.6, p.y - 2.2, "!", "#ff7d6e");
   }
 
   // player
-  r.shadow(s.player.x * CELL_W - r.camX, s.player.y * CELL_H - r.camY + 5);
-  r.tileAt(s.player.x - 0.5, s.player.y - 0.5, "@", s.player.dodgeT > 0 ? "#4dd0e1" : "#e8f0f2");
+  const pmoving = lastPX !== null && Math.hypot(s.player.x - lastPX, s.player.y - lastPY) > 0.02;
+  lastPX = s.player.x; lastPY = s.player.y;
+  r.shadow(s.player.x * CELL_W - r.camX, s.player.y * CELL_H - r.camY + 5, CELL_W * 1.2);
+  drawHuman(r, s.player.x, s.player.y, s.player.facing, r.camX, r.camY, s.t, pmoving);
+  if (s.player.dodgeT > 0) {
+    r.ctx.globalAlpha = 0.4;
+    drawHuman(r, s.player.x, s.player.y, s.player.facing, r.camX, r.camY, s.t, pmoving);
+    r.ctx.globalAlpha = 1;
+  }
 
   // projectiles
   for (const pr of s.projectiles) {
