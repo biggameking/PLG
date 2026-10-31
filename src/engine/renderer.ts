@@ -4,6 +4,13 @@ import { C, ColorName } from "./palette.ts";
 
 export const CELL_W = 16;
 export const CELL_H = 18;
+// Micro-glyph layer: tiny characters used as pixels. Each world tile is
+// MW x MH micro cells; creature sprites are drawn in micro cells too, so
+// zooming in reveals the whole scene is built from characters.
+export const MICRO_W = 4;
+export const MICRO_H = 5;
+export const TILE_MW = CELL_W / MICRO_W; // 4 micro cells per tile
+export const TILE_MH = CELL_H / MICRO_H; // ~3.6 (rounding handled per-cell)
 
 export class Renderer {
   ctx: CanvasRenderingContext2D;
@@ -13,6 +20,7 @@ export class Renderer {
   cols = 0;
   rows = 0;
   private atlas = new Map<string, HTMLCanvasElement>();
+  private matlas = new Map<string, HTMLCanvasElement>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -74,6 +82,34 @@ export class Renderer {
   /** Draw a glyph at world-tile coords through the camera. */
   tileAt(tx: number, ty: number, ch: string, fg: ColorName | string, bg?: string): void {
     this.glyph(tx * CELL_W - this.camX, ty * CELL_H - this.camY, ch, fg, bg);
+  }
+
+  private mtile(glyph: string, fg: string): HTMLCanvasElement {
+    const key = glyph + "|" + fg;
+    let t = this.matlas.get(key);
+    if (!t) {
+      t = document.createElement("canvas");
+      t.width = MICRO_W;
+      t.height = MICRO_H;
+      const g = t.getContext("2d")!;
+      g.font = `${MICRO_H - 0.5}px ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, monospace`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillStyle = fg;
+      g.fillText(glyph, MICRO_W / 2, MICRO_H / 2 + 0.5);
+      this.matlas.set(key, t);
+    }
+    return t;
+  }
+
+  /** Draw a micro glyph into an arbitrary 2d context at pixel coords. */
+  microInto(ctx: CanvasRenderingContext2D, px: number, py: number, ch: string, fg: string): void {
+    ctx.drawImage(this.mtile(ch, fg), Math.round(px), Math.round(py));
+  }
+
+  /** Draw a micro glyph at world pixel position through the camera. */
+  microGlyph(px: number, py: number, ch: string, fg: string): void {
+    this.ctx.drawImage(this.mtile(ch, fg), Math.round(px - this.camX), Math.round(py - this.camY));
   }
 
   /** Draw text in screen cell coords. */

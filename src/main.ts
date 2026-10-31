@@ -3,7 +3,7 @@ import { Renderer, CELL_W, CELL_H } from "./engine/renderer.ts";
 import { Input } from "./engine/input.ts";
 import { C } from "./engine/palette.ts";
 import { newGame, addItem, itemCount, isNight, log, ownedSpheres } from "./game/state.ts";
-import { World, tileLook, T } from "./game/world.ts";
+import { World, T, chunkCanvas, CHUNK_TILES } from "./game/world.ts";
 import { updateSpawns, dropItem } from "./game/entities.ts";
 import { updatePals } from "./game/ai.ts";
 import { updateProjectiles, updateSpheres, activePartner, catchChance } from "./game/combat.ts";
@@ -116,14 +116,14 @@ let lastPX: number | null = null, lastPY = 0;
 // ---------- render ----------
 function render(): void {
   r.clear();
-  const c0 = Math.floor(r.camX / CELL_W), r0 = Math.floor(r.camY / CELL_H);
-  const c1 = Math.min(WORLD_W - 1, c0 + r.cols + 1), r1 = Math.min(WORLD_H - 1, r0 + r.rows + 1);
-
-  // tiles
-  for (let y = r0; y <= r1; y++) {
-    for (let x = c0; x <= c1; x++) {
-      const [g, fg, bg] = tileLook(world, x, y, seed);
-      r.tileAt(x, y, g, fg, bg);
+  // terrain: micro-glyph chunks — every tile is 16 tiny characters
+  const CHPX = CHUNK_TILES * CELL_W, CHPY = CHUNK_TILES * CELL_H;
+  const ch0x = Math.floor(r.camX / CHPX), ch0y = Math.floor(r.camY / CHPY);
+  const ch1x = Math.floor((r.camX + r.w) / CHPX), ch1y = Math.floor((r.camY + r.h) / CHPY);
+  for (let cy = ch0y; cy <= ch1y; cy++) {
+    for (let cx = ch0x; cx <= ch1x; cx++) {
+      if (cx < 0 || cy < 0 || cx * CHUNK_TILES >= WORLD_W || cy * CHUNK_TILES >= WORLD_H) continue;
+      r.ctx.drawImage(chunkCanvas(r, world, seed, cx, cy), cx * CHPX - r.camX, cy * CHPY - r.camY);
     }
   }
 

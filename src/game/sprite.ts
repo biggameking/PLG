@@ -7,10 +7,11 @@
 import { Pal } from "./types.ts";
 import { Species } from "../data/species.ts";
 import { ELEMENT_GLYPH, ELEMENT_COLOR } from "../data/elements.ts";
-import { Renderer, CELL_W, CELL_H } from "../engine/renderer.ts";
+import { Renderer, CELL_W, CELL_H, MICRO_W, MICRO_H } from "../engine/renderer.ts";
+import { hash2 } from "../engine/rng.ts";
 
 const W = 24, H = 20;
-const SCALE = 2.2; // screen px per sprite pixel -> ~53x44px, ~3.3x2.4 tiles
+const SCALE = 1.0; // sprite pixels are micro cells; 24x20 chars = 96x100px
 
 // pixel indices: 1 primary, 2 secondary, 3 accent, 4 dark, 5 white
 type Pix = Uint8Array; // W*H
@@ -222,39 +223,65 @@ const SPRITES: Record<string, SpriteDef> = {
   $player:     { plan: "human",     colors: ["#d17b3c", "#4d9de0", "#e8c9a0"] },
 };
 
-function darken(hex: string, f: number): string {
+function shade(hex: string, f: number): string {
   const m = /^#(..)(..)(..)$/.exec(hex);
   if (!m) return hex;
-  return `rgb(${Math.floor(parseInt(m[1], 16) * f)},${Math.floor(parseInt(m[2], 16) * f)},${Math.floor(parseInt(m[3], 16) * f)})`;
+  const c = (i: number) => Math.max(0, Math.min(255, Math.floor(parseInt(m[i], 16) * f)));
+  return `rgb(${c(1)},${c(2)},${c(3)})`;
 }
+function darken(hex: string, f: number): string { return shade(hex, f); }
 function dim(hex: string): string { return darken(hex, 0.45); }
 
 // cache: speciesId -> [frame0, frame1] canvases
 const texCache = new Map<string, [HTMLCanvasElement, HTMLCanvasElement]>();
 
-function buildTex(id: string, frame: number): HTMLCanvasElement {
+// luminance ramp: every sprite pixel is drawn as a tiny character, picked
+// by how bright its shaded color is — the sprite IS a block of text.
+const RAMP = ["·", ":", "░", "▒", "▓", "█"];
+function rampFor(lum: number, h: number): string {
+  const i = Math.max(0, Math.min(RAMP.length - 1, Math.floor(lum / 256 * RAMP.length)));
+  // neighbors in the ramp get swapped by hash for organic texture
+  return RAMP[Math.max(0, Math.min(RAMP.length - 1, i + (h < 0.25 ? -1 : h > 0.8 ? 1 : 0)))];
+}
+function lum(col: string): number {
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(col) ?? /^#(..)(..)(..)$/.exec(col);
+  if (!m) return 128;
+  const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+  return r * 0.3 + g * 0.55 + b * 0.15;
+}
+
+function buildTex(r: Renderer, id: string, frame: number): HTMLCanvasElement {
   const def = SPRITES[id];
   const b = newPix();
   PLANS[def.plan](b, frame);
   const cvs = document.createElement("canvas");
-  cvs.width = W; cvs.height = H;
+  cvs.width = W * MICRO_W; cvs.height = H * MICRO_H;
   const c2 = cvs.getContext("2d")!;
   const pal: string[] = [def.colors[0], def.colors[1], def.colors[2], "#1a1d20", "#ffffff"];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const c = b[y * W + x];
     if (!c) continue;
-    // auto-outline: transparent 4-neighbor -> darkened shade of own color
-    const open = !b[y * W + x - 1] || !b[y * W + x + 1] || !b[(y - 1) * W + x] || !b[(y + 1) * W + x];
-    c2.fillStyle = open ? darken(pal[c - 1], 0.55) : pal[c - 1];
-    c2.fillRect(x, y, 1, 1);
+    const h = hash2(x, y, 31);
+    // volume shading: dark outline on open edges, rim light on top edges,
+    // belly shade in lower quarter, slight per-pixel jitter inside.
+    const openL = !b[y * W + x - 1], openR = !b[y * W + x + 1];
+    const openT = y === 0 || !b[(y - 1) * W + x], openB = y === H - 1 || !b[(y + 1) * W + x];
+    const open = openL || openR || openT || openB;
+    let col = pal[c - 1];
+    if (open) col = shade(col, 0.5);
+    else if (openT) col = shade(col, 1.45);            // rim light
+    else if (y > H * 0.72) col = shade(col, 0.82);     // ground shade
+    else col = shade(col, 0.94 + h * 0.12);            // interior jitter
+    const g = open ? (h < 0.5 ? "░" : "▒") : rampFor(lum(col), h);
+    r.microInto(c2, x * MICRO_W, y * MICRO_H, g, col);
   }
   return cvs;
 }
 
-function tex(id: string, frame: number): HTMLCanvasElement | null {
+function tex(r: Renderer, id: string, frame: number): HTMLCanvasElement | null {
   if (!SPRITES[id]) return null;
   let t = texCache.get(id);
-  if (!t) { t = [buildTex(id, 0), buildTex(id, 1)]; texCache.set(id, t); }
+  if (!t) { t = [buildTex(r, id, 0), buildTex(r, id, 1)]; texCache.set(id, t); }
   return t[frame];
 }
 
@@ -271,9 +298,9 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
   const moving = prev ? Math.hypot(p.x - prev.x, p.y - prev.y) > 0.02 : false;
   lastPos.set(p.uid, { x: p.x, y: p.y });
   const frame = moving ? Math.floor(time * 6 + p.uid) % 2 : 0;
-  const img = tex(p.speciesId, frame)!;
+  const img = tex(r, p.speciesId, frame)!;
 
-  const dw = W * SCALE, dh = H * SCALE;
+  const dw = W * MICRO_W * SCALE, dh = H * MICRO_H * SCALE;
   const bob = moving && frame === 1 ? -3 : (asleep ? 2 : 0);
   const dx = p.x * CELL_W - dw / 2 - camX;
   const dy = p.y * CELL_H - dh + CELL_H - camY + bob;
@@ -298,8 +325,8 @@ export function drawPal(r: Renderer, p: Pal, sp: Species, camX: number, camY: nu
 /** Draw the player as a pixel human, anchored bottom-center. */
 export function drawHuman(r: Renderer, x: number, y: number, dir: number, camX: number, camY: number, time: number, moving: boolean): void {
   const frame = moving ? Math.floor(time * 6) % 2 : 0;
-  const img = tex("$player", frame)!;
-  const dw = W * SCALE, dh = H * SCALE;
+  const img = tex(r, "$player", frame)!;
+  const dw = W * MICRO_W * SCALE, dh = H * MICRO_H * SCALE;
   const bob = moving && frame === 1 ? -3 : 0;
   const dx = x * CELL_W - dw / 2 - camX;
   const dy = y * CELL_H - dh + CELL_H - camY + bob;
