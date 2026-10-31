@@ -11,6 +11,7 @@ import { refreshJobs } from "./game/jobs.ts";
 import { updateStructures, placeStructure, canPlaceAt, structureNear } from "./game/structures.ts";
 import { updatePlayer } from "./game/player.ts";
 import * as ui from "./game/ui.ts";
+import { drawPal } from "./game/sprite.ts";
 import { ITEMS } from "./data/items.ts";
 import { SPECIES } from "./data/species.ts";
 import { SKILLS } from "./data/skills.ts";
@@ -31,6 +32,7 @@ s.player.y = spawn.spawnY + 0.5;
 s.mode = "help";
 
 log(s, "Welcome to PLG. Press H for help.");
+(window as unknown as { __game: unknown }).__game = { s, world };
 
 // ---------- build ghost ----------
 function updateBuildGhost(dt: number): void {
@@ -168,25 +170,23 @@ function render(): void {
     if (it) r.tileAt(d.x - 0.5, d.y - 0.5, it.glyph, it.color);
   }
 
-  // pals
+  // pals — composite mini-sprites
   for (const p of s.pals) {
     const sp = SPECIES[p.speciesId];
-    let ch = sp.glyph;
-    if (p.dir < 0 && /[a-z]/i.test(ch)) ch = ch;
     const sleeping = isNight(s) && !sp.night && p.mode === "wild" && p.aggroUid < 0;
-    r.shadow(p.x * CELL_W - r.camX, p.y * CELL_H - r.camY + 5);
-    r.tileAt(p.x - 0.5, p.y - 0.5, ch, sleeping ? "#4d565c" : sp.color);
+    r.shadow(p.x * CELL_W - r.camX, p.y * CELL_H - r.camY + 5, CELL_W * 1.5);
+    drawPal(r, p, sp, r.camX, r.camY, s.t, sleeping);
     // hp bar over damaged pals
     if (p.hp < p.maxHp && p.mode !== "box") {
-      const px = (p.x - 0.5) * CELL_W - r.camX, py = (p.y - 0.5) * CELL_H - r.camY - 4;
+      const px = (p.x - 0.5) * CELL_W - r.camX, py = (p.y - 1.5) * CELL_H - r.camY - 4;
       r.rectPx(px - 4, py, 22, 3, "#330");
       r.ctx.fillStyle = "#e64533";
       r.ctx.fillRect(px - 4, py, 22 * (p.hp / p.maxHp), 3);
     }
-    // job indicator
-    if (p.mode === "base" && p.jobUid >= 0) {
-      r.tileAt(p.x - 0.5, p.y - 1.3, "⚒", "#7f8c8d");
-    }
+    // status icons: sleeping Zzz / working ⚒ / aggro !
+    if (sleeping) r.tileAt(p.x + 0.6, p.y - 1.6, "z", "#8b9a9e");
+    else if (p.mode === "base" && p.jobUid >= 0) r.tileAt(p.x + 0.6, p.y - 1.6, "⚒", "#b0bec5");
+    else if (p.aggroUid >= 0 || p.aggroUid === -2) r.tileAt(p.x + 0.6, p.y - 1.6, "!", "#ff7d6e");
   }
 
   // player
