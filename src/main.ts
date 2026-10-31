@@ -138,16 +138,21 @@ function render(): void {
     }
   }
 
-  // structures
+  // structures — pixel platform + icon
   for (const st of s.structures) {
     const def = STRUCTURES[st.defId];
     for (let ty = st.y; ty < st.y + def.h; ty++) {
       for (let tx = st.x; tx < st.x + def.w; tx++) {
-        r.tileAt(tx, ty, "░", "#31393f", "#1a2126");
+        const px = tx * CELL_W - r.camX, py = ty * CELL_H - r.camY;
+        r.ctx.fillStyle = "#5c4a38"; r.ctx.fillRect(px, py, CELL_W, CELL_H);
+        r.ctx.fillStyle = "#6e5a44"; r.ctx.fillRect(px, py, CELL_W, 2);
+        r.ctx.fillStyle = "#453628"; r.ctx.fillRect(px, py + CELL_H - 2, CELL_W, 2);
+        r.ctx.fillStyle = "#4e3e2e"; r.ctx.fillRect(px, py + 2, 1, CELL_H - 4);
+        r.ctx.fillRect(px + CELL_W - 1, py + 2, 1, CELL_H - 4);
       }
     }
-    r.tileAt(st.x, st.y, def.glyph, def.color, "#1a2126");
-    if (def.w > 1 && def.h > 1) r.tileAt(st.x + def.w - 1, st.y + def.h - 1, def.glyph, def.color, "#1a2126");
+    r.tileAt(st.x, st.y, def.glyph, def.color);
+    if (def.w > 1 && def.h > 1) r.tileAt(st.x + def.w - 1, st.y + def.h - 1, def.glyph, def.color);
     // farm stage indicator
     if (st.farm) {
       const ch = st.farm.stage === "empty" ? "░" : st.farm.stage === "growing" ? "," : "♣";
