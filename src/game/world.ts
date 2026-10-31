@@ -84,20 +84,63 @@ export class World {
   }
 }
 
-// Tile visuals: [glyph options, fg, bg?]
-export function tileLook(t: Tile, x: number, y: number, seed: number): [string, string, string?] {
+// Tile visuals: [glyph, fg, bg?] — per-tile hash variation + neighbor-aware edges.
+const GREENS = ["#4a7c3f", "#3f6b3a", "#568a48", "#376030"];
+const GRASS_BG = ["#12200e", "#14240f", "#101c0d"];
+const WATER_TONES = ["#2e6f9e", "#356f9e", "#2a6290"];
+const SAND_TONES = ["#c9b578", "#b8a468", "#d0be85"];
+const ROCK_TONES = ["#6b6f72", "#5e6366", "#7a7e80", "#565a5e"];
+const FLOWER_TONES = ["#c678dd", "#e06c75", "#e5c07b", "#ffffff", "#d16d9e"];
+const TREE_TONES = ["#2e6b31", "#3a7d3c", "#265b28"];
+
+export function tileLook(world: World, x: number, y: number, seed: number): [string, string, string?] {
+  const t = world.get(x, y);
   const h = hash2(x, y, seed);
+  const h2 = hash2(x, y, seed + 101);
+  const pick = <A,>(arr: A[], v: number): A => arr[Math.min(arr.length - 1, Math.floor(v * arr.length))];
+
+  const nearWater = world.get(x + 1, y) === "water" || world.get(x - 1, y) === "water" ||
+    world.get(x, y + 1) === "water" || world.get(x, y - 1) === "water";
+  const nearLand = t === "water" && (
+    world.get(x + 1, y) !== "water" || world.get(x - 1, y) !== "water" ||
+    world.get(x, y + 1) !== "water" || world.get(x, y - 1) !== "water");
+
   switch (t) {
-    case "water": return [h < 0.5 ? "≈" : "~", "#2e6f9e", "#0e2a3d"];
-    case "sand": return [h < 0.85 ? "·" : ",", "#b8a468", "#3a3223"];
-    case "grass": return [h < 0.8 ? "·" : (h < 0.9 ? "'" : ","), "#3f6b3a", "#14240f"];
-    case "tallgrass": return [h < 0.7 ? "♣" : "♠", "#4d7d47", "#14240f"];
-    case "flower": return [h < 0.5 ? "✿" : "❀", "#c678dd", "#14240f"];
-    case "tree": return ["♣", "#2e6b31", "#0e1c0c"];
-    case "rock": return ["▲", "#6b6f72", "#1a1d20"];
-    case "ore": return ["▓", "#e8963c", "#1a1d20"];
-    case "floor": return ["·", "#4d565c", "#20262c"];
-    case "dirt": return ["·", "#5d4934", "#241a10"];
+    case "water": {
+      if (nearLand) return [h < 0.4 ? "≈" : "~", "#5b9ec4", "#123447"];
+      return [h < 0.5 ? "≈" : "~", pick(WATER_TONES, h2), "#0c2637"];
+    }
+    case "sand": {
+      const g = h < 0.6 ? "·" : h < 0.8 ? "," : h < 0.93 ? "\"" : "n";
+      return [g, pick(SAND_TONES, h2), h < 0.5 ? "#352e20" : "#3a3223"];
+    }
+    case "grass": {
+      if (h2 < 0.10) return [h < 0.5 ? ";" : "w", "#2c4d28", pick(GRASS_BG, h)]; // dark moss patches
+      const g = h < 0.35 ? "'" : h < 0.55 ? "`" : h < 0.75 ? "," : h < 0.88 ? "." : "w";
+      const fg = nearWater ? "#3a5f38" : pick(GREENS, h2 * 3.7 % 1);
+      return [g, fg, pick(GRASS_BG, h)];
+    }
+    case "tallgrass": {
+      const g = h < 0.5 ? "♣" : h < 0.8 ? "♠" : "w";
+      return [g, pick(["#5b9152", "#4d7d47", "#66a15c"], h2), pick(GRASS_BG, h)];
+    }
+    case "flower": {
+      const g = h < 0.4 ? "✿" : h < 0.7 ? "❀" : "✾";
+      return [g, pick(FLOWER_TONES, h2), "#14240f"];
+    }
+    case "tree": {
+      return [h < 0.72 ? "♣" : "♠", pick(TREE_TONES, h2), "#0d1a0b"];
+    }
+    case "rock": {
+      const g = h < 0.45 ? "▲" : h < 0.7 ? "▴" : h < 0.85 ? "^" : "n";
+      return [g, pick(ROCK_TONES, h2), "#16181b"];
+    }
+    case "ore": {
+      const g = h < 0.6 ? "▓" : h < 0.85 ? "▒" : "◆";
+      return [g, pick(["#e8963c", "#d4af37", "#c97e2a"], h2), "#16181b"];
+    }
+    case "floor": return [h < 0.8 ? "·" : "-", "#4d565c", "#1e242a"];
+    case "dirt": return [h < 0.7 ? "·" : ",", "#5d4934", "#201810"];
     default: return ["·", "#3f6b3a"];
   }
 }

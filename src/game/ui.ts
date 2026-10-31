@@ -85,13 +85,16 @@ export function drawHUD(r: Renderer, s: GameState, input: Input, camX: number, c
     r.text(20, r.rows - 1, `Q ${s.aimSphere ? "◉" : "◐"} ${ITEMS[sid].name} x${itemCount(s, sid)} (R swap)`, s.aimSphere ? C.cyan : C.fgDim);
   }
 
-  // log (above hotbar, right side)
+  // log (above hotbar, right side) — translucent backing for readability
   for (let i = 0; i < s.log.length; i++) {
-    r.text(r.cols - 42, r.rows - 1 - s.log.length + i, s.log[i].slice(0, 40), C.fgDim);
+    const ly = r.rows - 1 - s.log.length + i;
+    r.rect(r.cols - 42, ly, 42, 1, "rgba(8,10,14,0.72)");
+    r.text(r.cols - 42, ly, s.log[i].slice(0, 40), i === s.log.length - 1 ? C.fg : C.fgDim);
   }
 
   // interaction hint
-  r.text(1, r.rows - 2, "E interact · I inv · B build · T tech · H help", C.fgDark);
+  r.rect(0, r.rows - 2, 50, 1, "rgba(8,10,14,0.55)");
+  r.text(1, r.rows - 2, "E interact · I inv · B build · T tech · H help", "#8b9a9e");
 }
 
 // ---------- sphere aim overlay ----------

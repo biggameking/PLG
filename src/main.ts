@@ -119,7 +119,7 @@ function render(): void {
   // tiles
   for (let y = r0; y <= r1; y++) {
     for (let x = c0; x <= c1; x++) {
-      const [g, fg, bg] = tileLook(world.get(x, y), x, y, seed);
+      const [g, fg, bg] = tileLook(world, x, y, seed);
       r.tileAt(x, y, g, fg, bg);
     }
   }
@@ -140,10 +140,11 @@ function render(): void {
     const def = STRUCTURES[st.defId];
     for (let ty = st.y; ty < st.y + def.h; ty++) {
       for (let tx = st.x; tx < st.x + def.w; tx++) {
-        const ch = ty === st.y && tx === st.x ? def.glyph : (ty === st.y + def.h - 1 && tx === st.x + def.w - 1 ? def.glyph.toLowerCase() : "░");
-        r.tileAt(tx, ty, ch, def.color, "#1c2229");
+        r.tileAt(tx, ty, "░", "#31393f", "#1a2126");
       }
     }
+    r.tileAt(st.x, st.y, def.glyph, def.color, "#1a2126");
+    if (def.w > 1 && def.h > 1) r.tileAt(st.x + def.w - 1, st.y + def.h - 1, def.glyph, def.color, "#1a2126");
     // farm stage indicator
     if (st.farm) {
       const ch = st.farm.stage === "empty" ? "░" : st.farm.stage === "growing" ? "," : "♣";
@@ -173,6 +174,7 @@ function render(): void {
     let ch = sp.glyph;
     if (p.dir < 0 && /[a-z]/i.test(ch)) ch = ch;
     const sleeping = isNight(s) && !sp.night && p.mode === "wild" && p.aggroUid < 0;
+    r.shadow(p.x * CELL_W - r.camX, p.y * CELL_H - r.camY + 5);
     r.tileAt(p.x - 0.5, p.y - 0.5, ch, sleeping ? "#4d565c" : sp.color);
     // hp bar over damaged pals
     if (p.hp < p.maxHp && p.mode !== "box") {
@@ -188,6 +190,7 @@ function render(): void {
   }
 
   // player
+  r.shadow(s.player.x * CELL_W - r.camX, s.player.y * CELL_H - r.camY + 5);
   r.tileAt(s.player.x - 0.5, s.player.y - 0.5, "@", s.player.dodgeT > 0 ? "#4dd0e1" : "#e8f0f2");
 
   // projectiles
@@ -207,6 +210,13 @@ function render(): void {
     r.textPx((f.x - 0.5) * CELL_W - r.camX, (f.y - 0.5 - f.t * 0.8) * CELL_H - r.camY, f.s, f.color);
   }
 
+  // dawn/dusk warm tint
+  const tod = s.timeOfDay;
+  const dawn = Math.max(0, 0.30 - Math.abs(tod - 0.28)) / 0.30;
+  const dusk = Math.max(0, 0.25 - Math.abs(tod - 0.80)) / 0.25;
+  const warm = Math.max(dawn, dusk) * 0.10;
+  if (warm > 0.005) r.fill(`rgba(255,138,60,${warm.toFixed(3)})`);
+
   // night lighting
   const nightA = isNight(s) ? 0.55 : 0;
   if (nightA > 0) {
@@ -223,6 +233,8 @@ function render(): void {
     }
     r.nightOverlay(nightA, lights);
   }
+
+  r.vignette();
 
   // UI layers
   ui.drawHUD(r, s, input, r.camX, r.camY);

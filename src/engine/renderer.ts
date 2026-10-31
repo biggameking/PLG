@@ -100,20 +100,44 @@ export class Renderer {
     this.ctx.fillRect(x, y, w, h);
   }
 
-  /** Box-drawing panel border (single-line CP437). */
+  /** Box-drawing panel border (double-line CP437). */
   panel(cx: number, cy: number, w: number, h: number, title = ""): void {
     this.rect(cx, cy, w, h, C.bgPanel);
-    const top = "┌" + "─".repeat(w - 2) + "┐";
-    const bot = "└" + "─".repeat(w - 2) + "┘";
+    // subtle inner depth: darker top row
+    this.rect(cx + 1, cy + 1, w - 2, 1, "rgba(255,255,255,0.02)");
+    const top = "╔" + "═".repeat(w - 2) + "╗";
+    const bot = "╚" + "═".repeat(w - 2) + "╝";
     this.text(cx, cy, top, C.border);
     this.text(cx, cy + h - 1, bot, C.border);
     for (let y = cy + 1; y < cy + h - 1; y++) {
-      this.glyph(cx * CELL_W, y * CELL_H, "│", C.border);
-      this.glyph((cx + w - 1) * CELL_W, y * CELL_H, "│", C.border);
+      this.glyph(cx * CELL_W, y * CELL_H, "║", C.border);
+      this.glyph((cx + w - 1) * CELL_W, y * CELL_H, "║", C.border);
     }
     if (title) {
-      this.text(cx + 2, cy, ` ${title} `, C.cyan);
+      this.text(cx + 2, cy, `╡ ${title} ╞`, C.cyan);
     }
+  }
+
+  /** Soft dark vignette around screen edges. */
+  vignette(strength = 0.28): void {
+    const ctx = this.ctx;
+    const g = ctx.createRadialGradient(
+      this.w / 2, this.h / 2, Math.min(this.w, this.h) * 0.42,
+      this.w / 2, this.h / 2, Math.max(this.w, this.h) * 0.78,
+    );
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, `rgba(0,0,0,${strength})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, this.w, this.h);
+  }
+
+  /** Elliptical drop shadow under an entity (world px coords). */
+  shadow(px: number, py: number, w = CELL_W * 0.8): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(px, py, w / 2, w / 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   /** Horizontal progress bar made of █ / ░ cells. */
