@@ -20,6 +20,8 @@ var wander_t := 0.0
 var target := Vector2.ZERO
 var atk_cd := 0.0
 var spec: Dictionary = {}
+var job_site = null
+var needs_t := 0.0
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
@@ -72,11 +74,15 @@ func _physics_process(dt: float) -> void:
 	if hp <= 0:
 		return
 	atk_cd -= dt
+	if mode != "wild":
+		tick_needs(dt)
 	match mode:
 		"wild":
 			wild_ai(dt)
 		"partner":
 			partner_ai(dt)
+		"base":
+			base_ai(dt)
 	sync_screen()
 
 func wild_ai(dt: float) -> void:
@@ -132,3 +138,35 @@ func partner_ai(dt: float) -> void:
 		return
 	if pos.distance_to(pl.pos) > 1.8:
 		step_toward(pl.pos, dt)
+
+func base_ai(dt: float) -> void:
+	if job_site:
+		var site_cell: Vector2i = Vector2i(-1, -1)
+		for k in game.structures:
+			if game.structures[k] == job_site:
+				site_cell = k
+				break
+		if site_cell.x >= 0:
+			step_toward(Vector2(site_cell.x + 0.5, site_cell.y + 0.5), dt)
+	else:
+		wander_t -= dt
+		if wander_t <= 0:
+			wander_t = 2.0 + game.rng.next() * 3.0
+			var a := game.rng.next() * TAU
+			target = pos + Vector2(cos(a), sin(a)) * 2.0
+		if pos.distance_to(target) > 0.4:
+			step_toward(target, dt)
+
+func tick_needs(dt: float) -> void:
+	needs_t += dt
+	if needs_t < 1.0:
+		return
+	needs_t = 0
+	hunger = minf(100.0, hunger + 0.5)
+	san = maxf(0.0, san - (0.2 if job_site else 0.05))
+	if hunger > 70:
+		# seek feed box: eat directly for now
+		if game.has_structure("feed_box") and game.item_count("berry") > 0:
+			game.add_item("berry", -1)
+			hunger = maxf(0, hunger - 40)
+			san = minf(100, san + 8)

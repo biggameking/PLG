@@ -29,6 +29,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("dodge") and dodge_t <= 0:
 		dodge_t = 0.35
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if game.panel != "":
+			return
 		if aiming:
 			throw_sphere()
 		else:

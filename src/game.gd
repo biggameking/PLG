@@ -17,6 +17,13 @@ var t := 0.0               # world seconds
 var day := 1
 var tod := 8.0             # hour of day
 var next_uid_v := 1
+var structures := {}          # Vector2i -> {id, node, timer, workers:[]}
+var palbox_pos := Vector2i(-1, -1)  # base anchor; -1 = no base yet
+var tech_points := 0
+var unlocked := ["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
+var build_sel := -1           # index into buildable list; -1 off
+var craft_target: Node2D = null
+var panel := ""
 const DAY_LEN := 240.0     # seconds per game day
 
 @onready var entity_layer: Node2D = $YSort/Entities
@@ -110,6 +117,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		log_msg("Loot: %s x%d" % [ItemData.ITEMS[d[0]]["name"], int(d[2])])
 	pals.erase(p)
 	p.queue_free()
+	gain_xp(p.level * 4)
 
 func hurt_player(atk: float, from: Pal) -> void:
 	if player.dodge_t > 0:
@@ -137,6 +145,7 @@ func resolve_sphere(sp) -> void:
 	if randf() < chance:
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
+		gain_xp(target.level * 3)
 		target.mode = "box"
 		box.append(target)
 		pals.erase(target)
@@ -184,6 +193,7 @@ func _process(dt: float) -> void:
 		if sp["t"] > 0.45:
 			resolve_sphere(sp)
 			spheres_flying.erase(sp)
+	tick_production(dt)
 	# floaters age
 	for f in floaters:
 		f["age"] += dt
@@ -191,3 +201,202 @@ func _process(dt: float) -> void:
 	# respawn trickle
 	if pals.size() < 30 and rng.chance(dt * 0.15):
 		spawn_wild()
+
+# ---------- building / tech / crafting / base ----------
+
+func buildable_list() -> Array:
+	return unlocked.duplicate()
+
+func can_place(sid: String, tx: int, ty: int) -> bool:
+	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
+	if s.is_empty():
+		return false
+	var w: int = s.get("w", 2)
+	var h: int = s.get("h", 2)
+	if not world.flat_at(tx, ty, w, h):
+		return false
+	for dy in range(h):
+		for dx in range(w):
+			if world.blocked(tx + dx, ty + dy):
+				return false
+			if structures.has(Vector2i(tx + dx, ty + dy)):
+				return false
+	return true
+
+func place_structure(sid: String, tx: int, ty: int) -> bool:
+	var s: Dictionary = StructureData.STRUCTURES[sid]
+	for c in s.get("cost", []):
+		if item_count(c[0]) < c[1]:
+			log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
+			return false
+	for c in s.get("cost", []):
+		add_item(c[0], -c[1])
+	var spr := Sprite2D.new()
+	spr.texture = load("res://assets/structures/%s.png" % sid)
+	var w: int = s.get("w", 2)
+	var h: int = s.get("h", 2)
+	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
+	spr.position = Vector2(p.x, p.y - spr.texture.get_height() * 0.5 + 8)
+	entity_layer.add_child(spr)
+	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": []}
+	for dy in range(h):
+		for dx in range(w):
+			structures[Vector2i(tx + dx, ty + dy)] = st
+			world.structures[world.idx(tx + dx, ty + dy)] = st
+	if sid == "palbox":
+		palbox_pos = Vector2i(tx, ty)
+		log_msg("Base established! Assign pals with F.")
+	log_msg("Built %s" % s["name"])
+	return true
+
+func tech_node(sid: String) -> Dictionary:
+	for t in StructureData.TECH:
+		if t["id"] == sid:
+			return t
+	return {}
+
+func unlock(sid: String) -> void:
+	if sid in unlocked:
+		return
+	var t := tech_node(sid)
+	if t.is_empty():
+		return
+	if tech_points < t.get("cost", 0):
+		log_msg("Need %d tech points" % t.get("cost", 0))
+		return
+	tech_points -= t.get("cost", 0)
+	unlocked.append(sid)
+	log_msg("Unlocked %s" % t.get("name", sid))
+
+func recipe(rid: String) -> Dictionary:
+	for r in ItemData.RECIPES:
+		if r["id"] == rid:
+			return r
+	return {}
+
+func craft(recipe_id: String) -> void:
+	var r := recipe(recipe_id)
+	if r.is_empty():
+		return
+	for c in r.get("cost", []):
+		if item_count(c[0]) < c[1]:
+			log_msg("Missing materials")
+			return
+	for c in r.get("cost", []):
+		add_item(c[0], -c[1])
+	add_item(r["out"][0], r["out"][1])
+	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
+
+func gain_xp(n: int) -> void:
+	player.xp += n
+	var need := 30 + player.level * 20
+	if player.xp >= need:
+		player.xp -= need
+		player.level += 1
+		player.max_hp += 10
+		player.hp = player.max_hp
+		tech_points += 2
+		log_msg("Level up! Lv%d (+2 tech pts)" % player.level)
+
+func tick_production(dt: float) -> void:
+	for key in structures:
+		var st = structures[key]
+		if key != cell_of(st):
+			continue # tick once per structure
+		var s: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
+		var job: Dictionary = s.get("job", {})
+		var prod: Array = job.get("produces", [])
+		if prod.is_empty() or st["workers"].is_empty():
+			continue
+		st["timer"] += dt * st["workers"].size()
+		var rate: float = job.get("amount", 30)
+		if st["timer"] >= rate:
+			st["timer"] -= rate
+			for pr in prod:
+				add_item(pr[0], pr[1])
+			var t := ""
+			for pr in prod:
+				t += "+%d %s  " % [pr[1], pr[0]]
+			floaters.push_back({"p": Vector2(key.x + 0.5, key.y + 0.5), "t": t.strip_edges(), "c": "#a8e6a1", "age": 0.0})
+
+func cell_of(st) -> Vector2i:
+	for k in structures:
+		if structures[k] == st:
+			return k
+	return Vector2i(-1, -1)
+
+func structure_at(tw: Vector2):
+	var st = structures.get(Vector2i(int(tw.x), int(tw.y)))
+	if st:
+		return st
+	# try the 8 neighbors for multi-cell footprints
+	for dy in range(-2, 1):
+		for dx in range(-2, 1):
+			st = structures.get(Vector2i(int(tw.x) + dx, int(tw.y) + dy))
+			if st:
+				return st
+	return null
+
+func has_structure(sid: String) -> bool:
+	for k in structures:
+		if structures[k]["id"] == sid:
+			return true
+	return false
+
+func base_pals() -> Array:
+	return pals.filter(func(p): return p.mode == "base")
+
+func box_to_party(bp: Pal) -> void:
+	box.erase(bp)
+	pals.append(bp)
+	bp.mode = "partner" if party.size() < 5 else "base"
+	party.append(bp.uid) if party.size() < 5 else 0
+	var spawn_p := player.pos + Vector2(1.2, 0)
+	bp.pos = spawn_p
+	entity_layer.add_child(bp)
+	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
+
+func party_to_box(uid: int) -> void:
+	var p := find_pal(uid)
+	if not p:
+		return
+	party.erase(uid)
+	pals.erase(p)
+	p.mode = "box"
+	box.append(p)
+	entity_layer.remove_child(p)
+	log_msg("%s -> box" % p.spec["name"])
+
+func assign_worker() -> void:
+	# toggle nearest base pal between wander and assigned to nearest workplace
+	var best: Pal = null
+	var bd := 3.0
+	for p in base_pals():
+		var d := player.pos.distance_to(p.pos)
+		if d < bd:
+			bd = d
+			best = p
+	if not best:
+		log_msg("No base pal nearby")
+		return
+	if best.job_site != null:
+		best.job_site["workers"].erase(best)
+		best.job_site = null
+		log_msg("%s unassigned" % best.spec["name"])
+		return
+	var site = null
+	var sd := 6.0
+	for k in structures:
+		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
+		if s.get("produces") == null:
+			continue
+		var d := best.pos.distance_to(Vector2(k.x, k.y))
+		if d < sd:
+			sd = d
+			site = structures[k]
+	if site:
+		site["workers"].append(best)
+		best.job_site = site
+		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
+	else:
+		log_msg("No workplace nearby")
