@@ -723,6 +723,47 @@ func run() -> void:
 	check("hauler delivers to chest", stone_in_chests.call() >= stone0 + 3,
 		"stone %d->%d carry=%s" % [stone0, stone_in_chests.call(), str(hauler.carry)])
 
+	# lair alpha: engages on approach, tethered to its lair
+	var la: Pal = null
+	for q in game.pals:
+		if q.alpha and q.mode == "wild":
+			la = q
+			break
+	if la:
+		game.tod = 12.0
+		la.aggro = -1; la.statuses.erase("sleep")
+		game.player.pos = la.home
+		la.pos = la.home + Vector2(4, 0)
+		la.wild_ai(0.1)
+		check("lair alpha engages", la.aggro == 0, "aggro=%d" % la.aggro)
+		la.aggro = -1
+		# place it ~11 tiles off-lair on a walkable cell so one step is not blocked
+		var tether_spot := Vector2(-1, -1)
+		for rad in [11, 12, 13]:
+			for dd9 in [Vector2(1,0), Vector2(-1,0), Vector2(0,1), Vector2(0,-1),
+					Vector2(1,1), Vector2(-1,1), Vector2(1,-1), Vector2(-1,-1)]:
+				var cand: Vector2 = la.home + dd9.normalized() * rad
+				# require a clear, elevation-flat straight line home — the
+				# pal can't pathfind, so a cliff edge on the line sticks it
+				var e_home: int = game.world.elev_at(int(la.home.x), int(la.home.y))
+				var clear := true
+				for f9 in [0.0, 0.25, 0.5, 0.75, 1.0]:
+					var mid: Vector2 = cand.lerp(la.home, f9)
+					if game.world.blocked(int(mid.x), int(mid.y)) 							or game.world.elev_at(int(mid.x), int(mid.y)) != e_home:
+						clear = false; break
+				if clear:
+					tether_spot = cand; break
+			if tether_spot.x >= 0: break
+		if tether_spot.x >= 0:
+			la.pos = tether_spot
+			var dh0 := la.pos.distance_to(la.home)
+			var spd0 := la.speed
+			la.wild_ai(0.01)
+			check("lair alpha tethered", la.pos.distance_to(la.home) < dh0,
+				"%.1f->%.1f sp=%s spd=%.2f->%.2f aggro=%d moving=%s spec_spd=%s" % [
+				dh0, la.pos.distance_to(la.home), la.species_id, spd0, la.speed,
+				la.aggro, str(la.moving), str(la.spec.get("speed"))])
+
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null

@@ -18,6 +18,7 @@ var statuses := {}           # kind -> until_t
 var aggro := -1              # -1 none, 0 player, >0 pal uid
 var wander_t := 0.0
 var carry = null             # {id,n} while hauling
+var home := Vector2.ZERO     # spawn anchor; alphas tether to their lair
 var target := Vector2.ZERO
 var atk_cd := 0.0
 var spec: Dictionary = {}
@@ -43,7 +44,8 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	san = spec.get("san", 80)
 	pos = at
 	target = at
-	speed = spec.get("speed", 2.6)
+	home = at
+	speed = base_move_speed()
 	uid = game.next_uid()
 	sex = "M" if game.rng.chance(0.5) else "F"
 	roll_passives()
@@ -54,6 +56,14 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	if alpha:
 		sprite.scale = Vector2(1.6, 1.6)
 		sprite.position.y = -51.0
+
+func base_move_speed() -> float:
+	# species.gd stores tiles/sec (2-3.5); species_gen.gd carries stat-scale
+	# values (40-88+) — normalize both onto a sane tiles/sec curve
+	var s: float = spec.get("speed", 2.6)
+	if s > 10.0:
+		return 1.8 + s * 0.035
+	return s
 
 func hostile() -> int:
 	return spec.get("hostile", 1)
@@ -103,8 +113,7 @@ func _physics_process(dt: float) -> void:
 	if has_status("sleep") or stun_t > 0:
 		sync_screen()
 		return
-	var base_speed: float = spec.get("speed", 2.6)
-	speed = base_speed * status_speed_mult()
+	speed = base_move_speed() * status_speed_mult()
 	atk_cd -= dt
 	# far wild pals tick their AI at ~8Hz (accumulated dt keeps speeds honest)
 	var far := mode == "wild" and pos.distance_squared_to(game.player.pos) > 784.0
@@ -168,6 +177,14 @@ func wild_ai(dt: float) -> void:
 			if pd > 16:
 				aggro = -1
 		return
+	# lair alpha: tethered to its lair; engages only on home ground
+	if alpha:
+		if pos.distance_squared_to(home) > 81.0:
+			step_toward(home, dt)
+			return
+		if dist < 6.0 and not has_status("sleep"):
+			aggro = 0
+			return
 	# wander
 	wander_t -= dt
 	if wander_t <= 0:

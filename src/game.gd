@@ -919,10 +919,10 @@ func start_raid() -> void:
 	var n := 3 + rng.int_range(0, 2)
 	var spawned := 0
 	for i in n:
-		var ang := rng.next() * TAU
 		var placed := false
-		for try in 20:
-			var r := 14.0 + rng.next() * 6.0
+		for try in 40:
+			var ang := rng.next() * TAU
+			var r := 12.0 + rng.next() * 12.0
 			var tx := int(c.x + cos(ang) * r); var ty := int(c.y + sin(ang) * r)
 			if world.blocked(tx, ty):
 				continue
