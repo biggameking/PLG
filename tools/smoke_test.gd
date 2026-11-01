@@ -665,7 +665,7 @@ func run() -> void:
 			var dd := game.world.decor_at(tx, ty)
 			if dd == World.Decor.TREE_A or dd == World.Decor.TREE_B:
 				game.world.hp[game.world.idx(tx, ty)] = 1
-				game.try_harvest(game.player.pos, 0)
+				game.try_harvest(game.player.pos, Vector2(1, 0))
 				dxy = Vector2i(tx, ty)
 				break
 		if dxy != null: break

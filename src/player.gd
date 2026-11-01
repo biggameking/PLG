@@ -12,6 +12,7 @@ var xp := 0
 var capture_level := 1
 var dodge_t := 0.0
 var mount: Pal = null
+var facing := Vector2(1, 0)  # last move direction, for harvest/interact
 var equipment := {"weapon": "", "armor": ""}
 var atk_cd := 0.0
 var sphere_sel := 0
@@ -62,7 +63,7 @@ func melee() -> void:
 		p.hit(d, mult, true)
 		hit_any = true
 	if not hit_any:
-		game.try_harvest(pos, dir)
+		game.try_harvest(pos, facing)
 
 func throw_sphere() -> void:
 	var tiers := game.sphere_tiers()
@@ -107,6 +108,8 @@ func _physics_process(dt: float) -> void:
 		if statuses[k] <= game.t:
 			statuses.erase(k)
 	var iv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if iv.length_squared() > 0.01:
+		facing = iv.normalized()
 	hunger = maxf(0.0, hunger - dt * 0.075)
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp

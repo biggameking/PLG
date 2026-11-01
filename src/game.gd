@@ -298,10 +298,13 @@ func resolve_sphere(sp) -> void:
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
 		target.aggro = 0 if target.hostile() >= 1 else -1
 
-func try_harvest(at: Vector2, dir: int) -> void:
-	# hit the decor tile the player faces
-	var tx := int(at.x) + dir
-	var ty := int(at.y)
+func try_harvest(at: Vector2, face: Vector2) -> void:
+	# hit the decor tile on the dominant axis the player faces (was x-only)
+	var tx := int(at.x); var ty := int(at.y)
+	if absf(face.x) >= absf(face.y):
+		tx += int(signf(face.x))
+	else:
+		ty += int(signf(face.y))
 	var d := world.decor_at(tx, ty)
 	if d == World.Decor.NONE:
 		return
