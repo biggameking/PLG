@@ -179,7 +179,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Rampaging inferno berserker.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "human"
  },
  "blazehowl": {
@@ -227,7 +227,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Fire-maned hellhound.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "quadruped"
  },
  "bushi": {
@@ -276,7 +276,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Fire-blade ronin pal.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "human"
  },
  "ragnahawk": {
@@ -325,7 +325,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Phoenix-tier fire raptor.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "bird"
  },
  "suzaku": {
@@ -373,7 +373,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Vermillion fire god-bird.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "bird"
  },
  "blazamut": {
@@ -422,7 +422,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Magma-hide behemoth.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "cow"
  },
  "kelpsea": {
@@ -749,7 +749,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Sea leviathan emperor.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "serpent"
  },
  "gobfin": {
@@ -1644,7 +1644,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Storm-claw thunderbird.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "bird"
  },
  "rayhound": {
@@ -1692,7 +1692,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Lightning-speed hound.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "quadruped"
  },
  "dazzi": {
@@ -1825,7 +1825,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Minigun-armed storm bear.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "cow"
  },
  "sweepa": {
@@ -2101,7 +2101,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Legendary winged ice steed.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "deer"
  },
  "mau_cryst": {
@@ -3190,7 +3190,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Scorpion death-knight.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "human"
  },
  "shadowbeak": {
@@ -3239,7 +3239,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Void-rift war raptor.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "bird"
  },
  "necromus": {
@@ -3288,7 +3288,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Abyssal doom knight.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "human"
  },
  "helzephyr": {
@@ -3342,7 +3342,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Storm-soul herald.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "bird"
  },
  "tombat": {
@@ -3430,7 +3430,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Supersonic sky dragon.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "bird"
  },
  "paladius": {
@@ -3582,7 +3582,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Metal-jawed void dragon.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "quadruped"
  },
  "elphidran": {
@@ -3988,7 +3988,7 @@ const SPECIES = {
    ]
   ],
   "desc": "Abyss serpent overlord.",
-  "hostile": 1,
+  "hostile": 2,
   "body": "serpent"
  },
  "glimmora": {

@@ -772,6 +772,23 @@ func run() -> void:
 		check("gen %s capture scale" % gid, ch < 0.9, "capturePower=%s ch=%.2f" % [str(gsp["capturePower"]), ch])
 		break
 
+	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
+	var apex: Pal = null
+	for q in game.pals:
+		if q.mode == "wild" and q.hostile() == 2:
+			apex = q; break
+	if apex:
+		game.tod = 12.0
+		apex.aggro = -1; apex.statuses.erase("sleep")
+		apex.pos = game.player.pos + Vector2(4.5, 0)
+		apex.wild_ai(0.05)
+		check("apex aggros on sight", apex.aggro == 0, "aggro=%d" % apex.aggro)
+		game.tod = 23.0
+		apex.aggro = -1; apex.hit_flash = 0
+		apex.wild_ai(0.05)
+		check("apex stays up at night", not apex.has_status("sleep"), str(apex.statuses))
+		game.tod = 12.0
+
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null
