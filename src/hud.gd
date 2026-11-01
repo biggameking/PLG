@@ -149,6 +149,9 @@ func interact() -> void:
 				game.chest_ref = st
 				game.panel = "chest"
 				return
+			"pal_condenser":
+				game.condense_active()
+				return
 	if game.has_structure("palbox"):
 		game.panel = "palbox"
 		return
@@ -395,7 +398,7 @@ func draw_palbox(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 24, y - 12, 220, 18)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
-		draw_string(font, Vector2(rect.position.x, y), "%s %s Lv%d %s  HP%d/%d  %s" % [p.spec["name"], p.sex, p.level, passive_str(p), int(p.hp), int(p.max_hp), p.mode],
+		draw_string(font, Vector2(rect.position.x, y), "%s %s%s Lv%d %s  HP%d/%d  %s" % [p.spec["name"], p.sex, star_str(p), p.level, passive_str(p), int(p.hp), int(p.max_hp), p.mode],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		y += 19
 	y += 12
@@ -435,6 +438,14 @@ func draw_chat(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), "Say: " + chat_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
+
+func star_str(p: Pal) -> String:
+	var s := ""
+	for i in p.star:
+		s += "*"
+	if s != "":
+		s = " " + s
+	return s
 
 func passive_str(p: Pal) -> String:
 	var s := ""

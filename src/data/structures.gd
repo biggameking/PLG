@@ -460,6 +460,25 @@ const STRUCTURES = {
   "job": {"kind": "pump", "workType": "oilExtraction", "amount": 240, "produces": [["polymer", 1]]},
   "desc": "An oil-extracting pal refines polymer here."
  },
+ "pal_condenser": {
+  "id": "pal_condenser",
+  "name": "Pal Condenser",
+  "glyph": "★",
+  "color": "#7a5ac9",
+  "w": 2,
+  "h": 1,
+  "cost": [
+   [
+    "paldium",
+    4
+   ],
+   [
+    "ingot",
+    6
+   ]
+  ],
+  "desc": "Fuse same-species pals into the active pal's star rank."
+ },
  "ranch": {
   "id": "ranch",
   "name": "Ranch",
@@ -746,6 +765,12 @@ const TECH = [
   "name": "Musket Ball",
   "tier": 6,
   "cost": 1
+ },
+ {
+  "id": "pal_condenser",
+  "name": "Pal Condenser",
+  "tier": 6,
+  "cost": 3
  },
  {
   "id": "ultra_sphere",

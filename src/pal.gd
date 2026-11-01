@@ -50,8 +50,7 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	sex = "M" if game.rng.chance(0.5) else "F"
 	roll_passives()
 	if alpha:
-		max_hp *= 4.0
-		hp = max_hp
+		hp = max_hp # apply_bonuses already folded the 4x into max_hp
 	setup_visuals("res://assets/pals/%s_f0.png" % sp_id, "res://assets/pals/%s_f1.png" % sp_id)
 	if alpha:
 		sprite.scale = Vector2(1.6, 1.6)
@@ -353,12 +352,36 @@ func roll_passives() -> void:
 		var k: String = keys[game.rng.int_range(0, keys.size() - 1)]
 		if k not in passives:
 			passives.append(k)
+	apply_bonuses()
+
+func apply_bonuses() -> void:
+	atk_bonus = 1.0
+	def_bonus = 1.0
+	speed = base_move_speed() # recompute — repeat calls must not compound
 	var pv: Dictionary
 	for k in passives:
 		pv = PassiveData.PASSIVES[k]
 		atk_bonus *= pv.get("atk", 1.0)
 		def_bonus *= pv.get("def", 1.0)
 		speed *= pv.get("speed", 1.0)
+	# star rank stacks on top of passives (Palworld essence condenser)
+	var star_mult := pow(1.15, star)
+	atk_bonus *= star_mult
+	def_bonus *= star_mult
+	max_hp = Combat.stat_at(spec["hp"], level, talent) * star_mult
+	if alpha:
+		max_hp *= 4.0
+	if boss:
+		max_hp *= 2.0
+	hp = minf(hp, max_hp)
+
+# condense: +1 star rank; stats scale, current hp grows proportionally
+func condense() -> void:
+	star += 1
+	var frac := hp / maxf(1.0, max_hp)
+	apply_bonuses()
+	hp = max_hp * frac
 
 var atk_bonus := 1.0
 var def_bonus := 1.0
+var star := 0 # essence-condense rank 0-4; each star multiplies combat stats

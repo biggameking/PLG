@@ -729,6 +729,14 @@ def make_structure(sid, color, w, h):
         d.line([(W//2 - 14, 24), (W//2 + 14, 24)], fill=hxc("#4d9de0") + (255,), width=2)
         for (dx, dy) in ((-6, 30), (2, 33), (8, 29)):
             d.ellipse([W//2 + dx - 2, dy, W//2 + dx + 2, dy + 4], fill=hxc("#aef0fa") + (255,))
+    elif sid == "pal_condenser":
+        # two joining cylinders + star spark between them
+        d.rectangle([8, 16, 26, 44], fill=hxc("#5a448f") + (255,))
+        d.rectangle([W - 26, 16, W - 8, 44], fill=hxc("#5a448f") + (255,))
+        d.rectangle([W//2 - 3, 14, W//2 + 3, 44], fill=hxc("#b09ae0") + (255,))
+        for dx, dy in [(0, -6), (0, 6), (-6, 0), (6, 0)]:
+            d.rectangle([W//2 + dx - 1, 10 + dy - 1, W//2 + dx + 1, 10 + dy + 1],
+                        fill=hxc("#ffe89a") + (255,))
     elif sid == "oil_extractor":
         d.rectangle([W//2 - 4, 12, W//2 + 4, 40], fill=hxc("#3c352b") + (255,))
         d.polygon([(W//2 - 14, 20), (W//2 + 12, 12), (W//2 + 16, 18), (W//2 - 10, 26)],
@@ -754,6 +762,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "torch": ("#e8963c", 1, 1), "straw_bed": ("#b8a468", 2, 1),
     "gathering_site": ("#7d9a4a", 2, 2), "pharmacy": ("#8fd0a0", 2, 1),
     "cooler": ("#a8dff0", 1, 1), "oil_extractor": ("#4d565c", 2, 2),
+    "pal_condenser": ("#7a5ac9", 2, 1),
 }
 
 # =========================================================================

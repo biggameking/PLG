@@ -809,6 +809,25 @@ func run() -> void:
 		travelled = (prl["pos"] - sh_pos).length()
 		check("projectile hits terrain", travelled < 14.0 * 10.0, "flew %.1f unobstructed" % travelled)
 
+	# essence condenser: 4 same-species box pals -> star+1, stats x1.15
+	if game.party.size() > 0:
+		var ap2: Pal = game.find_pal(game.party[0])
+		var star0 := ap2.star; var mhp0 := ap2.max_hp; var atk0 := ap2.atk_bonus
+		var boxn0 := game.box.size()
+		for j in 4:
+			var fp := Pal.new()
+			fp.setup(game, ap2.species_id, 1, Vector2.ZERO)
+			fp.mode = "box"
+			game.box.append(fp)
+		game.condense_active()
+		check("condense star+1", ap2.star == star0 + 1, "star=%d" % ap2.star)
+		check("condense stats up", ap2.atk_bonus > atk0 and ap2.max_hp > mhp0,
+			"atk %.2f->%.2f hp %.0f->%.0f" % [atk0, ap2.atk_bonus, mhp0, ap2.max_hp])
+		check("condense eats fodder", game.box.size() == boxn0, "box %d->%d" % [boxn0 + 4, game.box.size()])
+		# second condense needs 16 — we only gave 4-4=0 left
+		game.condense_active()
+		check("condense needs fodder", ap2.star == star0 + 1, "star=%d" % ap2.star)
+
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null

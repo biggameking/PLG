@@ -324,6 +324,36 @@ func take_drop(d: Dictionary) -> void:
 	if is_instance_valid(d["node"]):
 		d["node"].queue_free()
 
+# condense costs: star 0->1 needs 4 fodder, then 16/32/64 (Palworld ladder)
+const CONDENSE_COST := [4, 16, 32, 64]
+
+func condense_active() -> void:
+	if party.is_empty():
+		log_msg("No active pal to condense")
+		return
+	var ap: Pal = find_pal(party[0])
+	if ap == null:
+		return
+	if ap.star >= CONDENSE_COST.size():
+		log_msg("%s is already max star" % ap.spec["name"])
+		return
+	var need: int = CONDENSE_COST[ap.star]
+	# fodder = same-species pals in the box (weakest first, active excluded)
+	var fodder: Array = []
+	for bp in box:
+		if bp.species_id == ap.species_id and bp.uid != ap.uid:
+			fodder.append(bp)
+	fodder.sort_custom(func(a, b): return a.level < b.level)
+	if fodder.size() < need:
+		log_msg("Need %d same-species pals for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
+		return
+	for i in need:
+		var fp: Pal = fodder[i]
+		box.erase(fp)
+		fp.free() # box pals aren't in the scene tree — free() not queue_free()
+	ap.condense()
+	log_msg("%s condensed to star %d!" % [ap.spec["name"], ap.star])
+
 func eat_food_item() -> int:
 	# feed-box rule: pals eat the cheapest food on hand (lowest satiety first)
 	var best_id := ""; var best_v := 1 << 30
@@ -807,7 +837,8 @@ func save_game() -> void:
 		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
-			"san": p.san, "hunger": p.hunger, "job": jc})
+			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
+			"star": p.star})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
@@ -823,6 +854,7 @@ func save_game() -> void:
 		"pals": pals_data, "structures": structs,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
+			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
 		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
 	}
@@ -865,6 +897,7 @@ func load_game() -> bool:
 	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
 	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
 	player.xp = d["player"]["xp"]; player.capture_level = d["player"]["cap_lv"]
+	player.hunger = d["player"].get("hunger", player.hunger)
 	var pending_jobs := []
 	for pd in d["pals"]:
 		var np := preload("res://src/pal.gd").new()
@@ -876,11 +909,13 @@ func load_game() -> bool:
 			np.passives = pd["passives"]
 		if pd.get("alpha"):
 			np.alpha = true
-			np.max_hp *= 4.0; np.hp = minf(np.hp, np.max_hp)
 			np.sprite.scale = Vector2(1.6, 1.6)
 		np.boss = pd.get("boss", false)
 		np.san = pd.get("san", np.san)
 		np.hunger = pd.get("hunger", 0.0)
+		np.carry = pd.get("carry")
+		np.star = pd.get("star", 0)
+		np.apply_bonuses()
 		if pd.get("job"):
 			pending_jobs.append([np, pd["job"]])
 		if pd["mode"] == "box":
