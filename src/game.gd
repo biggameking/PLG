@@ -147,9 +147,11 @@ func resolve_sphere(sp) -> void:
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
 		gain_xp(target.level * 3)
 		target.mode = "box"
+		target.statuses.clear()
+		target.aggro = -1
 		box.append(target)
 		pals.erase(target)
-		target.queue_free()
+		entity_layer.remove_child(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
@@ -194,6 +196,7 @@ func _process(dt: float) -> void:
 			resolve_sphere(sp)
 			spheres_flying.erase(sp)
 	tick_production(dt)
+	update_projectiles(dt)
 	# floaters age
 	for f in floaters:
 		f["age"] += dt
@@ -400,3 +403,179 @@ func assign_worker() -> void:
 		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
 	else:
 		log_msg("No workplace nearby")
+
+# ---------- skills / projectiles / statuses ----------
+const ELEM_ORB_IDX := {"neutral": 0, "fire": 1, "water": 2, "grass": 3, "electric": 4,
+	"ice": 5, "ground": 6, "dark": 7, "dragon": 8}
+var projectiles := []
+var orb_tex: Texture2D = preload("res://assets/ui/element_orbs.png")
+
+func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
+	var kind: String = sk.get("kind", "projectile")
+	var elem: String = sk.get("element", "neutral")
+	match kind:
+		"self":
+			caster.hp = minf(caster.max_hp, caster.hp + caster.max_hp * sk.get("power", 20) / 100.0)
+			floater(caster.pos, "+" + sk["name"], "#a8e6a1")
+		"lunge":
+			caster.pos = target_ent.pos + (caster.pos - target_ent.pos).normalized() * 0.9
+			skill_hit(caster, target_ent, sk)
+		"burst":
+			var radius: float = sk.get("range", 4)
+			if caster.mode == "wild":
+				if caster.pos.distance_to(player.pos) <= radius:
+					skill_hit(caster, player, sk)
+			else:
+				for p in pals:
+					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
+						skill_hit(caster, p, sk)
+			floater(caster.pos, sk["name"] + "!", "#ffd76e")
+		_: # projectile
+			var spr := Sprite2D.new()
+			var at := AtlasTexture.new()
+			at.atlas = orb_tex
+			at.region = Rect2(ELEM_ORB_IDX.get(elem, 0) * 16, 0, 16, 16)
+			at.filter_clip = true
+			spr.texture = at
+			spr.scale = Vector2(1.5, 1.5)
+			entity_layer.add_child(spr)
+			projectiles.append({
+				"pos": caster.pos, "dir": (target_ent.pos - caster.pos).normalized(),
+				"speed": sk.get("projectileSpeed", 12), "ttl": sk.get("range", 8) / maxf(1.0, sk.get("projectileSpeed", 12)),
+				"skill": sk, "from": caster, "node": spr,
+			})
+
+func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
+	var elem: String = sk.get("element", "neutral")
+	if target_ent is Player:
+		if player.dodge_t > 0:
+			return
+		player.hp -= maxi(1, int(sk.get("power", 10) * 0.6))
+		player.hit_flash = 0.4
+		floater(player.pos, "-" + str(int(sk.get("power", 10) * 0.6)), "#e64533")
+		var st = sk.get("status")
+		if st and rng.chance(st.get("chance", 1.0)):
+			player_status(st["kind"], st.get("dur", 3))
+		if player.hp <= 0:
+			player.hp = 0
+			log_msg("You were knocked out...")
+	else:
+		var tp: Pal = target_ent
+		var mult := Combat.effectiveness(elem, tp.elem())
+		if tp.has_status("soak") and elem == "electric":
+			mult *= 1.5
+		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent),
+			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent), mult, rng)
+		tp.hit(d, mult, caster.mode != "wild")
+		tp.apply_skill_status(sk)
+		if caster.mode == "partner":
+			gain_xp(maxi(1, d / 4))
+
+func update_projectiles(dt: float) -> void:
+	for pr in projectiles.duplicate():
+		pr["ttl"] -= dt
+		pr["pos"] += pr["dir"] * pr["speed"] * dt
+		var pp: Vector2 = pr["pos"]
+		var n: Sprite2D = pr["node"]
+		n.position = Iso.to_screen(pp.x, pp.y, world.elev_at(int(pp.x), int(pp.y))) - Vector2(0, 20)
+		var dead: bool = pr["ttl"] <= 0
+		var caster: Pal = pr["from"]
+		if not dead:
+			if caster.mode == "wild":
+				if pp.distance_to(player.pos) < 0.55:
+					skill_hit(caster, player, pr["skill"])
+					dead = true
+			else:
+				for p in pals:
+					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
+						skill_hit(caster, p, pr["skill"])
+						dead = true
+						break
+		if dead:
+			n.queue_free()
+			projectiles.erase(pr)
+
+func player_status(kind: String, dur: float) -> void:
+	player.statuses[kind] = t + dur
+	floater(player.pos, kind.to_upper(), "#e8963c")
+
+# ---------- save / load ----------
+func save_game() -> void:
+	var pals_data := []
+	for p in pals:
+		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
+			"mode": p.mode, "hp": p.hp, "talent": p.talent})
+	for bp in box:
+		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
+			"mode": "box", "hp": bp.hp, "talent": bp.talent})
+	var structs := {}
+	for k in structures:
+		structs["%d,%d" % [k.x, k.y]] = structures[k]["id"]
+	var d := {
+		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
+		"unlocked": unlocked, "items": items, "party": party,
+		"pals": pals_data, "structures": structs,
+		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
+			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
+		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
+	}
+	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	f.store_var(d)
+	f.close()
+	log_msg("Saved.")
+
+func load_game() -> bool:
+	if not FileAccess.file_exists("user://savegame.plg"):
+		return false
+	var f := FileAccess.open("user://savegame.plg", FileAccess.READ)
+	var d: Dictionary = f.get_var()
+	f.close()
+	for p in pals:
+		p.queue_free()
+	pals.clear()
+	box.clear()
+	for pr in projectiles:
+		pr["node"].queue_free()
+	projectiles.clear()
+	for k in structures.keys():
+		structures[k]["node"].queue_free()
+	structures.clear()
+	world.structures.clear()
+	world.generate(d["seed"])
+	world.decor = d["decor"]
+	world.hp = d["hp_map"]
+	day = d["day"]; tod = d["tod"]
+	tech_points = d["tech_points"]; unlocked = d["unlocked"]
+	items = d["items"]; party = d["party"]
+	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
+	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
+	player.xp = d["player"]["xp"]; player.capture_level = d["player"]["cap_lv"]
+	for pd in d["pals"]:
+		var np := preload("res://src/pal.gd").new()
+		np.setup(self, pd["sp"], pd["lv"], Vector2(pd["pos"][0], pd["pos"][1]))
+		np.mode = pd["mode"]; np.hp = pd["hp"]; np.talent = pd["talent"]
+		if pd["mode"] == "box":
+			box.append(np)
+		else:
+			entity_layer.add_child(np)
+			pals.append(np)
+	for ks in d["structures"]:
+		var parts: PackedStringArray = ks.split(",")
+		var sid: String = d["structures"][ks]
+		var s: Dictionary = StructureData.STRUCTURES[sid]
+		var tx := int(parts[0]); var ty := int(parts[1])
+		var spr := Sprite2D.new()
+		spr.texture = load("res://assets/structures/%s.png" % sid)
+		var w: int = s.get("w", 2); var h: int = s.get("h", 2)
+		var pp := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
+		spr.position = Vector2(pp.x, pp.y - spr.texture.get_height() * 0.5 + 8)
+		entity_layer.add_child(spr)
+		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": []}
+		for dy in range(h):
+			for dx in range(w):
+				structures[Vector2i(tx + dx, ty + dy)] = st
+				world.structures[world.idx(tx + dx, ty + dy)] = st
+		if sid == "palbox":
+			palbox_pos = Vector2i(tx, ty)
+	log_msg("Loaded.")
+	return true

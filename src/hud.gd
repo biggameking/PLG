@@ -38,6 +38,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
 		interact()
 		return
+	if event.is_action_pressed("save"):
+		game.save_game()
+		return
+	if event.is_action_pressed("load_save"):
+		game.load_game()
+		return
 	if event is InputEventKey and event.pressed and game.panel == "build":
 		var k: int = event.keycode
 		if k >= KEY_1 and k <= KEY_9:

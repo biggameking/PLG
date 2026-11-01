@@ -25,7 +25,11 @@ y_sort_enabled = true
 
 [node name="Entities" type="Node2D" parent="Game/YSort"]
 
-[node name="HUD" type="Control" parent="."]
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="UILayer"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

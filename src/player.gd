@@ -13,6 +13,7 @@ var dodge_t := 0.0
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
+var statuses := {}
 
 func setup(g: Game, at: Vector2) -> void:
 	game = g
@@ -82,9 +83,19 @@ func throw_sphere() -> void:
 func _physics_process(dt: float) -> void:
 	atk_cd -= dt
 	dodge_t -= dt
+	for k in statuses.keys():
+		if statuses[k] <= game.t:
+			statuses.erase(k)
 	var iv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var spd_mult := 1.0
+	if statuses.get("freeze", 0) > game.t:
+		spd_mult *= 0.5
+	if statuses.get("soak", 0) > game.t:
+		spd_mult *= 0.7
+	if statuses.get("sleep", 0) > game.t:
+		iv = Vector2.ZERO
 	if iv.length() > 0 and dodge_t <= 0:
-		var sp := speed * (1.7 if Input.is_action_pressed("sprint") else 1.0)
+		var sp := speed * spd_mult * (1.7 if Input.is_action_pressed("sprint") else 1.0)
 		var step := iv.normalized() * sp * dt
 		var nx: float = pos.x + step.x
 		var ny: float = pos.y + step.y

@@ -22,6 +22,8 @@ var atk_cd := 0.0
 var spec: Dictionary = {}
 var job_site = null
 var needs_t := 0.0
+var skill_cd := {}
+var stun_t := 0.0
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
@@ -70,9 +72,24 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 func elem() -> Array:
 	return spec.get("elements", ["neutral"])
 
+func status_speed_mult() -> float:
+	var m := 1.0
+	if has_status("freeze"):
+		m *= 0.5
+	if has_status("soak"):
+		m *= 0.7
+	return m
+
 func _physics_process(dt: float) -> void:
 	if hp <= 0:
 		return
+	tick_statuses(dt)
+	stun_t -= dt
+	if has_status("sleep") or stun_t > 0:
+		sync_screen()
+		return
+	var base_speed: float = spec.get("speed", 2.6)
+	speed = base_speed * status_speed_mult()
 	atk_cd -= dt
 	if mode != "wild":
 		tick_needs(dt)
@@ -91,11 +108,14 @@ func wild_ai(dt: float) -> void:
 	if aggro == 0:
 		# fight player if aggressive; timid flees
 		if hostile() >= 1:
-			if dist > 1.1:
+			if not cast_skills(pl, dt):
+				if dist > 1.1:
+					step_toward(pl.pos, dt)
+				elif atk_cd <= 0:
+					atk_cd = 1.1
+					game.hurt_player(spec.get("atk", 50), self)
+			elif dist > spec.get("reach", 4.0):
 				step_toward(pl.pos, dt)
-			elif atk_cd <= 0:
-				atk_cd = 1.1
-				game.hurt_player(spec.get("atk", 50), self)
 			if dist > 14:
 				aggro = -1
 		else:
@@ -127,14 +147,17 @@ func partner_ai(dt: float) -> void:
 			bd = d
 			best = p
 	if best:
-		if bd > 1.0:
+		if not cast_skills(best, dt):
+			if bd > 1.0:
+				step_toward(best.pos, dt)
+			elif atk_cd <= 0:
+				atk_cd = 1.0
+				var mult := Combat.effectiveness("neutral", best.elem())
+				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent), 30,
+					Combat.stat_at(best.spec["def"], best.level, best.talent), mult, game.rng)
+				best.hit(d, mult, true)
+		elif bd > 5.0:
 			step_toward(best.pos, dt)
-		elif atk_cd <= 0:
-			atk_cd = 1.0
-			var mult := Combat.effectiveness("neutral", best.elem())
-			var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent), 30,
-				Combat.stat_at(best.spec["def"], best.level, best.talent), mult, game.rng)
-			best.hit(d, mult, true)
 		return
 	if pos.distance_to(pl.pos) > 1.8:
 		step_toward(pl.pos, dt)
@@ -170,3 +193,50 @@ func tick_needs(dt: float) -> void:
 			game.add_item("berry", -1)
 			hunger = maxf(0, hunger - 40)
 			san = minf(100, san + 8)
+
+func learned_skills() -> Array:
+	var out := []
+	for e in spec.get("skills", []):
+		if level >= e[0]:
+			out.append(e[1])
+	return out
+
+func tick_statuses(dt: float) -> void:
+	for k in statuses.keys():
+		if statuses[k] <= game.t:
+			statuses.erase(k)
+			continue
+		match k:
+			"burn":
+				if int(game.t * 5) != int((game.t - dt) * 5):
+					take_dps(maxi(1, int(max_hp * 0.02)))
+			"poison":
+				if int(game.t * 3) != int((game.t - dt) * 3):
+					take_dps(maxi(1, int(max_hp * 0.012)))
+			"shock":
+				if game.rng.chance(dt * 0.25):
+					stun_t = 0.45
+
+func take_dps(n: int) -> void:
+	hp -= n
+	hit_flash = 0.2
+	if hp <= 0:
+		game.kill_pal(self, false)
+
+func cast_skills(target_ent, dt: float) -> bool:
+	var dist := pos.distance_to(target_ent.pos)
+	for sid in learned_skills():
+		if skill_cd.get(sid, 0) > game.t:
+			continue
+		var sk: Dictionary = SkillData.SKILLS.get(sid, {})
+		if sk.is_empty() or dist > sk.get("range", 1.4):
+			continue
+		skill_cd[sid] = game.t + sk.get("cooldown", 2)
+		game.cast_skill(self, target_ent, sk)
+		return true
+	return false
+
+func apply_skill_status(sk: Dictionary, is_behind: bool = false) -> void:
+	var st = sk.get("status")
+	if st and game.rng.chance(st.get("chance", 1.0)):
+		add_status(st["kind"], st.get("dur", 3))

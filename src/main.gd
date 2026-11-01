@@ -14,7 +14,7 @@ func _ready() -> void:
 	for k in ["tree_a", "tree_b", "rock", "ore_gold", "ore_coal", "berry_bush", "stump"]:
 		decor_tex[k] = load("res://assets/decor/%s.png" % k)
 	game.connect("decor_dirty", _on_decor_dirty)
-	$HUD.game = game
+	$UILayer/HUD.game = game
 
 func _on_decor_dirty() -> void:
 	pass # pool keys by world cell; pool refresh reads live data
@@ -30,6 +30,18 @@ func _process(_dt: float) -> void:
 	var pl := game.player
 	if not pl:
 		return
+	# day/night tint: 6-18 bright, dusk/dawn warm, night dark blue
+	var h := game.tod
+	var col: Color
+	if h < 5 or h > 20:
+		col = Color(0.42, 0.48, 0.72)
+	elif h < 7:
+		col = Color(0.85, 0.72, 0.62).lerp(Color.WHITE, (h - 5) / 2)
+	elif h < 17:
+		col = Color.WHITE
+	elif h < 20:
+		col = Color.WHITE.lerp(Color(0.9, 0.6, 0.5), (h - 17) / 3).lerp(Color(0.42, 0.48, 0.72), maxf(0, h - 18.5) / 1.5)
+	$CanvasModulate.color = col
 	cam.global_position = cam.global_position.lerp(pl.global_position, 0.12)
 	refresh_decor()
 	game.drawer.region = visible_tiles()
