@@ -1188,6 +1188,8 @@ func upgrade_perk(k: String) -> void:
 		return
 	add_item("lifmunk_effigy", -cost)
 	perks[k] = lvl + 1
+	if k == "capture":
+		player.capture_level = 1 + perks["capture"] # keep the stat in sync
 	if k == "hp":
 		player.max_hp = 100 + perks["hp"] * 12
 		player.hp = player.max_hp
