@@ -764,6 +764,14 @@ func run() -> void:
 				dh0, la.pos.distance_to(la.home), la.species_id, spd0, la.speed,
 				la.aggro, str(la.moving), str(la.spec.get("speed"))])
 
+	# generated-species capturePower must be on the 30-90 scale —
+	# a basic sphere at full HP should never be a free 97% catch
+	for gid in SpeciesGen.SPECIES.keys():
+		var gsp: Dictionary = SpeciesData.species_of(gid)
+		var ch := Combat.catch_chance(1.0, gsp["capturePower"], 26.0, false, false, 1)
+		check("gen %s capture scale" % gid, ch < 0.9, "capturePower=%s ch=%.2f" % [str(gsp["capturePower"]), ch])
+		break
+
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null

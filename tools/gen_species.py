@@ -99,7 +99,7 @@ NEW = [
  ("bombird","Bombird","bird",["#9a6a4a","#7d523a","#e8734a"],.15,["fire","neutral"],1,{"kindling":1,"gathering":1},[["gunpowder",1,3],["bone",1,1]],"Fuse-headed war bird.",1),
 ]
 
-TIER_STATS = {0: (70,70,70,40,2.6,2,70), 1: (82,82,76,52,2.7,3,75), 2: (96,96,86,70,2.8,4,80), 3: (115,115,98,88,3.0,5,90)}
+TIER_STATS = {0: (70,70,70,40,35,2,70), 1: (82,82,76,52,45,3,75), 2: (96,96,86,70,60,4,80), 3: (115,115,98,88,80,5,90)}
 ELEM_SKILLS = {"neutral":["tackle","airCannon"],"fire":["flameBurst","ignitionBreath"],"water":["hydroJet","aquaBurst"],
  "grass":["seedMachine","grassTornado"],"electric":["shockwave","lightningStrike"],"ice":["iceMissile","blizzard"],
  "ground":["sandBlast","stoneShot"],"dark":["darkBall","nightmare"],"dragon":["dragonBurst","dragonCanon"]}

@@ -13,7 +13,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -52,7 +52,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -96,7 +96,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -141,7 +141,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -194,7 +194,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -242,7 +242,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -291,7 +291,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -340,7 +340,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -388,7 +388,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -437,7 +437,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -477,7 +477,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -526,7 +526,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -565,7 +565,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -605,7 +605,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -659,7 +659,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -712,7 +712,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -764,7 +764,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -809,7 +809,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -854,7 +854,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -899,7 +899,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -943,7 +943,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -983,7 +983,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1028,7 +1028,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1073,7 +1073,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1117,7 +1117,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -1167,7 +1167,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1216,7 +1216,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1262,7 +1262,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -1312,7 +1312,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1357,7 +1357,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -1407,7 +1407,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1447,7 +1447,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1487,7 +1487,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -1526,7 +1526,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1566,7 +1566,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1610,7 +1610,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -1659,7 +1659,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -1707,7 +1707,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -1747,7 +1747,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -1791,7 +1791,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -1840,7 +1840,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -1885,7 +1885,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -1924,7 +1924,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -1974,7 +1974,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -2023,7 +2023,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2068,7 +2068,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -2116,7 +2116,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2160,7 +2160,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2200,7 +2200,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2245,7 +2245,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2289,7 +2289,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -2345,7 +2345,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -2398,7 +2398,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2443,7 +2443,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2487,7 +2487,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2532,7 +2532,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2578,7 +2578,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2623,7 +2623,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2662,7 +2662,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2707,7 +2707,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2751,7 +2751,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2797,7 +2797,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2841,7 +2841,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2886,7 +2886,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -2931,7 +2931,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -2977,7 +2977,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -3016,7 +3016,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3061,7 +3061,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3106,7 +3106,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3152,7 +3152,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -3205,7 +3205,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -3254,7 +3254,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -3304,7 +3304,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -3357,7 +3357,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -3397,7 +3397,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -3445,7 +3445,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -3494,7 +3494,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -3544,7 +3544,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -3597,7 +3597,7 @@ const SPECIES = {
   "atk": 96,
   "def": 86,
   "speed": 70,
-  "capturePower": 2.8,
+  "capturePower": 60,
   "food": 4,
   "san": 80,
   "work": {
@@ -3645,7 +3645,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3685,7 +3685,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -3724,7 +3724,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -3764,7 +3764,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3805,7 +3805,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3854,7 +3854,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -3900,7 +3900,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -3950,7 +3950,7 @@ const SPECIES = {
   "atk": 115,
   "def": 98,
   "speed": 88,
-  "capturePower": 3.0,
+  "capturePower": 80,
   "food": 5,
   "san": 90,
   "work": {
@@ -4003,7 +4003,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -4048,7 +4048,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
@@ -4093,7 +4093,7 @@ const SPECIES = {
   "atk": 70,
   "def": 70,
   "speed": 40,
-  "capturePower": 2.6,
+  "capturePower": 35,
   "food": 2,
   "san": 70,
   "work": {
@@ -4134,7 +4134,7 @@ const SPECIES = {
   "atk": 82,
   "def": 76,
   "speed": 52,
-  "capturePower": 2.7,
+  "capturePower": 45,
   "food": 3,
   "san": 75,
   "work": {
