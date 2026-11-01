@@ -63,12 +63,14 @@ func run() -> void:
 			tgt = q
 			break
 	tgt.hp = 1
-	game.add_item("legendary_sphere", 1)
+	game.add_item("legendary_sphere", 10)
 	var box0 := game.box.size()
-	game.resolve_sphere({"sid": "legendary_sphere", "target": tgt})
+	for try in 12:  # catch is chance-based; retry until captured
+		game.resolve_sphere({"sid": "legendary_sphere", "target": tgt})
+		if tgt.mode == "box":
+			break
 	check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
-	check("catch into box", game.box.size() == box0 + 1 or tgt.aggro != null,
-		"box %d->%d" % [box0, game.box.size()])
+	check("catch into box", game.box.size() == box0 + 1, "box %d->%d" % [box0, game.box.size()])
 
 	# palbox + party
 	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20)

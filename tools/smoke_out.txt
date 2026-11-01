@@ -5,19 +5,18 @@ PASS elevation variance  max elev 3
 PASS pals spawned  42 pals
 PASS species resolve  0 bad
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  272->267
+PASS melee damages pal  227->222
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
-PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
   place log: (113, 115) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  197->185
+PASS burn ticks  95->91
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -37,7 +36,7 @@ PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
 PASS feed box eats  
-PASS level learns skills  Lv15 skills 4
+PASS level learns skills  Lv15 skills 3
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -47,7 +46,7 @@ PASS cliff blocks
 PASS iso roundtrip  
 PASS farm produces  berry 3->5
 PASS generator powered  
-PASS chest store/withdraw  dep1727 wd1727
+PASS chest store/withdraw  dep1736 wd1736
 PASS hostile pal attacks  hp 112->56
 PASS statuses tracked  
 PASS dodge roll moves  
@@ -55,13 +54,13 @@ PASS day rolls over  day 2->2
 PASS medicine heals  hp 112
 PASS sigil consumed  sig1 pals1
 PASS pal levels via xp  Lv15->16 xp0
-  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=50
+  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=50
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  8->8
-  re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  M/["artisan"]
+  re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
+PASS save keeps sex/passives  M/["ferocious"]
 PASS save keeps chest store  
-PASS save keeps workers  4->4 [astegon eikthyrdeer lamball sparkit ]
+PASS save keeps workers  3->3 [necromus eikthyrdeer sparkit ]
 PASS dead partner frees slot  5->4
-PASS save/load  42
+PASS save/load  45
 PASS net host  
