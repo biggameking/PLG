@@ -66,6 +66,7 @@ func run() -> void:
 	game.add_item("legendary_sphere", 1)
 	var box0 := game.box.size()
 	game.resolve_sphere({"sid": "legendary_sphere", "target": tgt})
+	check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
 	check("catch into box", game.box.size() == box0 + 1 or tgt.aggro != null,
 		"box %d->%d" % [box0, game.box.size()])
 

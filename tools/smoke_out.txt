@@ -5,7 +5,8 @@ PASS elevation variance  max elev 3
 PASS pals spawned  42 pals
 PASS species resolve  0 bad
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  259->254
+PASS melee damages pal  263->258
+PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
@@ -15,7 +16,7 @@ PASS craft club
   place log: (113, 115) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  176->164
+PASS burn ticks  108->100
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -45,7 +46,7 @@ PASS iso roundtrip
 PASS farm produces  berry 3->5
 PASS generator powered  
 PASS chest store/withdraw  dep1728 wd1728
-PASS hostile pal attacks  hp 112->34
+PASS hostile pal attacks  hp 112->56
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
@@ -56,9 +57,9 @@ PASS pal levels via xp  Lv15->16 xp0
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  8->8
   re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
-PASS save keeps sex/passives  M/["pacifist"]
+PASS save keeps sex/passives  M/["ferocious", "zen"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [jetragon eikthyrdeer sparkit ]
+PASS save keeps workers  3->3 [necromus eikthyrdeer sparkit ]
 PASS dead partner frees slot  5->4
-PASS save/load  42
+PASS save/load  46
 PASS net host  

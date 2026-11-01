@@ -239,6 +239,7 @@ func resolve_sphere(sp) -> void:
 		box.append(target)
 		pals.erase(target)
 		entity_layer.remove_child(target)
+		entity_layer.remove_child(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
