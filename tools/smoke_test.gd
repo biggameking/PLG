@@ -288,8 +288,13 @@ func run() -> void:
 	check("death drops inventory", game.drops.size() > dcnt0 and game.item_count("wood") == 0,
 		"drops %d->%d" % [dcnt0, game.drops.size()])
 	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20); game.add_item("fiber", 40)
-	# straw bed: sleep advances day + heals
+	# straw bed: raid boss alive -> sleep refused; after killing it -> works
 	var day0: int = game.day
+	game.sleep_to_morning()
+	check("sleep blocked by raid", game.day == day0, "day=%d" % game.day)
+	for q in game.pals:
+		if q.raid and q.hp > 0:
+			game.kill_pal(q, true)
 	game.sleep_to_morning()
 	check("straw bed sleep", game.day == day0 + 1 and p.hp == p.max_hp and game.tod == 6.0)
 	# overlap: cannot build on occupied cell
