@@ -131,6 +131,9 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
 		add_item("lifmunk_effigy", 2)
 	pals.erase(p)
+	party.erase(p.uid)  # dead partners must free their party slot
+	if p.job_site and p in p.job_site["workers"]:
+		p.job_site["workers"].erase(p)
 	p.queue_free()
 	gain_xp(p.level * 4)
 

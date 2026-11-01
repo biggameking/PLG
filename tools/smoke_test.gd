@@ -575,6 +575,12 @@ func run() -> void:
 			job_names += q.species_id + " "
 	check("save keeps workers", re_workers == had_workers, "%d->%d [%s]" % [had_workers, re_workers, job_names])
 
+	# partner death frees the party slot + clears job site
+	var dp: Pal = game.find_pal(game.party[0]) if game.party.size() > 0 else null
+	if dp:
+		var psz0: int = game.party.size()
+		game.kill_pal(dp, true)
+		check("dead partner frees slot", game.party.size() == psz0 - 1, "%d->%d" % [psz0, game.party.size()])
 	# save/load roundtrip
 	game.add_item("gold_coin", 42)
 	var gold0 := game.item_count("gold_coin")

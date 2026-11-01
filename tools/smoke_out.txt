@@ -5,7 +5,7 @@ PASS elevation variance  max elev 3
 PASS pals spawned  42 pals
 PASS species resolve  0 bad
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  250->245
+PASS melee damages pal  109->100
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
@@ -15,7 +15,7 @@ PASS craft club
   place log: (113, 115) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  135->127
+PASS burn ticks  300->276
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -34,7 +34,7 @@ PASS work-type gating
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 28
 PASS feed box eats  
-PASS level learns skills  Lv15 skills 3
+PASS level learns skills  Lv10 skills 3
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -51,12 +51,12 @@ PASS dodge roll moves
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 112
 PASS sigil consumed  sig1 pals1
-PASS pal levels via xp  Lv15->16 xp0
+PASS pal levels via xp  Lv10->11 xp0
   had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 24, "berry_farm": 6, "generator": 4 } pals=50
 PASS structures rebuild 1:1  8->8
   re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  F/["hooligan"]
+PASS save keeps sex/passives  M/["swift"]
 PASS save keeps chest store  
-PASS save keeps workers  4->4 [suzaku eikthyrdeer lamball sparkit ]
+PASS save keeps workers  4->4 [pengullet eikthyrdeer lamball sparkit ]
 PASS save/load  42
 PASS net host  
