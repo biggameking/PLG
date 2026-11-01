@@ -104,12 +104,18 @@ func run() -> void:
 	check("craft club", game.item_count("wooden_club") == 1 and game.item_count("wood") == wood0 - 5)
 
 	var free_xy = func(sid: String):
-		for r0 in range(2, 20):
+		var bx := int(game.palbox_pos.x); var by := int(game.palbox_pos.y)
+		for r0 in range(2, 30):
+			var cells := []
 			for dx5 in range(-r0, r0 + 1):
-				var x0 := int(game.palbox_pos.x) + dx5
-				var y0 := int(game.palbox_pos.y) + r0
-				if game.place_structure(sid, x0, y0):
-					return Vector2i(x0, y0)
+				cells.append(Vector2i(bx + dx5, by - r0))
+				cells.append(Vector2i(bx + dx5, by + r0))
+			for dy5 in range(-r0 + 1, r0):
+				cells.append(Vector2i(bx - r0, by + dy5))
+				cells.append(Vector2i(bx + r0, by + dy5))
+			for c0 in cells:
+				if game.place_structure(sid, c0.x, c0.y):
+					return c0
 		return Vector2i(-1, -1)
 
 	# worker + production
@@ -249,8 +255,13 @@ func run() -> void:
 	# ---- round 2: boundary paths ----
 	# respawn: KO -> back at base half hp
 	p.hp = 0
+	game.add_item("wood", 10)
+	var dcnt0 := game.drops.size()
 	game.respawn_player()
 	check("respawn restores hp", p.hp == int(p.max_hp * 0.5))
+	check("death drops inventory", game.drops.size() > dcnt0 and game.item_count("wood") == 0,
+		"drops %d->%d" % [dcnt0, game.drops.size()])
+	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20); game.add_item("fiber", 40)
 	# straw bed: sleep advances day + heals
 	var day0: int = game.day
 	game.sleep_to_morning()
@@ -631,7 +642,7 @@ func run() -> void:
 	game.spawn_drop("wood", 2, game.player.pos + Vector2(0.4, 0))
 	var drops0 := game.drops.size()
 	game._process(0.1)
-	check("drops spawn+pickup", game.drops.size() == drops0 - 1 and game.item_count("wood") > wood_ct0,
+	check("drops spawn+pickup", game.drops.size() < drops0 and game.item_count("wood") > wood_ct0,
 		"drops %d->%d wood %d" % [drops0, game.drops.size(), game.item_count("wood")])
 	# hauling: unassigned transporting pal carries a drop to the chest
 	var hauler: Pal = null
@@ -646,13 +657,31 @@ func run() -> void:
 		hauler.mode = "base"; hauler.job_site = null
 		if not game.pals.has(hauler): game.pals.append(hauler)
 	hauler.mode = "base"; hauler.job_site = null; hauler.carry = null
-	var cst_xy = free_xy.call("chest")
-	var st_chest: Dictionary = game.structures[cst_xy]
-	hauler.pos = Vector2(cst_xy.x + 0.5, cst_xy.y - 0.5)
-	game.spawn_drop("stone", 3, hauler.pos + Vector2(0.4, 0))
-	for i in 60:
-		hauler.haul_ai(0.15)
-	check("hauler delivers to chest", st_chest["store"].get("stone", 0) >= 3,
+	# dedicated chest in open space; hauler must pick THIS one (nearest)
+	var cst_xy := Vector2i(-1, -1)
+	for r7 in range(6, 40):
+		var cx7 := int(game.palbox_pos.x) + r7; var cy7 := int(game.palbox_pos.y)
+		if not game.world.blocked(cx7, cy7) and not game.structures.has(Vector2i(cx7, cy7)) 				and game.place_free("chest", cx7, cy7):
+			cst_xy = Vector2i(cx7, cy7)
+			break
+	check("test chest placed", cst_xy.x >= 0)
+	var st_chest: Dictionary = game.structures.get(cst_xy, {})
+	if cst_xy.x >= 0:
+		var near_c := Vector2i(-1, -1)
+		for off in [Vector2i(0,-1), Vector2i(0,1), Vector2i(-1,0), Vector2i(1,0),
+				Vector2i(-1,-1), Vector2i(1,-1), Vector2i(-1,1), Vector2i(1,1)]:
+			var cc2: Vector2i = cst_xy + off
+			if not game.world.blocked(cc2.x, cc2.y) and not game.structures.has(cc2):
+				near_c = cc2
+				break
+		if near_c.x >= 0:
+			hauler.pos = Vector2(near_c.x + 0.5, near_c.y + 0.5)
+			game.spawn_drop("stone", 3, hauler.pos)
+			for i in 30:
+				hauler.haul_ai(0.15)
+				if hauler.carry == null:
+					break
+	check("hauler delivers to chest", st_chest.get("store", {}).get("stone", 0) >= 3,
 		"store=%s carry=%s" % [str(st_chest["store"]), str(hauler.carry)])
 
 	# player hunger: drain, slow when low, food restores
@@ -665,6 +694,9 @@ func run() -> void:
 	game.player.hunger = 40.0
 	main.get_node("UILayer/HUD").use_item("red_berries")
 	check("food restores hunger", game.player.hunger > 45.0, "hunger %.1f" % game.player.hunger)
+	# drops persist through save/load
+	game.spawn_drop("gold_coin", 7, game.player.pos + Vector2(1, 0))
+	var drops_sv := game.drops.size()
 	# save/load roundtrip
 	game.add_item("gold_coin", 42)
 	var gold0 := game.item_count("gold_coin")

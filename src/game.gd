@@ -185,7 +185,18 @@ func chest_withdraw_all(st) -> int:
 	return n
 
 func respawn_player() -> void:
+	# Palworld rule: your pack spills where you fell; walk back to reclaim
+	var dropped := 0
+	for id in items.keys():
+		if items[id] > 0:
+			var a := rng.next() * TAU
+			spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8))
+			dropped += items[id]
+			items[id] = 0
+	if dropped > 0:
+		log_msg("You dropped %d items where you fell!" % dropped)
 	player.hp = int(player.max_hp * 0.5)
+	player.hunger = 40.0
 	player.statuses.clear()
 	if palbox_pos.x >= 0:
 		player.pos = Vector2(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
@@ -758,6 +769,7 @@ func save_game() -> void:
 		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
 		"perks": perks, "equip": player.equipment,
 		"pals": pals_data, "structures": structs,
+		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
 		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
@@ -780,6 +792,10 @@ func load_game() -> bool:
 	for pr in projectiles:
 		pr["node"].queue_free()
 	projectiles.clear()
+	for dd0 in drops:
+		if is_instance_valid(dd0["node"]):
+			dd0["node"].queue_free()
+	drops.clear()
 	for k in structures.keys():
 		structures[k]["node"].queue_free()
 	structures.clear()
@@ -788,6 +804,8 @@ func load_game() -> bool:
 	world.decor = d["decor"]
 	world.hp = d["hp_map"]
 	day = d["day"]; tod = d["tod"]
+	for dd0 in d.get("drops", []):
+		spawn_drop(dd0["id"], int(dd0["n"]), Vector2(dd0["x"], dd0["y"]))
 	tech_points = d["tech_points"]; unlocked = d["unlocked"]
 	perks = d.get("perks", perks)
 	player.equipment = d.get("equip", player.equipment)

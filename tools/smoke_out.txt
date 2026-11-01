@@ -5,7 +5,7 @@ PASS elevation variance  max elev 3
 PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  87->76
+PASS melee damages pal  135->127
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
@@ -13,10 +13,10 @@ PASS box->party
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
-  place log: (113, 115) palbox_pos=(115, 113)
+  place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  160->148
+PASS burn ticks  112->104
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -29,6 +29,7 @@ PASS raid summon
 PASS boss immune  
 PASS passives rolled  
 PASS respawn restores hp  
+PASS death drops inventory  drops 0->20
 PASS straw bed sleep  
 PASS overlap rejected  
 PASS demolish removes  
@@ -46,25 +47,26 @@ PASS cliff blocks
 PASS iso roundtrip  
 PASS farm produces  berry 3->5
 PASS generator powered  
-PASS chest store/withdraw  dep1736 wd1736
-PASS hostile pal attacks  hp 112->36
+PASS chest store/withdraw  dep1080 wd1080
+PASS hostile pal attacks  hp 112->56
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 112
-PASS sigil consumed  sig1 pals1
+PASS sigil consumed  sig0 pals1
 PASS pal levels via xp  Lv7->8 xp0
-  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
+  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  20->20
-  re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
-PASS save keeps sex/passives  F/["pacifist"]
+  re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
+PASS save keeps sex/passives  F/["zen"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [tombat eikthyrdeer sparkit ]
+PASS save keeps workers  4->4 [grintale eikthyrdeer lamball sparkit ]
 PASS dead partner frees slot  5->4
 PASS raid wave spawns  +5 pals, 5 aggro
-PASS raider hits base pal  victim hp 122->114
-PASS drops spawn+pickup  drops 1->0 wood 364
+PASS raider hits base pal  victim hp 88->78
+PASS drops spawn+pickup  drops 30->29 wood 305
+PASS test chest placed  
 PASS hauler delivers to chest  store={ "stone": 3 } carry=<null>
 PASS hunger slows player  low 0.80 vs fed 1.00
 PASS food restores hunger  hunger 55.0
