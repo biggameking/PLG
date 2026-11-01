@@ -652,7 +652,9 @@ func save_game() -> void:
 		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents")}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
-		"unlocked": unlocked, "items": items, "party": party, "perks": perks, "equip": player.equipment,
+		"unlocked": unlocked, "items": items, "party": party,
+		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
+		"perks": perks, "equip": player.equipment,
 		"pals": pals_data, "structures": structs,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -714,6 +716,11 @@ func load_game() -> bool:
 		else:
 			entity_layer.add_child(np)
 			pals.append(np)
+	if d.has("party_idx"):
+		party.clear()
+		for pi in d["party_idx"]:
+			if pi is int and pi >= 0 and pi < pals.size():
+				party.append(pals[pi].uid)
 	for ks in d["structures"]:
 		var parts: PackedStringArray = ks.split(",")
 		var sv = d["structures"][ks]
