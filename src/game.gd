@@ -93,8 +93,9 @@ func spawn_wild() -> void:
 		var sp: Dictionary = SpeciesData.SPECIES[sid]
 		var lv := rng.int_range(1 + zone * 3, 4 + zone * 5)
 		var p := preload("res://src/pal.gd").new()
+		p.alpha = zone >= 2 and rng.chance(0.08)
 		entity_layer.add_child(p)
-		p.setup(self, sid, lv, Vector2(x + 0.5, y + 0.5))
+		p.setup(self, sid, lv + (6 if p.alpha else 0), Vector2(x + 0.5, y + 0.5))
 		pals.append(p)
 
 func find_pal(uid: int) -> Pal:
@@ -112,9 +113,13 @@ func party_pal() -> Pal:
 
 func kill_pal(p: Pal, by_player: bool) -> void:
 	# drops
+	var mult := 4 if p.alpha else 1
 	for d in p.spec.get("drops", []):
-		add_item(d[0], rng.int_range(d[1], d[2]))
-		log_msg("Loot: %s x%d" % [ItemData.ITEMS[d[0]]["name"], int(d[2])])
+		add_item(d[0], rng.int_range(d[1], d[2]) * mult)
+		log_msg("Loot: %s x%d" % [ItemData.ITEMS[d[0]]["name"], int(d[2]) * mult])
+	if p.alpha:
+		add_item("pal_sphere", 1)
+		log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
 	pals.erase(p)
 	p.queue_free()
 	gain_xp(p.level * 4)
