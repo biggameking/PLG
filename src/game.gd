@@ -574,7 +574,7 @@ func gain_xp(n: int) -> void:
 			if q.xp >= q.level * 25:
 				q.xp = 0
 				q.level += 1
-				q.max_hp = Combat.stat_at(q.spec["hp"], q.level, q.talent) * (4.0 if q.alpha else 1.0)
+				q.apply_bonuses() # recompute max_hp incl star/alpha/boss
 				q.hp = q.max_hp
 				log_msg("%s grew to Lv%d!" % [q.spec["name"], q.level])
 	player.xp += n
@@ -838,7 +838,7 @@ func save_game() -> void:
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
-			"star": p.star})
+			"star": p.star, "xp": p.xp})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
@@ -915,6 +915,7 @@ func load_game() -> bool:
 		np.hunger = pd.get("hunger", 0.0)
 		np.carry = pd.get("carry")
 		np.star = pd.get("star", 0)
+		np.xp = pd.get("xp", 0)
 		np.apply_bonuses()
 		if pd.get("job"):
 			pending_jobs.append([np, pd["job"]])
