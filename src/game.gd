@@ -711,6 +711,7 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 			spr.scale = Vector2(1.5, 1.5)
 			entity_layer.add_child(spr)
 			projectiles.append({
+				"elev": world.elev_at(int(caster.pos.x), int(caster.pos.y)),
 				"pos": caster.pos, "dir": (tpos - caster.pos).normalized(),
 				"speed": sk.get("projectileSpeed", 12), "ttl": sk.get("range", 8) / maxf(1.0, sk.get("projectileSpeed", 12)),
 				"skill": sk, "from": caster, "node": spr,
@@ -749,6 +750,18 @@ func update_projectiles(dt: float) -> void:
 		var n: Sprite2D = pr["node"]
 		n.position = Iso.to_screen(pp.x, pp.y, world.elev_at(int(pp.x), int(pp.y))) - Vector2(0, 20)
 		var dead: bool = pr["ttl"] <= 0
+		# terrain hit: cliff faces above launch height, trees/rocks/buildings
+		if not dead:
+			var cx: int = int(pp.x); var cy: int = int(pp.y)
+			if not world.in_bounds(cx, cy):
+				dead = true
+			else:
+				var ci: int = world.idx(cx, cy)
+				var wall: bool = world.elev_at(cx, cy) > pr.get("elev", 0)
+				if not wall:
+					wall = world.decor[ci] != World.Decor.NONE or world.structures.has(ci)
+				if wall:
+					dead = true
 		if pr["from"] is String and pr["from"] == "player":
 			if not dead:
 				for p in pals:
@@ -1138,6 +1151,7 @@ func fire_player_shot(tw: Vector2, wd: Dictionary) -> void:
 	var spd: float = 14.0
 	projectiles.append({"pos": player.pos, "dir": (tw - player.pos).normalized(),
 		"speed": spd, "ttl": wd.get("range", 10) / spd, "dmg": wd.get("dmg", 20),
+		"elev": world.elev_at(int(player.pos.x), int(player.pos.y)),
 		"from": "player", "node": spr})
 
 func equip(k: String) -> void:

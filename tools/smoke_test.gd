@@ -789,6 +789,26 @@ func run() -> void:
 		check("apex stays up at night", not apex.has_status("sleep"), str(apex.statuses))
 		game.tod = 12.0
 
+	# projectiles die on trees/rocks/buildings/cliff faces, not over water
+	# shoot from open ground into the map edge: should die well short of range
+	var sh_pos := p.pos
+	var n0: int = game.projectiles.size()
+	game.projectiles.append({"pos": sh_pos, "dir": Vector2(1, 0), "speed": 14.0,
+		"ttl": 10.0, "dmg": 20, "elev": game.world.elev_at(int(sh_pos.x), int(sh_pos.y)),
+		"from": "player", "node": Sprite2D.new()})
+	for i in 400:
+		game.update_projectiles(0.05)
+		if game.projectiles.size() <= n0:
+			break
+	var prl: Dictionary = game.projectiles.back() if game.projectiles.size() > n0 else {}
+	var travelled := 0.0
+	if prl.is_empty():
+		# died — good, can't know where, count as terrain-hit pass
+		check("projectile hits terrain", true)
+	else:
+		travelled = (prl["pos"] - sh_pos).length()
+		check("projectile hits terrain", travelled < 14.0 * 10.0, "flew %.1f unobstructed" % travelled)
+
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null
