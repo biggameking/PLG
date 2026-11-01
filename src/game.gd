@@ -675,11 +675,13 @@ func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 
 func box_to_party(bp: Pal) -> void:
+	if party.size() >= 5:
+		log_msg("Party full (5) - send someone to the box first")
+		return
 	box.erase(bp)
 	pals.append(bp)
-	bp.mode = "partner" if party.size() < 5 else "base"
-	if party.size() < 5:
-		party.append(bp.uid)
+	bp.mode = "partner"
+	party.append(bp.uid)
 	var spawn_p := player.pos + Vector2(1.2, 0)
 	bp.pos = spawn_p
 	entity_layer.add_child(bp)
