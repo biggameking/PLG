@@ -376,16 +376,21 @@ func run() -> void:
 	var d9: int = p.armor_def()
 	game.equip("dragon_scale")
 	check("armor tiers", d9 == 9 and p.armor_def() == 14, "%d/%d" % [d9, p.armor_def()])
-	# party overflow -> base mode
+	# party cap: 6th pal refused and stays in the box
+	while game.party.size() < 5:
+		var fp: Pal = load("res://src/pal.gd").new()
+		game.entity_layer.add_child(fp)
+		fp.setup(game, "cattiva", 3, p.pos)
+		game.box.append(fp)
+		game.box_to_party(fp)
 	var over: Pal = load("res://src/pal.gd").new()
 	game.entity_layer.add_child(over)
 	over.setup(game, "cattiva", 3, p.pos)
-	over.sex = "M"
 	game.box.append(over)
-	while game.party.size() < 5:
-		game.party.append(over.uid)
 	game.box_to_party(over)
-	check("party overflow -> base", over.mode == "base")
+	check("party overflow refused", game.party.size() == 5 and not game.pals.has(over) and game.box.has(over),
+		"mode=%s party=%d" % [over.mode, game.party.size()])
+	game.party_to_box(game.party[4]) # back to 4 for later checks
 	# non-mountable rejected
 	var snak: Pal = load("res://src/pal.gd").new()
 	game.entity_layer.add_child(snak)
