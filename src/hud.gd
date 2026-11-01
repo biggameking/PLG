@@ -89,7 +89,8 @@ func interact() -> void:
 		st = game.structure_at(game.player.pos)
 	if st:
 		match st["id"]:
-			"workbench", "furnace", "mill", "crusher":
+			"workbench", "furnace", "mill", "crusher", "campfire":
+				game.craft_station = st["id"]
 				game.panel = "craft"
 				return
 			"palbox":
