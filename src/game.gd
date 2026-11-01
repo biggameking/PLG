@@ -464,6 +464,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		if item_count(c[0]) < c[1]:
 			log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
 			return false
+	var e0: int = world.elev_at(tx, ty)
 	for dy0 in range(s.get("h", 2)):
 		for dx0 in range(s.get("w", 2)):
 			if structures.has(Vector2i(tx + dx0, ty + dy0)):
@@ -471,6 +472,9 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 				return false
 			if world.tile_at(tx + dx0, ty + dy0) == World.Tile.WATER:
 				log_msg("Can't build on water")
+				return false
+			if world.elev_at(tx + dx0, ty + dy0) != e0:
+				log_msg("Can't build across a ledge")
 				return false
 	for c in s.get("cost", []):
 		add_item(c[0], -c[1])
