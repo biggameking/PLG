@@ -51,6 +51,7 @@ func _ready() -> void:
 		add_item(id, 1)
 	log_msg("Welcome to PLG. Press H for help.")
 	spawn_wild()
+	spawn_lairs()
 
 func sphere_tiers() -> Array:
 	var out := []
@@ -353,6 +354,30 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		palbox_pos = Vector2i(tx, ty)
 		log_msg("Base established! Assign pals with F.")
 	log_msg("Built %s" % s["name"])
+	return true
+
+func place_free(sid: String, tx: int, ty: int) -> bool:
+	# Cost-free placement used by net state_sync and world-gen lair markers.
+	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
+	if s.is_empty():
+		return false
+	var w: int = s.get("w", 2); var h: int = s.get("h", 2)
+	for dy0 in range(h):
+		for dx0 in range(w):
+			if structures.has(Vector2i(tx + dx0, ty + dy0)):
+				return false
+	var spr := Sprite2D.new()
+	spr.texture = load("res://assets/structures/%s.png" % sid)
+	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
+	spr.position = Vector2(p.x, p.y - spr.texture.get_height() * 0.5 + 8)
+	entity_layer.add_child(spr)
+	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
+	for dy in range(h):
+		for dx in range(w):
+			structures[Vector2i(tx + dx, ty + dy)] = st
+			world.structures[world.idx(tx + dx, ty + dy)] = st
+	if sid == "palbox":
+		palbox_pos = Vector2i(tx, ty)
 	return true
 
 # X-key demolish: removes the structure under a tile, refunds half cost,
@@ -894,6 +919,48 @@ func hatch_egg() -> void:
 		pals.append(np)
 	floater(at, "* hatched! *", "#4dd0e1")
 	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])
+
+func spawn_lairs() -> void:
+	# Zone-3 boss lairs: torch ring + an Alpha guarding elite guards
+	var placed := 0
+	var tries := 0
+	while placed < 3 and tries < 6000:
+		tries += 1
+		var tx := rng.int_range(6, World.WORLD_W - 8)
+		var ty := rng.int_range(6, World.WORLD_H - 8)
+		if world.zone_at(tx, ty) < 3:
+			continue
+		var ok := true
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+					ok = false
+		if not ok:
+			continue
+		# torch ring (8 cells around a 5x5 clearing)
+		for c in [Vector2i(tx-2,ty-2),Vector2i(tx+2,ty-2),Vector2i(tx-2,ty+2),Vector2i(tx+2,ty+2)]:
+			place_free("torch", c.x, c.y)
+		# alpha boss at center
+		var pool := SpeciesGen.zone_pool(3)
+		if pool.is_empty():
+			pool = SpeciesGen.zone_pool(2)
+		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+		var bp := preload("res://src/pal.gd").new()
+		entity_layer.add_child(bp)
+		bp.setup(self, sid, rng.int_range(30, 40), Vector2(tx + 0.5, ty + 0.5))
+		bp.alpha = true
+		bp.max_hp *= 4.0; bp.hp = bp.max_hp
+		bp.sprite.scale = Vector2(1.6, 1.6)
+		pals.append(bp)
+		# 2 elite guards
+		for i in 2:
+			var gsid: String = pool[rng.int_range(0, pool.size() - 1)]
+			var gp := preload("res://src/pal.gd").new()
+			entity_layer.add_child(gp)
+			gp.setup(self, gsid, rng.int_range(18, 26), Vector2(tx + 0.5 + (1 if i == 0 else -1), ty + 0.5))
+			pals.append(gp)
+		placed += 1
+	log_msg("%d boss lairs marked deep in the world" % placed)
 
 func regenerate(s: int) -> void:
 	for p in pals:

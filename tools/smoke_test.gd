@@ -592,7 +592,7 @@ func run() -> void:
 	# raid wave: forced timer spawns hostile raiders near base
 	var pals0 := game.pals.size()
 	game.raid_t = 0.0
-	game._physics_process(0.1)
+	game._process(0.1)
 	var raiders := 0
 	for q in game.pals:
 		if q.aggro >= 0 and q.mode == "wild":
