@@ -9,6 +9,25 @@ var build_sel := -1
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
 
+var map_img: Image = null
+var map_show := false
+
+func bake_minimap() -> void:
+	var W := game.world
+	map_img = Image.create(W.WORLD_W, W.WORLD_H, false, Image.FORMAT_RGB8)
+	var cols := {
+		W.Tile.WATER: Color(0.13, 0.34, 0.62), W.Tile.SAND: Color(0.85, 0.76, 0.53),
+		W.Tile.GRASS: Color(0.24, 0.55, 0.24), W.Tile.TALLGRASS: Color(0.16, 0.44, 0.18),
+		W.Tile.FLOWER: Color(0.42, 0.62, 0.30), W.Tile.STONEFIELD: Color(0.48, 0.48, 0.52),
+		W.Tile.DIRT: Color(0.55, 0.42, 0.28), W.Tile.FARMLAND: Color(0.62, 0.48, 0.28)}
+	for y in W.WORLD_H:
+		for x in W.WORLD_W:
+			var c: Color = cols.get(W.tile_at(x, y), Color.BLACK)
+			var e := W.elev_at(x, y)
+			if W.tile_at(x, y) != W.Tile.WATER and W.tile_at(x, y) != W.Tile.SAND:
+				c = c.lightened(e * 0.09)
+			map_img.set_pixel(x, y, c)
+
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -56,6 +75,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("demolish"):
 		game.demolish_at(mouse_tile())
+		return
+	if event.is_action_pressed("map"):
+		map_show = not map_show
+		if map_show and map_img == null:
+			bake_minimap()
 		return
 	if event.is_action_pressed("interact"):
 		interact()
@@ -225,11 +249,25 @@ func _draw() -> void:
 			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
-			"DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter (net)",
+			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter (net)",
 		]
 		draw_rect(Rect2(10, r.y - 126, 580, 76), Color(0, 0, 0, 0.7))
 		for i in range(lines.size()):
 			draw_string(font, Vector2(20, r.y - 106 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#dfe8ea"))
+
+	# minimap (M): baked world image + live player/palbox markers
+	if map_show and map_img != null:
+		var vw := get_viewport_rect().size.x
+		var ms := 176.0
+		var mr := Rect2(vw - ms - 10, 10, ms, ms)
+		draw_rect(mr.grow(2), Color(0, 0, 0, 0.7))
+		draw_texture_rect(ImageTexture.create_from_image(map_img), mr, false)
+		var plp := game.player.pos
+		var pp := mr.position + Vector2(plp.x / game.world.WORLD_W * ms, plp.y / game.world.WORLD_H * ms)
+		draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), Color.WHITE)
+		if game.palbox_pos.x >= 0:
+			var pb := mr.position + Vector2(game.palbox_pos.x / float(game.world.WORLD_W) * ms, game.palbox_pos.y / float(game.world.WORLD_H) * ms)
+			draw_rect(Rect2(pb - Vector2(2, 2), Vector2(4, 4)), Color(1, 0.55, 0.1))
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()
