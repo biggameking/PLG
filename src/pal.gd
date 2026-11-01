@@ -23,6 +23,7 @@ var spec: Dictionary = {}
 var job_site = null
 var sex := "M"
 var alpha := false
+var boss := false
 var passives := []
 var needs_t := 0.0
 var skill_cd := {}

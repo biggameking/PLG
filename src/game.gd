@@ -116,6 +116,11 @@ func party_pal() -> Pal:
 func kill_pal(p: Pal, by_player: bool) -> void:
 	# drops
 	var mult := 4 if p.alpha else 1
+	if p.boss:
+		add_item("legendary_sphere", 1)
+		add_item("lifmunk_effigy", 3)
+		add_item("gold_coin", 10)
+		log_msg("RAID CLEARED! Legendary sphere + loot!")
 	for d in p.spec.get("drops", []):
 		add_item(d[0], rng.int_range(d[1], d[2]) * mult)
 		log_msg("Loot: %s x%d" % [ItemData.ITEMS[d[0]]["name"], int(d[2]) * mult])
@@ -145,6 +150,9 @@ func sphere_fly(sid: String, target: Pal) -> void:
 func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
 	if not is_instance_valid(target) or target.hp <= 0:
+		return
+	if target.boss:
+		floater(target.pos, "IMMUNE", "#e8452f")
 		return
 	var behind: float = sign(player.pos.x - target.pos.x) == -target.dir
 	var hp_frac := maxf(0, target.hp) / target.max_hp
