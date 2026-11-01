@@ -7,6 +7,7 @@ var font := ThemeDB.fallback_font
 var show_help := false
 var build_sel := -1
 var click_rects := []   # [{rect, act, arg}]
+var chat_buf := ""
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -16,6 +17,24 @@ func _process(_dt: float) -> void:
 	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	# chat input mode (net only)
+	if game.panel == "chat" and event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			if chat_buf.strip_edges() != "" and game.net:
+				game.net.rpc("chat", chat_buf)
+				game.log_msg("[you] " + chat_buf)
+			chat_buf = ""; game.panel = ""
+		elif event.keycode == KEY_ESCAPE:
+			chat_buf = ""; game.panel = ""
+		elif event.keycode == KEY_BACKSPACE:
+			chat_buf = chat_buf.left(-1)
+		elif event.unicode >= 32 and event.unicode < 127:
+			chat_buf += char(event.unicode)
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER 		and game.panel == "" and game.net and multiplayer.multiplayer_peer != null:
+		game.panel = "chat"; chat_buf = ""
+		return
 	if event.is_action_pressed("help"):
 		show_help = not show_help
 		return
@@ -198,12 +217,15 @@ func _draw() -> void:
 			draw_inv(r)
 		"palbox":
 			draw_palbox(r)
+		"chat":
+			draw_chat(r)
 	if show_help:
 		var lines := [
 			"MOVE wasd/arrows  SPRINT shift  DODGE space",
 			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
+			"DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter (net)",
 		]
 		draw_rect(Rect2(10, r.y - 126, 580, 76), Color(0, 0, 0, 0.7))
 		for i in range(lines.size()):
@@ -362,6 +384,12 @@ func use_item(k: String) -> void:
 				game.log_msg("+%d HP" % it["heal"])
 			else:
 				game.log_msg("Can't use " + k)
+
+func draw_chat(r: Vector2) -> void:
+	var rr := Rect2(12, r.y - 40, 480, 28)
+	draw_rect(rr, Color(0, 0, 0, 0.8))
+	draw_string(font, rr.position + Vector2(10, 19), "Say: " + chat_buf + "_",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
 
 func passive_str(p: Pal) -> String:
 	var s := ""
