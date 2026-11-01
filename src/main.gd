@@ -15,6 +15,10 @@ func _ready() -> void:
 		decor_tex[k] = load("res://assets/decor/%s.png" % k)
 	game.connect("decor_dirty", _on_decor_dirty)
 	$UILayer/HUD.game = game
+	var net := preload("res://src/net.gd").new()
+	add_child(net)
+	net.setup(game, game.entity_layer)
+	game.net = net
 
 func _on_decor_dirty() -> void:
 	pass # pool keys by world cell; pool refresh reads live data

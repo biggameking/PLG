@@ -6,6 +6,7 @@ class_name Game
 var world := World.new()
 var rng: Rng
 var player: Player
+var net = null
 var pals: Array[Pal] = []
 var items := {}            # item_id -> count
 var party: Array[int] = [] # pal uids
@@ -651,3 +652,22 @@ func hatch_egg() -> void:
 		pals.append(np)
 	floater(at, "* hatched! *", "#4dd0e1")
 	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])
+
+func regenerate(s: int) -> void:
+	for p in pals:
+		if is_instance_valid(p):
+			p.queue_free()
+	pals.clear()
+	party.clear()
+	box.clear()
+	for k in structures:
+		if is_instance_valid(structures[k]["sprite"]):
+			structures[k]["sprite"].queue_free()
+	structures.clear()
+	world.structures.clear()
+	palbox_pos = Vector2i(-1, -1)
+	world.generate(s)
+	drawer.setup(world)
+	spawn_wild()
+	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
+	player.sync_screen()
