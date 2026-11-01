@@ -78,6 +78,7 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 	if hp <= 0:
 		game.kill_pal(self, by_player)
 	elif mode == "wild":
+		statuses.erase("sleep")
 		if hostile() == 0 and game.rng.chance(0.5):
 			aggro = -1
 		else:
@@ -127,6 +128,11 @@ func _physics_process(dt: float) -> void:
 func wild_ai(dt: float) -> void:
 	var pl := game.player
 	var dist := pos.distance_to(pl.pos)
+	# night: non-nocturnal wild pals sleep — sneak in for catch/backstab;
+	# dark-element and apex hostiles stay awake
+	if game.is_night() and aggro < 0 and hit_flash <= 0 and "dark" not in spec.get("elements", []) and hostile() < 2:
+		statuses["sleep"] = game.t + 2.0
+		return
 	if aggro == 0:
 		# fight player if aggressive; timid flees
 		if hostile() >= 1:

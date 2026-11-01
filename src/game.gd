@@ -202,6 +202,9 @@ func respawn_player() -> void:
 		player.pos = Vector2(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
 	log_msg("You wake up battered at base…")
 
+func is_night() -> bool:
+	return tod >= 21.0 or tod < 5.0
+
 func sleep_to_morning() -> void:
 	day += 1
 	tod = 6.0

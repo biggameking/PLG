@@ -684,6 +684,29 @@ func run() -> void:
 	check("hauler delivers to chest", st_chest.get("store", {}).get("stone", 0) >= 3,
 		"store=%s carry=%s" % [str(st_chest["store"]), str(hauler.carry)])
 
+	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
+	game.tod = 23.0
+	var sleeper: Pal = null; var nightowl: Pal = null
+	for q in game.pals:
+		if q.mode == "wild" and "dark" not in q.spec.get("elements", []) and q.hostile() < 2:
+			sleeper = q
+		if q.mode == "wild" and "dark" in q.spec.get("elements", []):
+			nightowl = q
+	if sleeper == null:
+		sleeper = game.gen_pal("lamball", 3, game.player.pos + Vector2(6, 0))
+		sleeper.mode = "wild"; sleeper.aggro = -1
+		if not game.pals.has(sleeper): game.pals.append(sleeper)
+	sleeper.aggro = -1; sleeper.hit_flash = 0; sleeper.statuses.erase("sleep")
+	sleeper.wild_ai(0.1)
+	check("wild pal sleeps at night", sleeper.has_status("sleep"), "")
+	if nightowl:
+		nightowl.aggro = -1; nightowl.statuses.erase("sleep"); nightowl.hit_flash = 0
+		nightowl.wild_ai(0.1)
+		check("dark pal stays up", not nightowl.has_status("sleep"), "")
+	sleeper.hit(5, 1.0, true)
+	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro >= 0, "aggro=%d" % sleeper.aggro)
+	game.tod = 12.0
+
 	# player hunger: drain, slow when low, food restores
 	game.player.hunger = 20.0
 	var slow := game.player.speed_mult()
