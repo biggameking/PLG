@@ -564,6 +564,9 @@ func unlock(sid: String) -> void:
 	var t := tech_node(sid)
 	if t.is_empty():
 		return
+	if player.level < t.get("tier", 0):
+		log_msg("Reach Lv%d to unlock %s" % [t.get("tier", 0), t.get("name", sid)])
+		return
 	if tech_points < t.get("cost", 0):
 		log_msg("Need %d tech points" % t.get("cost", 0))
 		return
