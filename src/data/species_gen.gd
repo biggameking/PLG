@@ -37,7 +37,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Tiny flame sprite.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "rooby": {
   "id": "rooby",
@@ -80,7 +81,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Mischievous fire imp.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "kitty"
  },
  "arsox": {
   "id": "arsox",
@@ -123,7 +125,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Inferno fox mount.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "incineram": {
   "id": "incineram",
@@ -176,7 +179,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Rampaging inferno berserker.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "blazehowl": {
   "id": "blazehowl",
@@ -223,7 +227,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Fire-maned hellhound.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "bushi": {
   "id": "bushi",
@@ -271,7 +276,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Fire-blade ronin pal.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "ragnahawk": {
   "id": "ragnahawk",
@@ -319,7 +325,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Phoenix-tier fire raptor.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "suzaku": {
   "id": "suzaku",
@@ -366,7 +373,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Vermillion fire god-bird.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "blazamut": {
   "id": "blazamut",
@@ -414,7 +422,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Magma-hide behemoth.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "cow"
  },
  "kelpsea": {
   "id": "kelpsea",
@@ -452,7 +461,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Seaweed water serpent.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "serpent"
  },
  "chillet": {
   "id": "chillet",
@@ -501,7 +511,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Otter-dragon glide pal.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "celaray": {
   "id": "celaray",
@@ -539,7 +550,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Floating manta ray.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "teafant": {
   "id": "teafant",
@@ -577,7 +589,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Teapot elephant sprinkler.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "relaxaurus": {
   "id": "relaxaurus",
@@ -630,7 +643,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Giant sleepy water-saur.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "cow"
  },
  "azurobe": {
   "id": "azurobe",
@@ -682,7 +696,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Rain-dance water dragon.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "serpent"
  },
  "jormuntide": {
   "id": "jormuntide",
@@ -734,7 +749,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Sea leviathan emperor.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "serpent"
  },
  "gobfin": {
   "id": "gobfin",
@@ -778,7 +794,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Scheming goblin fish.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "blob"
  },
  "surfdog": {
   "id": "surfdog",
@@ -822,7 +839,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Surfing retriever pal.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "ribbuny": {
   "id": "ribbuny",
@@ -866,7 +884,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Ribbon-eared bunny.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "mouse"
  },
  "flopie": {
   "id": "flopie",
@@ -909,7 +928,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Pudgy leaf-hopper.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "sweety": {
   "id": "sweety",
@@ -948,7 +968,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Honey-drip bee buddy.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "beegarde": {
   "id": "beegarde",
@@ -992,7 +1013,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Bee-knight royal guard.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "bristla": {
   "id": "bristla",
@@ -1036,7 +1058,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Bramble-backed grazer.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "caprity": {
   "id": "caprity",
@@ -1079,7 +1102,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Berry-branch deer.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "deer"
  },
  "broncherry": {
   "id": "broncherry",
@@ -1127,7 +1151,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Cherry-blossom sauropod.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "dinossom": {
   "id": "dinossom",
@@ -1176,7 +1201,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Fruit-crest grass drake.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "verdash": {
   "id": "verdash",
@@ -1221,7 +1247,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Nimble forest scout.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "monkey"
  },
  "mossanda": {
   "id": "mossanda",
@@ -1270,7 +1297,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Forest-titan gorilla.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "monkey"
  },
  "grintale": {
   "id": "grintale",
@@ -1314,7 +1342,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Big grinning big-cat.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "kitty"
  },
  "elizabee": {
   "id": "elizabee",
@@ -1363,7 +1392,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Queen bee matriarch.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "ghost"
  },
  "vaelet": {
   "id": "vaelet",
@@ -1402,7 +1432,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Lilac forest sprite.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "cinnamoth": {
   "id": "cinnamoth",
@@ -1441,7 +1472,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Cinnamon moth pollinator.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "lullu": {
   "id": "lullu",
@@ -1479,7 +1511,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Drowsy lily spirit.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "petallia": {
   "id": "petallia",
@@ -1518,7 +1551,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Blooming petal dancer.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "univolt": {
   "id": "univolt",
@@ -1561,7 +1595,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Thunderbolt unicorn.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "deer"
  },
  "beakon": {
   "id": "beakon",
@@ -1609,7 +1644,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Storm-claw thunderbird.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "rayhound": {
   "id": "rayhound",
@@ -1656,7 +1692,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Lightning-speed hound.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "dazzi": {
   "id": "dazzi",
@@ -1695,7 +1732,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Sparkling sky-mouse.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "mouse"
  },
  "tocotoco": {
   "id": "tocotoco",
@@ -1738,7 +1776,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Exploding toucan trouble.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "grizzbolt": {
   "id": "grizzbolt",
@@ -1786,7 +1825,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Minigun-armed storm bear.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "cow"
  },
  "sweepa": {
   "id": "sweepa",
@@ -1830,7 +1870,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Floofy tail-sweeper.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "swee": {
   "id": "swee",
@@ -1868,7 +1909,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Chilly little snowball.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "wumpo": {
   "id": "wumpo",
@@ -1917,7 +1959,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Walrus-tusk cargo beast.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "cow"
  },
  "sibelyx": {
   "id": "sibelyx",
@@ -1965,7 +2008,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Silken frost moth-beast.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "reindrix": {
   "id": "reindrix",
@@ -2009,7 +2053,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Reindeer ice stag.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "deer"
  },
  "frostallion": {
   "id": "frostallion",
@@ -2056,7 +2101,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Legendary winged ice steed.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "deer"
  },
  "mau_cryst": {
   "id": "mau_cryst",
@@ -2099,7 +2145,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Icy Mau variant.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "kitty"
  },
  "hangyu": {
   "id": "hangyu",
@@ -2138,7 +2185,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Gliding scarf-tangler.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "fuddler": {
   "id": "fuddler",
@@ -2182,7 +2230,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Dig-happy cave mole.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "mouse"
  },
  "digtoise": {
   "id": "digtoise",
@@ -2225,7 +2274,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Drill-shell tortoise.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "hedgehog"
  },
  "anubis": {
   "id": "anubis",
@@ -2279,7 +2329,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Desert god workaholic.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "reptyro": {
   "id": "reptyro",
@@ -2332,7 +2383,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Magma-shell forge beast.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "direhowl": {
   "id": "direhowl",
@@ -2376,7 +2428,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Howling pack wolf.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "galeclaw": {
   "id": "galeclaw",
@@ -2419,7 +2472,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Gliding gun-talon.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "cawgnito": {
   "id": "cawgnito",
@@ -2463,7 +2517,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Sneaky phantom crow.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "robinquill": {
   "id": "robinquill",
@@ -2508,7 +2563,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Forest archer pal.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "human"
  },
  "gorirat": {
   "id": "gorirat",
@@ -2552,7 +2608,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Rowdy muscle monkey.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "monkey"
  },
  "woolipop": {
   "id": "woolipop",
@@ -2590,7 +2647,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Cotton-candy puffball.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "hedgehog"
  },
  "melpaca": {
   "id": "melpaca",
@@ -2634,7 +2692,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Pink pack alpaca.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "vixy": {
   "id": "vixy",
@@ -2677,7 +2736,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Lucky little fox.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "kitty"
  },
  "lovander": {
   "id": "lovander",
@@ -2722,7 +2782,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Heart-shaped salamander.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "human"
  },
  "loupmoon": {
   "id": "loupmoon",
@@ -2765,7 +2826,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Moonlit dark wolf.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "hoocrates": {
   "id": "hoocrates",
@@ -2809,7 +2871,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Owl-sage dark wizard.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "human"
  },
  "killamari": {
   "id": "killamari",
@@ -2853,7 +2916,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Vampire squid friend.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "lunaris": {
   "id": "lunaris",
@@ -2898,7 +2962,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Lunar time-mage.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "human"
  },
  "nox": {
   "id": "nox",
@@ -2936,7 +3001,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Night-whisper wisp.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "maraith": {
   "id": "maraith",
@@ -2980,7 +3046,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Skull-lantern wanderer.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "catress": {
   "id": "catress",
@@ -3024,7 +3091,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Bewitching night cat.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "kitty"
  },
  "wixen": {
   "id": "wixen",
@@ -3068,7 +3136,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Fox-witch spellcaster.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "human"
  },
  "menasting": {
   "id": "menasting",
@@ -3121,7 +3190,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Scorpion death-knight.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "shadowbeak": {
   "id": "shadowbeak",
@@ -3169,7 +3239,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Void-rift war raptor.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "necromus": {
   "id": "necromus",
@@ -3217,7 +3288,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Abyssal doom knight.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "helzephyr": {
   "id": "helzephyr",
@@ -3270,7 +3342,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Storm-soul herald.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "tombat": {
   "id": "tombat",
@@ -3309,7 +3382,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Squeaky night bat.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "jetragon": {
   "id": "jetragon",
@@ -3356,7 +3430,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Supersonic sky dragon.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "paladius": {
   "id": "paladius",
@@ -3404,7 +3479,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Sacred paladin legend.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "human"
  },
  "quivern": {
   "id": "quivern",
@@ -3452,7 +3528,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Feathered dream drake.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "bird"
  },
  "astegon": {
   "id": "astegon",
@@ -3505,7 +3582,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Metal-jawed void dragon.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "quadruped"
  },
  "elphidran": {
   "id": "elphidran",
@@ -3552,7 +3630,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Gentle glade dragon.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "quadruped"
  },
  "blazequil": {
   "id": "blazequil",
@@ -3591,7 +3670,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Ember-quill burrower.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "hedgehog"
  },
  "hydrostar": {
   "id": "hydrostar",
@@ -3629,7 +3709,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Starfish water-drop.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "blob"
  },
  "stormpuff": {
   "id": "stormpuff",
@@ -3668,7 +3749,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Thundercloud puff.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "emberwing": {
   "id": "emberwing",
@@ -3707,7 +3789,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Soot-winged falcon.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  },
  "mirelurk": {
   "id": "mirelurk",
@@ -3756,7 +3839,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Swamp-shell ambusher.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "hedgehog"
  },
  "frostbun": {
   "id": "frostbun",
@@ -3800,7 +3884,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Snow-hare hopper.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "mouse"
  },
  "thornite": {
   "id": "thornite",
@@ -3849,7 +3934,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Thorn-back boulder.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "hedgehog"
  },
  "dreadmaw": {
   "id": "dreadmaw",
@@ -3902,7 +3988,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Abyss serpent overlord.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "serpent"
  },
  "glimmora": {
   "id": "glimmora",
@@ -3946,7 +4033,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Biolume firefly sage.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "cragboar": {
   "id": "cragboar",
@@ -3990,7 +4078,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Cliff-breaking boar.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "boar"
  },
  "vapori": {
   "id": "vapori",
@@ -4029,7 +4118,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Steam-sprite kettle pal.",
-  "hostile": 0
+  "hostile": 0,
+  "body": "ghost"
  },
  "bombird": {
   "id": "bombird",
@@ -4078,7 +4168,8 @@ const SPECIES = {
    ]
   ],
   "desc": "Fuse-headed war bird.",
-  "hostile": 1
+  "hostile": 1,
+  "body": "bird"
  }
 }
 

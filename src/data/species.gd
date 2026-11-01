@@ -1779,3 +1779,18 @@ static func species_of(id: String) -> Dictionary:
 	if r.is_empty():
 		r = SpeciesGen.SPECIES.get(id, {})
 	return r
+
+const BODY := {
+ "lamball":"quadruped","cattiva":"kitty","chikipi":"bird","foxparks":"kitty",
+ "pengullet":"bird","penking":"bird","eikthyrdeer":"deer","lifmunk":"mouse",
+ "tanzee":"monkey","sparkit":"mouse","jolthog":"hedgehog","dumud":"serpent",
+ "depresso":"blob","daedream":"ghost","mau":"kitty","rushoar":"boar",
+ "cremis":"kitty","mozzarina":"cow","fuack":"bird","player":"human"
+}
+const MOUNTABLE := ["quadruped","deer","cow","boar"]
+static func body_of(id: String) -> String:
+	if SPECIES.has(id) and BODY.has(id):
+		return BODY[id]
+	return SpeciesGen.SPECIES.get(id, {}).get("body", "")
+static func mountable(id: String) -> bool:
+	return body_of(id) in MOUNTABLE

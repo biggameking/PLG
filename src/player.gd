@@ -10,6 +10,7 @@ var level := 1
 var xp := 0
 var capture_level := 1
 var dodge_t := 0.0
+var mount: Pal = null
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
@@ -119,3 +120,25 @@ func _physics_process(dt: float) -> void:
 			pos.y = ny
 		moving = true
 	sync_screen()
+
+func try_mount() -> void:
+	if mount:
+		mount.visible = true
+		mount.mode = "partner"
+		mount = null
+		game.log_msg("Dismounted")
+		return
+	var best: Pal = null
+	var bd := 1.4
+	for p in game.pals:
+		if p.uid in game.party and p.mode == "partner" and SpeciesData.mountable(p.species_id):
+			var d := pos.distance_to(p.pos)
+			if d < bd:
+				bd = d
+				best = p
+	if best:
+		mount = best
+		best.visible = false
+		game.log_msg("Riding %s" % best.spec["name"])
+	else:
+		game.log_msg("No mountable pal nearby")

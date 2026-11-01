@@ -118,7 +118,7 @@ def gen():
         skills = [[l, s] for l, s in skl]
         ent = {"id":sid,"name":name,"glyph":name[0].lower(),"color":cols[0],"elements":elems,
                "hp":hp,"atk":atk,"def":de_,"speed":speed,"capturePower":cap,"food":food,"san":san,
-               "work":work,"skills":skills,"drops":drops,"desc":desc,"hostile":hostile}
+               "work":work,"skills":skills,"drops":drops,"desc":desc,"hostile":hostile,"body":body}
         entries.append(ent)
         sprites[sid] = (body, cols, fluff)
 
@@ -131,7 +131,7 @@ def gen():
 	return SPECIES.get(id, {})
 
 static func zone_pool(z: int) -> Array:
-	return ZONE[z]
+	return ZONE.get(str(z), [])
 '''
     io.open(R+'src/data/species_gen.gd','w',encoding='utf-8').write(out)
 

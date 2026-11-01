@@ -146,6 +146,9 @@ func wild_ai(dt: float) -> void:
 		aggro = 0
 
 func partner_ai(dt: float) -> void:
+	if not visible:
+		pos = game.player.pos
+		return
 	var pl := game.player
 	# attack nearest wild pal threatening player
 	var best: Pal = null
