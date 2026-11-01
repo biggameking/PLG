@@ -20,6 +20,8 @@ var day := 1
 var tod := 8.0             # hour of day
 var next_uid_v := 1
 var raid_t := 180.0          # countdown to next base raid wave
+var drops: Array = []        # ground drops {id,n,pos,node}
+var _drop_tex := {}
 var structures := {}          # Vector2i -> {id, node, timer, workers:[]}
 var palbox_pos := Vector2i(-1, -1)  # base anchor; -1 = no base yet
 var tech_points := 0
@@ -126,8 +128,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		add_item("gold_coin", 10)
 		log_msg("RAID CLEARED! Legendary sphere + loot!")
 	for d in p.spec.get("drops", []):
-		add_item(d[0], rng.int_range(d[1], d[2]) * mult)
-		log_msg("Loot: %s x%d" % [ItemData.ITEMS[d[0]]["name"], int(d[2]) * mult])
+		spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 	if p.alpha:
 		add_item("pal_sphere", 1)
 		log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
@@ -263,11 +264,43 @@ func try_harvest(at: Vector2, dir: int) -> void:
 			World.Decor.ORE_COAL: "coal", World.Decor.BERRY: "berry",
 			World.Decor.STUMP: "wood"}[d]
 		var n: int = 1 if d == World.Decor.BERRY else rng.int_range(1, 3)
-		add_item(loot, n)
-		log_msg("+%d %s" % [n, ItemData.ITEMS.get(loot, {}).get("name", loot)])
+		spawn_drop(loot, n, Vector2(tx + 0.5, ty + 0.5))
 		world.decor[i] = World.Decor.STUMP if (d == World.Decor.TREE_A or d == World.Decor.TREE_B) else World.Decor.NONE
 		world.hp[i] = 0
 		queue_redraw_decor()
+
+func spawn_drop(id: String, n: int, at: Vector2) -> void:
+	# tiny tinted bag icon; drops persist until picked up (player or hauler pal)
+	if not _drop_tex.has(id):
+		var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
+		var c := Color(ItemData.ITEMS.get(id, {}).get("col", "#c8b070"))
+		img.fill(c.darkened(0.35))
+		for yy in range(2, 8):
+			for xx in range(2, 8):
+				img.set_pixel(xx, yy, c)
+		_drop_tex[id] = ImageTexture.create_from_image(img)
+	var spr := Sprite2D.new()
+	spr.texture = _drop_tex[id]
+	var p := Iso.to_screen(at.x, at.y, world.elev_at(int(at.x), int(at.y)))
+	spr.position = Vector2(p.x, p.y - 2)
+	entity_layer.add_child(spr)
+	drops.append({"id": id, "n": n, "pos": at, "node": spr})
+
+func take_drop(d: Dictionary) -> void:
+	drops.erase(d)
+	if is_instance_valid(d["node"]):
+		d["node"].queue_free()
+
+func nearest_chest_cell(at: Vector2) -> Vector2i:
+	var best := Vector2i(-1, -1); var bd := 1e9
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st["id"] != "chest":
+			continue
+		var dd := at.distance_squared_to(Vector2(k.x, k.y))
+		if dd < bd:
+			bd = dd; best = k
+	return best
 
 signal decor_dirty
 func queue_redraw_decor() -> void:
@@ -291,6 +324,13 @@ func _process(dt: float) -> void:
 	for f in floaters:
 		f["age"] += dt
 	floaters = floaters.filter(func(f): return f["age"] < 1.2)
+	# ground-drop pickup on walk-over
+	for i in range(drops.size() - 1, -1, -1):
+		var d: Dictionary = drops[i]
+		if player.pos.distance_squared_to(d["pos"]) < 0.55:
+			add_item(d["id"], d["n"])
+			floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
+			take_drop(d)
 	# respawn trickle
 	if pals.size() < 30 and rng.chance(dt * 0.15):
 		spawn_wild()

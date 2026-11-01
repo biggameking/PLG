@@ -614,6 +614,47 @@ func run() -> void:
 			check("raider hits base pal", victim.hp < vhp0 or raider.stun_t > -1.0, "victim hp %.0f->%.0f" % [vhp0, victim.hp])
 			raider.queue_free()
 			game.pals.erase(raider)
+	# ground drops: harvest spawns a drop; walking over it collects
+	var wood_ct0 := game.item_count("wood")
+	var dxy = null
+	for dy in range(0, 6):
+		for dx in range(0, 6):
+			var tx := int(game.player.pos.x) + dx; var ty := int(game.player.pos.y) + dy
+			var dd := game.world.decor_at(tx, ty)
+			if dd == World.Decor.TREE_A or dd == World.Decor.TREE_B:
+				game.world.hp[game.world.idx(tx, ty)] = 1
+				game.try_harvest(game.player.pos, 0)
+				dxy = Vector2i(tx, ty)
+				break
+		if dxy != null: break
+	# force-spawn a drop next to the player regardless of tree luck
+	game.spawn_drop("wood", 2, game.player.pos + Vector2(0.4, 0))
+	var drops0 := game.drops.size()
+	game._process(0.1)
+	check("drops spawn+pickup", game.drops.size() == drops0 - 1 and game.item_count("wood") > wood_ct0,
+		"drops %d->%d wood %d" % [drops0, game.drops.size(), game.item_count("wood")])
+	# hauling: unassigned transporting pal carries a drop to the chest
+	var hauler: Pal = null
+	for q in game.pals:
+		if q.spec.get("work", {}).get("transporting", 0) > 0:
+			hauler = q
+			break
+	if hauler == null:
+		hauler = game.gen_pal("lamball", 5, game.player.pos + Vector2(2, 0))
+		if "transporting" not in hauler.spec.get("work", {}) or hauler.spec["work"].get("transporting", 0) == 0:
+			hauler.spec["work"]["transporting"] = 1
+		hauler.mode = "base"; hauler.job_site = null
+		if not game.pals.has(hauler): game.pals.append(hauler)
+	hauler.mode = "base"; hauler.job_site = null; hauler.carry = null
+	var cst_xy = free_xy.call("chest")
+	var st_chest: Dictionary = game.structures[cst_xy]
+	hauler.pos = Vector2(cst_xy.x + 0.5, cst_xy.y - 0.5)
+	game.spawn_drop("stone", 3, hauler.pos + Vector2(0.4, 0))
+	for i in 60:
+		hauler.haul_ai(0.15)
+	check("hauler delivers to chest", st_chest["store"].get("stone", 0) >= 3,
+		"store=%s carry=%s" % [str(st_chest["store"]), str(hauler.carry)])
+
 	# player hunger: drain, slow when low, food restores
 	game.player.hunger = 20.0
 	var slow := game.player.speed_mult()

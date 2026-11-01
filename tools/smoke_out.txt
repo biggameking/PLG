@@ -1,23 +1,22 @@
-main=Main:<Node2D#35483813374>
-game=Game:<Node2D#35517367809> pals=51
+main=Main:<Node2D#35517367806>
+game=Game:<Node2D#35550922241> pals=51
 PASS world generated  
 PASS elevation variance  max elev 3
 PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  160->153
+PASS melee damages pal  87->76
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
-PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
   place log: (113, 115) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  142->134
+PASS burn ticks  160->148
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -37,7 +36,7 @@ PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
 PASS feed box eats  
-PASS level learns skills  Lv15 skills 3
+PASS level learns skills  Lv7 skills 2
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -48,23 +47,25 @@ PASS iso roundtrip
 PASS farm produces  berry 3->5
 PASS generator powered  
 PASS chest store/withdraw  dep1736 wd1736
-PASS hostile pal attacks  hp 112->56
+PASS hostile pal attacks  hp 112->36
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 112
 PASS sigil consumed  sig1 pals1
-PASS pal levels via xp  Lv15->16 xp0
+PASS pal levels via xp  Lv7->8 xp0
   had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  20->20
   re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
-PASS save keeps sex/passives  F/["swift"]
+PASS save keeps sex/passives  F/["pacifist"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [rayhound eikthyrdeer sparkit ]
+PASS save keeps workers  3->3 [tombat eikthyrdeer sparkit ]
 PASS dead partner frees slot  5->4
 PASS raid wave spawns  +5 pals, 5 aggro
-PASS raider hits base pal  victim hp 94->85
+PASS raider hits base pal  victim hp 122->114
+PASS drops spawn+pickup  drops 1->0 wood 364
+PASS hauler delivers to chest  store={ "stone": 3 } carry=<null>
 PASS hunger slows player  low 0.80 vs fed 1.00
 PASS food restores hunger  hunger 55.0
 PASS save/load  42

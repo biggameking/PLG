@@ -17,6 +17,7 @@ var mode := "wild"           # wild | partner | base
 var statuses := {}           # kind -> until_t
 var aggro := -1              # -1 none, 0 player, >0 pal uid
 var wander_t := 0.0
+var carry = null             # {id,n} while hauling
 var target := Vector2.ZERO
 var atk_cd := 0.0
 var spec: Dictionary = {}
@@ -212,6 +213,8 @@ func base_ai(dt: float) -> void:
 				break
 		if site_cell.x >= 0:
 			step_toward(Vector2(site_cell.x + 0.5, site_cell.y + 0.5), dt)
+	elif spec.get("work", {}).get("transporting", 0) > 0:
+		haul_ai(dt)
 	else:
 		wander_t -= dt
 		if wander_t <= 0:
@@ -220,6 +223,40 @@ func base_ai(dt: float) -> void:
 			target = pos + Vector2(cos(a), sin(a)) * 2.0
 		if pos.distance_to(target) > 0.4:
 			step_toward(target, dt)
+
+func haul_ai(dt: float) -> void:
+	if carry != null:
+		var cc := game.nearest_chest_cell(pos)
+		if cc.x < 0:
+			return  # no chest: hold the goods
+		var cp := Vector2(cc.x + 0.5, cc.y + 0.5)
+		if pos.distance_to(cp) > 1.8:
+			step_toward(cp, dt)
+		else:
+			var st: Dictionary = game.structures[cc]
+			st["store"][carry["id"]] = st["store"].get(carry["id"], 0) + carry["n"]
+			carry = null
+		return
+	var bd := 24.0 * 24.0; var bd2 := bd
+	var pick = null
+	for d in game.drops:
+		var dd := pos.distance_squared_to(d["pos"])
+		if dd < bd2:
+			bd2 = dd; pick = d
+	if pick == null:
+		wander_t -= dt
+		if wander_t <= 0:
+			wander_t = 2.0 + game.rng.next() * 3.0
+			var a := game.rng.next() * TAU
+			target = pos + Vector2(cos(a), sin(a)) * 2.0
+		if pos.distance_to(target) > 0.4:
+			step_toward(target, dt)
+		return
+	if pos.distance_to(pick["pos"]) > 0.6:
+		step_toward(pick["pos"], dt)
+	else:
+		carry = {"id": pick["id"], "n": pick["n"]}
+		game.take_drop(pick)
 
 func tick_needs(dt: float) -> void:
 	needs_t += dt
