@@ -841,6 +841,12 @@ func update_projectiles(dt: float) -> void:
 				if pp.distance_to(player.pos) < 0.55:
 					skill_hit(caster, player, pr["skill"])
 					dead = true
+				else:
+					for p in pals:
+						if p.mode == "partner" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
+							skill_hit(caster, p, pr["skill"]) # wild shots can hit partners too
+							dead = true
+							break
 			else:
 				for p in pals:
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
