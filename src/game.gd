@@ -147,6 +147,25 @@ func hurt_player(atk: float, from: Pal) -> void:
 func sphere_fly(sid: String, target: Pal) -> void:
 	spheres_flying.append({"sid": sid, "target": target, "t": 0.0})
 
+func summon_raid() -> void:
+	if palbox_pos.x < 0:
+		log_msg("Need a palbox to summon the raid")
+		return
+	var pool: Array = SpeciesGen.zone_pool(3)
+	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+	var bp := preload("res://src/pal.gd").new()
+	bp.alpha = true
+	entity_layer.add_child(bp)
+	bp.setup(self, sid, 45, Vector2(palbox_pos.x + 2.5, palbox_pos.y + 2.5))
+	bp.boss = true
+	bp.max_hp *= 2.0
+	bp.hp = bp.max_hp
+	bp.sprite.scale = Vector2(2.2, 2.2)
+	bp.sprite.position.y = -70.0
+	bp.aggro = 0  # player
+	pals.append(bp)
+	log_msg("RAID BOSS: %s Lv45 approaches your base!" % bp.spec["name"])
+
 func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
 	if not is_instance_valid(target) or target.hp <= 0:
@@ -373,7 +392,8 @@ func box_to_party(bp: Pal) -> void:
 	box.erase(bp)
 	pals.append(bp)
 	bp.mode = "partner" if party.size() < 5 else "base"
-	party.append(bp.uid) if party.size() < 5 else 0
+	if party.size() < 5:
+		party.append(bp.uid)
 	var spawn_p := player.pos + Vector2(1.2, 0)
 	bp.pos = spawn_p
 	entity_layer.add_child(bp)
@@ -411,7 +431,7 @@ func assign_worker() -> void:
 	var sd := 6.0
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
-		if s.get("produces") == null:
+		if s.get("job", {}).get("produces") == null:
 			continue
 		var d := best.pos.distance_to(Vector2(k.x, k.y))
 		if d < sd:
@@ -500,7 +520,7 @@ func update_projectiles(dt: float) -> void:
 		var n: Sprite2D = pr["node"]
 		n.position = Iso.to_screen(pp.x, pp.y, world.elev_at(int(pp.x), int(pp.y))) - Vector2(0, 20)
 		var dead: bool = pr["ttl"] <= 0
-		if pr["from"] == "player":
+		if pr["from"] is String and pr["from"] == "player":
 			if not dead:
 				for p in pals:
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:

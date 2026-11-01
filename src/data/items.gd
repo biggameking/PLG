@@ -513,6 +513,56 @@ const ITEMS = {
   "stack": 50,
   "heal": 150,
   "desc": "Strong medicine."
+ },
+ "pal_egg": {
+  "id": "pal_egg",
+  "name": "Pal Egg",
+  "desc": "A fertilized egg from the ranch. Use to hatch.",
+  "usable": true,
+  "stack": 5,
+  "price": 30
+ },
+ "lifmunk_effigy": {
+  "id": "lifmunk_effigy",
+  "name": "Lifmunk Effigy",
+  "desc": "A green mouse idol. Spend at the statue (U) to upgrade powers.",
+  "stack": 99,
+  "price": 0
+ },
+ "boss_sigil": {
+  "id": "boss_sigil",
+  "name": "Boss Sigil",
+  "desc": "Summons a raid boss at your palbox. Use it. If you dare.",
+  "usable": true,
+  "stack": 5,
+  "price": 0
+ },
+ "hide_armor": {
+  "id": "hide_armor",
+  "name": "Hide Armor",
+  "kind": "armor",
+  "armor": {"def": 4},
+  "desc": "Stitched hides. Better than skin.",
+  "stack": 1,
+  "price": 40
+ },
+ "metal_armor": {
+  "id": "metal_armor",
+  "name": "Metal Armor",
+  "kind": "armor",
+  "armor": {"def": 9},
+  "desc": "Plated protection for rough country.",
+  "stack": 1,
+  "price": 140
+ },
+ "dragon_scale": {
+  "id": "dragon_scale",
+  "name": "Dragonscale Armor",
+  "kind": "armor",
+  "armor": {"def": 14},
+  "desc": "Near-impenetrable plate of shed scales.",
+  "stack": 1,
+  "price": 400
  }
 }
 

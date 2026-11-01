@@ -1,0 +1,32 @@
+main=Main:<Node2D#34728838652>
+game=Game:<Node2D#34762393087> pals=42
+PASS world generated  
+PASS elevation variance  max elev 3
+PASS pals spawned  42 pals
+PASS species resolve  0 bad
+PASS player moves  -> (112.5, 110.5)
+PASS melee damages pal  278->273
+PASS catch into box  box 0->1
+PASS place palbox  
+PASS box->party  
+PASS partner_skill  0->0
+PASS tech unlock  
+PASS craft club  
+  place log: true palbox_pos=(115, 113)
+  base_pals=2 structs=8
+PASS assign_worker  
+PASS production ticks  wood 217->219
+PASS burn ticks  197->185
+PASS cast_skill projectile  
+PASS armor reduces damage  def 4
+PASS equip bow  
+PASS bow fires + ammo  
+PASS perk upgrade  
+PASS hp perk  maxhp 112
+PASS ranch egg  
+PASS hatch egg  
+PASS raid summon  
+PASS boss immune  
+PASS passives rolled  
+PASS save/load  42
+PASS net host  
