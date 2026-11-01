@@ -269,8 +269,8 @@ func summon_raid() -> void:
 
 func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
-	if not is_instance_valid(target) or target.hp <= 0:
-		return
+	if not is_instance_valid(target) or target.hp <= 0 or target.mode != "wild":
+		return # dead, freed, or already caught by another sphere in flight
 	if target.boss:
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
@@ -287,7 +287,6 @@ func resolve_sphere(sp) -> void:
 		target.aggro = -1
 		box.append(target)
 		pals.erase(target)
-		entity_layer.remove_child(target)
 		entity_layer.remove_child(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
