@@ -500,6 +500,7 @@ const ITEMS = {
   "glyph": "✚",
   "color": "#4caf50",
   "kind": "medicine",
+  "usable": true,
   "stack": 50,
   "heal": 50,
   "desc": "Heals pals/player."
@@ -510,6 +511,7 @@ const ITEMS = {
   "glyph": "✚",
   "color": "#4dd0e1",
   "kind": "medicine",
+  "usable": true,
   "stack": 50,
   "heal": 150,
   "desc": "Strong medicine."

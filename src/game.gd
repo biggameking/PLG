@@ -383,6 +383,15 @@ func craft(recipe_id: String) -> void:
 
 func gain_xp(n: int) -> void:
 	n = int(n * (1.0 + perks["xp"] * 0.08))
+	for q in pals:
+		if q.mode == "partner" and q.hp > 0:
+			q.xp += int(n * 0.5)
+			if q.xp >= q.level * 25:
+				q.xp = 0
+				q.level += 1
+				q.max_hp = Combat.stat_at(q.spec["hp"], q.level, q.talent) * (4.0 if q.alpha else 1.0)
+				q.hp = q.max_hp
+				log_msg("%s grew to Lv%d!" % [q.spec["name"], q.level])
 	player.xp += n
 	var need := 30 + player.level * 20
 	if player.xp >= need:
@@ -622,14 +631,22 @@ func player_status(kind: String, dur: float) -> void:
 func save_game() -> void:
 	var pals_data := []
 	for p in pals:
+		var jc = null
+		for kj in structures:
+			if p in structures[kj]["workers"]:
+				jc = "%d,%d" % [kj.x, kj.y]
+				break
 		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
-			"mode": p.mode, "hp": p.hp, "talent": p.talent})
+			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
+			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
+			"san": p.san, "hunger": p.hunger, "job": jc})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
-			"mode": "box", "hp": bp.hp, "talent": bp.talent})
+			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
+			"passives": bp.passives, "alpha": bp.alpha})
 	var structs := {}
 	for k in structures:
-		structs["%d,%d" % [k.x, k.y]] = structures[k]["id"]
+		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents")}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"unlocked": unlocked, "items": items, "party": party, "perks": perks, "equip": player.equipment,
@@ -671,10 +688,24 @@ func load_game() -> bool:
 	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
 	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
 	player.xp = d["player"]["xp"]; player.capture_level = d["player"]["cap_lv"]
+	var pending_jobs := []
 	for pd in d["pals"]:
 		var np := preload("res://src/pal.gd").new()
 		np.setup(self, pd["sp"], pd["lv"], Vector2(pd["pos"][0], pd["pos"][1]))
 		np.mode = pd["mode"]; np.hp = pd["hp"]; np.talent = pd["talent"]
+		if pd.get("sex") != null:
+			np.sex = pd["sex"]
+		if pd.get("passives") != null:
+			np.passives = pd["passives"]
+		if pd.get("alpha"):
+			np.alpha = true
+			np.max_hp *= 4.0; np.hp = minf(np.hp, np.max_hp)
+			np.sprite.scale = Vector2(1.6, 1.6)
+		np.boss = pd.get("boss", false)
+		np.san = pd.get("san", np.san)
+		np.hunger = pd.get("hunger", 0.0)
+		if pd.get("job"):
+			pending_jobs.append([np, pd["job"]])
 		if pd["mode"] == "box":
 			box.append(np)
 		else:
@@ -682,7 +713,8 @@ func load_game() -> bool:
 			pals.append(np)
 	for ks in d["structures"]:
 		var parts: PackedStringArray = ks.split(",")
-		var sid: String = d["structures"][ks]
+		var sv = d["structures"][ks]
+		var sid: String = sv["id"] if sv is Dictionary else sv
 		var s: Dictionary = StructureData.STRUCTURES[sid]
 		var tx := int(parts[0]); var ty := int(parts[1])
 		var spr := Sprite2D.new()
@@ -692,12 +724,22 @@ func load_game() -> bool:
 		spr.position = Vector2(pp.x, pp.y - spr.texture.get_height() * 0.5 + 8)
 		entity_layer.add_child(spr)
 		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
+		if sv is Dictionary:
+			st["store"] = sv.get("store", {})
+			if sv.get("egg"):
+				st["egg_parents"] = sv["egg"]
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
 				world.structures[world.idx(tx + dx, ty + dy)] = st
 		if sid == "palbox":
 			palbox_pos = Vector2i(tx, ty)
+	for pj in pending_jobs:
+		var parts2: PackedStringArray = pj[1].split(",")
+		var cell := Vector2i(int(parts2[0]), int(parts2[1]))
+		if structures.has(cell):
+			structures[cell]["workers"].append(pj[0])
+			pj[0].job_site = structures[cell]
 	log_msg("Loaded.")
 	return true
 

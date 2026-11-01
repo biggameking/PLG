@@ -347,10 +347,17 @@ func use_item(k: String) -> void:
 	match k:
 		"boss_sigil":
 			game.summon_raid()
+			game.add_item(k, -1)
 		"pal_egg":
-			game.hatch_egg()
+			game.hatch_egg()  # consumes inside
 		_:
-			game.log_msg("Can't use " + k)
+			var it: Dictionary = ItemData.ITEMS.get(k, {})
+			if it.get("heal", 0) > 0:
+				game.player.hp = mini(game.player.max_hp, game.player.hp + it["heal"])
+				game.add_item(k, -1)
+				game.log_msg("+%d HP" % it["heal"])
+			else:
+				game.log_msg("Can't use " + k)
 
 func passive_str(p: Pal) -> String:
 	var s := ""

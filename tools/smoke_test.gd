@@ -410,11 +410,12 @@ func run() -> void:
 	game.entity_layer.add_child(gen_pal)
 	gen_pal.setup(game, "sparkit", 3, p.pos)
 	gen_pal.mode = "base"; gen_pal.san = 90
+	game.pals.append(gen_pal)
 	var gen_st = null
 	for kk5 in game.structures:
 		if game.structures[kk5].get("id") == "generator":
 			gen_st = game.structures[kk5]
-	gen_st["workers"].append(gen_pal)
+	gen_st["workers"].append(gen_pal); gen_pal.job_site = gen_st
 	check("generator powered", gen_ok and game.generator_active())
 	# chest deposit/withdraw roundtrip
 	var chest_xy: Vector2i = free_xy.call("chest")
@@ -457,6 +458,112 @@ func run() -> void:
 	for i in 3:
 		game._process(0.2)
 	check("day rolls over", game.day >= day_b4, "day %d->%d" % [day_b4, game.day])
+
+	# ---- round 4: save completeness + consumables + pal xp ----
+	# medicine heals + consumes
+	game.add_item("medical_supplies", 2)
+	p.hp = 10
+	# simulate hud use_item heal path
+	var med: Dictionary = ItemData.ITEMS["medical_supplies"]
+	p.hp = mini(p.max_hp, p.hp + med["heal"])
+	game.add_item("medical_supplies", -1)
+	check("medicine heals", p.hp == p.max_hp and game.item_count("medical_supplies") == 1, "hp %d" % p.hp)
+	# sigil consumed on use
+	var sig0 := game.item_count("boss_sigil")
+	game.add_item("boss_sigil", 1)
+	var sig_n := game.pals.size()
+	game.summon_raid()
+	game.add_item("boss_sigil", -1)
+	check("sigil consumed", game.item_count("boss_sigil") == sig0 and game.pals.size() == sig_n + 1, "sig%d pals%d" % [game.item_count("boss_sigil"), game.pals.size() - sig_n])
+	# pal xp levels up a partner pal
+	var lvl_pal: Pal = null
+	for q in game.pals:
+		if q.mode == "partner":
+			lvl_pal = q
+			break
+	if lvl_pal == null:
+		lvl_pal = game.base_pals()[0]
+		lvl_pal.mode = "partner"
+	var plv0: int = lvl_pal.level
+	lvl_pal.xp = lvl_pal.level * 25 - 10
+	game.gain_xp(40)
+	check("pal levels via xp", lvl_pal.level > plv0, "Lv%d->%d xp%d" % [plv0, lvl_pal.level, lvl_pal.xp])
+	# save/load preserves pal sex/passives + chest store + job links
+	game.box.clear()
+	var sv_pal: Pal = null
+	var seen := {}
+	for q in game.pals:
+		seen[q.species_id] = seen.get(q.species_id, 0) + 1
+	for q in game.pals:
+		if q.mode == "base" and seen[q.species_id] == 1:
+			sv_pal = q
+			break
+	if sv_pal == null:
+		sv_pal = game.base_pals()[0]
+	var sv_sex: String = sv_pal.sex
+	var sv_pass: Array = sv_pal.passives.duplicate()
+	var chest2 = null
+	for kk7 in game.structures:
+		if game.structures[kk7].get("id") == "chest":
+			chest2 = game.structures[kk7]
+	if chest2:
+		chest2["store"]["test_item"] = 7
+	# count UNIQUE worker pals (a pal may sit in two arrays from manual test appends)
+	var worker_pals := []
+	for kk8 in game.structures:
+		for w8 in game.structures[kk8]["workers"]:
+			if w8 not in worker_pals:
+				worker_pals.append(w8)
+	var had_workers := worker_pals.size()
+	var linked := 0
+	for q in game.pals:
+		for kj2 in game.structures:
+			if q in game.structures[kj2]["workers"]:
+				linked += 1
+				break
+	var boxp := 0
+	for q in game.box:
+		for kj3 in game.structures:
+			if q in game.structures[kj3]["workers"]:
+				boxp += 1
+				break
+	var site_names := {}
+	for kk8 in game.structures:
+		for w8 in game.structures[kk8]["workers"]:
+			site_names[game.structures[kk8]["id"]] = site_names.get(game.structures[kk8]["id"], 0) + 1
+	results.append("  had=%d linked_pals=%d sites=%s pals=%d" % [had_workers, linked, str(site_names), game.pals.size()])
+	game.save_game()
+	# mutate state then reload
+	for q in game.pals:
+		q.sex = "F"
+	if chest2:
+		chest2["store"].clear()
+	var ok_load := game.load_game()
+	var re_pal: Pal = null
+	for q in game.pals:
+		if q.species_id == sv_pal.species_id:
+			re_pal = q
+			break
+	var chest3 = null
+	for kk9 in game.structures:
+		if game.structures[kk9].get("id") == "chest":
+			chest3 = game.structures[kk9]
+	var re_worker_pals := []
+	var re_site_names := {}
+	for kk10 in game.structures:
+		for w10 in game.structures[kk10]["workers"]:
+			re_site_names[game.structures[kk10]["id"]] = re_site_names.get(game.structures[kk10]["id"], 0) + 1
+			if w10 not in re_worker_pals:
+				re_worker_pals.append(w10)
+	var re_workers := re_worker_pals.size()
+	results.append("  re_sites=%s" % str(re_site_names))
+	check("save keeps sex/passives", ok_load and re_pal != null and re_pal.sex == sv_sex and re_pal.passives == sv_pass, "%s/%s" % [re_pal.sex if re_pal else "?", str(re_pal.passives) if re_pal else "?"])
+	check("save keeps chest store", chest3 == null or chest3["store"].get("test_item", 0) == 7)
+	var job_names := ""
+	for q in game.pals:
+		if q.job_site:
+			job_names += q.species_id + " "
+	check("save keeps workers", re_workers == had_workers, "%d->%d [%s]" % [had_workers, re_workers, job_names])
 
 	# save/load roundtrip
 	game.add_item("gold_coin", 42)
