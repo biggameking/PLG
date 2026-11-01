@@ -788,7 +788,7 @@ func hatch_egg() -> void:
 		sp_id = pair[rng.int_range(0, 1)]
 		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
 	else:
-		var keys := SpeciesData.SPECIES.keys()
+		var keys: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
 		sp_id = keys[rng.int_range(0, keys.size() - 1)]
 		talent_v = rng.int_range(0, 100)
 	add_item("pal_egg", -1)

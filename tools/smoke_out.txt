@@ -4,18 +4,18 @@ PASS world generated
 PASS elevation variance  max elev 3
 PASS pals spawned  42 pals
 PASS species resolve  0 bad
-PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  108->98
+PASS player moves  -> (108.5, 110.5)
+PASS melee damages pal  257->252
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
-  place log: (113, 115) palbox_pos=(115, 113)
+  place log: (109, 115) palbox_pos=(111, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  82->78
+PASS burn ticks  937->865
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -34,7 +34,7 @@ PASS work-type gating
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 28
 PASS feed box eats  
-PASS level learns skills  Lv12 skills 3
+PASS level learns skills  Lv15 skills 3
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -45,17 +45,17 @@ PASS iso roundtrip
 PASS farm produces  berry 3->5
 PASS generator powered  
 PASS chest store/withdraw  dep1728 wd1728
-PASS hostile pal attacks  hp 112->37
+PASS hostile pal attacks  hp 112->35
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 112
 PASS sigil consumed  sig1 pals1
-PASS pal levels via xp  Lv12->13 xp0
-  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 24, "berry_farm": 6, "generator": 4 } pals=50
-  re_sites={ "ranch": 1, "logging_site": 1, "generator": 1 }
-PASS save keeps sex/passives  F/["pacifist"]
+PASS pal levels via xp  Lv15->16 xp0
+  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 24, "berry_farm": 6, "generator": 4 } pals=50
+  re_sites={ "ranch": 2, "logging_site": 1, "generator": 1 }
+PASS save keeps sex/passives  M/["lucky"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [foxparks eikthyrdeer sparkit ]
+PASS save keeps workers  4->4 [necromus eikthyrdeer lamball sparkit ]
 PASS save/load  42
 PASS net host  
