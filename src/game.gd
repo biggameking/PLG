@@ -22,6 +22,25 @@ var next_uid_v := 1
 var raid_t := 180.0          # countdown to next base raid wave
 var drops: Array = []        # ground drops {id,n,pos,node}
 var _drop_tex := {}
+var _light_tex: Texture2D = null
+
+func light_tex() -> Texture2D:
+	if _light_tex == null:
+		var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+		for yy in 64:
+			for xx in 64:
+				var dd := Vector2(xx - 32, yy - 32).length() / 32.0
+				img.set_pixel(xx, yy, Color(1, 1, 1, maxf(0.0, 1.0 - dd)))
+		_light_tex = ImageTexture.create_from_image(img)
+	return _light_tex
+
+func add_glow(spr: Sprite2D, radius: int) -> void:
+	var L := PointLight2D.new()
+	L.texture = light_tex()
+	L.texture_scale = radius * 0.8
+	L.energy = 0.9
+	L.color = Color(1.0, 0.78, 0.45)
+	spr.add_child(L)
 var structures := {}          # Vector2i -> {id, node, timer, workers:[]}
 var palbox_pos := Vector2i(-1, -1)  # base anchor; -1 = no base yet
 var tech_points := 0
@@ -399,6 +418,8 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 	spr.position = Vector2(p.x, p.y - spr.texture.get_height() * 0.5 + 8)
 	entity_layer.add_child(spr)
+	if s.get("light", 0) > 0:
+		add_glow(spr, s["light"])
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 	for dy in range(h):
 		for dx in range(w):
@@ -425,6 +446,8 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 	spr.position = Vector2(p.x, p.y - spr.texture.get_height() * 0.5 + 8)
 	entity_layer.add_child(spr)
+	if s.get("light", 0) > 0:
+		add_glow(spr, s["light"])
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 	for dy in range(h):
 		for dx in range(w):
