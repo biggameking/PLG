@@ -151,6 +151,7 @@ func party_pal() -> Pal:
 	return null
 
 func kill_pal(p: Pal, by_player: bool) -> void:
+	player.dismount_if(p)
 	# drops
 	var mult := 4 if p.alpha else 1
 	if p.boss:
@@ -671,6 +672,9 @@ func box_to_party(bp: Pal) -> void:
 	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
 
 func party_to_box(uid: int) -> void:
+	var mp := find_pal(uid)
+	if mp:
+		player.dismount_if(mp)
 	var p := find_pal(uid)
 	if not p:
 		return

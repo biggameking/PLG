@@ -90,6 +90,8 @@ func throw_sphere() -> void:
 
 func speed_mult() -> float:
 	var m := 1.0
+	if mount != null:
+		m *= 1.8
 	if hunger < 25.0:
 		m *= 0.8
 	if statuses.get("freeze", 0) > game.t:
@@ -111,6 +113,8 @@ func _physics_process(dt: float) -> void:
 	var spd_mult := speed_mult()
 	if statuses.get("sleep", 0) > game.t:
 		iv = Vector2.ZERO
+	if mount != null:
+		mount.pos = pos # ridden pal travels with the player
 	if iv.length() > 0 and dodge_t <= 0:
 		var sp := speed * spd_mult * (1.7 if Input.is_action_pressed("sprint") else 1.0)
 		var step := iv.normalized() * sp * dt
@@ -136,6 +140,11 @@ func _physics_process(dt: float) -> void:
 			pos.y = ny
 		moving = true
 	sync_screen()
+
+func dismount_if(p: Pal) -> void:
+	if mount == p:
+		mount.visible = true
+		mount = null
 
 func try_mount() -> void:
 	if mount:
