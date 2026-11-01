@@ -988,6 +988,25 @@ const RECIPES = [
   ],
   "station": "workbench",
   "work": 40
- }
-]
-
+ },
+ {
+  "id": "hide_armor",
+  "out": ["hide_armor", 1],
+  "cost": [["leather", 6], ["fiber", 4]],
+  "station": "workbench",
+  "work": 120
+ },
+ {
+  "id": "metal_armor",
+  "out": ["metal_armor", 1],
+  "cost": [["ingot", 8], ["leather", 4], ["cloth", 2]],
+  "station": "workbench",
+  "work": 200
+ },
+ {
+  "id": "dragon_scale",
+  "out": ["dragon_scale", 1],
+  "cost": [["horn", 6], ["ingot", 12], ["cloth", 4]],
+  "station": "workbench",
+  "work": 300
+ }]

@@ -74,6 +74,8 @@ func run_click(cr: Dictionary) -> void:
 			game.party_to_box(cr["arg"])
 		"use_item":
 			use_item(cr["arg"])
+		"equip":
+			game.equip(cr["arg"])
 		"perk":
 			game.upgrade_perk(cr["arg"])
 
@@ -260,8 +262,13 @@ func draw_inv(r: Vector2) -> void:
 	for k in keys:
 		var nm: String = ItemData.ITEMS.get(k, {}).get("name", k)
 		var usable: bool = ItemData.ITEMS.get(k, {}).get("usable", false)
+		var equipable: bool = ItemData.ITEMS.get(k, {}).has("weapon") or ItemData.ITEMS.get(k, {}).has("armor")
 		var rect := Rect2(rr.position.x + 16, y - 12, 360, 18)
-		if usable:
+		if equipable:
+			click_rects.append({"rect": rect, "act": "equip", "arg": k})
+			var slot := "weapon" if ItemData.ITEMS[k].has("weapon") else "armor"
+			nm += "  [equipped]" if game.player.equipment[slot] == k else "  [equip]"
+		elif usable:
 			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
 			nm += "  [use]"
 		draw_string(font, Vector2(rect.position.x, y), "%s  x%d" % [nm, game.items[k]],
@@ -317,6 +324,11 @@ func passive_str(p: Pal) -> String:
 const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "Attack",
  "hp": "Max HP", "work": "Work Speed", "xp": "XP Gain"}
 
+func _eq_line() -> String:
+	var wn: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "Fists")
+	var an: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "None")
+	return "Wpn: %s   Arm: %s" % [wn, an]
+
 func draw_statues(r: Vector2) -> void:
 	var y := r.y + 40.0
 	draw_string(font, Vector2(r.x + 16, y - 16), "Lifmunk Effigies: %d" % game.item_count("lifmunk_effigy"),
@@ -331,3 +343,6 @@ func draw_statues(r: Vector2) -> void:
 			click_rects.append({"rect": rect, "act": "perk", "arg": k})
 		draw_string(font, Vector2(rect.position.x, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 		y += 24
+
+func draw_equipment_line() -> void:
+	draw_string(font, Vector2(14, 46), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))

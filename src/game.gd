@@ -137,7 +137,7 @@ func hurt_player(atk: float, from: Pal) -> void:
 		return
 	var def := 20.0 + player.level * 3.0
 	var d := maxi(1, int(round(25.0 * (2.0 * atk) / maxf(1.0, atk + 2.0 * def) * (0.9 + rng.next() * 0.2))))
-	player.hp -= d
+	player.hp -= maxi(1, d - player.armor_def())
 	player.hit_flash = 0.4
 	floater(player.pos, "-" + str(d), "#e64533")
 	if player.hp <= 0:
@@ -471,7 +471,7 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	if target_ent is Player:
 		if player.dodge_t > 0:
 			return
-		player.hp -= maxi(1, int(sk.get("power", 10) * 0.6))
+		player.hp -= maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def())
 		player.hit_flash = 0.4
 		floater(player.pos, "-" + str(int(sk.get("power", 10) * 0.6)), "#e64533")
 		var st = sk.get("status")
@@ -500,6 +500,19 @@ func update_projectiles(dt: float) -> void:
 		var n: Sprite2D = pr["node"]
 		n.position = Iso.to_screen(pp.x, pp.y, world.elev_at(int(pp.x), int(pp.y))) - Vector2(0, 20)
 		var dead: bool = pr["ttl"] <= 0
+		if pr["from"] == "player":
+			if not dead:
+				for p in pals:
+					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
+						var mult := Combat.effectiveness("neutral", p.elem())
+						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent), mult, rng)
+						p.hit(d, mult, true)
+						dead = true
+						break
+			if dead:
+				n.queue_free()
+				projectiles.erase(pr)
+			continue
 		var caster: Pal = pr["from"]
 		if not dead:
 			if caster.mode == "wild":
@@ -534,7 +547,7 @@ func save_game() -> void:
 		structs["%d,%d" % [k.x, k.y]] = structures[k]["id"]
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
-		"unlocked": unlocked, "items": items, "party": party, "perks": perks,
+		"unlocked": unlocked, "items": items, "party": party, "perks": perks, "equip": player.equipment,
 		"pals": pals_data, "structures": structs,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -568,6 +581,7 @@ func load_game() -> bool:
 	day = d["day"]; tod = d["tod"]
 	tech_points = d["tech_points"]; unlocked = d["unlocked"]
 	perks = d.get("perks", perks)
+	player.equipment = d.get("equip", player.equipment)
 	items = d["items"]; party = d["party"]
 	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
 	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
@@ -732,3 +746,33 @@ func partner_skill() -> void:
 	p.skill_cd[best["id"]] = t + best.get("cooldown", 2)
 	cast_skill(p, tw, best)
 	log_msg("%s casts %s!" % [p.spec["name"], best["name"]])
+
+func fire_player_shot(tw: Vector2, wd: Dictionary) -> void:
+	var spr := Sprite2D.new()
+	var at := AtlasTexture.new()
+	at.atlas = orb_tex
+	at.region = Rect2(0, 0, 16, 16)
+	at.filter_clip = true
+	spr.texture = at
+	spr.scale = Vector2(1.2, 1.2)
+	entity_layer.add_child(spr)
+	var spd: float = 14.0
+	projectiles.append({"pos": player.pos, "dir": (tw - player.pos).normalized(),
+		"speed": spd, "ttl": wd.get("range", 10) / spd, "dmg": wd.get("dmg", 20),
+		"from": "player", "node": spr})
+
+func equip(k: String) -> void:
+	var it: Dictionary = ItemData.ITEMS.get(k, {})
+	var slot := ""
+	if it.get("kind") == "weapon" or it.has("weapon"):
+		slot = "weapon"
+	elif it.get("kind") == "armor" or it.has("armor"):
+		slot = "armor"
+	if slot == "":
+		return
+	if player.equipment[slot] == k:
+		player.equipment[slot] = ""
+		log_msg("Unequipped " + it["name"])
+	else:
+		player.equipment[slot] = k
+		log_msg("Equipped " + it["name"])

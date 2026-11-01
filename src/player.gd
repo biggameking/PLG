@@ -11,6 +11,7 @@ var xp := 0
 var capture_level := 1
 var dodge_t := 0.0
 var mount: Pal = null
+var equipment := {"weapon": "", "armor": ""}
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
@@ -41,9 +42,14 @@ func _unhandled_input(event: InputEvent) -> void:
 func melee() -> void:
 	if atk_cd > 0:
 		return
-	atk_cd = 0.45
-	var atk: float = (30.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08)
-	var reach := 1.6
+	var w: Dictionary = ItemData.ITEMS.get(equipment["weapon"], {})
+	var wd: Dictionary = w.get("weapon", {})
+	if wd.get("range", 0) > 3:
+		shoot_weapon(wd)
+		return
+	atk_cd = wd.get("cd", 0.45)
+	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08)
+	var reach: float = wd.get("range", 1.6)
 	var hit_any := false
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
@@ -142,3 +148,18 @@ func try_mount() -> void:
 		game.log_msg("Riding %s" % best.spec["name"])
 	else:
 		game.log_msg("No mountable pal nearby")
+
+func shoot_weapon(wd: Dictionary) -> void:
+	var ammo_id: String = wd.get("ammo", "")
+	if ammo_id != "" and game.item_count(ammo_id) <= 0:
+		game.log_msg("Out of " + ammo_id)
+		return
+	atk_cd = wd.get("cd", 0.7)
+	if ammo_id != "":
+		game.add_item(ammo_id, -1)
+	var m := get_global_mouse_position()
+	var tw: Vector2 = Iso.from_screen(m.x, m.y, elev())
+	game.fire_player_shot(tw, wd)
+
+func armor_def() -> int:
+	return int(ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0))
