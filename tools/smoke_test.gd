@@ -41,7 +41,33 @@ func run() -> void:
 			unresolved += 1
 	check("species resolve", unresolved == 0, "%d bad" % unresolved)
 
-	# movement + blocked
+	# every work type except transporting has a structure site that uses it
+	var missing_sites: Array = []
+	for wt in ["kindling","watering","planting","electricity","handiwork",
+			"gathering","lumbering","mining","medicine","cooling","farming","oilExtraction"]:
+		var has_site := false
+		for st in StructureData.STRUCTURES.values():
+			var jb: Dictionary = st.get("job", {})
+			if jb.get("workType") == wt:
+				has_site = true
+				break
+		if not has_site:
+			missing_sites.append(wt)
+	check("work types have sites", missing_sites.is_empty(), ",".join(missing_sites))
+
+	# movement + blocked — if the spawn is boxed in, relocate to open ground
+	if [Vector2(1,0), Vector2(-1,0), Vector2(0,1), Vector2(0,-1)].all(
+			func(d0): return game.world.blocked(int(p.pos.x + d0.x), int(p.pos.y + d0.y))):
+		for r8 in range(1, 40):
+			var moved := false
+			for dx8 in range(-r8, r8 + 1):
+				for dy8 in [-r8, r8]:
+					var cx8: int = int(p.pos.x) + dx8; var cy8: int = int(p.pos.y) + dy8
+					if not game.world.blocked(cx8, cy8):
+						p.pos = Vector2(cx8 + 0.5, cy8 + 0.5)
+						moved = true; break
+				if moved: break
+			if moved: break
 	var before := p.pos
 	for dd in [Vector2(2,0), Vector2(-2,0), Vector2(0,2), Vector2(0,-2)]:
 		p.step_toward(p.pos + dd, 0.5)
@@ -316,13 +342,13 @@ func run() -> void:
 	# feed box eats berry when hungry
 	game.add_item("wood", 30); game.add_item("stone", 10)
 	free_xy.call("feed_box")
-	game.add_item("berry", 4)
+	game.add_item("red_berries", 4)
 	var hungry: Pal = game.base_pals()[0]
 	hungry.hunger = 90.0
-	var b0 := game.item_count("berry")
+	var b0 := game.item_count("red_berries")
 	for i in 3:
 		hungry.tick_needs(1.5)
-	check("feed box eats", game.item_count("berry") < b0 and hungry.hunger < 90.0)
+	check("feed box eats", game.item_count("red_berries") < b0 and hungry.hunger < 90.0)
 	# level up learns a skill
 	var lev: Pal = game.base_pals()[0]
 	var lv0: int = lev.level
@@ -415,10 +441,10 @@ func run() -> void:
 		if game.structures[kk4].get("id") == "berry_farm":
 			farm_st = game.structures[kk4]
 	farm_st["workers"].append(farmer); farmer.job_site = farm_st
-	var berry0 := game.item_count("berry")
+	var berry0 := game.item_count("red_berries")
 	for i in 100:
 		game.tick_production(1.0)
-	check("farm produces", farm_ok and game.item_count("berry") > berry0, "berry %d->%d" % [berry0, game.item_count("berry")])
+	check("farm produces", farm_ok and game.item_count("red_berries") > berry0, "red_berries %d->%d" % [berry0, game.item_count("red_berries")])
 	# generator boosts powered production 1.5x
 	game.add_item("ingot", 10); game.add_item("electric_organ", 10)
 	var gen_xy: Vector2i = free_xy.call("generator")
@@ -659,30 +685,43 @@ func run() -> void:
 	hauler.mode = "base"; hauler.job_site = null; hauler.carry = null
 	# dedicated chest in open space; hauler must pick THIS one (nearest)
 	var cst_xy := Vector2i(-1, -1)
+	var near_c0 := Vector2i(-1, -1)
 	for r7 in range(6, 40):
 		var cx7 := int(game.palbox_pos.x) + r7; var cy7 := int(game.palbox_pos.y)
-		if not game.world.blocked(cx7, cy7) and not game.structures.has(Vector2i(cx7, cy7)) 				and game.place_free("chest", cx7, cy7):
+		if game.world.blocked(cx7, cy7) or game.structures.has(Vector2i(cx7, cy7)):
+			continue
+		# spot must have a free neighbor for the hauler to stand on
+		var nc := Vector2i(-1, -1)
+		for off7 in [Vector2i(0,-1), Vector2i(0,1), Vector2i(-1,0), Vector2i(1,0),
+				Vector2i(-1,-1), Vector2i(1,-1), Vector2i(-1,1), Vector2i(1,1)]:
+			var cc7: Vector2i = Vector2i(cx7, cy7) + off7
+			if not game.world.blocked(cc7.x, cc7.y) and not game.structures.has(cc7):
+				nc = cc7; break
+		if nc.x >= 0 and game.place_free("chest", cx7, cy7):
 			cst_xy = Vector2i(cx7, cy7)
+			near_c0 = nc
 			break
 	check("test chest placed", cst_xy.x >= 0)
-	var st_chest: Dictionary = game.structures.get(cst_xy, {})
+	# haulers deposit into the NEAREST chest — the base may hold several,
+	# so assert on the aggregate stone across all chests, not one of them
+	var stone_in_chests := func() -> int:
+		var total := 0
+		for k7 in game.structures:
+			var st7: Dictionary = game.structures[k7]
+			if st7["id"] == "chest":
+				total += st7["store"].get("stone", 0)
+		return total
+	var stone0: int = stone_in_chests.call()
 	if cst_xy.x >= 0:
-		var near_c := Vector2i(-1, -1)
-		for off in [Vector2i(0,-1), Vector2i(0,1), Vector2i(-1,0), Vector2i(1,0),
-				Vector2i(-1,-1), Vector2i(1,-1), Vector2i(-1,1), Vector2i(1,1)]:
-			var cc2: Vector2i = cst_xy + off
-			if not game.world.blocked(cc2.x, cc2.y) and not game.structures.has(cc2):
-				near_c = cc2
-				break
-		if near_c.x >= 0:
-			hauler.pos = Vector2(near_c.x + 0.5, near_c.y + 0.5)
+		if near_c0.x >= 0:
+			hauler.pos = Vector2(near_c0.x + 0.5, near_c0.y + 0.5)
 			game.spawn_drop("stone", 3, hauler.pos)
 			for i in 30:
 				hauler.haul_ai(0.15)
 				if hauler.carry == null:
 					break
-	check("hauler delivers to chest", st_chest.get("store", {}).get("stone", 0) >= 3,
-		"store=%s carry=%s" % [str(st_chest["store"]), str(hauler.carry)])
+	check("hauler delivers to chest", stone_in_chests.call() >= stone0 + 3,
+		"stone %d->%d carry=%s" % [stone0, stone_in_chests.call(), str(hauler.carry)])
 
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0

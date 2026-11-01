@@ -4,20 +4,20 @@ PASS world generated
 PASS elevation variance  max elev 3
 PASS pals spawned  51 pals
 PASS species resolve  0 bad
+PASS work types have sites  
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  204->198
+PASS melee damages pal  82->72
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
-PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
   place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  212->196
+PASS burn ticks  278->258
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -38,7 +38,7 @@ PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
 PASS feed box eats  
-PASS level learns skills  Lv15 skills 3
+PASS level learns skills  Lv7 skills 2
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -46,29 +46,29 @@ PASS party overflow -> base
 PASS mount gate  
 PASS cliff blocks  
 PASS iso roundtrip  
-PASS farm produces  berry 3->5
+PASS farm produces  red_berries 3->5
 PASS generator powered  
 PASS chest store/withdraw  dep1080 wd1080
-PASS hostile pal attacks  hp 112->33
+PASS hostile pal attacks  hp 112->56
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 112
 PASS sigil consumed  sig0 pals1
-PASS pal levels via xp  Lv15->16 xp0
-  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
+PASS pal levels via xp  Lv7->8 xp0
+  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  20->20
-  re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  M/["glutton", "artisan"]
+  re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
+PASS save keeps sex/passives  F/["lucky", "zen"]
 PASS save keeps chest store  
-PASS save keeps workers  4->4 [wumpo eikthyrdeer lamball sparkit ]
+PASS save keeps workers  3->3 [flambelle eikthyrdeer sparkit ]
 PASS dead partner frees slot  5->4
-PASS raid wave spawns  +5 pals, 5 aggro
-PASS raider hits base pal  victim hp 75->66
-PASS drops spawn+pickup  drops 27->26 wood 2
+PASS raid wave spawns  +4 pals, 4 aggro
+PASS raider hits base pal  victim hp 86->76
+PASS drops spawn+pickup  drops 28->27 wood 2
 PASS test chest placed  
-PASS hauler delivers to chest  store={ "stone": 3 } carry=<null>
+PASS hauler delivers to chest  stone 0->3 carry=<null>
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0

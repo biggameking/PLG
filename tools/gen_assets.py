@@ -716,6 +716,24 @@ def make_structure(sid, color, w, h):
         d.polygon([(W//2 - 18, 32), (W//2 + 18, 32), (W//2 + 14, 42), (W//2 - 14, 42)],
                   fill=hxc("#5e462e") + (255,))
         d.ellipse([W//2 - 12, 30, W//2 + 12, 36], fill=hxc("#e64533") + (255,))
+    elif sid == "gathering_site":
+        for i in range(5):
+            x = W//2 - 24 + i * 12
+            d.ellipse([x - 4, 26, x + 4, 34], fill=hxc("#8a6d4d") + (255,))
+            d.ellipse([x - 5, 20, x + 5, 28], fill=hxc("#c46a52") + (255,))
+    elif sid == "pharmacy":
+        d.rectangle([W//2 - 4, 12, W//2 + 4, 34], fill=hxc("#e8f0f2") + (255,))
+        d.rectangle([W//2 - 11, 19, W//2 + 11, 27], fill=hxc("#e8f0f2") + (255,))
+    elif sid == "cooler":
+        d.rectangle([W//2 - 14, 16, W//2 + 14, 40], fill=hxc("#e8f4fa") + (255,))
+        d.line([(W//2 - 14, 24), (W//2 + 14, 24)], fill=hxc("#4d9de0") + (255,), width=2)
+        for (dx, dy) in ((-6, 30), (2, 33), (8, 29)):
+            d.ellipse([W//2 + dx - 2, dy, W//2 + dx + 2, dy + 4], fill=hxc("#aef0fa") + (255,))
+    elif sid == "oil_extractor":
+        d.rectangle([W//2 - 4, 12, W//2 + 4, 40], fill=hxc("#3c352b") + (255,))
+        d.polygon([(W//2 - 14, 20), (W//2 + 12, 12), (W//2 + 16, 18), (W//2 - 10, 26)],
+                  fill=hxc("#2f2a24") + (255,))
+        d.ellipse([W//2 + 12, 16, W//2 + 20, 24], fill=hxc("#a45ec0") + (255,))
     elif sid == "workbench":
         for dx in (-20, 16):
             d.rectangle([W//2 + dx, 38, W//2 + dx + 5, 52], fill=hxc("#5e462e") + (255,))
@@ -734,6 +752,8 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "wheat_farm": ("#b8a468", 3, 2), "ranch": ("#8a6d4d", 4, 3),
     "chest": ("#8a6d4d", 1, 1), "generator": ("#e8d44d", 2, 2),
     "torch": ("#e8963c", 1, 1), "straw_bed": ("#b8a468", 2, 1),
+    "gathering_site": ("#7d9a4a", 2, 2), "pharmacy": ("#8fd0a0", 2, 1),
+    "cooler": ("#a8dff0", 1, 1), "oil_extractor": ("#4d565c", 2, 2),
 }
 
 # =========================================================================

@@ -294,7 +294,7 @@ func try_harvest(at: Vector2, dir: int) -> void:
 	if world.hp[i] == 0:
 		var loot: String = {World.Decor.TREE_A: "wood", World.Decor.TREE_B: "wood",
 			World.Decor.ROCK: "stone", World.Decor.ORE_GOLD: "ore",
-			World.Decor.ORE_COAL: "coal", World.Decor.BERRY: "berry",
+			World.Decor.ORE_COAL: "coal", World.Decor.BERRY: "red_berries",
 			World.Decor.STUMP: "wood"}[d]
 		var n: int = 1 if d == World.Decor.BERRY else rng.int_range(1, 3)
 		spawn_drop(loot, n, Vector2(tx + 0.5, ty + 0.5))
@@ -323,6 +323,19 @@ func take_drop(d: Dictionary) -> void:
 	drops.erase(d)
 	if is_instance_valid(d["node"]):
 		d["node"].queue_free()
+
+func eat_food_item() -> int:
+	# feed-box rule: pals eat the cheapest food on hand (lowest satiety first)
+	var best_id := ""; var best_v := 1 << 30
+	for id in items.keys():
+		var it: Dictionary = ItemData.ITEMS.get(id, {})
+		var fv: int = it.get("food", 0)
+		if fv > 0 and items[id] > 0 and fv < best_v:
+			best_v = fv; best_id = id
+	if best_id == "":
+		return 0
+	add_item(best_id, -1)
+	return best_v
 
 func nearest_chest_cell(at: Vector2) -> Vector2i:
 	var best := Vector2i(-1, -1); var bd := 1e9

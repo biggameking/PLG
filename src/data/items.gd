@@ -164,6 +164,24 @@ const ITEMS = {
   "stack": 999,
   "desc": "Pal bone."
  },
+ "coal": {
+  "id": "coal",
+  "name": "Coal",
+  "glyph": "●",
+  "color": "#3c3a36",
+  "kind": "material",
+  "stack": 999,
+  "desc": "Fuel for hot work."
+ },
+ "polymer": {
+  "id": "polymer",
+  "name": "Polymer",
+  "glyph": "⬡",
+  "color": "#a45ec0",
+  "kind": "material",
+  "stack": 999,
+  "desc": "Oil-derived material for top-tier gear."
+ },
  "gold_coin": {
   "id": "gold_coin",
   "name": "Gold Coin",
@@ -869,6 +887,10 @@ const RECIPES = [
    [
     "electric_organ",
     4
+   ],
+   [
+    "polymer",
+    2
    ]
   ],
   "station": "workbench",

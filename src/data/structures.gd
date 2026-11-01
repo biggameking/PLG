@@ -332,7 +332,7 @@ const STRUCTURES = {
  },
  "berry_farm": {
   "id": "berry_farm",
-  "job": {"kind": "farm", "workType": "farming", "amount": 90, "produces": [["berry", 2]]},
+  "job": {"kind": "farm", "workType": "farming", "amount": 90, "produces": [["red_berries", 2]]},
   "name": "Berry Plantation",
   "glyph": "♣",
   "color": "#e64533",
@@ -379,6 +379,86 @@ const STRUCTURES = {
   ],
   "farmField": true,
   "desc": "Grows wheat: plant → water → gather."
+ },
+ "gathering_site": {
+  "id": "gathering_site",
+  "name": "Gathering Site",
+  "glyph": "❧",
+  "color": "#7d9a4a",
+  "w": 2,
+  "h": 2,
+  "cost": [
+   [
+    "wood",
+    8
+   ],
+   [
+    "fiber",
+    4
+   ]
+  ],
+  "job": {"kind": "gather", "workType": "gathering", "amount": 80, "produces": [["mushroom", 1]]},
+  "desc": "A gathering pal forages mushrooms here."
+ },
+ "pharmacy": {
+  "id": "pharmacy",
+  "name": "Pharmacy",
+  "glyph": "✚",
+  "color": "#8fd0a0",
+  "w": 2,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    12
+   ],
+   [
+    "paldium",
+    2
+   ]
+  ],
+  "job": {"kind": "brew", "workType": "medicine", "amount": 150, "produces": [["low_medical", 1]]},
+  "desc": "A medicine pal brews basic remedies here."
+ },
+ "cooler": {
+  "id": "cooler",
+  "name": "Ice Box",
+  "glyph": "❄",
+  "color": "#a8dff0",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    10
+   ],
+   [
+    "stone",
+    8
+   ]
+  ],
+  "job": {"kind": "chill", "workType": "cooling", "amount": 120, "produces": [["ice_organ", 1]]},
+  "desc": "A cooling pal condenses ice organs here."
+ },
+ "oil_extractor": {
+  "id": "oil_extractor",
+  "name": "Oil Extractor",
+  "glyph": "⛽",
+  "color": "#4d565c",
+  "w": 2,
+  "h": 2,
+  "cost": [
+   [
+    "ingot",
+    6
+   ],
+   [
+    "nails",
+    4
+   ]
+  ],
+  "job": {"kind": "pump", "workType": "oilExtraction", "amount": 240, "produces": [["polymer", 1]]},
+  "desc": "An oil-extracting pal refines polymer here."
  },
  "ranch": {
   "id": "ranch",
@@ -584,6 +664,12 @@ const TECH = [
   "cost": 1
  },
  {
+  "id": "gathering_site",
+  "name": "Gathering Site",
+  "tier": 3,
+  "cost": 1
+ },
+ {
   "id": "furnace",
   "name": "Primitive Furnace",
   "tier": 4,
@@ -632,9 +718,27 @@ const TECH = [
   "cost": 3
  },
  {
+  "id": "pharmacy",
+  "name": "Pharmacy",
+  "tier": 5,
+  "cost": 2
+ },
+ {
   "id": "musket",
   "name": "Musket",
   "tier": 6,
+  "cost": 3
+ },
+ {
+  "id": "cooler",
+  "name": "Ice Box",
+  "tier": 6,
+  "cost": 2
+ },
+ {
+  "id": "oil_extractor",
+  "name": "Oil Extractor",
+  "tier": 7,
   "cost": 3
  },
  {

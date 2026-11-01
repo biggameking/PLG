@@ -272,11 +272,12 @@ func tick_needs(dt: float) -> void:
 	hunger = minf(100.0, hunger + 0.5)
 	san = maxf(0.0, san - (0.2 if job_site else 0.05))
 	if hunger > 70:
-		# seek feed box: eat directly for now
-		if game.has_structure("feed_box") and game.item_count("berry") > 0:
-			game.add_item("berry", -1)
-			hunger = maxf(0, hunger - 40)
-			san = minf(100, san + 8)
+		# seek feed box: eat whatever food is stocked
+		if game.has_structure("feed_box"):
+			var ate: int = game.eat_food_item()
+			if ate > 0:
+				hunger = maxf(0, hunger - float(ate) * 2.5)
+				san = minf(100, san + 8)
 	if san < 30 and game.has_structure("pal_bed"):
 		san = minf(100.0, san + 6.0)  # rests on a pal bed
 

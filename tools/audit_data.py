@@ -72,7 +72,8 @@ for r in recipes:
     chk(r['out'][0] in items, 'recipe %s output %s not in ITEMS' % (r['id'], r['out'][0]))
     for c in r.get('cost', []):
         chk(c[0] in items, 'recipe %s cost %s not in ITEMS' % (r['id'], c[0]))
-    chk(r.get('station') in structs or r.get('station') is None, 'recipe %s station %s not in STRUCTURES' % (r['id'], r.get('station')))
+    # 'hand' = bare-handed crafting, needs no structure
+    chk(r.get('station') in structs or r.get('station') in (None, 'hand'), 'recipe %s station %s not in STRUCTURES' % (r['id'], r.get('station')))
 
 # structures
 for sid, s in structs.items():
