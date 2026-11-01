@@ -308,6 +308,9 @@ func tick_production(dt: float) -> void:
 			continue # tick once per structure
 		var s: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
 		var job: Dictionary = s.get("job", {})
+		if st["id"] == "ranch":
+			tick_ranch(key, st, dt)
+			continue
 		var prod: Array = job.get("produces", [])
 		if prod.is_empty() or st["workers"].is_empty():
 			continue
@@ -579,3 +582,67 @@ func load_game() -> bool:
 			palbox_pos = Vector2i(tx, ty)
 	log_msg("Loaded.")
 	return true
+
+# ---------- breeding ----------
+func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
+	var has_m := false
+	var has_f := false
+	for w in st["workers"]:
+		if not is_instance_valid(w) or w.mode != "base":
+			continue
+		if w.sex == "M":
+			has_m = true
+		else:
+			has_f = true
+	if not (has_m and has_f):
+		st["timer"] = 0.0
+		return
+	st["timer"] += dt
+	var rate := 60.0
+	if st["timer"] < rate:
+		return
+	st["timer"] -= rate
+	var pair := []
+	for w in st["workers"]:
+		if is_instance_valid(w):
+			pair.append(w)
+	var a: Pal = pair[0]
+	var b: Pal = pair[1] if pair.size() > 1 else pair[0]
+	st["egg_parents"] = [a.species_id, b.species_id, a.talent, b.talent]
+	add_item("pal_egg", 1)
+	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
+	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
+
+func hatch_egg() -> void:
+	if item_count("pal_egg") <= 0:
+		return
+	var pair = null
+	for k in structures:
+		if structures[k].get("egg_parents"):
+			pair = structures[k]["egg_parents"]
+			structures[k]["egg_parents"] = null
+			break
+	var sp_id: String
+	var talent_v: int
+	if pair:
+		sp_id = pair[rng.int_range(0, 1)]
+		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
+	else:
+		var keys := SpeciesData.SPECIES.keys()
+		sp_id = keys[rng.int_range(0, keys.size() - 1)]
+		talent_v = rng.int_range(0, 100)
+	add_item("pal_egg", -1)
+	var at := player.pos + Vector2(1.0, 0.5)
+	var np := preload("res://src/pal.gd").new()
+	entity_layer.add_child(np)
+	np.setup(self, sp_id, 1, at)
+	np.talent = talent_v
+	np.mode = "base" if palbox_pos.x >= 0 else "wild"
+	np.max_hp = Combat.stat_at(np.spec["hp"], 1, talent_v)
+	np.hp = np.max_hp
+	if np.mode == "base":
+		pals.append(np)
+	else:
+		pals.append(np)
+	floater(at, "* hatched! *", "#4dd0e1")
+	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])

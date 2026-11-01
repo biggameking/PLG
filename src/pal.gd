@@ -21,6 +21,7 @@ var target := Vector2.ZERO
 var atk_cd := 0.0
 var spec: Dictionary = {}
 var job_site = null
+var sex := "M"
 var needs_t := 0.0
 var skill_cd := {}
 var stun_t := 0.0
@@ -39,6 +40,7 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	target = at
 	speed = spec.get("speed", 2.6)
 	uid = game.next_uid()
+	sex = "M" if game.rng.chance(0.5) else "F"
 	setup_visuals("res://assets/pals/%s_f0.png" % sp_id, "res://assets/pals/%s_f1.png" % sp_id)
 
 func hostile() -> int:

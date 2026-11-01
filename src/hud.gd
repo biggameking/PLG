@@ -72,6 +72,8 @@ func run_click(cr: Dictionary) -> void:
 			game.box_to_party(cr["arg"])
 		"party_in":
 			game.party_to_box(cr["arg"])
+		"use_item":
+			use_item(cr["arg"])
 
 func interact() -> void:
 	var st = game.structure_at(game.player.pos + Vector2(game.player.dir * 0.8, 0))
@@ -252,8 +254,14 @@ func draw_inv(r: Vector2) -> void:
 	var keys := game.items.keys()
 	keys.sort()
 	for k in keys:
-		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [ItemData.ITEMS.get(k, {}).get("name", k), game.items[k]],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		var nm: String = ItemData.ITEMS.get(k, {}).get("name", k)
+		var usable: bool = ItemData.ITEMS.get(k, {}).get("usable", false)
+		var rect := Rect2(rr.position.x + 16, y - 12, 360, 18)
+		if usable:
+			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
+			nm += "  [use]"
+		draw_string(font, Vector2(rect.position.x, y), "%s  x%d" % [nm, game.items[k]],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#ffd76e") if usable else Color.WHITE)
 		y += 17
 		if y > rr.end.y - 14:
 			break
@@ -272,7 +280,7 @@ func draw_palbox(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 24, y - 12, 220, 18)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
-		draw_string(font, Vector2(rect.position.x, y), "%s Lv%d  HP%d/%d  %s" % [p.spec["name"], p.level, int(p.hp), int(p.max_hp), p.mode],
+		draw_string(font, Vector2(rect.position.x, y), "%s %s Lv%d  HP%d/%d  %s" % [p.spec["name"], p.sex, p.level, int(p.hp), int(p.max_hp), p.mode],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		y += 19
 	y += 12
@@ -286,3 +294,10 @@ func draw_palbox(r: Vector2) -> void:
 		y += 19
 		if y > rr.end.y - 14:
 			break
+
+func use_item(k: String) -> void:
+	match k:
+		"pal_egg":
+			game.hatch_egg()
+		_:
+			game.log_msg("Can't use " + k)
