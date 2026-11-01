@@ -589,6 +589,31 @@ func run() -> void:
 		var psz0: int = game.party.size()
 		game.kill_pal(dp, true)
 		check("dead partner frees slot", game.party.size() == psz0 - 1, "%d->%d" % [psz0, game.party.size()])
+	# raid wave: forced timer spawns hostile raiders near base
+	var pals0 := game.pals.size()
+	game.raid_t = 0.0
+	game._physics_process(0.1)
+	var raiders := 0
+	for q in game.pals:
+		if q.aggro >= 0 and q.mode == "wild":
+			raiders += 1
+	check("raid wave spawns", game.pals.size() > pals0 and raiders >= 2, "+%d pals, %d aggro" % [game.pals.size() - pals0, raiders])
+	# aggro>0 pal targeting: raider fights a base pal
+	var raider: Pal = null
+	for q in game.pals:
+		if q.mode == "wild" and q.aggro > 0:
+			raider = q
+			break
+	if raider:
+		var victim: Pal = game.find_pal(raider.aggro)
+		if victim:
+			raider.pos = victim.pos + Vector2(0.5, 0)
+			var vhp0 := victim.hp
+			raider.atk_cd = 0
+			raider.wild_ai(0.1)
+			check("raider hits base pal", victim.hp < vhp0 or raider.stun_t > -1.0, "victim hp %.0f->%.0f" % [vhp0, victim.hp])
+			raider.queue_free()
+			game.pals.erase(raider)
 	# save/load roundtrip
 	game.add_item("gold_coin", 42)
 	var gold0 := game.item_count("gold_coin")

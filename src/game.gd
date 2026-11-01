@@ -19,6 +19,7 @@ var t := 0.0               # world seconds
 var day := 1
 var tod := 8.0             # hour of day
 var next_uid_v := 1
+var raid_t := 180.0          # countdown to next base raid wave
 var structures := {}          # Vector2i -> {id, node, timer, workers:[]}
 var palbox_pos := Vector2i(-1, -1)  # base anchor; -1 = no base yet
 var tech_points := 0
@@ -292,6 +293,12 @@ func _process(dt: float) -> void:
 	# respawn trickle
 	if pals.size() < 30 and rng.chance(dt * 0.15):
 		spawn_wild()
+	# base raid waves
+	if palbox_pos.x >= 0:
+		raid_t -= dt
+		if raid_t <= 0:
+			raid_t = 240.0 + rng.next() * 180.0
+			start_raid()
 
 # ---------- building / tech / crafting / base ----------
 
@@ -784,6 +791,45 @@ func load_game() -> bool:
 			pj[0].job_site = structures[cell]
 	log_msg("Loaded.")
 	return true
+
+func start_raid() -> void:
+	var c := Vector2(palbox_pos.x + 0.5, palbox_pos.y + 0.5)
+	var n := 3 + rng.int_range(0, 2)
+	var spawned := 0
+	for i in n:
+		var ang := rng.next() * TAU
+		var placed := false
+		for try in 20:
+			var r := 14.0 + rng.next() * 6.0
+			var tx := int(c.x + cos(ang) * r); var ty := int(c.y + sin(ang) * r)
+			if world.blocked(tx, ty):
+				continue
+			var zone := world.zone_at(tx, ty)
+			var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+			var hostile_pool := pool.filter(func(s): return SpeciesData.species_of(s).get("hostile", 0) >= 1)
+			if hostile_pool.is_empty():
+				hostile_pool = pool
+			var sid: String = hostile_pool[rng.int_range(0, hostile_pool.size() - 1)]
+			var rp := preload("res://src/pal.gd").new()
+			entity_layer.add_child(rp)
+			rp.setup(self, sid, rng.int_range(4 + zone * 4, 8 + zone * 6), Vector2(tx + 0.5, ty + 0.5))
+			# raider picks nearest non-wild pal; falls back to the player
+			rp.aggro = 0
+			var bp: Pal = null; var bd := 30.0
+			for q in pals:
+				if q.mode == "wild" or q.hp <= 0:
+					continue
+				var dd := rp.pos.distance_to(q.pos)
+				if dd < bd:
+					bd = dd; bp = q
+			if bp:
+				rp.aggro = bp.uid
+			pals.append(rp)
+			spawned += 1
+			placed = true
+			break
+	if spawned > 0:
+		log_msg("!! RAID: %d hostile pals approach your base !!" % spawned)
 
 # ---------- breeding ----------
 func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:

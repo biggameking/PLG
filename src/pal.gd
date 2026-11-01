@@ -144,6 +144,23 @@ func wild_ai(dt: float) -> void:
 			if dist > 10:
 				aggro = -1
 		return
+	elif aggro > 0:
+		var tp: Pal = game.find_pal(aggro)
+		if tp == null or tp.hp <= 0:
+			aggro = -1
+		else:
+			var pd := pos.distance_to(tp.pos)
+			if not cast_skills(tp, dt):
+				if pd > 1.1:
+					step_toward(tp.pos, dt)
+				elif atk_cd <= 0:
+					atk_cd = 1.1
+					tp.hit(maxi(2, int(spec.get("atk", 40) * 0.35)), 1.0, false)
+			elif pd > spec.get("reach", 4.0):
+				step_toward(tp.pos, dt)
+			if pd > 16:
+				aggro = -1
+		return
 	# wander
 	wander_t -= dt
 	if wander_t <= 0:
