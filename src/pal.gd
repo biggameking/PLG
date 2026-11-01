@@ -25,6 +25,7 @@ var sex := "M"
 var alpha := false
 var boss := false
 var passives := []
+var ai_accum := 0.0
 var needs_t := 0.0
 var skill_cd := {}
 var stun_t := 0.0
@@ -103,11 +104,19 @@ func _physics_process(dt: float) -> void:
 	var base_speed: float = spec.get("speed", 2.6)
 	speed = base_speed * status_speed_mult()
 	atk_cd -= dt
+	# far wild pals tick their AI at ~8Hz (accumulated dt keeps speeds honest)
+	var far := mode == "wild" and pos.distance_squared_to(game.player.pos) > 784.0
+	ai_accum += dt
+	if far and ai_accum < 0.12:
+		sync_screen()
+		return
+	var adt: float = ai_accum if far else dt
+	ai_accum = 0.0
 	if mode != "wild":
 		tick_needs(dt)
 	match mode:
 		"wild":
-			wild_ai(dt)
+			wild_ai(adt)
 		"partner":
 			partner_ai(dt)
 		"base":

@@ -532,6 +532,11 @@ func run() -> void:
 		for w8 in game.structures[kk8]["workers"]:
 			site_names[game.structures[kk8]["id"]] = site_names.get(game.structures[kk8]["id"], 0) + 1
 	results.append("  had=%d linked_pals=%d sites=%s pals=%d" % [had_workers, linked, str(site_names), game.pals.size()])
+	# unique structure instances before save (dedupe footprint cells)
+	var st_before := []
+	for kk11 in game.structures:
+		if game.structures[kk11] not in st_before:
+			st_before.append(game.structures[kk11])
 	game.save_game()
 	# mutate state then reload
 	for q in game.pals:
@@ -548,6 +553,11 @@ func run() -> void:
 	for kk9 in game.structures:
 		if game.structures[kk9].get("id") == "chest":
 			chest3 = game.structures[kk9]
+	var st_after := []
+	for kk12 in game.structures:
+		if game.structures[kk12] not in st_after:
+			st_after.append(game.structures[kk12])
+	check("structures rebuild 1:1", st_after.size() == st_before.size(), "%d->%d" % [st_before.size(), st_after.size()])
 	var re_worker_pals := []
 	var re_site_names := {}
 	for kk10 in game.structures:

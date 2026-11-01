@@ -717,6 +717,8 @@ func load_game() -> bool:
 		var sid: String = sv["id"] if sv is Dictionary else sv
 		var s: Dictionary = StructureData.STRUCTURES[sid]
 		var tx := int(parts[0]); var ty := int(parts[1])
+		if structures.has(Vector2i(tx, ty)):
+			continue  # footprint cell of an already-rebuilt structure
 		var spr := Sprite2D.new()
 		spr.texture = load("res://assets/structures/%s.png" % sid)
 		var w: int = s.get("w", 2); var h: int = s.get("h", 2)

@@ -38,6 +38,7 @@ func join(ip: String) -> void:
 func _on_peer_connected(id: int) -> void:
 	if is_host:
 		rpc_id(id, "world_sync", game.world.seed)
+		rpc_id(id, "state_sync", state_snapshot())
 		# inform every client about every peer (star topo: clients never see peer_connected)
 		for pid in multiplayer.get_peers():
 			rpc("peer_joined", pid)
@@ -65,6 +66,25 @@ func peer_left(id: int) -> void:
 	if ghosts.has(id):
 		ghosts[id].queue_free()
 		ghosts.erase(id)
+
+func state_snapshot() -> Dictionary:
+	# unique structures by origin cell (first-seen order = placement order)
+	var seen := []
+	var arr := []
+	for k in game.structures:
+		var st = game.structures[k]
+		if st not in seen:
+			seen.append(st)
+			arr.append([st["id"], k.x, k.y])
+	return {"structures": arr, "tod": game.tod, "day": game.day}
+
+@rpc("authority", "call_remote", "reliable")
+func state_sync(d: Dictionary) -> void:
+	for e in d.get("structures", []):
+		game.place_free(e[0], int(e[1]), int(e[2]))
+	game.tod = d.get("tod", game.tod)
+	game.day = d.get("day", game.day)
+	game.log_msg("Synced %d structures" % d.get("structures", []).size())
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
