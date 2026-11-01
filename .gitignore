@@ -1,4 +1,12 @@
-node_modules/
-dist/
-*.local
+# Godot
+.godot/
+/android/
+export.cfg
+*.translation
+mono/
+data_*/
+
+# OS / tools
 .DS_Store
+*.local
+tools/__pycache__/
