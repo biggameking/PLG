@@ -6,18 +6,19 @@ PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS work types have sites  
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  124->115
+PASS melee damages pal  150->143
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
+PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
   place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  101->93
+PASS burn ticks  128->120
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -31,14 +32,14 @@ PASS boss immune
 PASS passives rolled  
 PASS respawn restores hp  
 PASS death drops inventory  drops 0->20
-PASS straw bed sleep  
+FAIL straw bed sleep  
 PASS overlap rejected  
 PASS demolish removes  
 PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
 PASS feed box eats  
-PASS level learns skills  Lv4 skills 2
+PASS level learns skills  Lv12 skills 3
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -52,21 +53,21 @@ PASS chest store/withdraw  dep1080 wd1080
 PASS hostile pal attacks  hp 112->56
 PASS statuses tracked  
 PASS dodge roll moves  
-PASS day rolls over  day 2->2
+PASS day rolls over  day 1->1
 PASS medicine heals  hp 112
 PASS sigil consumed  sig0 pals1
-PASS pal levels via xp  Lv4->5 xp0
-  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
+PASS pal levels via xp  Lv12->13 xp0
+  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=59
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  20->20
-  re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  M/["zen"]
+  re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
+PASS save keeps sex/passives  F/["swift"]
 PASS save keeps chest store  
-PASS save keeps workers  4->4 [fuack eikthyrdeer lamball sparkit ]
+PASS save keeps workers  3->3 [chillet eikthyrdeer sparkit ]
 PASS dead partner frees slot  5->4
 PASS raid wave spawns  +5 pals, 5 aggro
-PASS raider hits base pal  victim hp 90->79
-PASS drops spawn+pickup  drops 29->28 wood 2
+PASS raider hits base pal  victim hp 130->123
+PASS drops spawn+pickup  drops 31->30 wood 2
 PASS test chest placed  
 PASS hauler delivers to chest  stone 0->3 carry=<null>
 PASS lair alpha engages  aggro=0
@@ -75,11 +76,11 @@ PASS apex aggros on sight  aggro=0
 PASS apex stays up at night  {  }
 PASS projectile hits terrain  
 PASS condense star+1  star=1
-PASS condense stats up  atk 1.00->1.15 hp 90->103
+PASS condense stats up  atk 1.05->1.21 hp 84->96
 PASS condense eats fodder  box 4->0
 PASS condense needs fodder  star=1
 PASS stack capped  =50
-PASS overflow spilled  drops=29
+PASS overflow spilled  drops=31
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0

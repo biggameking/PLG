@@ -384,4 +384,5 @@ func condense() -> void:
 
 var atk_bonus := 1.0
 var def_bonus := 1.0
-var star := 0 # essence-condense rank 0-4; each star multiplies combat stats
+var star := 0
+var raid := false            # spawned by a raid wave — blocks sleeping # essence-condense rank 0-4; each star multiplies combat stats

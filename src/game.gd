@@ -238,11 +238,15 @@ func is_night() -> bool:
 	return tod >= 21.0 or tod < 5.0
 
 func sleep_to_morning() -> void:
+	for q in pals:
+		if q.raid and q.hp > 0:
+			log_msg("Can't sleep - raiders are attacking!")
+			return
 	day += 1
 	tod = 6.0
 	player.hp = player.max_hp
 	for q in pals:
-		if q.mode == "base":
+		if q.mode == "base" or q.mode == "partner":
 			q.hp = q.max_hp
 			q.san = 100.0
 			q.hunger = 0.0
@@ -264,6 +268,7 @@ func summon_raid() -> void:
 	bp.sprite.scale = Vector2(2.2, 2.2)
 	bp.sprite.position.y = -70.0
 	bp.aggro = 0  # player
+	bp.raid = true
 	pals.append(bp)
 	log_msg("RAID BOSS: %s Lv45 approaches your base!" % bp.spec["name"])
 
@@ -1004,6 +1009,7 @@ func start_raid() -> void:
 			rp.setup(self, sid, rng.int_range(4 + zone * 4, 8 + zone * 6), Vector2(tx + 0.5, ty + 0.5))
 			# raider picks nearest non-wild pal; falls back to the player
 			rp.aggro = 0
+			rp.raid = true
 			var bp: Pal = null; var bd := 30.0
 			for q in pals:
 				if q.mode == "wild" or q.hp <= 0:
