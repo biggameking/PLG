@@ -749,13 +749,18 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 			caster.hp = minf(caster.max_hp, caster.hp + caster.max_hp * sk.get("power", 20) / 100.0)
 			floater(caster.pos, "+" + sk["name"], "#a8e6a1")
 		"lunge":
-			caster.pos = tpos + (caster.pos - tpos).normalized() * 0.9
+			var land: Vector2 = tpos + (caster.pos - tpos).normalized() * 0.9
+			if not world.blocked(int(land.x), int(land.y)):
+				caster.pos = land # don't lunge into water/cliffs
 			skill_hit(caster, target_ent, sk)
 		"burst":
 			var radius: float = sk.get("range", 4)
 			if caster.mode == "wild":
 				if caster.pos.distance_to(player.pos) <= radius:
 					skill_hit(caster, player, sk)
+				for p in pals:
+					if p.mode == "partner" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
+						skill_hit(caster, p, sk)
 			else:
 				for p in pals:
 					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
@@ -874,7 +879,7 @@ func save_game() -> void:
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
-			"star": p.star, "xp": p.xp})
+			"star": p.star, "xp": p.xp, "raid": p.raid})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
@@ -952,6 +957,7 @@ func load_game() -> bool:
 		np.carry = pd.get("carry")
 		np.star = pd.get("star", 0)
 		np.xp = pd.get("xp", 0)
+		np.raid = pd.get("raid", false)
 		np.apply_bonuses()
 		if pd.get("job"):
 			pending_jobs.append([np, pd["job"]])
