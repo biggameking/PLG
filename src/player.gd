@@ -5,6 +5,7 @@ class_name Player
 
 var game: Game
 var hp := 100.0
+var hunger := 80.0          # 0-100; drains ~100 over ~22 min
 var max_hp := 100.0
 var level := 1
 var xp := 0
@@ -87,6 +88,16 @@ func throw_sphere() -> void:
 	game.add_item(sid, -1)
 	game.sphere_fly(sid, best)
 
+func speed_mult() -> float:
+	var m := 1.0
+	if hunger < 25.0:
+		m *= 0.8
+	if statuses.get("freeze", 0) > game.t:
+		m *= 0.5
+	if statuses.get("soak", 0) > game.t:
+		m *= 0.7
+	return m
+
 func _physics_process(dt: float) -> void:
 	atk_cd -= dt
 	dodge_t -= dt
@@ -94,11 +105,10 @@ func _physics_process(dt: float) -> void:
 		if statuses[k] <= game.t:
 			statuses.erase(k)
 	var iv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var spd_mult := 1.0
-	if statuses.get("freeze", 0) > game.t:
-		spd_mult *= 0.5
-	if statuses.get("soak", 0) > game.t:
-		spd_mult *= 0.7
+	hunger = maxf(0.0, hunger - dt * 0.075)
+	if hunger <= 0.0:
+		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
+	var spd_mult := speed_mult()
 	if statuses.get("sleep", 0) > game.t:
 		iv = Vector2.ZERO
 	if iv.length() > 0 and dodge_t <= 0:

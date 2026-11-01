@@ -614,6 +614,16 @@ func run() -> void:
 			check("raider hits base pal", victim.hp < vhp0 or raider.stun_t > -1.0, "victim hp %.0f->%.0f" % [vhp0, victim.hp])
 			raider.queue_free()
 			game.pals.erase(raider)
+	# player hunger: drain, slow when low, food restores
+	game.player.hunger = 20.0
+	var slow := game.player.speed_mult()
+	game.player.hunger = 90.0
+	var fast := game.player.speed_mult()
+	check("hunger slows player", slow < fast, "low %.2f vs fed %.2f" % [slow, fast])
+	game.add_item("red_berries", 2)
+	game.player.hunger = 40.0
+	main.get_node("UILayer/HUD").use_item("red_berries")
+	check("food restores hunger", game.player.hunger > 45.0, "hunger %.1f" % game.player.hunger)
 	# save/load roundtrip
 	game.add_item("gold_coin", 42)
 	var gold0 := game.item_count("gold_coin")

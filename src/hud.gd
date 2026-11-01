@@ -177,6 +177,9 @@ func _draw() -> void:
 	var r := get_viewport_rect().size
 	draw_rect(Rect2(12, 10, 224, 18), Color(0, 0, 0, 0.55))
 	draw_rect(Rect2(14, 12, int(220 * clampf(pl.hp / pl.max_hp, 0, 1)), 14), Color("#4caf50"))
+	draw_rect(Rect2(12, 30, 224, 10), Color(0, 0, 0, 0.55))
+	var hc: Color = Color("#e6a23c") if pl.hunger >= 25 else Color("#e0503c")
+	draw_rect(Rect2(14, 32, int(220 * clampf(pl.hunger / 100.0, 0, 1)), 6), hc)
 	draw_string(font, Vector2(16, 25), "HP %d/%d  Lv%d  XP%d" % [int(pl.hp), int(pl.max_hp), pl.level, pl.xp],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	var tiers := game.sphere_tiers()
@@ -186,9 +189,9 @@ func _draw() -> void:
 		if n <= 0:
 			continue
 		var sel := tiers.find(id) == pl.sphere_sel
-		draw_rect(Rect2(sx, 34, 70, 20), Color(0, 0, 0, 0.55))
+		draw_rect(Rect2(sx, 44, 70, 20), Color(0, 0, 0, 0.55))
 		if sel:
-			draw_rect(Rect2(sx, 34, 70, 20), Color("#4dd0e1"), false, 1.5)
+			draw_rect(Rect2(sx, 44, 70, 20), Color("#4dd0e1"), false, 1.5)
 		draw_string(font, Vector2(sx + 4, 49), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		sx += 74
@@ -420,6 +423,10 @@ func use_item(k: String) -> void:
 				game.player.hp = mini(game.player.max_hp, game.player.hp + it["heal"])
 				game.add_item(k, -1)
 				game.log_msg("+%d HP" % it["heal"])
+			elif it.get("food", 0) > 0:
+				game.player.hunger = minf(100.0, game.player.hunger + it["food"])
+				game.add_item(k, -1)
+				game.log_msg("+%d food" % it["food"])
 			else:
 				game.log_msg("Can't use " + k)
 
