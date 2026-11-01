@@ -1773,3 +1773,9 @@ const SPECIES_LIST = [
  }
 ]
 
+
+static func species_of(id: String) -> Dictionary:
+	var r: Dictionary = SPECIES.get(id, {})
+	if r.is_empty():
+		r = SpeciesGen.SPECIES.get(id, {})
+	return r

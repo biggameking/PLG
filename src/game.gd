@@ -89,9 +89,9 @@ func spawn_wild() -> void:
 		if world.blocked(x, y):
 			continue
 		var zone := world.zone_at(x, y)
-		var pool: Array = ZONE_SPECIES[zone]
+		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
-		var sp: Dictionary = SpeciesData.SPECIES[sid]
+		var sp: Dictionary = SpeciesData.species_of(sid)
 		var lv := rng.int_range(1 + zone * 3, 4 + zone * 5)
 		var p := preload("res://src/pal.gd").new()
 		p.alpha = zone >= 2 and rng.chance(0.08)
@@ -473,8 +473,8 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 		var mult := Combat.effectiveness(elem, tp.elem())
 		if tp.has_status("soak") and elem == "electric":
 			mult *= 1.5
-		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent),
-			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent), mult, rng)
+		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus,
+			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus, mult, rng)
 		tp.hit(d, mult, caster.mode != "wild")
 		tp.apply_skill_status(sk)
 		if caster.mode == "partner":

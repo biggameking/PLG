@@ -280,7 +280,7 @@ func draw_palbox(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 24, y - 12, 220, 18)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
-		draw_string(font, Vector2(rect.position.x, y), "%s %s Lv%d  HP%d/%d  %s" % [p.spec["name"], p.sex, p.level, int(p.hp), int(p.max_hp), p.mode],
+		draw_string(font, Vector2(rect.position.x, y), "%s %s Lv%d %s  HP%d/%d  %s" % [p.spec["name"], p.sex, p.level, passive_str(p), int(p.hp), int(p.max_hp), p.mode],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		y += 19
 	y += 12
@@ -301,3 +301,9 @@ func use_item(k: String) -> void:
 			game.hatch_egg()
 		_:
 			game.log_msg("Can't use " + k)
+
+func passive_str(p: Pal) -> String:
+	var s := ""
+	for k in p.passives:
+		s += "[" + PassiveData.PASSIVES[k]["name"] + "]"
+	return s

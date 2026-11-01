@@ -23,6 +23,7 @@ var spec: Dictionary = {}
 var job_site = null
 var sex := "M"
 var alpha := false
+var passives := []
 var needs_t := 0.0
 var skill_cd := {}
 var stun_t := 0.0
@@ -31,7 +32,7 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
 	world = g.world
 	species_id = sp_id
-	spec = SpeciesData.SPECIES[sp_id]
+	spec = SpeciesData.species_of(sp_id)
 	level = lv
 	talent = game.rng.int_range(0, 100)
 	max_hp = Combat.stat_at(spec["hp"], level, talent)
@@ -42,6 +43,7 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	speed = spec.get("speed", 2.6)
 	uid = game.next_uid()
 	sex = "M" if game.rng.chance(0.5) else "F"
+	roll_passives()
 	if alpha:
 		max_hp *= 4.0
 		hp = max_hp
@@ -162,8 +164,8 @@ func partner_ai(dt: float) -> void:
 			elif atk_cd <= 0:
 				atk_cd = 1.0
 				var mult := Combat.effectiveness("neutral", best.elem())
-				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent), 30,
-					Combat.stat_at(best.spec["def"], best.level, best.talent), mult, game.rng)
+				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus, 30,
+					Combat.stat_at(best.spec["def"], best.level, best.talent) * best.def_bonus, mult, game.rng)
 				best.hit(d, mult, true)
 		elif bd > 5.0:
 			step_toward(best.pos, dt)
@@ -249,3 +251,21 @@ func apply_skill_status(sk: Dictionary, is_behind: bool = false) -> void:
 	var st = sk.get("status")
 	if st and game.rng.chance(st.get("chance", 1.0)):
 		add_status(st["kind"], st.get("dur", 3))
+
+func roll_passives() -> void:
+	passives.clear()
+	var keys := PassiveData.PASSIVES.keys()
+	var n := 1 + (1 if game.rng.chance(0.35) else 0)
+	for i in n:
+		var k: String = keys[game.rng.int_range(0, keys.size() - 1)]
+		if k not in passives:
+			passives.append(k)
+	var pv: Dictionary
+	for k in passives:
+		pv = PassiveData.PASSIVES[k]
+		atk_bonus *= pv.get("atk", 1.0)
+		def_bonus *= pv.get("def", 1.0)
+		speed *= pv.get("speed", 1.0)
+
+var atk_bonus := 1.0
+var def_bonus := 1.0
