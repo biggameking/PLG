@@ -1,22 +1,23 @@
-main=Main:<Node2D#34930165244>
-game=Game:<Node2D#34963719679> pals=42
+main=Main:<Node2D#34946942461>
+game=Game:<Node2D#34980496896> pals=42
 PASS world generated  
 PASS elevation variance  max elev 3
 PASS pals spawned  42 pals
 PASS species resolve  0 bad
-PASS player moves  -> (108.5, 110.5)
-PASS melee damages pal  232->228
+PASS player moves  -> (112.5, 110.5)
+PASS melee damages pal  272->267
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
+PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
-  place log: (109, 115) palbox_pos=(111, 113)
+  place log: (113, 115) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  176->164
+PASS burn ticks  197->185
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -31,6 +32,7 @@ PASS passives rolled
 PASS respawn restores hp  
 PASS straw bed sleep  
 PASS overlap rejected  
+PASS demolish removes  
 PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
@@ -45,7 +47,7 @@ PASS cliff blocks
 PASS iso roundtrip  
 PASS farm produces  berry 3->5
 PASS generator powered  
-PASS chest store/withdraw  dep1728 wd1728
+PASS chest store/withdraw  dep1727 wd1727
 PASS hostile pal attacks  hp 112->56
 PASS statuses tracked  
 PASS dodge roll moves  
@@ -57,9 +59,9 @@ PASS pal levels via xp  Lv15->16 xp0
 PASS party survives reload  party=5/5
 PASS structures rebuild 1:1  8->8
   re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  M/["swift"]
+PASS save keeps sex/passives  M/["artisan"]
 PASS save keeps chest store  
-PASS save keeps workers  4->4 [azurobe eikthyrdeer lamball sparkit ]
+PASS save keeps workers  4->4 [astegon eikthyrdeer lamball sparkit ]
 PASS dead partner frees slot  5->4
 PASS save/load  42
 PASS net host  

@@ -348,6 +348,34 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	log_msg("Built %s" % s["name"])
 	return true
 
+# X-key demolish: removes the structure under a tile, refunds half cost,
+# returns chest contents, unassigns workers.
+func demolish_at(at: Vector2) -> bool:
+	var st = structure_at(at)
+	if not st:
+		log_msg("Nothing to demolish")
+		return false
+	var sid: String = st["id"]
+	var cells := []
+	for k in structures:
+		if structures[k] == st:
+			cells.append(k)
+	for w in st["workers"].duplicate():
+		st["workers"].erase(w)
+		w.job_site = null
+	for it in st.get("store", {}).keys():
+		add_item(it, st["store"][it])
+	for c in StructureData.STRUCTURES[sid].get("cost", []):
+		add_item(c[0], int(ceil(c[1] * 0.5)))
+	for k in cells:
+		structures.erase(k)
+		world.structures.erase(world.idx(k.x, k.y))
+	st["node"].queue_free()
+	if sid == "palbox":
+		palbox_pos = Vector2i(-1, -1)
+	log_msg("Demolished %s (50%% refund)" % StructureData.STRUCTURES[sid]["name"])
+	return true
+
 func tech_node(sid: String) -> Dictionary:
 	for t in StructureData.TECH:
 		if t["id"] == sid:

@@ -256,6 +256,9 @@ func run() -> void:
 	# overlap: cannot build on occupied cell
 	var kx: Vector2i = game.palbox_pos
 	check("overlap rejected", game.place_structure("torch", kx.x, kx.y) == false)
+	# demolish: removes structure + refunds half cost
+	var t_xy = free_xy.call("torch")
+	check("demolish removes", t_xy != null and game.demolish_at(Vector2(t_xy.x, t_xy.y) + Vector2(0.5,0.5)) and not game.structures.has(t_xy), "")
 	# work-type gating: lamball lacks lumbering -> cannot log
 	var non: Pal = null
 	for q in game.pals:

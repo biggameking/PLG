@@ -35,6 +35,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("party_toggle"):
 		game.assign_worker()
 		return
+	if event.is_action_pressed("demolish"):
+		game.demolish_at(mouse_tile())
+		return
 	if event.is_action_pressed("interact"):
 		interact()
 		return
