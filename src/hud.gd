@@ -74,6 +74,8 @@ func run_click(cr: Dictionary) -> void:
 			game.party_to_box(cr["arg"])
 		"use_item":
 			use_item(cr["arg"])
+		"perk":
+			game.upgrade_perk(cr["arg"])
 
 func interact() -> void:
 	var st = game.structure_at(game.player.pos + Vector2(game.player.dir * 0.8, 0))
@@ -169,6 +171,8 @@ func _draw() -> void:
 			draw_build_bar(r)
 		"tech":
 			draw_tech(r)
+		"statues":
+			draw_statues(r)
 		"craft":
 			draw_craft(r)
 		"inv":
@@ -307,3 +311,21 @@ func passive_str(p: Pal) -> String:
 	for k in p.passives:
 		s += "[" + PassiveData.PASSIVES[k]["name"] + "]"
 	return s
+
+const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "Attack",
+ "hp": "Max HP", "work": "Work Speed", "xp": "XP Gain"}
+
+func draw_statues(r: Vector2) -> void:
+	var y := r.y + 40.0
+	draw_string(font, Vector2(r.x + 16, y - 16), "Lifmunk Effigies: %d" % game.item_count("lifmunk_effigy"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9be8a0"))
+	for k in game.perks:
+		var lvl: int = game.perks[k]
+		var cost := 2 + lvl * 2
+		var txt := "%s  Lv%d/5  (cost %d)" % [PERK_LABEL[k], lvl, cost]
+		var rect := Rect2(r.x + 16, y - 12, 360, 20)
+		var col := Color.WHITE if lvl < 5 else Color(0.5, 0.5, 0.5)
+		if lvl < 5:
+			click_rects.append({"rect": rect, "act": "perk", "arg": k})
+		draw_string(font, Vector2(rect.position.x, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
+		y += 24

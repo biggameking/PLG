@@ -42,7 +42,7 @@ func melee() -> void:
 	if atk_cd > 0:
 		return
 	atk_cd = 0.45
-	var atk := 30.0 + level * 4.0
+	var atk: float = (30.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08)
 	var reach := 1.6
 	var hit_any := false
 	for p in game.pals:

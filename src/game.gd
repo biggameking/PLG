@@ -7,6 +7,7 @@ var world := World.new()
 var rng: Rng
 var player: Player
 var net = null
+var perks := {"capture": 0, "speed": 0, "atk": 0, "hp": 0, "work": 0, "xp": 0}
 var pals: Array[Pal] = []
 var items := {}            # item_id -> count
 var party: Array[int] = [] # pal uids
@@ -121,6 +122,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 	if p.alpha:
 		add_item("pal_sphere", 1)
 		log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
+		add_item("lifmunk_effigy", 2)
 	pals.erase(p)
 	p.queue_free()
 	gain_xp(p.level * 4)
@@ -146,8 +148,8 @@ func resolve_sphere(sp) -> void:
 		return
 	var behind: float = sign(player.pos.x - target.pos.x) == -target.dir
 	var hp_frac := maxf(0, target.hp) / target.max_hp
-	var chance := Combat.catch_chance(hp_frac, target.spec["capturePower"],
-		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level)
+	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, target.spec["capturePower"],
+		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level) * (1.0 + perks["capture"] * 0.05))
 	if randf() < chance:
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
@@ -297,6 +299,7 @@ func craft(recipe_id: String) -> void:
 	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
 
 func gain_xp(n: int) -> void:
+	n = int(n * (1.0 + perks["xp"] * 0.08))
 	player.xp += n
 	var need := 30 + player.level * 20
 	if player.xp >= need:
@@ -320,7 +323,7 @@ func tick_production(dt: float) -> void:
 		var prod: Array = job.get("produces", [])
 		if prod.is_empty() or st["workers"].is_empty():
 			continue
-		st["timer"] += dt * st["workers"].size()
+		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * st["workers"].size()
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
@@ -422,12 +425,13 @@ var orb_tex: Texture2D = preload("res://assets/ui/element_orbs.png")
 func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 	var kind: String = sk.get("kind", "projectile")
 	var elem: String = sk.get("element", "neutral")
+	var tpos: Vector2 = target_ent if target_ent is Vector2 else target_ent.pos
 	match kind:
 		"self":
 			caster.hp = minf(caster.max_hp, caster.hp + caster.max_hp * sk.get("power", 20) / 100.0)
 			floater(caster.pos, "+" + sk["name"], "#a8e6a1")
 		"lunge":
-			caster.pos = target_ent.pos + (caster.pos - target_ent.pos).normalized() * 0.9
+			caster.pos = tpos + (caster.pos - tpos).normalized() * 0.9
 			skill_hit(caster, target_ent, sk)
 		"burst":
 			var radius: float = sk.get("range", 4)
@@ -449,7 +453,7 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 			spr.scale = Vector2(1.5, 1.5)
 			entity_layer.add_child(spr)
 			projectiles.append({
-				"pos": caster.pos, "dir": (target_ent.pos - caster.pos).normalized(),
+				"pos": caster.pos, "dir": (tpos - caster.pos).normalized(),
 				"speed": sk.get("projectileSpeed", 12), "ttl": sk.get("range", 8) / maxf(1.0, sk.get("projectileSpeed", 12)),
 				"skill": sk, "from": caster, "node": spr,
 			})
@@ -522,7 +526,7 @@ func save_game() -> void:
 		structs["%d,%d" % [k.x, k.y]] = structures[k]["id"]
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
-		"unlocked": unlocked, "items": items, "party": party,
+		"unlocked": unlocked, "items": items, "party": party, "perks": perks,
 		"pals": pals_data, "structures": structs,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -555,6 +559,7 @@ func load_game() -> bool:
 	world.hp = d["hp_map"]
 	day = d["day"]; tod = d["tod"]
 	tech_points = d["tech_points"]; unlocked = d["unlocked"]
+	perks = d.get("perks", perks)
 	items = d["items"]; party = d["party"]
 	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
 	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
@@ -603,7 +608,7 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if not (has_m and has_f):
 		st["timer"] = 0.0
 		return
-	st["timer"] += dt
+	st["timer"] += (dt * (1.0 + perks["work"] * 0.1))
 	var rate := 60.0
 	if st["timer"] < rate:
 		return
@@ -671,3 +676,51 @@ func regenerate(s: int) -> void:
 	spawn_wild()
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
+
+# ---------- effigy statues ----------
+const PERK_COST := 2
+func upgrade_perk(k: String) -> void:
+	var lvl: int = perks[k]
+	if lvl >= 5:
+		log_msg("Statue maxed")
+		return
+	var cost := PERK_COST + lvl * 2
+	if item_count("lifmunk_effigy") < cost:
+		log_msg("Need %d effigies (have %d)" % [cost, item_count("lifmunk_effigy")])
+		return
+	add_item("lifmunk_effigy", -cost)
+	perks[k] = lvl + 1
+	if k == "hp":
+		player.max_hp = 100 + perks["hp"] * 12
+		player.hp = player.max_hp
+	log_msg("Statue upgraded: %s Lv%d" % [k, perks[k]])
+
+func partner_skill() -> void:
+	if party.is_empty():
+		log_msg("No party pal")
+		return
+	var p: Pal = null
+	for q in pals:
+		if q.uid == party[0]:
+			p = q
+			break
+	if not p:
+		return
+	var m := player.get_global_mouse_position()
+	var tw: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
+	var best: Dictionary = {}
+	for sid in p.learned_skills():
+		if p.skill_cd.get(sid, 0) > t:
+			continue
+		var sk: Dictionary = SkillData.SKILLS.get(sid, {})
+		if sk.is_empty() or sk.get("kind") == "lunge":
+			continue
+		if p.pos.distance_to(tw) > sk.get("range", 6) * 2.0:
+			continue
+		best = sk
+	if best.is_empty():
+		log_msg("%s has no usable partner skill" % p.spec["name"])
+		return
+	p.skill_cd[best["id"]] = t + best.get("cooldown", 2)
+	cast_skill(p, tw, best)
+	log_msg("%s casts %s!" % [p.spec["name"], best["name"]])
