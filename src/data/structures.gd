@@ -332,6 +332,7 @@ const STRUCTURES = {
  },
  "berry_farm": {
   "id": "berry_farm",
+  "job": {"kind": "farm", "workType": "farming", "amount": 90, "produces": [["berry", 2]]},
   "name": "Berry Plantation",
   "glyph": "♣",
   "color": "#e64533",
@@ -356,6 +357,7 @@ const STRUCTURES = {
  },
  "wheat_farm": {
   "id": "wheat_farm",
+  "job": {"kind": "farm", "workType": "planting", "amount": 120, "produces": [["wheat", 2]]},
   "name": "Wheat Plantation",
   "glyph": "ψ",
   "color": "#b8a468",

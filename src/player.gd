@@ -57,7 +57,7 @@ func melee() -> void:
 		if pos.distance_to(p.pos) > reach:
 			continue
 		var mult := Combat.effectiveness("neutral", p.elem())
-		var d := Combat.damage(atk, 34, Combat.stat_at(p.spec["def"], p.level, p.talent), mult, game.rng)
+		var d := Combat.damage(atk, 34, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus, mult, game.rng)
 		p.hit(d, mult, true)
 		hit_any = true
 	if not hit_any:

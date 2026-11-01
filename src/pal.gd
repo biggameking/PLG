@@ -208,6 +208,8 @@ func tick_needs(dt: float) -> void:
 			game.add_item("berry", -1)
 			hunger = maxf(0, hunger - 40)
 			san = minf(100, san + 8)
+	if san < 30 and game.has_structure("pal_bed"):
+		san = minf(100.0, san + 6.0)  # rests on a pal bed
 
 func learned_skills() -> Array:
 	var out := []

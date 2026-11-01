@@ -78,6 +78,10 @@ func run_click(cr: Dictionary) -> void:
 			game.equip(cr["arg"])
 		"perk":
 			game.upgrade_perk(cr["arg"])
+		"chest_dep":
+			game.log_msg("Stored %d items" % game.chest_deposit_all(game.chest_ref))
+		"chest_wd":
+			game.log_msg("Took %d items" % game.chest_withdraw_all(game.chest_ref))
 
 func interact() -> void:
 	var st = game.structure_at(game.player.pos + Vector2(game.player.dir * 0.8, 0))
@@ -90,6 +94,13 @@ func interact() -> void:
 				return
 			"palbox":
 				game.panel = "palbox"
+				return
+			"straw_bed":
+				game.sleep_to_morning()
+				return
+			"chest":
+				game.chest_ref = st
+				game.panel = "chest"
 				return
 	if game.has_structure("palbox"):
 		game.panel = "palbox"
@@ -177,6 +188,8 @@ func _draw() -> void:
 			draw_statues(r)
 		"craft":
 			draw_craft(r)
+		"chest":
+			draw_chest(r)
 		"inv":
 			draw_inv(r)
 		"palbox":
@@ -230,12 +243,36 @@ func draw_tech(r: Vector2) -> void:
 		if y > rr.end.y - 16:
 			break
 
+func draw_chest(r: Vector2) -> void:
+	var rr := Rect2(r.x / 2 - 220, 150, 440, 300)
+	draw_rect(rr, Color(0, 0, 0, 0.85))
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CHEST", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8c97a"))
+	var st = game.chest_ref
+	if st == null:
+		return
+	var y := rr.position.y + 52
+	var rect1 := Rect2(rr.position.x + 16, y - 12, 200, 20)
+	var rect2 := Rect2(rr.position.x + 230, y - 12, 190, 20)
+	click_rects.append({"rect": rect1, "act": "chest_dep", "arg": null})
+	click_rects.append({"rect": rect2, "act": "chest_wd", "arg": null})
+	draw_string(font, rect1.position, "[ deposit all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
+	draw_string(font, rect2.position, "[ take all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
+	y += 28
+	for iid in st.get("store", {}).keys():
+		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [ItemData.ITEMS.get(iid, {}).get("name", iid), st["store"][iid]],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		y += 18
+		if y > rr.end.y - 16:
+			break
+
 func draw_craft(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8963c"))
 	var y := rr.position.y + 48
 	for rec in ItemData.RECIPES:
+		if rec.get("station") not in [game.craft_station, "hand"]:
+			continue
 		var afford := true
 		var cost := ""
 		for c in rec.get("cost", []):

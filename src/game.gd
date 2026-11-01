@@ -26,6 +26,8 @@ var unlocked := ["palbox", "pal_bed", "feed_box", "campfire", "workbench", "stra
 var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
 var panel := ""
+var craft_station := ""
+var chest_ref = null
 const DAY_LEN := 240.0     # seconds per game day
 
 @onready var entity_layer: Node2D = $YSort/Entities
@@ -141,11 +143,57 @@ func hurt_player(atk: float, from: Pal) -> void:
 	player.hit_flash = 0.4
 	floater(player.pos, "-" + str(d), "#e64533")
 	if player.hp <= 0:
-		player.hp = 0
-		log_msg("You were knocked out…")
+		respawn_player()
 
 func sphere_fly(sid: String, target: Pal) -> void:
 	spheres_flying.append({"sid": sid, "target": target, "t": 0.0})
+
+func generator_active() -> bool:
+	for kg in structures:
+		var sg = structures[kg]
+		if sg.get("id") == "generator" and not sg["workers"].is_empty():
+			return true
+	return false
+
+func chest_deposit_all(st) -> int:
+	var n := 0
+	if not st.has("store"):
+		st["store"] = {}
+	for iid in items.keys():
+		if iid in ["gold_coin"]:
+			continue
+		var c: int = items[iid]
+		if c > 0:
+			st["store"][iid] = st["store"].get(iid, 0) + c
+			n += c
+			items.erase(iid)
+	return n
+
+func chest_withdraw_all(st) -> int:
+	var n := 0
+	for iid in st.get("store", {}).keys():
+		add_item(iid, st["store"][iid])
+		n += st["store"][iid]
+	st["store"] = {}
+	return n
+
+func respawn_player() -> void:
+	player.hp = int(player.max_hp * 0.5)
+	player.statuses.clear()
+	if palbox_pos.x >= 0:
+		player.pos = Vector2(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
+	log_msg("You wake up battered at base…")
+
+func sleep_to_morning() -> void:
+	day += 1
+	tod = 6.0
+	player.hp = player.max_hp
+	for q in pals:
+		if q.mode == "base":
+			q.hp = q.max_hp
+			q.san = 100.0
+			q.hunger = 0.0
+	log_msg("You sleep until dawn. Day %d" % day)
 
 func summon_raid() -> void:
 	if palbox_pos.x < 0:
@@ -267,6 +315,14 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		if item_count(c[0]) < c[1]:
 			log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
 			return false
+	for dy0 in range(s.get("h", 2)):
+		for dx0 in range(s.get("w", 2)):
+			if structures.has(Vector2i(tx + dx0, ty + dy0)):
+				log_msg("Blocked: something already built there")
+				return false
+			if world.tile_at(tx + dx0, ty + dy0) == World.Tile.WATER:
+				log_msg("Can't build on water")
+				return false
 	for c in s.get("cost", []):
 		add_item(c[0], -c[1])
 	var spr := Sprite2D.new()
@@ -276,7 +332,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 	spr.position = Vector2(p.x, p.y - spr.texture.get_height() * 0.5 + 8)
 	entity_layer.add_child(spr)
-	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": []}
+	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 	for dy in range(h):
 		for dx in range(w):
 			structures[Vector2i(tx + dx, ty + dy)] = st
@@ -348,9 +404,15 @@ func tick_production(dt: float) -> void:
 			tick_ranch(key, st, dt)
 			continue
 		var prod: Array = job.get("produces", [])
-		if prod.is_empty() or st["workers"].is_empty():
+		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0)
+		if prod.is_empty() or active.is_empty():
 			continue
-		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * st["workers"].size()
+		var powered := 1.0
+		for kg in structures:
+			var sg = structures[kg]
+			if sg.get("id") == "generator" and not sg["workers"].is_empty():
+				powered = 1.5
+		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * active.size()
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
@@ -438,6 +500,10 @@ func assign_worker() -> void:
 			sd = d
 			site = structures[k]
 	if site:
+		var need: String = StructureData.STRUCTURES[site["id"]].get("job", {}).get("workType", "")
+		if need != "" and best.spec.get("work", {}).get(need, 0) == 0:
+			log_msg("%s can't %s" % [best.spec["name"], need])
+			return
 		site["workers"].append(best)
 		best.job_site = site
 		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
@@ -498,8 +564,7 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
 		if player.hp <= 0:
-			player.hp = 0
-			log_msg("You were knocked out...")
+			respawn_player()
 	else:
 		var tp: Pal = target_ent
 		var mult := Combat.effectiveness(elem, tp.elem())
@@ -525,7 +590,7 @@ func update_projectiles(dt: float) -> void:
 				for p in pals:
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
-						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent), mult, rng)
+						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus, mult, rng)
 						p.hit(d, mult, true)
 						dead = true
 						break
@@ -626,7 +691,7 @@ func load_game() -> bool:
 		var pp := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 		spr.position = Vector2(pp.x, pp.y - spr.texture.get_height() * 0.5 + 8)
 		entity_layer.add_child(spr)
-		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": []}
+		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
