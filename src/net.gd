@@ -38,15 +38,38 @@ func join(ip: String) -> void:
 func _on_peer_connected(id: int) -> void:
 	if is_host:
 		rpc_id(id, "world_sync", game.world.seed)
+		# inform every client about every peer (star topo: clients never see peer_connected)
+		for pid in multiplayer.get_peers():
+			rpc("peer_joined", pid)
+		rpc("peer_joined", id)
 	spawn_ghost(id)
 
 func _on_connected_to_server() -> void:
+	spawn_ghost(1)  # host
 	game.log_msg("Connected to host")
 
 func _on_peer_disconnected(id: int) -> void:
 	if ghosts.has(id):
 		ghosts[id].queue_free()
 		ghosts.erase(id)
+	if is_host:
+		rpc("peer_left", id)
+
+@rpc("authority", "call_remote", "reliable")
+func peer_joined(id: int) -> void:
+	if id != multiplayer.get_unique_id() and not ghosts.has(id):
+		spawn_ghost(id)
+
+@rpc("authority", "call_remote", "reliable")
+func peer_left(id: int) -> void:
+	if ghosts.has(id):
+		ghosts[id].queue_free()
+		ghosts.erase(id)
+
+@rpc("authority", "call_remote", "unreliable")
+func peer_pos(id: int, x: float, y: float, elev: float) -> void:
+	if ghosts.has(id):
+		ghosts[id].net_pos = Vector3(x, y, elev)
 
 func spawn_ghost(id: int) -> void:
 	var g := preload("res://src/ghost.gd").new()
@@ -65,6 +88,8 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if ghosts.has(id):
 		ghosts[id].net_pos = Vector3(x, y, elev)
+	if is_host:
+		rpc("peer_pos", id, x, y, elev)  # relay so clients see each other
 
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String) -> void:
