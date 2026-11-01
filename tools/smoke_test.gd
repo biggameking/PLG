@@ -828,6 +828,12 @@ func run() -> void:
 		game.condense_active()
 		check("condense needs fodder", ap2.star == star0 + 1, "star=%d" % ap2.star)
 
+	# stack cap: overflow spills to a ground drop, items not lost
+	var n_drops := game.drops.size()
+	game.add_item("pal_sphere", 9999) # stack 50
+	check("stack capped", game.item_count("pal_sphere") == 50, "=%d" % game.item_count("pal_sphere"))
+	check("overflow spilled", game.drops.size() > n_drops, "drops=%d" % game.drops.size())
+
 	# night sleep: wild non-dark pals sleep; dark pals stay up; hit wakes
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null

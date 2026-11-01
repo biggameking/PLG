@@ -83,6 +83,18 @@ func sphere_tiers() -> Array:
 
 func add_item(id: String, n: int) -> void:
 	items[id] = items.get(id, 0) + n
+	if n > 0:
+		# stack cap: overflow spills to the ground instead of vanishing
+		var cap: int = ItemData.ITEMS.get(id, {}).get("stack", 999)
+		if items[id] > cap:
+			var spill: int = items[id] - cap
+			items[id] = cap
+			if player != null:
+				spawn_drop(id, spill, player.pos)
+				drops.back()["cool"] = 3.0 # don't vacuum it straight back up
+				log_msg("Bag full - %s x%d dropped" % [ItemData.ITEMS[id].get("name", id), spill])
+			else:
+				items[id] += spill # pre-player init: keep the overflow
 	if items[id] <= 0:
 		items.erase(id)
 
@@ -317,7 +329,7 @@ func spawn_drop(id: String, n: int, at: Vector2) -> void:
 	var p := Iso.to_screen(at.x, at.y, world.elev_at(int(at.x), int(at.y)))
 	spr.position = Vector2(p.x, p.y - 2)
 	entity_layer.add_child(spr)
-	drops.append({"id": id, "n": n, "pos": at, "node": spr})
+	drops.append({"id": id, "n": n, "pos": at, "node": spr, "cool": 0.0})
 
 func take_drop(d: Dictionary) -> void:
 	drops.erase(d)
@@ -403,6 +415,9 @@ func _process(dt: float) -> void:
 	# ground-drop pickup on walk-over
 	for i in range(drops.size() - 1, -1, -1):
 		var d: Dictionary = drops[i]
+		if d["cool"] > 0.0:
+			d["cool"] = d["cool"] - dt
+			continue
 		if player.pos.distance_squared_to(d["pos"]) < 0.55:
 			add_item(d["id"], d["n"])
 			floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
