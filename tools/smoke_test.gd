@@ -270,7 +270,7 @@ func run() -> void:
 				log_st = game.structures[kk2]
 		log_st["workers"].erase(non)
 		game.assign_worker()
-		check("work-type gating", non not in log_st["workers"] and non.job_site == null)
+		check("work-type gating", non not in log_st["workers"], "site=%s" % (non.job_site["id"] if non.job_site else "none"))
 	else:
 		check("work-type gating", false, "no non-lumbering base pal")
 	# SAN slack: a worker with san<15 produces nothing

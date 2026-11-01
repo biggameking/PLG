@@ -142,9 +142,10 @@ func hurt_player(atk: float, from: Pal) -> void:
 		return
 	var def := 20.0 + player.level * 3.0
 	var d := maxi(1, int(round(25.0 * (2.0 * atk) / maxf(1.0, atk + 2.0 * def) * (0.9 + rng.next() * 0.2))))
-	player.hp -= maxi(1, d - player.armor_def())
+	var final := maxi(1, d - player.armor_def())
+	player.hp -= final
 	player.hit_flash = 0.4
-	floater(player.pos, "-" + str(d), "#e64533")
+	floater(player.pos, "-" + str(final), "#e64533")
 	if player.hp <= 0:
 		respawn_player()
 
@@ -505,17 +506,17 @@ func assign_worker() -> void:
 	var sd := 6.0
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
-		if s.get("job", {}).get("produces") == null:
+		var jb: Dictionary = s.get("job", {})
+		if jb.get("produces") == null and structures[k]["id"] != "ranch":
 			continue
+		var need: String = jb.get("workType", "")
+		if need != "" and best.spec.get("work", {}).get(need, 0) == 0:
+			continue  # this pal can't work this site — keep looking
 		var d := best.pos.distance_to(Vector2(k.x, k.y))
 		if d < sd:
 			sd = d
 			site = structures[k]
 	if site:
-		var need: String = StructureData.STRUCTURES[site["id"]].get("job", {}).get("workType", "")
-		if need != "" and best.spec.get("work", {}).get(need, 0) == 0:
-			log_msg("%s can't %s" % [best.spec["name"], need])
-			return
 		site["workers"].append(best)
 		best.job_site = site
 		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
