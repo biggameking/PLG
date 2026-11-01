@@ -1172,7 +1172,8 @@ func partner_skill() -> void:
 		if q.uid == party[0]:
 			p = q
 			break
-	if not p:
+	if not p or p.hp <= 0:
+		log_msg("Party pal is down")
 		return
 	var m := player.get_global_mouse_position()
 	var tw: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
@@ -1185,7 +1186,8 @@ func partner_skill() -> void:
 			continue
 		if p.pos.distance_to(tw) > sk.get("range", 6) * 2.0:
 			continue
-		best = sk
+		if best.is_empty() or sk.get("dmg", 0) > best.get("dmg", 0):
+			best = sk # strongest usable skill, not just the last one scanned
 	if best.is_empty():
 		log_msg("%s has no usable partner skill" % p.spec["name"])
 		return
