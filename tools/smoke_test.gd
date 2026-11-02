@@ -857,12 +857,14 @@ func run() -> void:
 			fp.setup(game, ap2.species_id, 1, Vector2.ZERO)
 			fp.mode = "box"
 			game.box.append(fp)
-		game.condense_active()
+		game.condense_active() # first press = preview
+		game.condense_active() # second press within 4s = commit
 		check("condense star+1", ap2.star == star0 + 1, "star=%d" % ap2.star)
 		check("condense stats up", ap2.atk_bonus > atk0 and ap2.max_hp > mhp0,
 			"atk %.2f->%.2f hp %.0f->%.0f" % [atk0, ap2.atk_bonus, mhp0, ap2.max_hp])
 		check("condense eats fodder", game.box.size() == boxn0, "box %d->%d" % [boxn0 + 4, game.box.size()])
 		# second condense needs 16 — we only gave 4-4=0 left
+		game.condense_active()
 		game.condense_active()
 		check("condense needs fodder", ap2.star == star0 + 1, "star=%d" % ap2.star)
 

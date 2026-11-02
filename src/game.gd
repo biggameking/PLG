@@ -50,6 +50,7 @@ var craft_target: Node2D = null
 var panel := ""
 var craft_station := ""
 var chest_ref = null
+var condense_arm := 0.0
 const DAY_LEN := 240.0     # seconds per game day
 
 @onready var entity_layer: Node2D = $YSort/Entities
@@ -403,6 +404,19 @@ func condense_active() -> void:
 	if party.is_empty():
 		log_msg("No active pal to condense")
 		return
+	var ap0: Pal = find_pal(party[0])
+	if ap0 != null and ap0.star < CONDENSE_COST.size():
+		var need0: int = CONDENSE_COST[ap0.star]
+		var have0 := 0
+		for bp0 in box:
+			if bp0.species_id == ap0.species_id:
+				have0 += 1
+		if have0 >= need0:
+			if t > condense_arm: # first E previews; second E within 4s commits
+				condense_arm = t + 4.0
+				log_msg("Press E again to consume %d %s -> star %d" % [need0, ap0.spec["name"], ap0.star + 1])
+				return
+			condense_arm = 0.0
 	var ap: Pal = find_pal(party[0])
 	if ap == null:
 		return
