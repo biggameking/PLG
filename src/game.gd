@@ -415,6 +415,19 @@ func eat_food_item() -> int:
 		best["store"].erase(best_id)
 	return best_v
 
+func eat_from_bag() -> int:
+	# party pals eat straight from the player's inventory (Palworld rule)
+	var best_id := ""; var best_v := 1 << 30
+	for id in items.keys():
+		var it: Dictionary = ItemData.ITEMS.get(id, {})
+		var fv: int = it.get("food", 0)
+		if fv > 0 and items[id] > 0 and fv < best_v:
+			best_v = fv; best_id = id
+	if best_id == "":
+		return 0
+	add_item(best_id, -1)
+	return best_v
+
 func chest_can_take(st: Dictionary, id: String) -> bool:
 	var store: Dictionary = st.get("store", {})
 	if store.has(id):
