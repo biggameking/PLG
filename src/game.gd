@@ -1417,6 +1417,8 @@ func regenerate(s: int) -> void:
 			p.queue_free()
 	pals.clear()
 	party.clear()
+	for bp0 in box: # box pals were remove_child'd — clear() alone leaks their nodes
+		bp0.free()
 	box.clear()
 	for k in structures:
 		if is_instance_valid(structures[k]["node"]):
@@ -1431,6 +1433,10 @@ func regenerate(s: int) -> void:
 		if is_instance_valid(pr["node"]):
 			pr["node"].queue_free()
 	projectiles.clear()
+	for sp0 in spheres_flying: # in-flight spheres: sprite + stale target would linger
+		if is_instance_valid(sp0["node"]):
+			sp0["node"].queue_free()
+	spheres_flying.clear()
 	palbox_pos = Vector2i(-1, -1)
 	world.generate(s)
 	drawer.setup(world)
