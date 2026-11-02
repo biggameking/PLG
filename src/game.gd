@@ -242,8 +242,10 @@ func sphere_fly(sid: String, target: Pal) -> void:
 func generator_active() -> bool:
 	for kg in structures:
 		var sg = structures[kg]
-		if sg.get("id") == "generator" and not sg["workers"].is_empty():
-			return true
+		if sg.get("id") == "generator":
+			for w in sg["workers"]:
+				if is_instance_valid(w) and w.san >= 15.0: # a slacking pal doesn't keep the lights on
+					return true
 	return false
 
 func chest_deposit_all(st) -> int:
@@ -822,12 +824,7 @@ func gain_xp(n: int) -> void:
 		log_msg("Level up! Lv%d (+2 tech pts)" % player.level)
 
 func tick_production(dt: float) -> void:
-	var powered := 1.0 # generator bonus is global — compute once, not per site
-	for kg0 in structures:
-		var sg0: Dictionary = structures[kg0]
-		if sg0.get("id") == "generator" and not sg0["workers"].is_empty():
-			powered = 1.5
-			break
+	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
 	for key in structures:
 		var st = structures[key]
 		if key != cell_of(st):
