@@ -80,8 +80,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("map"):
 		map_show = not map_show
-		if map_show and map_img == null:
-			bake_minimap()
+		if map_show:
+			bake_minimap() # rebake every open — terrain/decor change and load_game swaps the world
 		return
 	if event.is_action_pressed("interact"):
 		interact()
