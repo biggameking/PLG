@@ -211,7 +211,21 @@ func hurt_player(atk: float, from: Pal) -> void:
 		respawn_player()
 
 func sphere_fly(sid: String, target: Pal) -> void:
-	spheres_flying.append({"sid": sid, "target": target, "t": 0.0})
+	var spr := Sprite2D.new()
+	var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
+	var c := Color(ItemData.ITEMS.get(sid, {}).get("col", "#e05050"))
+	img.fill(Color(0, 0, 0, 0))
+	for yy in range(2, 8):
+		for xx in range(2, 8):
+			img.set_pixel(xx, yy, c)
+	for xx in range(3, 7):
+		img.set_pixel(xx, 2, Color.WHITE) # top glint
+	spr.texture = ImageTexture.create_from_image(img)
+	var p0 := Iso.to_screen(player.pos.x, player.pos.y, world.elev_at(int(player.pos.x), int(player.pos.y)))
+	spr.position = Vector2(p0.x, p0.y - 14)
+	entity_layer.add_child(spr)
+	spheres_flying.append({"sid": sid, "target": target, "t": 0.0,
+		"node": spr, "from": player.pos})
 
 func generator_active() -> bool:
 	for kg in structures:
@@ -487,7 +501,18 @@ func _process(dt: float) -> void:
 	# spheres
 	for sp in spheres_flying.duplicate():
 		sp["t"] += dt
+		var tg: Pal = sp["target"]
+		if is_instance_valid(tg):
+			var f: float = minf(1.0, sp["t"] / 0.45)
+			var tp: Vector2 = tg.pos
+			var fp: Vector2 = sp["from"]
+			var cur: Vector2 = fp + (tp - fp) * f
+			var arc: float = sin(f * PI) * 24.0 # lobbed arc
+			var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
+			sp["node"].position = Vector2(pp.x, pp.y - 14 - arc)
 		if sp["t"] > 0.45:
+			if is_instance_valid(sp["node"]):
+				sp["node"].queue_free()
 			resolve_sphere(sp)
 			spheres_flying.erase(sp)
 	tick_production(dt)
