@@ -796,6 +796,12 @@ func gain_xp(n: int) -> void:
 		log_msg("Level up! Lv%d (+2 tech pts)" % player.level)
 
 func tick_production(dt: float) -> void:
+	var powered := 1.0 # generator bonus is global — compute once, not per site
+	for kg0 in structures:
+		var sg0: Dictionary = structures[kg0]
+		if sg0.get("id") == "generator" and not sg0["workers"].is_empty():
+			powered = 1.5
+			break
 	for key in structures:
 		var st = structures[key]
 		if key != cell_of(st):
@@ -818,11 +824,6 @@ func tick_production(dt: float) -> void:
 		var cons: Array = job.get("consumes", [])
 		if not cons.is_empty() and not consume_ready(cons):
 			continue # starved for inputs — no free production
-		var powered := 1.0
-		for kg in structures:
-			var sg = structures[kg]
-			if sg.get("id") == "generator" and not sg["workers"].is_empty():
-				powered = 1.5
 		var work_sum := 0.0 # each worker contributes by its Artisan/etc passives
 		for w in active:
 			work_sum += w.passive_mult("work")
