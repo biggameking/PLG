@@ -93,16 +93,20 @@ func run() -> void:
 	var box0 := game.box.size()
 	for try in 12:  # catch is chance-based; retry until captured
 		game.resolve_sphere({"sid": "legendary_sphere", "target": tgt})
-		if tgt.mode == "box":
+		if tgt.mode != "wild":
 			break
-	check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
-	check("catch into box", game.box.size() == box0 + 1, "box %d->%d" % [box0, game.box.size()])
+	check("caught pal captured", tgt.mode in ["partner", "box"], "mode=%s" % tgt.mode)
+	check("catch box only if party full", tgt.mode != "box" or game.party.size() >= 5, "mode=%s party=%d" % [tgt.mode, game.party.size()])
+	if tgt.mode == "box":
+		check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
 
 	# palbox + party
 	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20)
 	var k := Vector2i(int(p.pos.x) + 3, int(p.pos.y) + 3)
 	var placed := game.place_structure("palbox", k.x, k.y)
 	check("place palbox", placed and game.palbox_pos.x >= 0)
+	if game.box.is_empty() and not game.party.is_empty():
+		game.party_to_box(game.party[0]) # catch went to party — exercise party->box too
 	if not game.box.is_empty():
 		var bp: Pal = game.box[0]
 		game.box_to_party(bp)

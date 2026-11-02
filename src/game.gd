@@ -349,12 +349,17 @@ func resolve_sphere(sp) -> void:
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
 		gain_xp(target.level * 3)
-		target.mode = "box"
 		target.statuses.clear()
 		target.aggro = -1
-		box.append(target)
-		pals.erase(target)
-		entity_layer.remove_child(target)
+		if party.size() < 5: # Palworld rule: catch joins the party until it's full
+			target.mode = "partner"
+			party.append(target.uid)
+			log_msg("%s joins your party (%d/5)" % [target.spec["name"], party.size()])
+		else:
+			target.mode = "box"
+			box.append(target)
+			pals.erase(target)
+			entity_layer.remove_child(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
