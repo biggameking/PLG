@@ -151,6 +151,7 @@ func spawn_wild() -> void:
 		p.alpha = zone >= 2 and rng.chance(0.08)
 		entity_layer.add_child(p)
 		p.setup(self, sid, lv + (6 if p.alpha else 0), Vector2(x + 0.5, y + 0.5))
+		p.home = p.pos # lair anchor — alphas tether here
 		pals.append(p)
 		wild_n += 1
 
@@ -1198,6 +1199,7 @@ func load_game() -> bool:
 			continue # corrupt entry — don't crash on spec lookups
 		var np := preload("res://src/pal.gd").new()
 		np.setup(self, pd["sp"], pd["lv"], Vector2(pd["pos"][0], pd["pos"][1]))
+		np.home = np.pos # loaded pals re-anchor at their saved spot
 		np.mode = pd["mode"]; np.hp = pd["hp"]; np.talent = pd["talent"]
 		if pd.get("sex") != null:
 			np.sex = pd["sex"]

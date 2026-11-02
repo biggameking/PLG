@@ -210,8 +210,9 @@ func wild_ai(dt: float) -> void:
 		var a := game.rng.next() * TAU
 		target = pos + Vector2(cos(a), sin(a)) * (1.5 + game.rng.next() * 3.0)
 	step_toward(target, dt)
-	# aggro check
-	if hostile() == 2 and dist < 5.0 and not has_status("sleep"):
+	# aggro check — apex pounces from further out, ordinary hostiles at arm's length
+	var trigger := 5.0 if hostile() == 2 else 3.5
+	if hostile() >= 1 and dist < trigger and not has_status("sleep"):
 		aggro = 0
 
 func partner_ai(dt: float) -> void:
