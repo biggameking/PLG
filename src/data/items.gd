@@ -370,6 +370,7 @@ const ITEMS = {
  },
  "mega_sphere": {
   "id": "mega_sphere",
+  "tech": "mega_sphere",
   "name": "Mega Sphere",
   "glyph": "◐",
   "color": "#4caf50",
@@ -380,6 +381,7 @@ const ITEMS = {
  },
  "giga_sphere": {
   "id": "giga_sphere",
+  "tech": "giga_sphere",
   "name": "Giga Sphere",
   "glyph": "◐",
   "color": "#e8d44d",
@@ -390,6 +392,7 @@ const ITEMS = {
  },
  "ultra_sphere": {
   "id": "ultra_sphere",
+  "tech": "ultra_sphere",
   "name": "Ultra Sphere",
   "glyph": "◐",
   "color": "#e8963c",
@@ -400,6 +403,7 @@ const ITEMS = {
  },
  "legendary_sphere": {
   "id": "legendary_sphere",
+  "tech": "legendary_sphere",
   "name": "Legendary Sphere",
   "glyph": "◐",
   "color": "#e64533",
@@ -438,6 +442,7 @@ const ITEMS = {
  },
  "bow": {
   "id": "bow",
+  "tech": "bow",
   "name": "Bow",
   "glyph": ")",
   "color": "#8a6d4d",
@@ -453,6 +458,7 @@ const ITEMS = {
  },
  "musket": {
   "id": "musket",
+  "tech": "musket",
   "name": "Musket",
   "glyph": "┐",
   "color": "#5d4934",
@@ -496,6 +502,7 @@ const ITEMS = {
  },
  "arrow": {
   "id": "arrow",
+  "tech": "arrow",
   "name": "Arrow",
   "glyph": "→",
   "color": "#b8a468",
@@ -505,6 +512,7 @@ const ITEMS = {
  },
  "musket_ball": {
   "id": "musket_ball",
+  "tech": "musket_ball",
   "name": "Musket Ball",
   "glyph": "•",
   "color": "#4d565c",
@@ -604,6 +612,7 @@ const RECIPES = [
  },
  {
   "id": "spear",
+  "tech": "spear",
   "out": [
    "stone_spear",
    1
@@ -703,6 +712,7 @@ const RECIPES = [
  },
  {
   "id": "axe",
+  "tech": "axe",
   "out": [
    "metal_axe",
    1
@@ -722,6 +732,7 @@ const RECIPES = [
  },
  {
   "id": "pick",
+  "tech": "pick",
   "out": [
    "metal_pickaxe",
    1

@@ -345,6 +345,8 @@ func draw_craft(r: Vector2) -> void:
 	for rec in ItemData.RECIPES:
 		if rec.get("station") not in [game.craft_station, "hand"]:
 			continue
+		if rec.get("tech", "") != "" and rec["tech"] not in game.unlocked:
+			continue
 		var afford := true
 		var cost := ""
 		for c in rec.get("cost", []):

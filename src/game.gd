@@ -624,6 +624,9 @@ func craft(recipe_id: String) -> void:
 	var r := recipe(recipe_id)
 	if r.is_empty():
 		return
+	if r.get("tech", "") != "" and r["tech"] not in unlocked:
+		log_msg("Unlock %s in the tech tree first" % r["tech"])
+		return
 	for c in r.get("cost", []):
 		if item_count(c[0]) < c[1]:
 			log_msg("Missing materials")
