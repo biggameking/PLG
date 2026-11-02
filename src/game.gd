@@ -1186,9 +1186,12 @@ func load_game() -> bool:
 		log_msg("Save file corrupt - starting fresh")
 		return false
 	var d: Dictionary = dv
+	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
 	for p in pals:
 		p.queue_free()
 	pals.clear()
+	for bp1 in box: # box pals aren't in the scene tree — clear() alone leaks them
+		bp1.free()
 	box.clear()
 	for pr in projectiles:
 		pr["node"].queue_free()
@@ -1480,6 +1483,7 @@ func regenerate(s: int) -> void:
 			sp0["node"].queue_free()
 	spheres_flying.clear()
 	palbox_pos = Vector2i(-1, -1)
+	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	world.generate(s)
 	drawer.setup(world)
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
