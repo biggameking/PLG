@@ -107,6 +107,11 @@ func _physics_process(dt: float) -> void:
 	for k in statuses.keys():
 		if statuses[k] <= game.t:
 			statuses.erase(k)
+	# DoT statuses on the player (were cosmetic-only)
+	if statuses.get("burn", 0) > game.t and int(game.t * 5) != int((game.t - dt) * 5):
+		hp = maxf(1.0, hp - max_hp * 0.02)
+	if statuses.get("poison", 0) > game.t and int(game.t * 3) != int((game.t - dt) * 3):
+		hp = maxf(1.0, hp - max_hp * 0.012)
 	var iv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if iv.length_squared() > 0.01:
 		facing = iv.normalized()
