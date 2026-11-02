@@ -314,6 +314,8 @@ func haul_ai(dt: float) -> void:
 		if pos.distance_to(cp) > 1.8:
 			step_toward(cp, dt)
 		else:
+			if not game.structures.has(cc) or game.structures[cc]["id"] not in ["chest", "feed_box"]:
+				return # chest was demolished mid-walk — keep holding the goods
 			var st: Dictionary = game.structures[cc]
 			st["store"][carry["id"]] = st["store"].get(carry["id"], 0) + carry["n"]
 			carry = null
@@ -334,6 +336,8 @@ func haul_ai(dt: float) -> void:
 		if pos.distance_to(cp2) > 1.6:
 			step_toward(cp2, dt)
 		else:
+			if sst["store"].is_empty():
+				return # another hauler emptied it between scan and pickup
 			site_id = sst["store"].keys()[0]
 			carry = {"id": site_id, "n": sst["store"][site_id]}
 			sst["store"].erase(site_id)
@@ -356,6 +360,8 @@ func haul_ai(dt: float) -> void:
 	if pos.distance_to(pick["pos"]) > 0.6:
 		step_toward(pick["pos"], dt)
 	else:
+		if pick not in game.drops:
+			return # a faster hauler already claimed it — no loot duplication
 		carry = {"id": pick["id"], "n": pick["n"]}
 		game.take_drop(pick)
 
