@@ -758,8 +758,10 @@ func gain_xp(n: int) -> void:
 				q.hp = q.max_hp
 				log_msg("%s grew to Lv%d!" % [q.spec["name"], q.level])
 	player.xp += n
-	var need := 30 + player.level * 20
-	if player.xp >= need:
+	while true: # a big kill can cross several levels
+		var need := 30 + player.level * 20
+		if player.xp < need:
+			break
 		player.xp -= need
 		player.level += 1
 		player.max_hp += 10
