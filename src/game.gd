@@ -955,7 +955,7 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 				if caster.pos.distance_to(player.pos) <= radius:
 					skill_hit(caster, player, sk)
 				for p in pals:
-					if p.mode == "partner" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
+					if p.mode in ["partner", "base"] and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
 						skill_hit(caster, p, sk)
 			else:
 				for p in pals:
