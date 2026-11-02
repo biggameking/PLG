@@ -964,11 +964,11 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 			if caster.mode == "wild":
 				if caster.pos.distance_to(player.pos) <= radius:
 					skill_hit(caster, player, sk)
-				for p in pals:
+				for p in pals.duplicate():
 					if p.mode in ["partner", "base"] and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
 						skill_hit(caster, p, sk)
 			else:
-				for p in pals:
+				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
 						skill_hit(caster, p, sk)
 			floater(caster.pos, sk["name"] + "!", "#ffd76e")
@@ -1035,7 +1035,7 @@ func update_projectiles(dt: float) -> void:
 					dead = true
 		if pr["from"] is String and pr["from"] == "player":
 			if not dead:
-				for p in pals:
+				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
 						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus, mult, rng)
@@ -1053,13 +1053,13 @@ func update_projectiles(dt: float) -> void:
 					skill_hit(caster, player, pr["skill"])
 					dead = true
 				else:
-					for p in pals:
+					for p in pals.duplicate():
 						if p.mode in ["partner", "base"] and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 							skill_hit(caster, p, pr["skill"]) # wild shots hit partners AND base workers
 							dead = true
 							break
 			else:
-				for p in pals:
+				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						skill_hit(caster, p, pr["skill"])
 						dead = true
