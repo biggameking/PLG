@@ -10,3 +10,7 @@ data_*/
 .DS_Store
 *.local
 tools/__pycache__/
+
+# test artifacts
+tools/smoke_out.txt
+tools/dbg.txt

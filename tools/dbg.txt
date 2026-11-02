@@ -1,5 +1,0 @@
-palbox=(115, 113) wood=2 palbox-placed=true
-probe (118, 113) water=false occ=true
-probe (125, 113) water=false occ=false
-probe (140, 113) water=false occ=false
-place=false
