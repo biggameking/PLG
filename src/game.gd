@@ -1021,8 +1021,9 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 			floater(caster.pos, "+%d %s" % [int(heal), sk["name"]], "#a8e6a1")
 		"lunge":
 			var land: Vector2 = tpos + (caster.pos - tpos).normalized() * 0.9
-			if not world.blocked(int(land.x), int(land.y)):
-				caster.pos = land # don't lunge into water/cliffs
+			# pass caster pos so elevation is actually checked — 2-arg blocked skips it
+			if not world.blocked(int(land.x), int(land.y), caster.pos.x, caster.pos.y):
+				caster.pos = land
 			skill_hit(caster, target_ent, sk)
 		"burst":
 			var radius: float = sk.get("range", 4)
