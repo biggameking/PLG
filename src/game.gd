@@ -624,8 +624,14 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var e0: int = world.elev_at(tx, ty)
 	for dy0 in range(s.get("h", 2)):
 		for dx0 in range(s.get("w", 2)):
+			if not world.in_bounds(tx + dx0, ty + dy0):
+				log_msg("Can't build off the map")
+				return false
 			if structures.has(Vector2i(tx + dx0, ty + dy0)):
 				log_msg("Blocked: something already built there")
+				return false
+			if world.decor[world.idx(tx + dx0, ty + dy0)] != World.Decor.NONE:
+				log_msg("Clear the %s first" % "trees and rocks here")
 				return false
 			if world.tile_at(tx + dx0, ty + dy0) == World.Tile.WATER:
 				log_msg("Can't build on water")
@@ -663,6 +669,8 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 	var w: int = s.get("w", 2); var h: int = s.get("h", 2)
 	for dy0 in range(h):
 		for dx0 in range(w):
+			if not world.in_bounds(tx + dx0, ty + dy0):
+				return false
 			if structures.has(Vector2i(tx + dx0, ty + dy0)):
 				return false
 	var spr := Sprite2D.new()
