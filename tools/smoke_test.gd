@@ -102,8 +102,18 @@ func run() -> void:
 
 	# palbox + party
 	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20)
-	var k := Vector2i(int(p.pos.x) + 3, int(p.pos.y) + 3)
-	var placed := game.place_structure("palbox", k.x, k.y)
+	var placed := false
+	for r9 in range(2, 16): # palbox needs flat non-water ground — spiral until a valid cell turns up
+		for dx9 in range(-r9, r9 + 1):
+			for dy9 in range(-r9, r9 + 1):
+				if maxi(absi(dx9), absi(dy9)) != r9:
+					continue
+				var k := Vector2i(int(p.pos.x) + dx9, int(p.pos.y) + dy9)
+				if game.place_structure("palbox", k.x, k.y):
+					placed = true
+					break
+			if placed: break
+		if placed: break
 	check("place palbox", placed and game.palbox_pos.x >= 0)
 	if game.box.is_empty() and not game.party.is_empty():
 		game.party_to_box(game.party[0]) # catch went to party — exercise party->box too
@@ -228,7 +238,8 @@ func run() -> void:
 	game.upgrade_perk("capture")
 	check("perk upgrade", game.perks["capture"] == 1 and game.item_count("lifmunk_effigy") == 8)
 	game.upgrade_perk("hp")
-	check("hp perk", p.max_hp == 112, "maxhp %d" % p.max_hp)
+	var want_hp: float = 100 + (p.level - 1) * 10 + game.perks["hp"] * 12
+	check("hp perk", p.max_hp == want_hp, "maxhp %d want %d" % [p.max_hp, want_hp])
 
 	# breeding
 	game.add_item("wood", 40); game.add_item("stone", 20); game.add_item("fiber", 20)
