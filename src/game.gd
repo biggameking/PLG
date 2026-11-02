@@ -724,12 +724,15 @@ func demolish_at(at: Vector2) -> bool:
 		w.job_site = null
 	for it in st.get("store", {}).keys():
 		add_item(it, st["store"][it])
+	st["store"] = {} # refunded — an open chest panel must not re-withdraw these
 	for c in StructureData.STRUCTURES[sid].get("cost", []):
 		add_item(c[0], int(ceil(c[1] * 0.5)))
 	for k in cells:
 		structures.erase(k)
 		world.structures.erase(world.idx(k.x, k.y))
 	st["node"].queue_free()
+	if chest_ref == st:
+		chest_ref = null # the panel's container just died — stop referencing it
 	if sid == "palbox":
 		palbox_pos = Vector2i(-1, -1)
 	log_msg("Demolished %s (50%% refund)" % StructureData.STRUCTURES[sid]["name"])

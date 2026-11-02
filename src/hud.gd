@@ -130,9 +130,11 @@ func run_click(cr: Dictionary) -> void:
 		"perk":
 			game.upgrade_perk(cr["arg"])
 		"chest_dep":
-			game.log_msg("Stored %d items" % game.chest_deposit_all(game.chest_ref))
+			if game.chest_ref != null:
+				game.log_msg("Stored %d items" % game.chest_deposit_all(game.chest_ref))
 		"chest_wd":
-			game.log_msg("Took %d items" % game.chest_withdraw_all(game.chest_ref))
+			if game.chest_ref != null:
+				game.log_msg("Took %d items" % game.chest_withdraw_all(game.chest_ref))
 
 func interact() -> void:
 	var f: Vector2 = game.player.facing
