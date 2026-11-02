@@ -133,8 +133,8 @@ func _physics_process(dt: float) -> void:
 		elif iv.x < -0.02:
 			dir = -1
 	elif dodge_t > 0:
-		# dodge roll: burst along facing
-		var v := Vector2(dir * 0.4, 0) + Input.get_vector("move_left", "move_right", "move_up", "move_down") * 0.6
+		# dodge roll: burst along the real facing (dir is x-only)
+		var v := facing * 0.4 + Input.get_vector("move_left", "move_right", "move_up", "move_down") * 0.6
 		var nx: float = pos.x + v.normalized().x * 9.0 * dt
 		var ny: float = pos.y + v.normalized().y * 9.0 * dt
 		if not world.blocked(int(nx), int(pos.y), pos.x, pos.y):
