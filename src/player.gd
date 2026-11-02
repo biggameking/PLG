@@ -30,7 +30,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("aim"):
 		aiming = not aiming
 	if event.is_action_pressed("cycle_sphere"):
-		sphere_sel += 1
+		sphere_sel = (sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
 	if event.is_action_pressed("dodge") and dodge_t <= 0:
 		dodge_t = 0.35
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -53,7 +53,7 @@ func melee() -> void:
 	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08)
 	var reach: float = wd.get("range", 1.6)
 	var hit_any := false
-	for p in game.pals:
+	for p in game.pals.duplicate():
 		if p.mode != "wild" or p.hp <= 0:
 			continue
 		if pos.distance_to(p.pos) > reach:
