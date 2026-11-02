@@ -194,6 +194,8 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		p.job_site = null # no lingering worker SAN drain or base_ai pull
 	if p.mode in ["partner", "base"]: # owned pals are knocked out, not deleted
 		p.mode = "box"
+		p.statuses.clear() # a KO'd pal shouldn't come out of the box still burning
+		p.stun_t = 0.0
 		p.revive_t = t + 300.0  # Palworld-style revive timer
 		box.append(p)
 		entity_layer.remove_child(p)
