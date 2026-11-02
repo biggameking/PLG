@@ -187,8 +187,10 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		p.carry = null
 	pals.erase(p)
 	party.erase(p.uid)  # dead partners must free their party slot
-	if p.job_site and p in p.job_site["workers"]:
-		p.job_site["workers"].erase(p)
+	if p.job_site:
+		if p in p.job_site["workers"]:
+			p.job_site["workers"].erase(p)
+		p.job_site = null # no lingering worker SAN drain or base_ai pull
 	if p.mode in ["partner", "base"]: # owned pals are knocked out, not deleted
 		p.mode = "box"
 		p.revive_t = t + 300.0  # Palworld-style revive timer
