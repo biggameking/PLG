@@ -149,13 +149,21 @@ func interact() -> void:
 				game.craft_station = st["id"]
 				game.panel = "craft"
 				return
-			"furnace", "mill", "crusher", "lumber_site", "stone_pit", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy":
+			"furnace", "mill", "crusher", "logging_site", "stone_pit", "gathering_site", "ore_mine", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy", "generator", "ranch", "cooler":
 				# automated sites: E reports the stockpile, no crafting here
 				var sdef: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
+				var eggs: String = "  %d egg(s)" % st["store"].get("pal_egg", 0) if st["id"] == "ranch" and st.get("store", {}).get("pal_egg", 0) > 0 else ""
 				if st.get("store", {}).is_empty():
 					game.log_msg("%s: %d workers, nothing stored" % [sdef.get("name", st["id"]), st["workers"].size()])
 				else:
-					game.log_msg("%s stores: %s" % [sdef.get("name", st["id"]), str(st["store"])])
+					game.log_msg("%s stores: %s%s" % [sdef.get("name", st["id"]), str(st["store"]), eggs])
+				return
+			"feed_box":
+				game.chest_ref = st # pals eat out of it; it's still a container
+				game.panel = "chest"
+				return
+			"pal_bed":
+				game.log_msg("Pal bed: base pals resting here recover SAN")
 				return
 			"palbox":
 				game.panel = "palbox"

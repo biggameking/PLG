@@ -248,6 +248,9 @@ func chest_deposit_all(st) -> int:
 			continue
 		var c: int = items[iid]
 		if c > 0:
+			if st["id"] == "feed_box" and ItemData.ITEMS.get(iid, {}).get("food", 0) <= 0:
+				skipped += c # feed boxes only take food — don't bury it under stone
+				continue
 			if not chest_can_take(st, iid):
 				skipped += c
 				continue
