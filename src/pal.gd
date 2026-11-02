@@ -242,7 +242,8 @@ func partner_ai(dt: float) -> void:
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
 			continue
-		if p.aggro != 0 and p.aggro != uid and not p.raid: # threats to the player or self, plus raiders
+		# threats: hunting the player, hunting me, hunting any party member, or raiders
+		if p.aggro != 0 and p.aggro != uid and not p.raid and not (p.aggro > 0 and p.aggro in game.party):
 			continue
 		var d := pos.distance_to(p.pos)
 		if d < bd:
