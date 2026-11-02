@@ -502,6 +502,23 @@ func run() -> void:
 	var dep: int = game.chest_deposit_all(chest_st)
 	var wd: int = game.chest_withdraw_all(chest_st)
 	check("chest store/withdraw", chest_ok and dep == wd and dep > 0, "dep%d wd%d" % [dep, wd])
+	# chest panel opened near the chest must refuse service once the player walks away
+	if chest_st != null:
+		game.chest_ref = chest_st
+		game.panel = "chest"
+		var hud_ref: Control = main.get_node("UILayer/HUD")
+		game.add_item("wood", 7)
+		var before_dep: int = game.item_count("wood")
+		var orig_pos := p.pos
+		var far := Vector2(p.pos.x + 30.0, p.pos.y)
+		if game.world.blocked(int(far.x), int(far.y)):
+			far = Vector2(4.5, 4.5)
+		p.pos = far
+		hud_ref.run_click({"act": "chest_dep"})
+		check("chest refuses remote access", game.item_count("wood") == before_dep and game.panel == "",
+			"wood=%d panel=%s" % [game.item_count("wood"), game.panel])
+		game.chest_ref = null
+		p.pos = orig_pos
 	# hostile pal aggros and damages player
 	var foe: Pal = load("res://src/pal.gd").new()
 	game.entity_layer.add_child(foe)

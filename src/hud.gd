@@ -135,12 +135,17 @@ func run_click(cr: Dictionary) -> void:
 			game.equip(cr["arg"])
 		"perk":
 			game.upgrade_perk(cr["arg"])
-		"chest_dep":
-			if game.chest_ref != null:
-				game.log_msg("Stored %d items" % game.chest_deposit_all(game.chest_ref))
-		"chest_wd":
-			if game.chest_ref != null:
-				game.log_msg("Took %d items" % game.chest_withdraw_all(game.chest_ref))
+		"chest_dep", "chest_wd":
+			var st = game.chest_ref
+			var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
+			if cc.x < 0 or game.player.pos.distance_to(Vector2(cc.x + 0.5, cc.y + 0.5)) > 5.0:
+				game.chest_ref = null
+				game.panel = "" # walked too far — the container is out of reach
+				return
+			if cr["act"] == "chest_dep":
+				game.log_msg("Stored %d items" % game.chest_deposit_all(st))
+			else:
+				game.log_msg("Took %d items" % game.chest_withdraw_all(st))
 
 func interact() -> void:
 	var f: Vector2 = game.player.facing
