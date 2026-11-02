@@ -1022,9 +1022,10 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	if target_ent is Player:
 		if player.dodge_t > 0:
 			return
-		player.hp -= maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def())
+		var final := maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def())
+		player.hp -= final
 		player.hit_flash = 0.4
-		floater(player.pos, "-" + str(int(sk.get("power", 10) * 0.6)), "#e64533")
+		floater(player.pos, "-" + str(final), "#e64533") # show post-armor damage like hurt_player
 		var st = sk.get("status")
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
@@ -1076,6 +1077,8 @@ func update_projectiles(dt: float) -> void:
 				projectiles.erase(pr)
 			continue
 		var caster: Pal = pr["from"]
+		if not is_instance_valid(caster): # caster died while the shot was in flight
+			dead = true
 		if not dead:
 			if caster.mode == "wild":
 				if pp.distance_to(player.pos) < 0.55:
