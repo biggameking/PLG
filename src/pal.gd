@@ -114,7 +114,7 @@ func _physics_process(dt: float) -> void:
 	if has_status("sleep") or stun_t > 0:
 		sync_screen()
 		return
-	speed = base_move_speed() * status_speed_mult()
+	speed = base_move_speed() * speed_bonus * status_speed_mult() # passive speed must survive the per-frame recompute
 	atk_cd -= dt
 	# far wild pals tick their AI at ~8Hz (accumulated dt keeps speeds honest)
 	var far := mode == "wild" and pos.distance_squared_to(game.player.pos) > 784.0
@@ -450,13 +450,13 @@ func passive_mult(field: String) -> float:
 func apply_bonuses() -> void:
 	atk_bonus = 1.0
 	def_bonus = 1.0
-	speed = base_move_speed() # recompute — repeat calls must not compound
+	speed_bonus = 1.0
 	var pv: Dictionary
 	for k in passives:
 		pv = PassiveData.PASSIVES[k]
 		atk_bonus *= pv.get("atk", 1.0)
 		def_bonus *= pv.get("def", 1.0)
-		speed *= pv.get("speed", 1.0)
+		speed_bonus *= pv.get("speed", 1.0)
 	# star rank stacks on top of passives (Palworld essence condenser)
 	var star_mult := pow(1.15, star)
 	atk_bonus *= star_mult
@@ -477,5 +477,6 @@ func condense() -> void:
 
 var atk_bonus := 1.0
 var def_bonus := 1.0
+var speed_bonus := 1.0
 var star := 0
 var raid := false            # spawned by a raid wave — blocks sleeping # essence-condense rank 0-4; each star multiplies combat stats
