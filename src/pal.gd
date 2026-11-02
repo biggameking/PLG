@@ -318,6 +318,8 @@ func haul_ai(dt: float) -> void:
 			if not game.structures.has(cc) or game.structures[cc]["id"] not in ["chest", "feed_box"]:
 				return # chest was demolished mid-walk — keep holding the goods
 			var st: Dictionary = game.structures[cc]
+			if not game.chest_can_take(st, carry["id"]):
+				return # filled up since it was picked — retarget next frame instead of over-stacking
 			st["store"][carry["id"]] = st["store"].get(carry["id"], 0) + carry["n"]
 			carry = null
 		return
