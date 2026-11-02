@@ -224,9 +224,12 @@ func respawn_player() -> void:
 			var a := rng.next() * TAU
 			spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8))
 			dropped += items[id]
-			items[id] = 0
+			items.erase(id) # don't leave ghost "x0" rows in the bag
 	if dropped > 0:
 		log_msg("You dropped %d items where you fell!" % dropped)
+	if player.mount != null: # dead men don't ride
+		player.mount.visible = true
+		player.mount = null
 	player.hp = int(player.max_hp * 0.5)
 	player.hunger = 40.0
 	player.statuses.clear()
