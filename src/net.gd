@@ -17,6 +17,7 @@ func setup(g: Game, layer: Node2D) -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func host() -> void:
 	var peer := ENetMultiplayerPeer.new()
@@ -91,7 +92,17 @@ func peer_pos(id: int, x: float, y: float, elev: float) -> void:
 	if ghosts.has(id):
 		ghosts[id].net_pos = Vector3(x, y, elev)
 
+func _on_server_disconnected() -> void:
+	for gid in ghosts.keys(): # frozen ghosts shouldn't outlive the session
+		if is_instance_valid(ghosts[gid]):
+			ghosts[gid].queue_free()
+	ghosts.clear()
+	is_host = false
+	game.log_msg("Host disconnected")
+
 func spawn_ghost(id: int) -> void:
+	if ghosts.has(id):
+		return # a reused peer id must not stack a second ghost
 	var g := preload("res://src/ghost.gd").new()
 	g.game = game
 	entity_layer.add_child(g)

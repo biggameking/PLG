@@ -1489,6 +1489,7 @@ func regenerate(s: int) -> void:
 	drawer.setup(world)
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
+	spawn_lairs() # joining clients need their own lair bosses (pals are locally authoritative)
 	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
 
 # ---------- effigy statues ----------
