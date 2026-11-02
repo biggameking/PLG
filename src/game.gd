@@ -509,6 +509,13 @@ func _process(dt: float) -> void:
 			wild_n += 1
 	if wild_n < 30 and rng.chance(dt * 0.15):
 		spawn_wild()
+	# stumps regrow into trees over a few in-game days
+	if rng.chance(dt * 0.02):
+		var ri := rng.int_range(0, world.decor.size() - 1)
+		if world.decor[ri] == World.Decor.STUMP:
+			world.decor[ri] = World.Decor.TREE_A if rng.chance(0.5) else World.Decor.TREE_B
+			world.hp[ri] = 30
+			queue_redraw_decor()
 	# base raid waves
 	if palbox_pos.x >= 0:
 		raid_t -= dt
