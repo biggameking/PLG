@@ -1280,7 +1280,9 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 			b = w
 	if a == null or b == null:
 		return
-	st["egg_parents"] = [a.species_id, b.species_id, a.talent, b.talent]
+	if not st.has("egg_parents") or st["egg_parents"] == null:
+		st["egg_parents"] = []
+	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent]) # FIFO queue, one entry per egg
 	st["store"]["pal_egg"] = st["store"].get("pal_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
@@ -1290,12 +1292,14 @@ func hatch_egg() -> void:
 		return
 	var pair = null
 	for k in structures:
-		if structures[k].get("egg_parents"):
-			pair = structures[k]["egg_parents"]
-			structures[k]["egg_parents"] = null
+		var q = structures[k].get("egg_parents")
+		if q is Array and q.size() > 0:
+			pair = q.pop_front() # oldest egg's parents
 			break
 	var sp_id: String
 	var talent_v: int
+	if pair is not Array or pair.size() < 4: # old saves stored a single flat pair, or nothing
+		pair = null
 	if pair:
 		sp_id = pair[rng.int_range(0, 1)]
 		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
@@ -1306,16 +1310,16 @@ func hatch_egg() -> void:
 	add_item("pal_egg", -1)
 	var at := player.pos + Vector2(1.0, 0.5)
 	var np := preload("res://src/pal.gd").new()
+	np.talent = talent_v # set BEFORE setup so apply_bonuses uses it
 	entity_layer.add_child(np)
 	np.setup(self, sp_id, 1, at)
-	np.talent = talent_v
-	np.mode = "base" if palbox_pos.x >= 0 else "wild"
-	np.max_hp = Combat.stat_at(np.spec["hp"], 1, talent_v)
-	np.hp = np.max_hp
-	if np.mode == "base":
+	if palbox_pos.x >= 0:
+		np.mode = "base"
 		pals.append(np)
-	else:
-		pals.append(np)
+	else: # no base: it goes straight to the box like any caught pal
+		np.mode = "box"
+		box.append(np)
+		entity_layer.remove_child(np)
 	floater(at, "* hatched! *", "#4dd0e1")
 	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])
 
