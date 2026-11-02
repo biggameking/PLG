@@ -101,6 +101,7 @@ func speed_mult() -> float:
 		m *= 0.5
 	if statuses.get("soak", 0) > game.t:
 		m *= 0.7
+	m *= 1.0 + game.perks["speed"] * 0.06
 	return m
 
 func _physics_process(dt: float) -> void:
