@@ -8,6 +8,7 @@ var show_help := false
 var build_sel := -1
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
+var join_buf := ""
 
 var map_img: Image = null
 var map_tex: ImageTexture = null # cached — was rebuilt every frame the map was open
@@ -51,6 +52,21 @@ func _unhandled_input(event: InputEvent) -> void:
 			chat_buf = chat_buf.left(-1)
 		elif event.unicode >= 32 and event.unicode < 127:
 			chat_buf += char(event.unicode)
+		get_viewport().set_input_as_handled()
+		return
+	# join-ip input mode
+	if game.panel == "join" and event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			var ip := join_buf.strip_edges()
+			if ip == "": ip = "127.0.0.1"
+			if game.net: game.net.join(ip)
+			join_buf = ""; game.panel = ""
+		elif event.keycode == KEY_ESCAPE:
+			join_buf = ""; game.panel = ""
+		elif event.keycode == KEY_BACKSPACE:
+			join_buf = join_buf.left(-1)
+		elif event.unicode >= 33 and event.unicode < 127 and not event.unicode == 32:
+			join_buf += char(event.unicode)
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER 		and game.panel == "" and game.net and multiplayer.multiplayer_peer != null:
@@ -99,7 +115,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if game.net: game.net.host() # J: host on :7777 — these actions were bound but unwired
 		return
 	if event.is_action_pressed("join_net"):
-		if game.net: game.net.join("127.0.0.1") # K: join local host — LAN ip by edit
+		if game.net and game.panel == "":
+			game.panel = "join"; join_buf = "" # K: type the host's IP, Enter to join
 		return
 	if event is InputEventKey and event.pressed and game.panel == "build":
 		var k: int = event.keycode
@@ -295,17 +312,20 @@ func _draw() -> void:
 			draw_palbox(r)
 		"chat":
 			draw_chat(r)
+		"join":
+			draw_join(r)
 	if show_help:
 		var lines := [
 			"MOVE wasd/arrows  SPRINT shift  DODGE space",
 			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
-			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter (net)",
+			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter",
+			"HOST j   JOIN k (type host IP, enter)",
 		]
-		draw_rect(Rect2(10, r.y - 126, 580, 76), Color(0, 0, 0, 0.7))
+		draw_rect(Rect2(10, r.y - 136, 580, 96), Color(0, 0, 0, 0.7))
 		for i in range(lines.size()):
-			draw_string(font, Vector2(20, r.y - 106 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#dfe8ea"))
+			draw_string(font, Vector2(20, r.y - 116 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#dfe8ea"))
 
 	# minimap (M): baked world image + live player/palbox markers
 	if map_show and map_img != null:
@@ -500,6 +520,12 @@ func use_item(k: String) -> void:
 				game.log_msg("+%d food" % it["food"])
 			else:
 				game.log_msg("Can't use " + k)
+
+func draw_join(r: Vector2) -> void:
+	var rr := Rect2(10, r.y - 58, 520, 44)
+	draw_rect(rr, Color(0, 0, 0, 0.8))
+	draw_string(font, rr.position + Vector2(10, 19), "Join IP (blank=localhost): " + join_buf + "_",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9fd8ff"))
 
 func draw_chat(r: Vector2) -> void:
 	var rr := Rect2(12, r.y - 40, 480, 28)
