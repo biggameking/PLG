@@ -5,19 +5,20 @@ PASS elevation variance  max elev 3
 PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS work types have sites  
-PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  306->301
+PASS player moves  -> (111.9148, 111.9137)
+PASS melee damages pal  1233->1229
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
+PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
-  place log: (113, 111) palbox_pos=(115, 113)
+  place log: (112, 112) palbox_pos=(114, 114)
 PASS assign_worker  
 PASS production ticks  wood 0->8 (site stockpile)
-PASS burn ticks  139->131
+PASS burn ticks  194->182
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -38,8 +39,8 @@ PASS demolish removes
 PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
-PASS feed box eats  stored={ "red_berries": 3 } hunger=54
-PASS level learns skills  Lv15 skills 3
+PASS feed box eats  stored={ "red_berries": 3 } hunger=55
+PASS level learns skills  Lv15 skills 4
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -57,17 +58,17 @@ PASS day rolls over  day 2->2
 PASS medicine heals  hp 132
 PASS sigil consumed  sig0 pals1
 PASS pal levels via xp  Lv15->16 xp10
-  had=2 linked_pals=2 sites={ "ranch": 12, "generator": 4 } pals=55 box=0 phantom=[lamball(ranch,,mode=base,inpal=true,inbox=false,js=ranch) sparkit(generator,,mode=base,inpal=true,inbox=false,js=generator) ]
+  had=1 linked_pals=1 sites={ "generator": 4 } pals=55 box=0 phantom=[sparkit(generator,,mode=base,inpal=true,inbox=false,js=generator) ]
 PASS party survives reload  party=1/1
 PASS structures rebuild 1:1  20->20
-  re_sites={ "ranch": 12, "generator": 4 } re_workers=[lamball(js=ranch,mode=base) sparkit(js=generator,mode=base) ]
-PASS save keeps sex/passives  F/["ferocious"]
+  re_sites={ "generator": 4 } re_workers=[sparkit(js=generator,mode=base) ]
+PASS save keeps sex/passives  F/["zen", "hooligan"]
 PASS save keeps chest store  
-PASS save keeps workers  2->2 [lamball sparkit ]
+PASS save keeps workers  1->1 [sparkit ]
 PASS dead partner frees slot  1->0
-PASS raid wave spawns  +4 pals, 4 aggro
-PASS raider hits base pal  victim hp 9->0
-PASS drops spawn+pickup  drops 52->51 wood 2
+PASS raid wave spawns  +5 pals, 5 aggro
+PASS raider hits base pal  victim hp 15->15
+PASS drops spawn+pickup  drops 50->49 wood 2
 PASS test chest placed  
 PASS hauler picks from site  carry={ "id": "stone", "n": 3 }
 PASS hauler delivers to chest  stone 0->3 carry=<null>
@@ -78,7 +79,7 @@ PASS apex stays up at night  {  }
 PASS projectile hits terrain  
 PASS buildable filters techs  list=["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 PASS stack capped  =50
-PASS overflow spilled  drops=52
+PASS overflow spilled  drops=50
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0

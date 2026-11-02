@@ -485,7 +485,10 @@ func star_str(p: Pal) -> String:
 func passive_str(p: Pal) -> String:
 	var s := ""
 	for k in p.passives:
-		s += "[" + PassiveData.PASSIVES[k]["name"] + "]"
+		var pv: Dictionary = PassiveData.PASSIVES.get(k, {})
+		if pv.is_empty():
+			continue # stale key from an older save — skip instead of crashing
+		s += "[" + pv["name"] + "]"
 	return s
 
 const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "Attack",
