@@ -606,10 +606,16 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 		return false
 	for dy in range(h):
 		for dx in range(w):
-			if world.blocked(tx + dx, ty + dy):
+			var cx0 := tx + dx; var cy0 := ty + dy
+			if not world.in_bounds(cx0, cy0):
 				return false
-			if structures.has(Vector2i(tx + dx, ty + dy)):
+			if world.tile_at(cx0, cy0) == World.Tile.WATER:
 				return false
+			if structures.has(Vector2i(cx0, cy0)):
+				return false
+			var dc: int = world.decor[world.idx(cx0, cy0)]
+			if dc in [World.Decor.ROCK, World.Decor.ORE_GOLD, World.Decor.ORE_COAL]:
+				return false # trees/bushes clear themselves; outcrops don't
 	return true
 
 func place_structure(sid: String, tx: int, ty: int) -> bool:
