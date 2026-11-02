@@ -1411,7 +1411,7 @@ func hatch_egg() -> void:
 		var keys2: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
 		sp_id = keys2[rng.int_range(0, keys2.size() - 1)]
 	add_item("pal_egg", -1)
-	var at := player.pos + Vector2(1.0, 0.5)
+	var at: Vector2 = nearest_free(player.pos.x + 1.0, player.pos.y + 0.5) # don't hatch into a wall
 	var np := preload("res://src/pal.gd").new()
 	entity_layer.add_child(np)
 	np.setup(self, sp_id, 1, at)
