@@ -987,8 +987,8 @@ func assign_worker() -> void:
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
 		var jb: Dictionary = s.get("job", {})
-		if jb.get("produces") == null and structures[k]["id"] != "ranch" and jb.get("kind") != "power":
-			continue # sites with no output aren't assignable (except generator/ranch)
+		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power":
+			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
 		var need: String = jb.get("workType", "")
 		if need != "" and best.spec.get("work", {}).get(need, 0) == 0:
 			continue  # this pal can't work this site — keep looking
