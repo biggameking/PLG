@@ -285,9 +285,9 @@ func respawn_player() -> void:
 	player.hunger = 40.0
 	player.statuses.clear()
 	if palbox_pos.x >= 0:
-		player.pos = Vector2(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
+		player.pos = nearest_free(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
 	else: # no base yet: back to the landing point, not back into the jaws
-		player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
+		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5)
 	log_msg("You wake up battered at base…")
 
 func is_night() -> bool:
@@ -318,7 +318,7 @@ func summon_raid() -> bool:
 	bp.alpha = true
 	bp.boss = true # set before setup so apply_bonuses folds the 2x in once
 	entity_layer.add_child(bp)
-	bp.setup(self, sid, 45, Vector2(palbox_pos.x + 2.5, palbox_pos.y + 2.5))
+	bp.setup(self, sid, 45, nearest_free(palbox_pos.x + 2.5, palbox_pos.y + 2.5))
 	bp.sprite.scale = Vector2(2.2, 2.2)
 	bp.sprite.position.y = -70.0
 	bp.aggro = 0  # player
@@ -835,6 +835,20 @@ func consume_ready(cons: Array) -> bool:
 		if have < cn[1]:
 			return false
 	return true
+
+func nearest_free(x: float, y: float) -> Vector2:
+	# spiral out from a desired spot until a walkable cell turns up
+	var c := Vector2i(int(x), int(y))
+	if not world.blocked(c.x, c.y):
+		return Vector2(c.x + 0.5, c.y + 0.5)
+	for r in range(1, 8):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue # ring cells only
+				if not world.blocked(c.x + dx, c.y + dy):
+					return Vector2(c.x + dx + 0.5, c.y + dy + 0.5)
+	return Vector2(x, y) # give up: original spot
 
 func cell_of(st) -> Vector2i:
 	for k in structures:
