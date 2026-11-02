@@ -398,16 +398,20 @@ func take_dps(n: int) -> void:
 
 func cast_skills(target_ent, dt: float) -> bool:
 	var dist := pos.distance_to(target_ent.pos)
+	var best: Dictionary = {}
 	for sid in learned_skills():
 		if skill_cd.get(sid, 0) > game.t:
 			continue
 		var sk: Dictionary = SkillData.SKILLS.get(sid, {})
 		if sk.is_empty() or dist > sk.get("range", 1.4):
 			continue
-		skill_cd[sid] = game.t + sk.get("cooldown", 2)
-		game.cast_skill(self, target_ent, sk)
-		return true
-	return false
+		if best.is_empty() or sk.get("power", 0) > best.get("power", 0):
+			best = sk # strongest usable skill, not the lowest-level one
+	if best.is_empty():
+		return false
+	skill_cd[best["id"]] = game.t + best.get("cooldown", 2)
+	game.cast_skill(self, target_ent, best)
+	return true
 
 func apply_skill_status(sk: Dictionary, is_behind: bool = false) -> void:
 	var st = sk.get("status")
