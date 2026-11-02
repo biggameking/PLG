@@ -175,8 +175,11 @@ func mouse_tile() -> Vector2:
 
 func place_ghost() -> void:
 	var tw := mouse_tile()
-	var sid: String = game.buildable_list()[build_sel]
-	game.place_structure(sid, int(tw.x), int(tw.y))
+	var bl := game.buildable_list()
+	if build_sel >= bl.size(): # list shrank since the bar was drawn
+		build_sel = maxi(0, bl.size() - 1)
+		return
+	game.place_structure(bl[build_sel], int(tw.x), int(tw.y))
 
 func w2s(p: Vector2) -> Vector2:
 	var c: Camera2D = get_viewport().get_camera_2d()
