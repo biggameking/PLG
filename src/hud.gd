@@ -95,6 +95,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("load_save"):
 		game.load_game()
 		return
+	if event.is_action_pressed("host_net"):
+		if game.net: game.net.host() # J: host on :7777 — these actions were bound but unwired
+		return
+	if event.is_action_pressed("join_net"):
+		if game.net: game.net.join("127.0.0.1") # K: join local host — LAN ip by edit
+		return
 	if event is InputEventKey and event.pressed and game.panel == "build":
 		var k: int = event.keycode
 		if k >= KEY_1 and k <= KEY_9:
@@ -480,6 +486,9 @@ func use_item(k: String) -> void:
 				game.add_item(k, -1)
 				game.log_msg("+%d HP" % it["heal"])
 			elif it.get("food", 0) > 0:
+				if game.player.hunger >= 100.0:
+					game.log_msg("Not hungry")
+					return # don't waste the food at full satiety
 				game.player.hunger = minf(100.0, game.player.hunger + it["food"])
 				game.add_item(k, -1)
 				game.log_msg("+%d food" % it["food"])

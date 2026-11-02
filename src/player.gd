@@ -29,6 +29,10 @@ func setup(g: Game, at: Vector2) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("aim"):
 		aiming = not aiming
+	if event.is_action_pressed("ride"):
+		try_mount()
+	if event.is_action_pressed("partner_skill"):
+		game.partner_skill()
 	if event.is_action_pressed("cycle_sphere"):
 		sphere_sel = (sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
 	if statuses.get("sleep", 0) > game.t:
