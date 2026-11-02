@@ -72,6 +72,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("tech"):
 		game.panel = "" if game.panel == "tech" else "tech"
 		return
+	if event.is_action_pressed("statues"):
+		game.panel = "" if game.panel == "statues" else "statues" # U: lifmunk effigy upgrades
+		return
 	if event.is_action_pressed("party_toggle"):
 		game.assign_worker()
 		return

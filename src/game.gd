@@ -605,6 +605,8 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
 	if s.is_empty():
 		return false
+	if sid == "palbox" and has_structure("palbox"):
+		return false # one base only — ghost must agree with place_structure
 	var w: int = s.get("w", 2)
 	var h: int = s.get("h", 2)
 	if not world.flat_at(tx, ty, w, h):
