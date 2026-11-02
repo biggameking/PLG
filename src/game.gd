@@ -509,12 +509,25 @@ signal decor_dirty
 func queue_redraw_decor() -> void:
 	decor_dirty.emit()
 
+var starve_acc := 0.0
 func _process(dt: float) -> void:
 	t += dt
 	tod += dt / DAY_LEN * 24.0
 	if tod >= 24.0:
 		tod -= 24.0
 		day += 1
+	# hunger actually burns — ~100 to 0 over ~8 real minutes
+	player.hunger = maxf(0.0, player.hunger - dt * 0.2)
+	if player.hunger <= 0.0:
+		starve_acc += dt
+		if starve_acc > 3.0: # starving ticks 1hp every 3s — can kill
+			starve_acc = 0.0
+			player.hp -= 1
+			floater(player.pos, "starving", "#e0503c")
+			if player.hp <= 0:
+				respawn_player()
+	else:
+		starve_acc = 0.0
 	# spheres
 	for sp in spheres_flying.duplicate():
 		sp["t"] += dt
