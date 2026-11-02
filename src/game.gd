@@ -1154,7 +1154,7 @@ func load_game() -> bool:
 		if pd.get("sex") != null:
 			np.sex = pd["sex"]
 		if pd.get("passives") != null:
-			np.passives = pd["passives"]
+			np.passives = pd["passives"].filter(func(k): return PassiveData.PASSIVES.has(k)) # drop passives removed in newer builds
 		if pd.get("alpha"):
 			np.alpha = true
 			np.sprite.scale = Vector2(1.6, 1.6)
