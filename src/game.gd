@@ -778,16 +778,16 @@ func tick_production(dt: float) -> void:
 			continue # tick once per structure
 		var s: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
 		var job: Dictionary = s.get("job", {})
-		if st["id"] == "ranch":
-			tick_ranch(key, st, dt)
-			continue
-		var prod: Array = job.get("produces", [])
 		var seen := []
-		for w in st["workers"].duplicate(): # hygiene: dedupe + drop stale refs
+		for w in st["workers"].duplicate(): # hygiene first — every site incl. ranch: dedupe + drop stale refs
 			if not is_instance_valid(w) or w.job_site != st or w.mode != "base" or w in seen:
 				st["workers"].erase(w)
 			else:
 				seen.append(w)
+		if st["id"] == "ranch":
+			tick_ranch(key, st, dt)
+			continue
+		var prod: Array = job.get("produces", [])
 		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0)
 		if prod.is_empty() or active.is_empty():
 			continue
@@ -933,7 +933,8 @@ func assign_worker() -> void:
 			sd = d
 			site = structures[k]
 	if site:
-		site["workers"].append(best)
+		if best not in site["workers"]:
+			site["workers"].append(best) # idempotent — a stale entry must not duplicate
 		best.job_site = site
 		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
 	else:
@@ -1077,10 +1078,11 @@ func save_game() -> void:
 	var pals_data := []
 	for p in pals:
 		var jc = null
-		for kj in structures:
-			if p in structures[kj]["workers"]:
-				jc = "%d,%d" % [kj.x, kj.y]
-				break
+		if p.mode == "base": # only base pals hold jobs; anything else in workers is stale
+			for kj in structures:
+				if p in structures[kj]["workers"]:
+					jc = "%d,%d" % [kj.x, kj.y]
+					break
 		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
@@ -1217,7 +1219,7 @@ func load_game() -> bool:
 	for pj in pending_jobs:
 		var parts2: PackedStringArray = pj[1].split(",")
 		var cell := Vector2i(int(parts2[0]), int(parts2[1]))
-		if structures.has(cell):
+		if structures.has(cell) and pj[0].mode == "base" and pj[0] not in structures[cell]["workers"]:
 			structures[cell]["workers"].append(pj[0])
 			pj[0].job_site = structures[cell]
 	log_msg("Loaded.")

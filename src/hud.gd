@@ -431,7 +431,7 @@ func draw_palbox(r: Vector2) -> void:
 	for bp in game.box:
 		var rect := Rect2(rr.position.x + 24, y - 12, 220, 18)
 		click_rects.append({"rect": rect, "act": "box_out", "arg": bp})
-		var ko := bp.hp <= 0
+		var ko: bool = bp.hp <= 0
 		var label := "%s %s%s Lv%d  HP%d/%d%s" % [bp.spec["name"], bp.sex, star_str(bp), bp.level,
 			int(maxi(0, bp.hp)), int(bp.max_hp), "  [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else ""]
 		draw_string(font, Vector2(rect.position.x, y), label,

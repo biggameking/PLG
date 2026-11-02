@@ -459,6 +459,8 @@ func run() -> void:
 	var farm_xy: Vector2i = free_xy.call("berry_farm")
 	var farm_ok: bool = farm_xy.x >= 0
 	var farmer: Pal = game.base_pals()[0]
+	if farmer.job_site and farmer in farmer.job_site["workers"]:
+		farmer.job_site["workers"].erase(farmer) # fully unassign before taking over (mirrors assign_worker)
 	farmer.mode = "base"; farmer.pos = p.pos; farmer.job_site = null; farmer.san = 90
 	var farm_st = null
 	for kk4 in game.structures:
@@ -551,6 +553,9 @@ func run() -> void:
 			break
 	if lvl_pal == null:
 		lvl_pal = game.base_pals()[0]
+		if lvl_pal.job_site and lvl_pal in lvl_pal.job_site["workers"]:
+			lvl_pal.job_site["workers"].erase(lvl_pal) # partner can't hold a job — drop the slot like the game does
+			lvl_pal.job_site = null
 		lvl_pal.mode = "partner"
 	var plv0: int = lvl_pal.level
 	lvl_pal.xp = lvl_pal.level * 25 - 10
@@ -590,6 +595,13 @@ func run() -> void:
 			if q in game.structures[kj2]["workers"]:
 				linked += 1
 				break
+	var phantom := ""
+	for w9 in worker_pals:
+		var sites_of: String = ""
+		for k9 in game.structures:
+			if w9 in game.structures[k9]["workers"] and game.structures[k9]["id"] not in sites_of:
+				sites_of += game.structures[k9]["id"] + ","
+		phantom += "%s(%s,mode=%s,inpal=%s,inbox=%s,js=%s) " % [w9.species_id if is_instance_valid(w9) else "?", sites_of, w9.mode if is_instance_valid(w9) else "?", str(w9 in game.pals), str(w9 in game.box), w9.job_site["id"] if is_instance_valid(w9) and w9.job_site else "-"]
 	var boxp := 0
 	for q in game.box:
 		for kj3 in game.structures:
@@ -600,7 +612,7 @@ func run() -> void:
 	for kk8 in game.structures:
 		for w8 in game.structures[kk8]["workers"]:
 			site_names[game.structures[kk8]["id"]] = site_names.get(game.structures[kk8]["id"], 0) + 1
-	results.append("  had=%d linked_pals=%d sites=%s pals=%d" % [had_workers, linked, str(site_names), game.pals.size()])
+	results.append("  had=%d linked_pals=%d sites=%s pals=%d box=%d phantom=[%s]" % [had_workers, linked, str(site_names), game.pals.size(), game.box.size(), phantom])
 	var party_sz_before := game.party.size()
 	# unique structure instances before save (dedupe footprint cells)
 	var st_before := []
@@ -628,6 +640,7 @@ func run() -> void:
 	check("party survives reload", game.party.size() == party_sz_before and game.party_pal() != null, "party=%d/%d" % [game.party.size(), party_sz_before])
 	check("structures rebuild 1:1", st_after.size() == st_before.size(), "%d->%d" % [st_before.size(), st_after.size()])
 	var re_worker_pals := []
+	var re_detail := ""
 	var re_site_names := {}
 	for kk10 in game.structures:
 		for w10 in game.structures[kk10]["workers"]:
@@ -635,7 +648,9 @@ func run() -> void:
 			if w10 not in re_worker_pals:
 				re_worker_pals.append(w10)
 	var re_workers := re_worker_pals.size()
-	results.append("  re_sites=%s" % str(re_site_names))
+	for w10 in re_worker_pals:
+		re_detail += "%s(js=%s,mode=%s) " % [w10.species_id, w10.job_site["id"] if w10.job_site else "-", w10.mode]
+	results.append("  re_sites=%s re_workers=[%s]" % [str(re_site_names), re_detail])
 	check("save keeps sex/passives", ok_load and re_pal != null and re_pal.sex == sv_sex and re_pal.passives == sv_pass, "%s/%s" % [re_pal.sex if re_pal else "?", str(re_pal.passives) if re_pal else "?"])
 	check("save keeps chest store", chest3 == null or chest3["store"].get("test_item", 0) == 7)
 	var job_names := ""

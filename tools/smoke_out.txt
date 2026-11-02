@@ -1,23 +1,24 @@
-main=Main:<Node2D#35785803262>
-game=Game:<Node2D#35819357697> pals=51
+main=Main:<Node2D#35819357694>
+game=Game:<Node2D#35852912129> pals=51
 PASS world generated  
 PASS elevation variance  max elev 3
 PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS work types have sites  
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  176->169
+PASS melee damages pal  231->225
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
+PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
   place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 0->8 (site stockpile)
-PASS burn ticks  103->95
+PASS burn ticks  174->162
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -37,9 +38,9 @@ PASS overlap rejected
 PASS demolish removes  
 PASS work-type gating  site=ranch
 PASS SAN slack-off  
-PASS pal bed SAN regen  san 28
+PASS pal bed SAN regen  san 27
 PASS feed box eats  stored={ "red_berries": 3 } hunger=54
-PASS level learns skills  Lv15 skills 4
+PASS level learns skills  Lv15 skills 3
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -50,37 +51,40 @@ PASS iso roundtrip
 PASS farm produces  red_berries 0->2 (site stockpile)
 PASS generator powered  
 PASS chest store/withdraw  dep838 wd838
-PASS hostile pal attacks  hp 132->71
+PASS hostile pal attacks  hp 142->37
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 142
 PASS sigil consumed  sig0 pals1
 PASS pal levels via xp  Lv15->16 xp10
-  had=3 linked_pals=3 sites={ "ranch": 36, "berry_farm": 6, "generator": 4 } pals=56
+  had=2 linked_pals=2 sites={ "ranch": 12, "generator": 4 } pals=56 box=0 phantom=[eikthyrdeer(ranch,,mode=base,inpal=true,inbox=false,js=ranch) sparkit(generator,,mode=base,inpal=true,inbox=false,js=generator) ]
 PASS party survives reload  party=1/1
 PASS structures rebuild 1:1  20->20
-  re_sites={ "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  M/["lucky"]
+  re_sites={ "ranch": 12, "generator": 4 } re_workers=[eikthyrdeer(js=ranch,mode=base) sparkit(js=generator,mode=base) ]
+PASS save keeps sex/passives  F/["coward"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [helzephyr eikthyrdeer sparkit ]
+PASS save keeps workers  2->2 [eikthyrdeer sparkit ]
 PASS dead partner frees slot  1->0
-PASS raid wave spawns  +4 pals, 4 aggro
-PASS raider hits base pal  victim hp 129->129
-PASS drops spawn+pickup  drops 39->38 wood 2
+PASS raid wave spawns  +3 pals, 3 aggro
+PASS raider hits base pal  victim hp 7->7
+PASS drops spawn+pickup  drops 44->43 wood 2
 PASS test chest placed  
 PASS hauler picks from site  carry={ "id": "stone", "n": 3 }
 PASS hauler delivers to chest  stone 0->3 carry=<null>
 PASS lair alpha engages  aggro=0
-PASS lair alpha tethered  11.0->10.9 sp=jormuntide spd=5.47->5.47 aggro=-1 moving=true spec_spd=88
+PASS lair alpha tethered  11.0->11.0 sp=bushi spd=4.25->4.25 aggro=-1 moving=true spec_spd=70
 PASS gen flambelle capture scale  capturePower=35 ch=0.23
 PASS apex aggros on sight  aggro=0
 PASS apex stays up at night  {  }
 PASS projectile hits terrain  
 PASS buildable filters techs  list=["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 PASS stack capped  =50
-PASS overflow spilled  drops=39
+PASS overflow spilled  drops=44
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0
 PASS hunger slows player  low 0.80 vs fed 1.00
+PASS food restores hunger  hunger 55.0
+PASS save/load  42
+PASS net host  
