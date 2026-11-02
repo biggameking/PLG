@@ -782,6 +782,12 @@ func tick_production(dt: float) -> void:
 			tick_ranch(key, st, dt)
 			continue
 		var prod: Array = job.get("produces", [])
+		var seen := []
+		for w in st["workers"].duplicate(): # hygiene: dedupe + drop stale refs
+			if not is_instance_valid(w) or w.job_site != st or w.mode != "base" or w in seen:
+				st["workers"].erase(w)
+			else:
+				seen.append(w)
 		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0)
 		if prod.is_empty() or active.is_empty():
 			continue
@@ -882,6 +888,10 @@ func party_to_box(uid: int) -> void:
 		return
 	party.erase(uid)
 	pals.erase(p)
+	if p.job_site: # leaving for the box drops the job too
+		if p in p.job_site["workers"]:
+			p.job_site["workers"].erase(p)
+		p.job_site = null
 	p.mode = "box"
 	if p.carry != null: # hauling cargo doesn't vanish into the box
 		add_item(p.carry["id"], p.carry["n"])
