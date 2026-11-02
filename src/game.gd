@@ -1388,9 +1388,9 @@ func regenerate(s: int) -> void:
 	palbox_pos = Vector2i(-1, -1)
 	world.generate(s)
 	drawer.setup(world)
-	spawn_wild()
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
+	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
 
 # ---------- effigy statues ----------
 const PERK_COST := 2
