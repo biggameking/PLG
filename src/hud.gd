@@ -10,6 +10,7 @@ var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
 
 var map_img: Image = null
+var map_tex: ImageTexture = null # cached — was rebuilt every frame the map was open
 var map_show := false
 
 func bake_minimap() -> void:
@@ -28,6 +29,7 @@ func bake_minimap() -> void:
 				c = c.lightened(e * 0.09)
 			map_img.set_pixel(x, y, c)
 
+	map_tex = ImageTexture.create_from_image(map_img)
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -286,7 +288,8 @@ func _draw() -> void:
 		var ms := 176.0
 		var mr := Rect2(vw - ms - 10, 10, ms, ms)
 		draw_rect(mr.grow(2), Color(0, 0, 0, 0.7))
-		draw_texture_rect(ImageTexture.create_from_image(map_img), mr, false)
+		if map_tex != null:
+			draw_texture_rect(map_tex, mr, false)
 		var plp := game.player.pos
 		var pp := mr.position + Vector2(plp.x / game.world.WORLD_W * ms, plp.y / game.world.WORLD_H * ms)
 		draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), Color.WHITE)
