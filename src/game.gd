@@ -993,7 +993,9 @@ func save_game() -> void:
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
-			"passives": bp.passives, "alpha": bp.alpha})
+			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
+			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry,
+			"revive": maxf(0.0, bp.revive_t - t)})
 	var structs := {}
 	for k in structures:
 		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents")}
@@ -1068,6 +1070,7 @@ func load_game() -> bool:
 		np.star = pd.get("star", 0)
 		np.xp = pd.get("xp", 0)
 		np.raid = pd.get("raid", false)
+		np.revive_t = t + pd.get("revive", 0.0)
 		np.apply_bonuses()
 		if pd.get("job"):
 			pending_jobs.append([np, pd["job"]])
