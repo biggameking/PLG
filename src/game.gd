@@ -454,9 +454,16 @@ func chest_can_take(st: Dictionary, id: String) -> bool:
 
 func nearest_chest_cell(at: Vector2, id: String = "") -> Vector2i:
 	var best := Vector2i(-1, -1); var bd := 1e9
+	# food hauls to the feed box when one exists; otherwise a chest
+	var want_feed: bool = (id != "" and ItemData.ITEMS.get(id, {}).get("food", 0) > 0
+		and has_structure("feed_box"))
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st["id"] != "chest":
+		var store_kind: String = st["id"]
+		if want_feed:
+			if store_kind != "feed_box":
+				continue
+		elif store_kind != "chest":
 			continue
 		if id != "" and not chest_can_take(st, id):
 			continue

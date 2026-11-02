@@ -6,7 +6,7 @@ PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS work types have sites  
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  172->165
+PASS melee damages pal  1297->1293
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
@@ -17,7 +17,7 @@ PASS craft club
   place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 0->8 (site stockpile)
-PASS burn ticks  89->85
+PASS burn ticks  150->138
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -39,7 +39,7 @@ PASS work-type gating  site=ranch
 PASS SAN slack-off  
 PASS pal bed SAN regen  san 27
 PASS feed box eats  stored={ "red_berries": 3 } hunger=54
-PASS level learns skills  Lv12 skills 3
+PASS level learns skills  Lv15 skills 4
 PASS catch chance bounded  0.04
 PASS all 5 sphere tiers  
 PASS armor tiers  9/14
@@ -50,24 +50,24 @@ PASS iso roundtrip
 PASS farm produces  red_berries 0->2 (site stockpile)
 PASS generator powered  
 PASS chest store/withdraw  dep838 wd838
-PASS hostile pal attacks  hp 122->25
+PASS hostile pal attacks  hp 122->28
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
 PASS medicine heals  hp 122
 PASS sigil consumed  sig0 pals1
-PASS pal levels via xp  Lv12->13 xp0
-  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=60
+PASS pal levels via xp  Lv15->16 xp0
+  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=60
 PASS party survives reload  party=4/4
 PASS structures rebuild 1:1  20->20
-  re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
-PASS save keeps sex/passives  F/["burly"]
+  re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
+PASS save keeps sex/passives  M/["glutton", "coward"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [daedream eikthyrdeer sparkit ]
+PASS save keeps workers  4->4 [menasting eikthyrdeer lamball sparkit ]
 PASS dead partner frees slot  4->3
 PASS raid wave spawns  +3 pals, 3 aggro
-PASS raider hits base pal  victim hp 86->78
-PASS drops spawn+pickup  drops 30->29 wood 301
+PASS raider hits base pal  victim hp 112->103
+PASS drops spawn+pickup  drops 34->33 wood 301
 PASS test chest placed  
 PASS hauler picks from site  carry={ "id": "stone", "n": 3 }
 PASS hauler delivers to chest  stone 0->3 carry=<null>
@@ -77,12 +77,12 @@ PASS apex aggros on sight  aggro=0
 PASS apex stays up at night  {  }
 PASS projectile hits terrain  
 PASS condense star+1  star=1
-PASS condense stats up  atk 1.10->1.26 hp 86->99
+PASS condense stats up  atk 1.15->1.32 hp 90->104
 PASS condense eats fodder  box 5->1
 PASS condense needs fodder  star=1
 PASS buildable filters techs  list=["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 PASS stack capped  =50
-PASS overflow spilled  drops=30
+PASS overflow spilled  drops=34
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0
