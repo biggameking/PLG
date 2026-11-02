@@ -88,12 +88,13 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 		"#e8d44d" if mult >= 2 else "#e8f0f2")
 	if hp <= 0:
 		game.kill_pal(self, by_player)
-	elif mode == "wild":
-		statuses.erase("sleep")
-		if hostile() == 0 and game.rng.chance(0.5):
-			aggro = -1
-		else:
-			aggro = 0
+	else:
+		statuses.erase("sleep") # any hit wakes, whatever the mode
+		if mode == "wild":
+			if hostile() == 0 and game.rng.chance(0.5):
+				aggro = -1
+			else:
+				aggro = 0
 
 func elem() -> Array:
 	return spec.get("elements", ["neutral"])
