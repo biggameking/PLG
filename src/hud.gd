@@ -468,6 +468,9 @@ func use_item(k: String) -> void:
 		_:
 			var it: Dictionary = ItemData.ITEMS.get(k, {})
 			if it.get("heal", 0) > 0:
+				if game.player.hp >= game.player.max_hp:
+					game.log_msg("HP already full")
+					return # don't burn the medicine
 				game.player.hp = mini(game.player.max_hp, game.player.hp + it["heal"])
 				game.add_item(k, -1)
 				game.log_msg("+%d HP" % it["heal"])
