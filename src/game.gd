@@ -323,6 +323,7 @@ func summon_raid() -> bool:
 	bp.sprite.position.y = -70.0
 	bp.aggro = 0  # player
 	bp.raid = true
+	bp.set_meta("raid_t0", t)
 	pals.append(bp)
 	log_msg("RAID BOSS: %s Lv45 approaches your base!" % bp.spec["name"])
 	return true
@@ -392,7 +393,7 @@ func spawn_drop(id: String, n: int, at: Vector2) -> void:
 	var p := Iso.to_screen(at.x, at.y, world.elev_at(int(at.x), int(at.y)))
 	spr.position = Vector2(p.x, p.y - 2)
 	entity_layer.add_child(spr)
-	drops.append({"id": id, "n": n, "pos": at, "node": spr, "cool": 0.0})
+	drops.append({"id": id, "n": n, "pos": at, "node": spr, "cool": 0.0, "age": 0.0})
 
 func take_drop(d: Dictionary) -> void:
 	drops.erase(d)
@@ -545,6 +546,10 @@ func _process(dt: float) -> void:
 	# ground-drop pickup on walk-over
 	for i in range(drops.size() - 1, -1, -1):
 		var d: Dictionary = drops[i]
+		d["age"] = d.get("age", 0.0) + dt
+		if d["age"] > 600.0: # old loot decays — else the world fills with bags
+			take_drop(d)
+			continue
 		if d["cool"] > 0.0:
 			d["cool"] = d["cool"] - dt
 			continue
@@ -572,6 +577,10 @@ func _process(dt: float) -> void:
 		if raid_t <= 0:
 			raid_t = 240.0 + rng.next() * 180.0
 			start_raid()
+		for q in pals.duplicate(): # stale raiders wander off instead of stacking up
+			if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
+				pals.erase(q)
+				q.queue_free()
 
 # ---------- building / tech / crafting / base ----------
 
@@ -1263,6 +1272,7 @@ func start_raid() -> void:
 			# raider picks nearest non-wild pal; falls back to the player
 			rp.aggro = 0
 			rp.raid = true
+			rp.set_meta("raid_t0", t)
 			var bp: Pal = null; var bd := 30.0
 			for q in pals:
 				if q.mode == "wild" or q.hp <= 0:
