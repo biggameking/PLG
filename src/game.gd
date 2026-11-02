@@ -1435,8 +1435,8 @@ func partner_skill() -> void:
 			continue
 		if p.pos.distance_to(tw) > sk.get("range", 6) * 2.0:
 			continue
-		if best.is_empty() or sk.get("dmg", 0) > best.get("dmg", 0):
-			best = sk # strongest usable skill, not just the last one scanned
+		if best.is_empty() or sk.get("power", 0) > best.get("power", 0):
+			best = sk # strongest usable skill — skills key damage as "power"
 	if best.is_empty():
 		log_msg("%s has no usable partner skill" % p.spec["name"])
 		return
