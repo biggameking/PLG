@@ -238,8 +238,9 @@ func _draw() -> void:
 		draw_string(font, Vector2(sx + 4, 49), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		sx += 74
+	draw_equipment_line() # was never called — gear row under the sphere chips
 	if pl.aiming:
-		draw_string(font, Vector2(12, 76), "AIM — click a pal to throw (Q cancel)",
+		draw_string(font, Vector2(12, 96), "AIM — click a pal to throw (Q cancel)",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#4dd0e1"))
 	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
 	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00" % [game.day, int(game.tod)],
@@ -542,4 +543,4 @@ func draw_statues(r: Vector2) -> void:
 		y += 24
 
 func draw_equipment_line() -> void:
-	draw_string(font, Vector2(14, 46), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))
+	draw_string(font, Vector2(14, 80), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))
