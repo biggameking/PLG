@@ -485,24 +485,24 @@ func chest_can_take(st: Dictionary, id: String) -> bool:
 	return store.size() < cap # N distinct stacks per chest
 
 func nearest_chest_cell(at: Vector2, id: String = "") -> Vector2i:
-	var best := Vector2i(-1, -1); var bd := 1e9
-	# food hauls to the feed box when one exists; otherwise a chest
-	var want_feed: bool = (id != "" and ItemData.ITEMS.get(id, {}).get("food", 0) > 0
-		and has_structure("feed_box"))
-	for k in structures:
-		var st: Dictionary = structures[k]
-		var store_kind: String = st["id"]
-		if want_feed:
-			if store_kind != "feed_box":
+	# food prefers the feed box; a full feed box falls back to chests
+	var kinds := ["chest"]
+	if id != "" and ItemData.ITEMS.get(id, {}).get("food", 0) > 0 and has_structure("feed_box"):
+		kinds = ["feed_box", "chest"]
+	for kind in kinds:
+		var best := Vector2i(-1, -1); var bd := 1e9
+		for k in structures:
+			var st: Dictionary = structures[k]
+			if st["id"] != kind:
 				continue
-		elif store_kind != "chest":
-			continue
-		if id != "" and not chest_can_take(st, id):
-			continue
-		var dd := at.distance_squared_to(Vector2(k.x, k.y))
-		if dd < bd:
-			bd = dd; best = k
-	return best
+			if id != "" and not chest_can_take(st, id):
+				continue
+			var dd := at.distance_squared_to(Vector2(k.x, k.y))
+			if dd < bd:
+				bd = dd; best = k
+		if best.x >= 0:
+			return best
+	return Vector2i(-1, -1)
 
 signal decor_dirty
 func queue_redraw_decor() -> void:
