@@ -203,6 +203,18 @@ func wild_ai(dt: float) -> void:
 		if dist < 6.0 and not has_status("sleep"):
 			aggro = 0
 			return
+	# a de-aggro'd raider re-targets the base instead of wandering home
+	if raid:
+		var bt2: Pal = null; var bd2 := 30.0
+		for bp in game.pals:
+			if bp.mode != "base" or bp.hp <= 0:
+				continue
+			var dd2 := pos.distance_to(bp.pos)
+			if dd2 < bd2:
+				bd2 = dd2; bt2 = bp
+		if bt2 != null:
+			aggro = bt2.uid
+			return
 	# wander
 	wander_t -= dt
 	if wander_t <= 0:
