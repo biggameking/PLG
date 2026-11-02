@@ -45,10 +45,18 @@ func step_toward(target: Vector2, dt: float) -> void:
 	var nx: float = pos.x + d.x / dist * step
 	var ny: float = pos.y + d.y / dist * step
 	# axis-separated tile collision w/ elevation rule
+	var moved := false
 	if not world.blocked(int(nx), int(pos.y), pos.x, pos.y):
-		pos.x = nx
+		pos.x = nx; moved = true
 	if not world.blocked(int(pos.x), int(ny), pos.x, pos.y):
-		pos.y = ny
+		pos.y = ny; moved = true
+	if not moved: # wedged on a corner: retry rotated ±45° to slide around
+		for rot in [0.785, -0.785]:
+			var rd := d.normalized().rotated(rot)
+			var rx: float = pos.x + rd.x * step
+			var ry: float = pos.y + rd.y * step
+			if not world.blocked(int(rx), int(pos.y), pos.x, pos.y) and not world.blocked(int(rx), int(ry), pos.x, pos.y):
+				pos.x = rx; pos.y = ry; moved = true; break
 	moving = true
 	if d.x > 0.02:
 		dir = 1

@@ -684,6 +684,17 @@ func craft(recipe_id: String) -> void:
 	var r := recipe(recipe_id)
 	if r.is_empty():
 		return
+	# station-gated recipes require standing at the station
+	var stn: String = r.get("station", "hand")
+	if stn != "hand":
+		var near := false
+		for k in structures:
+			if structures[k]["id"] == stn and player.pos.distance_to(Vector2(k.x + 0.5, k.y + 0.5)) < 4.0:
+				near = true
+				break
+		if not near:
+			log_msg("Need to be at a %s" % stn)
+			return
 	if r.get("tech", "") != "" and r["tech"] not in unlocked:
 		log_msg("Unlock %s in the tech tree first" % r["tech"])
 		return
