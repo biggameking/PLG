@@ -337,6 +337,10 @@ func tick_needs(dt: float) -> void:
 			san = minf(100, san + 8)
 		elif mode in ["base", "partner"]:
 			san = maxf(0.0, san - 0.6)  # starving with no food to find: SAN bleeds
+	if hunger >= 100.0:
+		hp -= maxi(1, int(max_hp * 0.02)) # prolonged starvation costs real hp
+		if hp <= 0 and mode in ["base", "partner"]:
+			game.kill_pal(self, false)
 	if mode == "base" and san < 30 and game.has_structure("pal_bed"):
 		san = minf(100.0, san + 6.0)  # resting requires being AT the base
 
