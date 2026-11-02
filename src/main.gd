@@ -88,7 +88,7 @@ func refresh_decor() -> void:
 			if d == World.Decor.NONE:
 				continue
 			need[x + y * 1000] = [d, x, y]
-	for key in pool_used:
+	for key in pool_used.keys(): # keys() snapshot: erase() while iterating skips entries
 		if not need.has(key):
 			var spr: Sprite2D = pool_used[key]
 			spr.hide()
