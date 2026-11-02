@@ -319,8 +319,8 @@ func haul_ai(dt: float) -> void:
 	var site_pick = null; var site_id := ""
 	for k in game.structures:
 		var st2: Dictionary = game.structures[k]
-		if st2["id"] == "chest" or st2.get("store", {}).is_empty():
-			continue
+		if st2["id"] in ["chest", "feed_box"] or st2.get("store", {}).is_empty():
+			continue # feed_box stock is the pals' own food — hauling it out starves the base
 		var dd2 := pos.distance_squared_to(Vector2(k.x + 0.5, k.y + 0.5))
 		if dd2 < bd2:
 			bd2 = dd2; site_pick = k
