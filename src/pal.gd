@@ -370,6 +370,8 @@ func tick_needs(dt: float) -> void:
 	if needs_t < 1.0:
 		return
 	needs_t = 0
+	if mode not in ["base", "partner"]: # wild pals have no needs (Palworld rule) —
+		return                       # starvation left them at 0hp forever otherwise
 	hunger = minf(100.0, hunger + 0.5 * passive_mult("food"))  # Glutton eats more
 	san = maxf(0.0, san - (0.2 if job_site else 0.05) / passive_mult("san"))  # Zen/Pacifist hold SAN longer
 	if hunger > 70:
