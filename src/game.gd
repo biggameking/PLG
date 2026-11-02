@@ -686,6 +686,9 @@ func tick_production(dt: float) -> void:
 		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0)
 		if prod.is_empty() or active.is_empty():
 			continue
+		var cons: Array = job.get("consumes", [])
+		if not cons.is_empty() and not consume_ready(cons):
+			continue # starved for inputs — no free production
 		var powered := 1.0
 		for kg in structures:
 			var sg = structures[kg]
@@ -695,12 +698,35 @@ func tick_production(dt: float) -> void:
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
+			for cn in cons: # inputs come out of the base's chest network
+				var need: int = cn[1]
+				for kc in structures:
+					var sc: Dictionary = structures[kc]
+					if sc["id"] != "chest" or need <= 0:
+						continue
+					var take: int = mini(need, sc["store"].get(cn[0], 0))
+					if take > 0:
+						sc["store"][cn[0]] -= take
+						if sc["store"][cn[0]] <= 0:
+							sc["store"].erase(cn[0])
+						need -= take
 			for pr in prod: # goods pile up at the site; haulers move them
 				st["store"][pr[0]] = st["store"].get(pr[0], 0) + pr[1]
 			var t := ""
 			for pr in prod:
 				t += "+%d %s  " % [pr[1], pr[0]]
 			floaters.push_back({"p": Vector2(key.x + 0.5, key.y + 0.5), "t": t.strip_edges(), "c": "#a8e6a1", "age": 0.0})
+
+func consume_ready(cons: Array) -> bool:
+	for cn in cons:
+		var have := 0
+		for kc in structures:
+			var sc: Dictionary = structures[kc]
+			if sc["id"] == "chest":
+				have += sc["store"].get(cn[0], 0)
+		if have < cn[1]:
+			return false
+	return true
 
 func cell_of(st) -> Vector2i:
 	for k in structures:
