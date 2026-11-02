@@ -353,13 +353,18 @@ func run() -> void:
 	# feed box eats berry when hungry
 	game.add_item("wood", 30); game.add_item("stone", 10)
 	free_xy.call("feed_box")
-	game.add_item("red_berries", 4)
+	var fb = null
+	for k9 in game.structures:
+		if game.structures[k9].get("id") == "feed_box":
+			fb = game.structures[k9]
+	if fb:
+		fb["store"]["red_berries"] = 4 # stocked like a real feed box
 	var hungry: Pal = game.base_pals()[0]
 	hungry.hunger = 90.0
-	var b0 := game.item_count("red_berries")
 	for i in 3:
 		hungry.tick_needs(1.5)
-	check("feed box eats", game.item_count("red_berries") < b0 and hungry.hunger < 90.0)
+	check("feed box eats", fb != null and fb["store"].get("red_berries", 0) < 4 and hungry.hunger < 90.0,
+		"stored=%s hunger=%.0f" % [str(fb["store"]) if fb else "none", hungry.hunger])
 	# level up learns a skill
 	var lev: Pal = game.base_pals()[0]
 	var lv0: int = lev.level
@@ -429,7 +434,9 @@ func run() -> void:
 				continue
 			var e0: int = game.world.elev_at(int(p.pos.x), int(p.pos.y))
 			var e1: int = game.world.elev_at(tx4, ty4)
-			if absi(e1 - e0) >= 1 and game.world.ramp[game.world.idx(tx4, ty4)] == 0:
+			# rule: blocked when either side is unramped — player cell must be a non-ramp too
+			if (absi(e1 - e0) >= 1 and game.world.ramp[game.world.idx(tx4, ty4)] == 0
+					and game.world.ramp[game.world.idx(int(p.pos.x), int(p.pos.y))] == 0):
 				cx = tx4; cy = ty4
 				blocked = true
 				break
@@ -562,6 +569,7 @@ func run() -> void:
 		sv_pal = game.base_pals()[0]
 	var sv_sex: String = sv_pal.sex
 	var sv_pass: Array = sv_pal.passives.duplicate()
+	var sv_idx: int = game.pals.find(sv_pal) # order is stable through save/load
 	var chest2 = null
 	for kk7 in game.structures:
 		if game.structures[kk7].get("id") == "chest":
@@ -606,10 +614,8 @@ func run() -> void:
 		chest2["store"].clear()
 	var ok_load := game.load_game()
 	var re_pal: Pal = null
-	for q in game.pals:
-		if q.species_id == sv_pal.species_id:
-			re_pal = q
-			break
+	if sv_idx >= 0 and sv_idx < game.pals.size():
+		re_pal = game.pals[sv_idx]
 	var chest3 = null
 	for kk9 in game.structures:
 		if game.structures[kk9].get("id") == "chest":

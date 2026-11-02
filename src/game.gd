@@ -384,16 +384,25 @@ func condense_active() -> void:
 	log_msg("%s condensed to star %d!" % [ap.spec["name"], ap.star])
 
 func eat_food_item() -> int:
-	# feed-box rule: pals eat the cheapest food on hand (lowest satiety first)
-	var best_id := ""; var best_v := 1 << 30
-	for id in items.keys():
-		var it: Dictionary = ItemData.ITEMS.get(id, {})
-		var fv: int = it.get("food", 0)
-		if fv > 0 and items[id] > 0 and fv < best_v:
-			best_v = fv; best_id = id
-	if best_id == "":
+	# feed-box rule: pals eat the cheapest stored food — feed_box store
+	# first, then any chest's store (never the player's bag remotely)
+	var best = null; var best_id := ""; var best_v := 1 << 30
+	var stores := []
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st["id"] in ["feed_box", "chest"] and not st.get("store", {}).is_empty():
+			stores.append(st)
+	for st2 in stores:
+		for id in st2["store"].keys():
+			var it: Dictionary = ItemData.ITEMS.get(id, {})
+			var fv: int = it.get("food", 0)
+			if fv > 0 and st2["store"][id] > 0 and fv < best_v:
+				best_v = fv; best_id = id; best = st2
+	if best == null:
 		return 0
-	add_item(best_id, -1)
+	best["store"][best_id] -= 1
+	if best["store"][best_id] <= 0:
+		best["store"].erase(best_id)
 	return best_v
 
 func chest_can_take(st: Dictionary, id: String) -> bool:
