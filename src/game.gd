@@ -992,6 +992,8 @@ func assign_worker() -> void:
 		var need: String = jb.get("workType", "")
 		if need != "" and best.spec.get("work", {}).get(need, 0) == 0:
 			continue  # this pal can't work this site — keep looking
+		if structures[k]["workers"].size() >= 4:
+			continue # site is fully crewed — piling more pals on one site scales unbounded
 		var d := best.pos.distance_to(Vector2(k.x, k.y))
 		if d < sd:
 			sd = d
