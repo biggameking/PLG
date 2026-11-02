@@ -1059,8 +1059,14 @@ func load_game() -> bool:
 	if not FileAccess.file_exists("user://savegame.plg"):
 		return false
 	var f := FileAccess.open("user://savegame.plg", FileAccess.READ)
-	var d: Dictionary = f.get_var()
+	if f == null:
+		return false
+	var dv = f.get_var()
 	f.close()
+	if dv is not Dictionary or not dv.has("seed"):
+		log_msg("Save file corrupt - starting fresh")
+		return false
+	var d: Dictionary = dv
 	for p in pals:
 		p.queue_free()
 	pals.clear()
