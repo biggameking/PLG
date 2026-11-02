@@ -1266,7 +1266,7 @@ func load_game() -> bool:
 		np.raid = pd.get("raid", false)
 		if np.raid:
 			np.set_meta("raid_t0", t - pd.get("rt0", 0.0)) # preserve despawn countdown
-		np.revive_t = t + pd.get("revive", 0.0)
+		np.revive_t = t + pd.get("revive", 0.0) if pd.get("revive", 0.0) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
 		if pd.get("job"):
 			pending_jobs.append([np, pd["job"]])
