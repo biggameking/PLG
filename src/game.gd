@@ -480,7 +480,9 @@ func _process(dt: float) -> void:
 # ---------- building / tech / crafting / base ----------
 
 func buildable_list() -> Array:
-	return unlocked.duplicate()
+	# only tech nodes that are actual structures — spear/sphere/axe techs
+	# unlock recipes, not buildings (selecting them crashed place_structure)
+	return unlocked.filter(func(id): return StructureData.STRUCTURES.has(id))
 
 func can_place(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})

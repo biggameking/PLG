@@ -865,6 +865,12 @@ func run() -> void:
 		game.condense_active()
 		check("condense needs fodder", ap2.star == star0 + 1, "star=%d" % ap2.star)
 
+	# buildable list excludes recipe-techs (they crashed place_structure)
+	game.unlocked.append("spear")
+	var bl: Array = game.buildable_list()
+	check("buildable filters techs", "spear" not in bl, "list=%s" % str(bl))
+	game.unlocked.erase("spear")
+
 	# stack cap: overflow spills to a ground drop, items not lost
 	var n_drops := game.drops.size()
 	game.add_item("pal_sphere", 9999) # stack 50
