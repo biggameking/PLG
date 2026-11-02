@@ -249,7 +249,8 @@ func run() -> void:
 		st_r["workers"].append(m_pal); st_r["workers"].append(f_pal)
 		m_pal.job_site = st_r; f_pal.job_site = st_r
 		game.tick_ranch(ranch_k, st_r, 61.0)
-		check("ranch egg", game.item_count("pal_egg") >= 1)
+		check("ranch egg", st_r["store"].get("pal_egg", 0) >= 1)
+		game.add_item("pal_egg", 1) # egg reaches the bag via haulers/player pickup
 		var n0 := game.pals.size()
 		game.hatch_egg()
 		check("hatch egg", game.pals.size() == n0 + 1 and game.item_count("pal_egg") == 0)

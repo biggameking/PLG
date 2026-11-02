@@ -1177,14 +1177,18 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if st["timer"] < rate:
 		return
 	st["timer"] -= rate
-	var pair := []
+	var a: Pal = null; var b: Pal = null
 	for w in st["workers"]:
-		if is_instance_valid(w):
-			pair.append(w)
-	var a: Pal = pair[0]
-	var b: Pal = pair[1] if pair.size() > 1 else pair[0]
+		if not is_instance_valid(w):
+			continue
+		if w.sex == "M" and a == null:
+			a = w
+		elif w.sex == "F" and b == null:
+			b = w
+	if a == null or b == null:
+		return
 	st["egg_parents"] = [a.species_id, b.species_id, a.talent, b.talent]
-	add_item("pal_egg", 1)
+	st["store"]["pal_egg"] = st["store"].get("pal_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
 
