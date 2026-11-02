@@ -248,9 +248,9 @@ func base_ai(dt: float) -> void:
 
 func haul_ai(dt: float) -> void:
 	if carry != null:
-		var cc := game.nearest_chest_cell(pos)
+		var cc := game.nearest_chest_cell(pos, carry["id"])
 		if cc.x < 0:
-			return  # no chest: hold the goods
+			return  # no chest that can take it: hold the goods
 		var cp := Vector2(cc.x + 0.5, cc.y + 0.5)
 		if pos.distance_to(cp) > 1.8:
 			step_toward(cp, dt)

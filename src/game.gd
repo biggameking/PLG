@@ -198,14 +198,20 @@ func chest_deposit_all(st) -> int:
 	var n := 0
 	if not st.has("store"):
 		st["store"] = {}
+	var skipped := 0
 	for iid in items.keys():
 		if iid in ["gold_coin"]:
 			continue
 		var c: int = items[iid]
 		if c > 0:
+			if not chest_can_take(st, iid):
+				skipped += c
+				continue
 			st["store"][iid] = st["store"].get(iid, 0) + c
 			n += c
 			items.erase(iid)
+	if skipped > 0:
+		log_msg("Chest full - %d item(s) kept in bag" % skipped)
 	return n
 
 func chest_withdraw_all(st) -> int:
@@ -390,11 +396,20 @@ func eat_food_item() -> int:
 	add_item(best_id, -1)
 	return best_v
 
-func nearest_chest_cell(at: Vector2) -> Vector2i:
+func chest_can_take(st: Dictionary, id: String) -> bool:
+	var store: Dictionary = st.get("store", {})
+	if store.has(id):
+		return true
+	var cap: int = StructureData.STRUCTURES.get(st["id"], {}).get("storage", 12)
+	return store.size() < cap # N distinct stacks per chest
+
+func nearest_chest_cell(at: Vector2, id: String = "") -> Vector2i:
 	var best := Vector2i(-1, -1); var bd := 1e9
 	for k in structures:
 		var st: Dictionary = structures[k]
 		if st["id"] != "chest":
+			continue
+		if id != "" and not chest_can_take(st, id):
 			continue
 		var dd := at.distance_squared_to(Vector2(k.x, k.y))
 		if dd < bd:
