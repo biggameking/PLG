@@ -342,7 +342,7 @@ func resolve_sphere(sp) -> void:
 	var behind: float = sign(player.pos.x - target.pos.x) == -target.dir
 	var hp_frac := maxf(0, target.hp) / target.max_hp
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, target.spec["capturePower"],
-		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level) * (1.0 + perks["capture"] * 0.05))
+		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
 	if randf() < chance:
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
