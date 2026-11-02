@@ -20,8 +20,10 @@ func _ready() -> void:
 	net.setup(game, game.entity_layer)
 	game.net = net
 
+var decor_need := true
+var last_vis := Rect2i(-999, -999, 0, 0)
 func _on_decor_dirty() -> void:
-	pass # pool keys by world cell; pool refresh reads live data
+	decor_need = true
 
 const DECOR_KIND := {
 	World.Decor.TREE_A: "tree_a", World.Decor.TREE_B: "tree_b",
@@ -47,8 +49,12 @@ func _process(_dt: float) -> void:
 		col = Color.WHITE.lerp(Color(0.9, 0.6, 0.5), (h - 17) / 3).lerp(Color(0.42, 0.48, 0.72), maxf(0, h - 18.5) / 1.5)
 	$CanvasModulate.color = col
 	cam.global_position = cam.global_position.lerp(pl.global_position, 0.12)
-	refresh_decor()
-	game.drawer.region = visible_tiles()
+	var vis := visible_tiles()
+	if decor_need or vis != last_vis: # decor pool only on camera move / decor change
+		refresh_decor()
+		decor_need = false
+		last_vis = vis
+	game.drawer.region = vis
 	game.drawer.queue_redraw()
 
 func _unhandled_input(e: InputEvent) -> void:
