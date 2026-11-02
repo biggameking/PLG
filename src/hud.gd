@@ -137,9 +137,17 @@ func interact() -> void:
 		st = game.structure_at(game.player.pos)
 	if st:
 		match st["id"]:
-			"workbench", "furnace", "mill", "crusher", "campfire":
+			"workbench", "campfire":
 				game.craft_station = st["id"]
 				game.panel = "craft"
+				return
+			"furnace", "mill", "crusher", "lumber_site", "stone_pit", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy":
+				# automated sites: E reports the stockpile, no crafting here
+				var sdef: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
+				if st.get("store", {}).is_empty():
+					game.log_msg("%s: %d workers, nothing stored" % [sdef.get("name", st["id"]), st["workers"].size()])
+				else:
+					game.log_msg("%s stores: %s" % [sdef.get("name", st["id"]), str(st["store"])])
 				return
 			"palbox":
 				game.panel = "palbox"
