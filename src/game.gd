@@ -630,9 +630,9 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 			if structures.has(Vector2i(tx + dx0, ty + dy0)):
 				log_msg("Blocked: something already built there")
 				return false
-			if world.decor[world.idx(tx + dx0, ty + dy0)] != World.Decor.NONE:
-				log_msg("Clear the %s first" % "trees and rocks here")
-				return false
+			if world.decor[world.idx(tx + dx0, ty + dy0)] in [World.Decor.ROCK, World.Decor.ORE_GOLD, World.Decor.ORE_COAL]:
+				log_msg("Can't build on exposed rock")
+				return false # ore/rock outcrops are terrain — clear trees but not these
 			if world.tile_at(tx + dx0, ty + dy0) == World.Tile.WATER:
 				log_msg("Can't build on water")
 				return false
@@ -653,8 +653,12 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 	for dy in range(h):
 		for dx in range(w):
+			var ci0 := world.idx(tx + dx, ty + dy)
+			if world.decor[ci0] != World.Decor.NONE: # trees/berries under the footprint are cleared
+				world.decor[ci0] = World.Decor.NONE
+				world.hp[ci0] = 0
 			structures[Vector2i(tx + dx, ty + dy)] = st
-			world.structures[world.idx(tx + dx, ty + dy)] = st
+			world.structures[ci0] = st
 	if sid == "palbox":
 		palbox_pos = Vector2i(tx, ty)
 		log_msg("Base established! Assign pals with F.")
