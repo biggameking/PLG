@@ -1221,8 +1221,11 @@ func load_game() -> bool:
 	structures.clear()
 	world.structures.clear()
 	world.generate(d["seed"])
-	world.decor = d["decor"]
-	world.hp = d["hp_map"]
+	if d["decor"] is PackedByteArray and d["decor"].size() == world.decor.size():
+		world.decor = d["decor"]
+		world.hp = d["hp_map"]
+	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
+		log_msg("Save layout predates the current world format - fresh terrain")
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
 	day = d["day"]; tod = d["tod"]
 	raid_t = d.get("raid_t", raid_t)
