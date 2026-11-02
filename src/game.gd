@@ -498,7 +498,11 @@ func _process(dt: float) -> void:
 			floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
 			take_drop(d)
 	# respawn trickle
-	if pals.size() < 30 and rng.chance(dt * 0.15):
+	var wild_n := 0
+	for wp in pals:
+		if wp.mode == "wild":
+			wild_n += 1
+	if wild_n < 30 and rng.chance(dt * 0.15):
 		spawn_wild()
 	# base raid waves
 	if palbox_pos.x >= 0:
