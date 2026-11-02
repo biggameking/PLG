@@ -130,7 +130,9 @@ func run_click(cr: Dictionary) -> void:
 			game.log_msg("Took %d items" % game.chest_withdraw_all(game.chest_ref))
 
 func interact() -> void:
-	var st = game.structure_at(game.player.pos + Vector2(game.player.dir * 0.8, 0))
+	var f: Vector2 = game.player.facing
+	var probe := Vector2(signf(f.x), 0) if absf(f.x) >= absf(f.y) else Vector2(0, signf(f.y))
+	var st = game.structure_at(game.player.pos + probe * 0.8)
 	if not st:
 		st = game.structure_at(game.player.pos)
 	if st:

@@ -6,7 +6,7 @@ PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS work types have sites  
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  163->156
+PASS melee damages pal  266->262
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
@@ -18,7 +18,7 @@ PASS craft club
   place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 237->239
-PASS burn ticks  297->277
+PASS burn ticks  184->172
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -51,7 +51,7 @@ PASS iso roundtrip
 PASS farm produces  red_berries 3->5
 PASS generator powered  
 PASS chest store/withdraw  dep1087 wd1087
-PASS hostile pal attacks  hp 122->21
+PASS hostile pal attacks  hp 122->19
 PASS statuses tracked  
 PASS dodge roll moves  
 PASS day rolls over  day 2->2
@@ -62,13 +62,13 @@ PASS pal levels via xp  Lv15->16 xp0
 PASS party survives reload  party=4/4
 PASS structures rebuild 1:1  20->20
   re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
-PASS save keeps sex/passives  M/["swift", "ferocious"]
+PASS save keeps sex/passives  M/["coward"]
 PASS save keeps chest store  
-PASS save keeps workers  3->3 [broncherry eikthyrdeer sparkit ]
+PASS save keeps workers  3->3 [grizzbolt eikthyrdeer sparkit ]
 PASS dead partner frees slot  4->3
 PASS raid wave spawns  +5 pals, 5 aggro
-PASS raider hits base pal  victim hp 96->88
-PASS drops spawn+pickup  drops 36->35 wood 2
+PASS raider hits base pal  victim hp 83->74
+PASS drops spawn+pickup  drops 38->37 wood 2
 PASS test chest placed  
 PASS hauler delivers to chest  stone 0->3 carry=<null>
 PASS lair alpha engages  aggro=0
@@ -77,15 +77,15 @@ PASS apex aggros on sight  aggro=0
 PASS apex stays up at night  {  }
 PASS projectile hits terrain  
 PASS condense star+1  star=1
-PASS condense stats up  atk 1.00->1.15 hp 96->110
+PASS condense stats up  atk 1.15->1.32 hp 83->95
 PASS condense eats fodder  box 4->0
 PASS condense needs fodder  star=1
 PASS stack capped  =50
-PASS overflow spilled  drops=36
+PASS overflow spilled  drops=38
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0
 PASS hunger slows player  low 0.80 vs fed 1.00
 PASS food restores hunger  hunger 55.0
-PASS save/load  42
+PASS save/load  52
 PASS net host  
