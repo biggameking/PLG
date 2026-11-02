@@ -1348,10 +1348,18 @@ func regenerate(s: int) -> void:
 	party.clear()
 	box.clear()
 	for k in structures:
-		if is_instance_valid(structures[k]["sprite"]):
-			structures[k]["sprite"].queue_free()
+		if is_instance_valid(structures[k]["node"]):
+			structures[k]["node"].queue_free()
 	structures.clear()
 	world.structures.clear()
+	for dd0 in drops: # old world's ground loot doesn't carry over
+		if is_instance_valid(dd0["node"]):
+			dd0["node"].queue_free()
+	drops.clear()
+	for pr in projectiles:
+		if is_instance_valid(pr["node"]):
+			pr["node"].queue_free()
+	projectiles.clear()
 	palbox_pos = Vector2i(-1, -1)
 	world.generate(s)
 	drawer.setup(world)
