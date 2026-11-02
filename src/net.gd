@@ -112,10 +112,12 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		rpc("peer_pos", id, x, y, elev)  # relay so clients see each other
 
 @rpc("any_peer", "call_remote", "unreliable")
-func chat(t: String) -> void:
+func chat(t: String, from_id: int = 0) -> void:
+	if from_id == multiplayer.get_unique_id():
+		return # the server relayed your own line back — hud already echoed it
 	game.log_msg("[friend] " + t)
 	if multiplayer.is_server():
-		rpc("chat", t) # ENet is a star: relay client chat to the other clients
+		rpc("chat", t, from_id) # ENet is a star: relay client chat to the other clients
 
 func _process(dt: float) -> void:
 	if multiplayer.multiplayer_peer == null or ghosts.is_empty():

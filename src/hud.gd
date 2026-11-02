@@ -42,7 +42,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if game.panel == "chat" and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
 			if chat_buf.strip_edges() != "" and game.net:
-				game.net.rpc("chat", chat_buf)
+				game.net.rpc("chat", chat_buf, multiplayer.get_unique_id())
 				game.log_msg("[you] " + chat_buf)
 			chat_buf = ""; game.panel = ""
 		elif event.keycode == KEY_ESCAPE:
