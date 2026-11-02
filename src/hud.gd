@@ -395,61 +395,68 @@ func draw_craft(r: Vector2) -> void:
 			break
 
 func draw_inv(r: Vector2) -> void:
-	var rr := Rect2(r.x / 2 - 200, 120, 400, 320)
+	var rr := Rect2(r.x / 2 - 230, 60, 460, 500)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a8e6a1"))
-	var y := rr.position.y + 46
 	var keys := game.items.keys()
 	keys.sort()
-	for k in keys:
+	var colw := 222.0
+	var rows: int = int((rr.size.y - 66) / 16) # ~27 rows per column
+	for ki in range(keys.size()):
+		var k: String = keys[ki]
+		var cx0: float = rr.position.x + 12 + (ki / rows) * colw
+		var y0: float = rr.position.y + 46 + (ki % rows) * 16
+		if cx0 + colw - 10 > rr.end.x: # third column would spill — stop
+			break
 		var nm: String = ItemData.ITEMS.get(k, {}).get("name", k)
 		var usable: bool = ItemData.ITEMS.get(k, {}).get("usable", false)
 		var equipable: bool = ItemData.ITEMS.get(k, {}).has("weapon") or ItemData.ITEMS.get(k, {}).has("armor")
-		var rect := Rect2(rr.position.x + 16, y - 12, 360, 18)
+		var rect := Rect2(cx0, y0 - 12, colw - 12, 16)
 		if equipable:
 			click_rects.append({"rect": rect, "act": "equip", "arg": k})
 			var slot := "weapon" if ItemData.ITEMS[k].has("weapon") else "armor"
-			nm += "  [equipped]" if game.player.equipment[slot] == k else "  [equip]"
+			nm += "  [eq'd]" if game.player.equipment[slot] == k else "  [eq]"
 		elif usable:
 			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
 			nm += "  [use]"
-		draw_string(font, Vector2(rect.position.x, y), "%s  x%d" % [nm, game.items[k]],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#ffd76e") if usable else Color.WHITE)
-		y += 17
-		if y > rr.end.y - 14:
-			break
+		draw_string(font, Vector2(cx0, y0), "%s x%d" % [nm.left(16), game.items[k]],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e") if usable else Color.WHITE)
 
 func draw_palbox(r: Vector2) -> void:
-	var rr := Rect2(r.x / 2 - 260, 100, 520, 380)
+	var rr := Rect2(r.x / 2 - 300, 40, 600, 540)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "PALBOX — click to swap party/base",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#4dd0e1"))
-	var y := rr.position.y + 48
+	var y := rr.position.y + 44
 	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c8f0d0"))
-	y += 20
+	y += 18
 	for uid in game.party:
 		var p := game.find_pal(uid)
 		if not p:
 			continue
-		var rect := Rect2(rr.position.x + 24, y - 12, 220, 18)
+		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
-		draw_string(font, Vector2(rect.position.x, y), "%s %s%s Lv%d %s  HP%d/%d  %s" % [p.spec["name"], p.sex, star_str(p), p.level, passive_str(p), int(p.hp), int(p.max_hp), p.mode],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
-		y += 19
-	y += 12
-	draw_string(font, Vector2(rr.position.x + 16, y), "BOX", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
-	y += 20
-	for bp in game.box:
-		var rect := Rect2(rr.position.x + 24, y - 12, 220, 18)
+		draw_string(font, Vector2(rect.position.x, y), "%s %s%s Lv%d %s HP%d/%d" % [p.spec["name"], p.sex, star_str(p), p.level, passive_str(p).left(14), int(p.hp), int(p.max_hp)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+		y += 17
+	y += 10
+	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % game.box.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
+	y += 18
+	var colw := 288.0
+	var rows: int = int((rr.end.y - y - 8) / 16)
+	for bi in range(game.box.size()):
+		var bp: Pal = game.box[bi]
+		var cx0: float = rr.position.x + 16 + (bi / rows) * colw
+		var y0: float = y + (bi % rows) * 16
+		if cx0 + colw - 8 > rr.end.x:
+			break
+		var rect := Rect2(cx0, y0 - 11, colw - 10, 16)
 		click_rects.append({"rect": rect, "act": "box_out", "arg": bp})
 		var ko: bool = bp.hp <= 0
-		var label := "%s %s%s Lv%d  HP%d/%d%s" % [bp.spec["name"], bp.sex, star_str(bp), bp.level,
-			int(maxi(0, bp.hp)), int(bp.max_hp), "  [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else ""]
-		draw_string(font, Vector2(rect.position.x, y), label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#d06a6a") if ko else Color("#c8d3d5"))
-		y += 19
-		if y > rr.end.y - 14:
-			break
+		var label := "%s %s%s Lv%d HP%d/%d%s" % [bp.spec["name"], bp.sex, star_str(bp), bp.level,
+			int(maxi(0, bp.hp)), int(bp.max_hp), " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else ""]
+		draw_string(font, Vector2(cx0, y0), label,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if ko else Color("#c8d3d5"))
 
 func use_item(k: String) -> void:
 	match k:
