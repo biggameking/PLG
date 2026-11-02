@@ -143,6 +143,23 @@ func wild_ai(dt: float) -> void:
 		statuses["sleep"] = game.t + 2.0
 		return
 	if aggro == 0:
+		# raiders storm the BASE: target the nearest defender, not just the player
+		if raid:
+			var bt: Pal = null; var bd := dist
+			for bp in game.pals:
+				if bp.mode != "base" or bp.hp <= 0:
+					continue
+				var dd := pos.distance_to(bp.pos)
+				if dd < bd:
+					bd = dd; bt = bp
+			if bt != null and bd <= 1.1 and atk_cd <= 0:
+				atk_cd = 1.1
+				bt.hit(maxi(2, int(spec.get("atk", 40) * 0.4)), 1.0, false)
+				return
+			elif bt != null:
+				if not cast_skills(bt, dt):
+					step_toward(bt.pos, dt)
+				return
 		# fight player if aggressive; timid flees
 		if hostile() >= 1:
 			if not cast_skills(pl, dt):
