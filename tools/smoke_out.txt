@@ -6,19 +6,18 @@ PASS pals spawned  51 pals
 PASS species resolve  0 bad
 PASS work types have sites  
 PASS player moves  -> (112.5, 110.5)
-PASS melee damages pal  199->193
+PASS melee damages pal  175->168
 PASS caught pal leaves world  
 PASS catch into box  box 0->1
 PASS place palbox  
 PASS box->party  
-PASS mount  
 PASS partner_skill  0->0
 PASS tech unlock  
 PASS craft club  
   place log: (113, 111) palbox_pos=(115, 113)
 PASS assign_worker  
 PASS production ticks  wood 0->8 (site stockpile)
-PASS burn ticks  170->158
+PASS burn ticks  127->119
 PASS cast_skill projectile  
 PASS armor reduces damage  def 4
 PASS equip bow  
@@ -58,32 +57,33 @@ PASS day rolls over  day 2->2
 PASS medicine heals  hp 142
 PASS sigil consumed  sig0 pals1
 PASS pal levels via xp  Lv15->16 xp10
-  had=4 linked_pals=4 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=60
+  had=3 linked_pals=3 sites={ "logging_site": 4, "ranch": 36, "berry_farm": 6, "generator": 4 } pals=60
 PASS party survives reload  party=4/4
 PASS structures rebuild 1:1  20->20
-  re_sites={ "logging_site": 4, "ranch": 24, "generator": 4 }
-PASS save keeps sex/passives  M/["hooligan"]
+  re_sites={ "logging_site": 4, "ranch": 12, "generator": 4 }
+PASS save keeps sex/passives  F/["zen"]
 PASS save keeps chest store  
-PASS save keeps workers  4->4 [sibelyx eikthyrdeer lamball sparkit ]
+PASS save keeps workers  3->3 [quivern eikthyrdeer sparkit ]
 PASS dead partner frees slot  4->3
-PASS raid wave spawns  +4 pals, 4 aggro
-PASS raider hits base pal  victim hp 125->117
-PASS drops spawn+pickup  drops 30->29 wood 2
+PASS raid wave spawns  +5 pals, 5 aggro
+PASS raider hits base pal  victim hp 94->94
+PASS drops spawn+pickup  drops 33->32 wood 301
 PASS test chest placed  
 PASS hauler picks from site  carry={ "id": "stone", "n": 3 }
 PASS hauler delivers to chest  stone 0->3 carry=<null>
 PASS lair alpha engages  aggro=0
+PASS lair alpha tethered  11.0->11.0 sp=blazehowl spd=4.25->4.25 aggro=-1 moving=true spec_spd=70
 PASS gen flambelle capture scale  capturePower=35 ch=0.23
 PASS apex aggros on sight  aggro=0
 PASS apex stays up at night  {  }
 PASS projectile hits terrain  
 PASS condense star+1  star=1
-PASS condense stats up  atk 0.90->1.03 hp 90->103
+PASS condense stats up  atk 1.05->1.21 hp 94->108
 PASS condense eats fodder  box 5->1
 PASS condense needs fodder  star=1
 PASS buildable filters techs  list=["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 PASS stack capped  =50
-PASS overflow spilled  drops=30
+PASS overflow spilled  drops=33
 PASS wild pal sleeps at night  
 PASS dark pal stays up  
 PASS hit wakes sleeper  aggro=0
