@@ -174,11 +174,21 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		add_item("pal_sphere", 1)
 		log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
 		add_item("lifmunk_effigy", 2)
+	if p.carry != null: # a hauler's load doesn't die with it
+		spawn_drop(p.carry["id"], p.carry["n"], p.pos)
+		p.carry = null
 	pals.erase(p)
 	party.erase(p.uid)  # dead partners must free their party slot
 	if p.job_site and p in p.job_site["workers"]:
 		p.job_site["workers"].erase(p)
-	p.queue_free()
+	if p.mode in ["partner", "base"]: # owned pals are knocked out, not deleted
+		p.mode = "box"
+		p.revive_t = t + 300.0  # Palworld-style revive timer
+		box.append(p)
+		entity_layer.remove_child(p)
+		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
+	else:
+		p.queue_free()
 	gain_xp(p.level * 4)
 
 func hurt_player(atk: float, from: Pal) -> void:
@@ -466,6 +476,11 @@ func _process(dt: float) -> void:
 			spheres_flying.erase(sp)
 	tick_production(dt)
 	update_projectiles(dt)
+	for bp in box: # knocked-out pals recover on a timer
+		if bp.revive_t > 0 and t > bp.revive_t:
+			bp.revive_t = 0
+			bp.hp = int(bp.max_hp * 0.3)
+			log_msg("%s has recovered" % bp.spec["name"])
 	# floaters age
 	for f in floaters:
 		f["age"] += dt
@@ -756,6 +771,9 @@ func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 
 func box_to_party(bp: Pal) -> void:
+	if bp.hp <= 0:
+		log_msg("%s is KO'd - wait for it to recover" % bp.spec["name"])
+		return
 	if party.size() >= 5:
 		log_msg("Party full (5) - send someone to the box first")
 		return

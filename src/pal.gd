@@ -31,6 +31,7 @@ var ai_accum := 0.0
 var needs_t := 0.0
 var skill_cd := {}
 var stun_t := 0.0
+var revive_t := 0.0         # >0 while knocked out in the box
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
