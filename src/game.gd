@@ -697,6 +697,10 @@ func party_to_box(uid: int) -> void:
 	party.erase(uid)
 	pals.erase(p)
 	p.mode = "box"
+	if p.carry != null: # hauling cargo doesn't vanish into the box
+		add_item(p.carry["id"], p.carry["n"])
+		log_msg("%s dropped off %d %s" % [p.spec["name"], p.carry["n"], p.carry["id"]])
+		p.carry = null
 	box.append(p)
 	entity_layer.remove_child(p)
 	log_msg("%s -> box" % p.spec["name"])
