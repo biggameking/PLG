@@ -114,6 +114,8 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String) -> void:
 	game.log_msg("[friend] " + t)
+	if multiplayer.is_server():
+		rpc("chat", t) # ENet is a star: relay client chat to the other clients
 
 func _process(dt: float) -> void:
 	if multiplayer.multiplayer_peer == null or ghosts.is_empty():
