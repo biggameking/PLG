@@ -1327,10 +1327,8 @@ func spawn_lairs() -> void:
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 		var bp := preload("res://src/pal.gd").new()
 		entity_layer.add_child(bp)
+		bp.alpha = true # before setup: apply_bonuses folds the 4x into max_hp
 		bp.setup(self, sid, rng.int_range(30, 40), Vector2(tx + 0.5, ty + 0.5))
-		bp.alpha = true
-		bp.max_hp *= 4.0; bp.hp = bp.max_hp
-		bp.sprite.scale = Vector2(1.6, 1.6)
 		pals.append(bp)
 		# 2 elite guards
 		for i in 2:
