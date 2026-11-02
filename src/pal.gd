@@ -248,6 +248,27 @@ func partner_ai(dt: float) -> void:
 		step_toward(pl.pos, dt)
 
 func base_ai(dt: float) -> void:
+	# defend the base: raiders beating on workers get fought back
+	var foe: Pal = null; var fbd := 4.0
+	for p in game.pals:
+		if p.mode != "wild" or p.hp <= 0:
+			continue
+		if not p.raid and p.aggro < 0:
+			continue
+		var dd := pos.distance_to(p.pos)
+		if dd < fbd:
+			fbd = dd; foe = p
+	if foe != null:
+		if not cast_skills(foe, dt):
+			if fbd > 1.1:
+				step_toward(foe.pos, dt)
+			elif atk_cd <= 0:
+				atk_cd = 1.0
+				var mult := Combat.effectiveness("neutral", foe.elem())
+				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus, 25,
+					Combat.stat_at(foe.spec["def"], foe.level, foe.talent) * foe.def_bonus, mult, game.rng)
+				foe.hit(d, mult, true)
+		return
 	if job_site:
 		var site_cell: Vector2i = Vector2i(-1, -1)
 		for k in game.structures:
