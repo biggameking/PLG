@@ -1236,6 +1236,8 @@ func load_game() -> bool:
 	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
 	player.xp = d["player"]["xp"]; player.capture_level = d["player"]["cap_lv"]
 	player.hunger = d["player"].get("hunger", player.hunger)
+	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
+	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []
 	for pd in d["pals"]:
 		if SpeciesData.species_of(pd.get("sp", "")).is_empty():
@@ -1523,7 +1525,7 @@ func upgrade_perk(k: String) -> void:
 	if k == "capture":
 		player.capture_level = 1 + perks["capture"] # keep the stat in sync
 	if k == "hp":
-		player.max_hp = 100 + perks["hp"] * 12
+		player.max_hp = 100 + (player.level - 1) * 10 + perks["hp"] * 12 # level hp + perk hp
 		player.hp = player.max_hp
 	log_msg("Statue upgraded: %s Lv%d" % [k, perks[k]])
 
