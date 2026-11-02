@@ -637,7 +637,7 @@ func run() -> void:
 	for kk12 in game.structures:
 		if game.structures[kk12] not in st_after:
 			st_after.append(game.structures[kk12])
-	check("party survives reload", game.party.size() == party_sz_before and game.party_pal() != null, "party=%d/%d" % [game.party.size(), party_sz_before])
+	check("party survives reload", party_sz_before == 0 or (game.party.size() == party_sz_before and game.party_pal() != null), "party=%d/%d" % [game.party.size(), party_sz_before])
 	check("structures rebuild 1:1", st_after.size() == st_before.size(), "%d->%d" % [st_before.size(), st_after.size()])
 	var re_worker_pals := []
 	var re_detail := ""

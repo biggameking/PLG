@@ -1138,7 +1138,8 @@ func save_game() -> void:
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
-			"star": p.star, "xp": p.xp, "raid": p.raid})
+			"star": p.star, "xp": p.xp, "raid": p.raid,
+			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
@@ -1147,9 +1148,10 @@ func save_game() -> void:
 			"revive": maxf(0.0, bp.revive_t - t)})
 	var structs := {}
 	for k in structures:
-		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents")}
+		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents"), "timer": structures[k].get("timer", 0.0)}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
+		"raid_t": raid_t,
 		"unlocked": unlocked, "items": items, "party": party,
 		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
 		"perks": perks, "equip": player.equipment,
@@ -1200,6 +1202,7 @@ func load_game() -> bool:
 	world.decor = d["decor"]
 	world.hp = d["hp_map"]
 	day = d["day"]; tod = d["tod"]
+	raid_t = d.get("raid_t", raid_t)
 	for dd0 in d.get("drops", []):
 		spawn_drop(dd0["id"], int(dd0["n"]), Vector2(dd0["x"], dd0["y"]))
 	tech_points = d["tech_points"]; unlocked = d["unlocked"]
@@ -1233,6 +1236,8 @@ func load_game() -> bool:
 		np.star = pd.get("star", 0)
 		np.xp = pd.get("xp", 0)
 		np.raid = pd.get("raid", false)
+		if np.raid:
+			np.set_meta("raid_t0", t - pd.get("rt0", 0.0)) # preserve despawn countdown
 		np.revive_t = t + pd.get("revive", 0.0)
 		np.apply_bonuses()
 		if pd.get("job"):
@@ -1264,6 +1269,7 @@ func load_game() -> bool:
 		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 		if sv is Dictionary:
 			st["store"] = sv.get("store", {})
+			st["timer"] = sv.get("timer", 0.0)
 			if sv.get("egg"):
 				st["egg_parents"] = sv["egg"]
 		for dy in range(h):
