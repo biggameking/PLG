@@ -1400,7 +1400,7 @@ func equip(k: String) -> void:
 		slot = "weapon"
 	elif it.get("kind") == "armor" or it.has("armor"):
 		slot = "armor"
-	if slot == "":
+	if slot == "" or item_count(k) <= 0:
 		return
 	if player.equipment[slot] == k:
 		player.equipment[slot] = ""
