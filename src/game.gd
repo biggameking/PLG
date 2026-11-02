@@ -541,6 +541,9 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 
 func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES[sid]
+	if sid == "palbox" and has_structure("palbox"):
+		log_msg("You can only run one base")  # palbox_pos is a single anchor
+		return false
 	for c in s.get("cost", []):
 		if item_count(c[0]) < c[1]:
 			log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
