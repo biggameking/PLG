@@ -31,6 +31,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		aiming = not aiming
 	if event.is_action_pressed("cycle_sphere"):
 		sphere_sel = (sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
+	if statuses.get("sleep", 0) > game.t:
+		return # asleep: no dodge / attack / throw
 	if event.is_action_pressed("dodge") and dodge_t <= 0:
 		dodge_t = 0.35
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
