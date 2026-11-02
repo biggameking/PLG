@@ -904,8 +904,7 @@ func box_to_party(bp: Pal) -> void:
 	pals.append(bp)
 	bp.mode = "partner"
 	party.append(bp.uid)
-	var spawn_p := player.pos + Vector2(1.2, 0)
-	bp.pos = spawn_p
+	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y) # box-out must not land inside a cliff/lake
 	entity_layer.add_child(bp)
 	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
 
