@@ -129,7 +129,11 @@ const ZONE_SPECIES := {
 func spawn_wild() -> void:
 	var want := 42
 	var tries := 0
-	while pals.size() < want and tries < 4000:
+	var wild_n := 0
+	for wp in pals:
+		if wp.mode == "wild":
+			wild_n += 1
+	while wild_n < want and tries < 4000:
 		tries += 1
 		var x := rng.int_range(4, World.WORLD_W - 5)
 		var y := rng.int_range(4, World.WORLD_H - 5)
@@ -145,6 +149,7 @@ func spawn_wild() -> void:
 		entity_layer.add_child(p)
 		p.setup(self, sid, lv + (6 if p.alpha else 0), Vector2(x + 0.5, y + 0.5))
 		pals.append(p)
+		wild_n += 1
 
 func find_pal(uid: int) -> Pal:
 	for p in pals:
