@@ -170,19 +170,21 @@ func party_pal() -> Pal:
 
 func kill_pal(p: Pal, by_player: bool) -> void:
 	player.dismount_if(p)
-	# drops
-	var mult := 4 if p.alpha else 1
-	if p.boss:
-		add_item("legendary_sphere", 1)
-		add_item("lifmunk_effigy", 3)
-		add_item("gold_coin", 10)
-		log_msg("RAID CLEARED! Legendary sphere + loot!")
-	for d in p.spec.get("drops", []):
-		spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
-	if p.alpha:
-		add_item("pal_sphere", 1)
-		log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
-		add_item("lifmunk_effigy", 2)
+	var owned := p.mode in ["partner", "base"]
+	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
+		var mult := 4 if p.alpha else 1
+		if p.boss:
+			add_item("legendary_sphere", 1)
+			add_item("lifmunk_effigy", 3)
+			add_item("gold_coin", 10)
+			log_msg("RAID CLEARED! Legendary sphere + loot!")
+		for d in p.spec.get("drops", []):
+			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
+		if p.alpha:
+			add_item("pal_sphere", 1)
+			log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
+			add_item("lifmunk_effigy", 2)
+		gain_xp(p.level * 4)
 	if p.carry != null: # a hauler's load doesn't die with it
 		spawn_drop(p.carry["id"], p.carry["n"], p.pos)
 		p.carry = null
@@ -192,7 +194,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		if p in p.job_site["workers"]:
 			p.job_site["workers"].erase(p)
 		p.job_site = null # no lingering worker SAN drain or base_ai pull
-	if p.mode in ["partner", "base"]: # owned pals are knocked out, not deleted
+	if owned: # owned pals are knocked out, not deleted
 		p.mode = "box"
 		p.statuses.clear() # a KO'd pal shouldn't come out of the box still burning
 		p.stun_t = 0.0
@@ -202,7 +204,6 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
 	else:
 		p.queue_free()
-	gain_xp(p.level * 4)
 
 func hurt_player(atk: float, from: Pal) -> void:
 	if player.dodge_t > 0:
