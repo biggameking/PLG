@@ -339,7 +339,7 @@ func resolve_sphere(sp) -> void:
 	if target.boss:
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
-	var behind: float = sign(player.pos.x - target.pos.x) == -target.dir
+	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
 	var hp_frac := maxf(0, target.hp) / target.max_hp
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, target.spec["capturePower"],
 		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
