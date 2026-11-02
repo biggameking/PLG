@@ -1223,6 +1223,7 @@ func load_game() -> bool:
 	world.generate(d["seed"])
 	world.decor = d["decor"]
 	world.hp = d["hp_map"]
+	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
 	day = d["day"]; tod = d["tod"]
 	raid_t = d.get("raid_t", raid_t)
 	for dd0 in d.get("drops", []):
@@ -1274,6 +1275,8 @@ func load_game() -> bool:
 		for pi in d["party_idx"]:
 			if pi is int and pi >= 0 and pi < pals.size():
 				party.append(pals[pi].uid)
+	else: # pre-party_idx saves stored raw uids — new pals got fresh uids, so old refs are dead
+		party = party.filter(func(u): return find_pal(u) != null)
 	for ks in d["structures"]:
 		var parts: PackedStringArray = ks.split(",")
 		var sv = d["structures"][ks]
@@ -1498,6 +1501,7 @@ func regenerate(s: int) -> void:
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	world.generate(s)
 	drawer.setup(world)
+	queue_redraw_decor() # the decor pool is keyed by cell — old-world sprites must be rebuilt
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
 	spawn_lairs() # joining clients need their own lair bosses (pals are locally authoritative)

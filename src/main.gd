@@ -95,9 +95,12 @@ func refresh_decor() -> void:
 			pool.append(spr)
 			pool_used.erase(key)
 	for key in need:
-		if pool_used.has(key):
-			continue
 		var d: int = need[key][0]
+		if pool_used.has(key):
+			if pool_used[key].get_meta("dk", -1) == d:
+				continue # same cell, same decor kind — reuse the sprite
+			var stale: Sprite2D = pool_used[key] # world regen changed what's here — recycle, don't keep the old texture
+			stale.hide(); pool.append(stale); pool_used.erase(key)
 		var spr: Sprite2D
 		if pool.is_empty():
 			spr = Sprite2D.new()
@@ -106,6 +109,7 @@ func refresh_decor() -> void:
 			spr = pool.pop_back()
 			spr.show()
 		spr.texture = decor_tex[DECOR_KIND[d]]
+		spr.set_meta("dk", d)
 		var x: int = need[key][1]
 		var y: int = need[key][2]
 		var p := Iso.to_screen(x + 0.5, y + 0.5, w.elev_at(x, y))
