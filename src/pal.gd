@@ -259,7 +259,27 @@ func haul_ai(dt: float) -> void:
 			st["store"][carry["id"]] = st["store"].get(carry["id"], 0) + carry["n"]
 			carry = null
 		return
+	# first: production sites holding goods -> move one stack to a chest
 	var bd := 24.0 * 24.0; var bd2 := bd
+	var site_pick = null; var site_id := ""
+	for k in game.structures:
+		var st2: Dictionary = game.structures[k]
+		if st2["id"] == "chest" or st2.get("store", {}).is_empty():
+			continue
+		var dd2 := pos.distance_squared_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if dd2 < bd2:
+			bd2 = dd2; site_pick = k
+	if site_pick != null:
+		var sst: Dictionary = game.structures[site_pick]
+		var cp2 := Vector2(site_pick.x + 0.5, site_pick.y + 0.5)
+		if pos.distance_to(cp2) > 1.6:
+			step_toward(cp2, dt)
+		else:
+			site_id = sst["store"].keys()[0]
+			carry = {"id": site_id, "n": sst["store"][site_id]}
+			sst["store"].erase(site_id)
+		return
+	bd2 = bd
 	var pick = null
 	for d in game.drops:
 		var dd := pos.distance_squared_to(d["pos"])

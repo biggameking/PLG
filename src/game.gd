@@ -658,8 +658,8 @@ func tick_production(dt: float) -> void:
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
-			for pr in prod:
-				add_item(pr[0], pr[1])
+			for pr in prod: # goods pile up at the site; haulers move them
+				st["store"][pr[0]] = st["store"].get(pr[0], 0) + pr[1]
 			var t := ""
 			for pr in prod:
 				t += "+%d %s  " % [pr[1], pr[0]]

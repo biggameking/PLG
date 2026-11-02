@@ -179,10 +179,16 @@ func run() -> void:
 			if not game.structures[kk]["workers"].is_empty():
 				has_job = true
 		check("assign_worker", has_job)
-		var w0 := game.item_count("wood")
+		var w0 := 0
+		for kk in game.structures:
+			if not game.structures[kk]["workers"].is_empty():
+				w0 += game.structures[kk]["store"].get("wood", 0)
 		for i in 80:
 			game.tick_production(1.0)
-		check("production ticks", game.item_count("wood") > w0, "wood %d->%d" % [w0, game.item_count("wood")])
+		var w1 := 0
+		for kk in game.structures:
+			w1 += game.structures[kk]["store"].get("wood", 0)
+		check("production ticks", w1 > w0, "wood %d->%d (site stockpile)" % [w0, w1])
 
 	# skills + statuses
 	var sp_pal: Pal = game.pals[0]
@@ -451,10 +457,11 @@ func run() -> void:
 		if game.structures[kk4].get("id") == "berry_farm":
 			farm_st = game.structures[kk4]
 	farm_st["workers"].append(farmer); farmer.job_site = farm_st
-	var berry0 := game.item_count("red_berries")
+	var berry0: int = farm_st["store"].get("red_berries", 0)
 	for i in 100:
 		game.tick_production(1.0)
-	check("farm produces", farm_ok and game.item_count("red_berries") > berry0, "red_berries %d->%d" % [berry0, game.item_count("red_berries")])
+	check("farm produces", farm_ok and farm_st["store"].get("red_berries", 0) > berry0,
+		"red_berries %d->%d (site stockpile)" % [berry0, farm_st["store"].get("red_berries", 0)])
 	# generator boosts powered production 1.5x
 	game.add_item("ingot", 10); game.add_item("electric_organ", 10)
 	var gen_xy: Vector2i = free_xy.call("generator")
@@ -723,9 +730,23 @@ func run() -> void:
 		return total
 	var stone0: int = stone_in_chests.call()
 	if cst_xy.x >= 0:
+		# seed a production site's stockpile near the chest, put the hauler
+		# on it -> picks the stack up -> walks it into the chest
+		var src = null
+		for k8 in game.structures:
+			var st8: Dictionary = game.structures[k8]
+			if st8["id"] != "chest":
+				src = k8; break
+		if src != null:
+			var st_src: Dictionary = game.structures[src]
+			st_src["store"]["stone"] = 3
+			hauler.pos = Vector2(src.x + 0.5, src.y + 0.5)
+			hauler.carry = null
+			hauler.haul_ai(0.15)
+			check("hauler picks from site", hauler.carry != null and hauler.carry["id"] == "stone",
+				"carry=%s" % str(hauler.carry))
 		if near_c0.x >= 0:
 			hauler.pos = Vector2(near_c0.x + 0.5, near_c0.y + 0.5)
-			game.spawn_drop("stone", 3, hauler.pos)
 			for i in 30:
 				hauler.haul_ai(0.15)
 				if hauler.carry == null:
