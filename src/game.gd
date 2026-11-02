@@ -923,8 +923,9 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 	var tpos: Vector2 = target_ent if target_ent is Vector2 else target_ent.pos
 	match kind:
 		"self":
-			caster.hp = minf(caster.max_hp, caster.hp + caster.max_hp * sk.get("power", 20) / 100.0)
-			floater(caster.pos, "+" + sk["name"], "#a8e6a1")
+			var heal := caster.max_hp * absf(sk.get("power", 20)) / 100.0
+			caster.hp = minf(caster.max_hp, caster.hp + heal)
+			floater(caster.pos, "+%d %s" % [int(heal), sk["name"]], "#a8e6a1")
 		"lunge":
 			var land: Vector2 = tpos + (caster.pos - tpos).normalized() * 0.9
 			if not world.blocked(int(land.x), int(land.y)):
