@@ -138,14 +138,19 @@ func spawn_wild() -> void:
 		tries += 1
 		var x := rng.int_range(4, World.WORLD_W - 5)
 		var y := rng.int_range(4, World.WORLD_H - 5)
-		if world.blocked(x, y):
-			continue
 		if player.pos.distance_squared_to(Vector2(x, y)) < 64.0:
 			continue # don't pop a pal into existence on top of the player
 		var zone := world.zone_at(x, y)
 		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 		var sp: Dictionary = SpeciesData.species_of(sid)
+		var aquatic: bool = "water" in sp.get("elements", [])
+		var in_water: bool = world.tiles[world.idx(x, y)] == World.Tile.WATER
+		if in_water:
+			if not aquatic or world.blocked_swim(x, y, x, y):
+				continue # landlubbers can't pop up in a lake
+		elif world.blocked(x, y):
+			continue
 		var lv := rng.int_range(1 + zone * 3, 4 + zone * 5)
 		var p := preload("res://src/pal.gd").new()
 		p.alpha = zone >= 2 and rng.chance(0.08)
