@@ -444,7 +444,7 @@ func roll_passives() -> void:
 func passive_mult(field: String) -> float:
 	var m := 1.0
 	for k in passives:
-		m *= PassiveData.PASSIVES[k].get(field, 1.0)
+		m *= PassiveData.PASSIVES.get(k, {}).get(field, 1.0) # stale save keys skip safely
 	return m
 
 func apply_bonuses() -> void:
@@ -453,7 +453,7 @@ func apply_bonuses() -> void:
 	speed_bonus = 1.0
 	var pv: Dictionary
 	for k in passives:
-		pv = PassiveData.PASSIVES[k]
+		pv = PassiveData.PASSIVES.get(k, {})
 		atk_bonus *= pv.get("atk", 1.0)
 		def_bonus *= pv.get("def", 1.0)
 		speed_bonus *= pv.get("speed", 1.0)
