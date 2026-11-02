@@ -1141,6 +1141,9 @@ func load_game() -> bool:
 	player.hunger = d["player"].get("hunger", player.hunger)
 	var pending_jobs := []
 	for pd in d["pals"]:
+		if SpeciesData.species_of(pd.get("sp", "")).is_empty():
+			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
+			continue # corrupt entry — don't crash on spec lookups
 		var np := preload("res://src/pal.gd").new()
 		np.setup(self, pd["sp"], pd["lv"], Vector2(pd["pos"][0], pd["pos"][1]))
 		np.mode = pd["mode"]; np.hp = pd["hp"]; np.talent = pd["talent"]
