@@ -318,30 +318,31 @@ func draw_build_bar(r: Vector2) -> void:
 		for c in s.get("cost", []):
 			cost += "%d%s " % [c[1], c[0].left(4)]
 		var col := Color("#4dd0e1") if i == build_sel else Color.WHITE
-		draw_string(font, Vector2(bx + 8, by + 32 + i * 0), "", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
-		draw_string(font, Vector2(x, y), "%d %s" % [i + 1, s["name"].left(10)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+		draw_string(font, Vector2(x, y), "%d %s %s" % [i + 1, s["name"].left(7), cost.left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 func draw_tech(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "TECH  (pts: %d)" % game.tech_points,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8d44d"))
-	var y := rr.position.y + 48
-	for t in StructureData.TECH:
+	var colw := 232.0
+	for ti in StructureData.TECH.size():
+		var t: Dictionary = StructureData.TECH[ti]
 		var k: String = t["id"]
 		var has: bool = k in game.unlocked
 		var afford: bool = game.tech_points >= t.get("cost", 0)
 		var col := Color("#5a6068") if has else (Color.WHITE if afford else Color("#7a6a55"))
-		var label := "T%d %s  [%d pts] %s" % [t.get("tier", 1), t.get("name", k), t.get("cost", 0), "✓" if has else ""]
-		var rect := Rect2(rr.position.x + 16, y - 12, 440, 18)
+		var label := "T%d %s [%d]%s" % [t.get("tier", 1), t.get("name", k).left(14), t.get("cost", 0), " ✓" if has else ""]
+		var cx0: float = rr.position.x + 12 + (ti / 18) * colw
+		var cy0: float = rr.position.y + 44 + (ti % 18) * 17
+		if cy0 > rr.end.y - 10:
+			continue # click rects only for rows actually drawn
+		var rect := Rect2(cx0, cy0 - 12, colw - 14, 17)
 		if not has:
 			click_rects.append({"rect": rect, "act": "tech", "arg": k})
-		draw_string(font, Vector2(rect.position.x, y), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
-		y += 20
-		if y > rr.end.y - 16:
-			break
+		draw_string(font, Vector2(cx0, cy0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
 
 func draw_chest(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 220, 150, 440, 300)
@@ -366,7 +367,7 @@ func draw_chest(r: Vector2) -> void:
 			break
 
 func draw_craft(r: Vector2) -> void:
-	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)
+	var rr := Rect2(r.x / 2 - 240, 60, 480, 560)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8963c"))
 	var y := rr.position.y + 48
@@ -383,6 +384,8 @@ func draw_craft(r: Vector2) -> void:
 				afford = false
 		cost = cost.left(-2)
 		var out_name: String = ItemData.ITEMS.get(rec["out"][0], {}).get("name", rec["out"][0])
+		if y > rr.end.y - 16:
+			break # don't leave click rects for rows that were never drawn
 		var rect := Rect2(rr.position.x + 16, y - 12, 440, 18)
 		click_rects.append({"rect": rect, "act": "craft", "arg": rec["id"]})
 		draw_string(font, Vector2(rect.position.x, y), "%s x%d  <-  %s" % [out_name, rec["out"][1], cost.left(50)],
