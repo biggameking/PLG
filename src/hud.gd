@@ -135,6 +135,12 @@ func interact() -> void:
 	var st = game.structure_at(game.player.pos + probe * 0.8)
 	if not st:
 		st = game.structure_at(game.player.pos)
+	if not st: # facing misses big structures diagonally — fall back to nearest
+		var bd := 2.2
+		for k in game.structures:
+			var dd: float = game.player.pos.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
+			if dd < bd:
+				bd = dd; st = game.structures[k]
 	if st:
 		match st["id"]:
 			"workbench", "campfire":
