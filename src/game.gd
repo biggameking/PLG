@@ -295,8 +295,8 @@ func is_night() -> bool:
 
 func sleep_to_morning() -> void:
 	for q in pals:
-		if q.raid and q.hp > 0:
-			log_msg("Can't sleep - raiders are attacking!")
+		if q.hp > 0 and (q.raid or (q.mode == "wild" and q.aggro > 0.0)):
+			log_msg("Can't sleep - hostiles are after you!")
 			return
 	day += 1
 	tod = 6.0
