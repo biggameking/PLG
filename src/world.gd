@@ -45,6 +45,21 @@ func elev_at(x: int, y: int) -> int:
 func zone_at(x: int, y: int) -> int:
 	return spawn_zone[idx(x, y)] if in_bounds(x, y) else 3
 
+func blocked_swim(x: int, y: int, from_x: float, from_y: float) -> bool:
+	# aquatic pals: water is open, everything else still blocks
+	if not in_bounds(x, y):
+		return true
+	var i := idx(x, y)
+	if decor[i] != Decor.NONE or structures.has(i):
+		return true
+	var t := tiles[i]
+	if SOLID_TILES.has(t) and t != Tile.WATER:
+		return true
+	var fi := idx(int(floor(from_x)), int(floor(from_y)))
+	if elev[i] != elev[fi] and not ramp[i] and not ramp[fi]:
+		return true
+	return false
+
 func blocked(x: int, y: int, from_x := -1.0, from_y := -1.0) -> bool:
 	if not in_bounds(x, y):
 		return true

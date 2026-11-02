@@ -38,6 +38,7 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	world = g.world
 	species_id = sp_id
 	spec = SpeciesData.species_of(sp_id)
+	swims = "water" in spec.get("elements", [])
 	level = lv
 	talent = game.rng.int_range(0, 100)
 	max_hp = Combat.stat_at(spec["hp"], level, talent)

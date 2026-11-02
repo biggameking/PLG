@@ -4,6 +4,7 @@ class_name Entity
 # screen sync, 2-frame walk sprite + shadow, z-index by y-sort.
 
 var world: World
+var swims := false          # aquatic pals traverse water tiles
 var pos := Vector2.ZERO          # tile coords; tile (x,y) center = x+0.5
 var speed := 4.0                  # tiles/sec
 var dir := 1                      # facing: 1 right, -1 left
@@ -44,18 +45,22 @@ func step_toward(target: Vector2, dt: float) -> void:
 	var step: float = minf(dist, speed * dt)
 	var nx: float = pos.x + d.x / dist * step
 	var ny: float = pos.y + d.y / dist * step
-	# axis-separated tile collision w/ elevation rule
+	# axis-separated tile collision w/ elevation rule (water open if swims)
 	var moved := false
-	if not world.blocked(int(nx), int(pos.y), pos.x, pos.y):
+	var bx := world.blocked_swim(int(nx), int(pos.y), pos.x, pos.y) if swims else world.blocked(int(nx), int(pos.y), pos.x, pos.y)
+	if not bx:
 		pos.x = nx; moved = true
-	if not world.blocked(int(pos.x), int(ny), pos.x, pos.y):
+	var byy := world.blocked_swim(int(pos.x), int(ny), pos.x, pos.y) if swims else world.blocked(int(pos.x), int(ny), pos.x, pos.y)
+	if not byy:
 		pos.y = ny; moved = true
 	if not moved: # wedged on a corner: retry rotated ±45° to slide around
 		for rot in [0.785, -0.785]:
 			var rd := d.normalized().rotated(rot)
 			var rx: float = pos.x + rd.x * step
 			var ry: float = pos.y + rd.y * step
-			if not world.blocked(int(rx), int(pos.y), pos.x, pos.y) and not world.blocked(int(rx), int(ry), pos.x, pos.y):
+			var okx := world.blocked_swim(int(rx), int(pos.y), pos.x, pos.y) if swims else world.blocked(int(rx), int(pos.y), pos.x, pos.y)
+			var okxy := world.blocked_swim(int(rx), int(ry), pos.x, pos.y) if swims else world.blocked(int(rx), int(ry), pos.x, pos.y)
+			if not okx and not okxy:
 				pos.x = rx; pos.y = ry; moved = true; break
 	moving = true
 	if d.x > 0.02:
