@@ -12,6 +12,7 @@ var elev: PackedByteArray = PackedByteArray()      # 0..3
 var ramp: PackedByteArray = PackedByteArray()      # 0/1
 var hp: PackedByteArray = PackedByteArray()        # decor hit points
 var spawn_zone: PackedByteArray = PackedByteArray()
+var spawn := Vector2i.ZERO
 var structures := {}                                # idx -> structure node id
 var seed := 1
 
@@ -148,4 +149,5 @@ func generate(new_seed: int) -> Vector2i:
 			var e0: int = elev[i]
 			var mix := elev_at(x - 1, y) != e0 or elev_at(x + 1, y) != e0 or elev_at(x, y - 1) != e0 or elev_at(x, y + 1) != e0
 			ramp[i] = 1 if (mix and Rng.hash2(x, y, seed + 913) < 0.45) else 0
-	return Vector2i(cx, cy)
+	spawn = Vector2i(cx, cy)
+	return spawn
