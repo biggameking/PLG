@@ -1178,6 +1178,10 @@ func load_game() -> bool:
 	for pr in projectiles:
 		pr["node"].queue_free()
 	projectiles.clear()
+	for sp0 in spheres_flying: # sphere sprites + stale targets must not cross a load
+		if is_instance_valid(sp0["node"]):
+			sp0["node"].queue_free()
+	spheres_flying.clear()
 	for dd0 in drops:
 		if is_instance_valid(dd0["node"]):
 			dd0["node"].queue_free()
