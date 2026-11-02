@@ -418,8 +418,8 @@ func draw_palbox(r: Vector2) -> void:
 func use_item(k: String) -> void:
 	match k:
 		"boss_sigil":
-			game.summon_raid()
-			game.add_item(k, -1)
+			if game.summon_raid():
+				game.add_item(k, -1)
 		"pal_egg":
 			game.hatch_egg()  # consumes inside
 		_:

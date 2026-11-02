@@ -272,10 +272,10 @@ func sleep_to_morning() -> void:
 			q.hunger = 0.0
 	log_msg("You sleep until dawn. Day %d" % day)
 
-func summon_raid() -> void:
+func summon_raid() -> bool:
 	if palbox_pos.x < 0:
 		log_msg("Need a palbox to summon the raid")
-		return
+		return false
 	var pool: Array = SpeciesGen.zone_pool(3)
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	var bp := preload("res://src/pal.gd").new()
@@ -289,6 +289,7 @@ func summon_raid() -> void:
 	bp.raid = true
 	pals.append(bp)
 	log_msg("RAID BOSS: %s Lv45 approaches your base!" % bp.spec["name"])
+	return true
 
 func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
