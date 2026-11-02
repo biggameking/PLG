@@ -139,6 +139,8 @@ func spawn_wild() -> void:
 		var y := rng.int_range(4, World.WORLD_H - 5)
 		if world.blocked(x, y):
 			continue
+		if player.pos.distance_squared_to(Vector2(x, y)) < 64.0:
+			continue # don't pop a pal into existence on top of the player
 		var zone := world.zone_at(x, y)
 		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
