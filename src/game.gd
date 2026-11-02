@@ -775,7 +775,10 @@ func tick_production(dt: float) -> void:
 			var sg = structures[kg]
 			if sg.get("id") == "generator" and not sg["workers"].is_empty():
 				powered = 1.5
-		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * active.size()
+		var work_sum := 0.0 # each worker contributes by its Artisan/etc passives
+		for w in active:
+			work_sum += w.passive_mult("work")
+		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * work_sum
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate

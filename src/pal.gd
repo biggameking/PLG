@@ -324,8 +324,8 @@ func tick_needs(dt: float) -> void:
 	if needs_t < 1.0:
 		return
 	needs_t = 0
-	hunger = minf(100.0, hunger + 0.5)
-	san = maxf(0.0, san - (0.2 if job_site else 0.05))
+	hunger = minf(100.0, hunger + 0.5 * passive_mult("food"))  # Glutton eats more
+	san = maxf(0.0, san - (0.2 if job_site else 0.05) / passive_mult("san"))  # Zen/Pacifist hold SAN longer
 	if hunger > 70:
 		var ate := 0
 		if mode == "base" and game.has_structure("feed_box"):
@@ -396,6 +396,12 @@ func roll_passives() -> void:
 		if k not in passives:
 			passives.append(k)
 	apply_bonuses()
+
+func passive_mult(field: String) -> float:
+	var m := 1.0
+	for k in passives:
+		m *= PassiveData.PASSIVES[k].get(field, 1.0)
+	return m
 
 func apply_bonuses() -> void:
 	atk_bonus = 1.0
