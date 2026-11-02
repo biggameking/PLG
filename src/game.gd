@@ -751,8 +751,8 @@ func gain_xp(n: int) -> void:
 	for q in pals:
 		if q.mode == "partner" and q.hp > 0:
 			q.xp += int(n * 0.5)
-			if q.xp >= q.level * 25:
-				q.xp = 0
+			while q.xp >= q.level * 25:
+				q.xp -= q.level * 25
 				q.level += 1
 				q.apply_bonuses() # recompute max_hp incl star/alpha/boss
 				q.hp = q.max_hp
