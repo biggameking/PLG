@@ -1384,12 +1384,18 @@ func hatch_egg() -> void:
 		var keys: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
 		sp_id = keys[rng.int_range(0, keys.size() - 1)]
 		talent_v = rng.int_range(0, 100)
+	if SpeciesData.species_of(sp_id).is_empty() and SpeciesGen.SPECIES.get(sp_id, {}).is_empty():
+		# parent species no longer exists in data — don't hatch into a broken pal
+		var keys2: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
+		sp_id = keys2[rng.int_range(0, keys2.size() - 1)]
 	add_item("pal_egg", -1)
 	var at := player.pos + Vector2(1.0, 0.5)
 	var np := preload("res://src/pal.gd").new()
-	np.talent = talent_v # set BEFORE setup so apply_bonuses uses it
 	entity_layer.add_child(np)
 	np.setup(self, sp_id, 1, at)
+	np.talent = talent_v # setup() rolls a fresh talent — overwrite then re-derive stats
+	np.apply_bonuses()
+	np.hp = np.max_hp
 	if palbox_pos.x >= 0:
 		np.mode = "base"
 		pals.append(np)

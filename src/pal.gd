@@ -51,8 +51,8 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	uid = game.next_uid()
 	sex = "M" if game.rng.chance(0.5) else "F"
 	roll_passives()
-	if alpha:
-		hp = max_hp # apply_bonuses already folded the 4x into max_hp
+	apply_bonuses() # folds passives + star/alpha/boss hp multipliers into max_hp
+	hp = max_hp
 	setup_visuals("res://assets/pals/%s_f0.png" % sp_id, "res://assets/pals/%s_f1.png" % sp_id)
 	if alpha:
 		sprite.scale = Vector2(1.6, 1.6)
@@ -214,6 +214,9 @@ func wild_ai(dt: float) -> void:
 				bd2 = dd2; bt2 = bp
 		if bt2 != null:
 			aggro = bt2.uid
+			return
+		if dist < 14.0:
+			aggro = 0 # base wiped of defenders — turn on the player
 			return
 	# wander
 	wander_t -= dt
