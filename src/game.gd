@@ -269,11 +269,9 @@ func summon_raid() -> void:
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	var bp := preload("res://src/pal.gd").new()
 	bp.alpha = true
+	bp.boss = true # set before setup so apply_bonuses folds the 2x in once
 	entity_layer.add_child(bp)
 	bp.setup(self, sid, 45, Vector2(palbox_pos.x + 2.5, palbox_pos.y + 2.5))
-	bp.boss = true
-	bp.max_hp *= 2.0
-	bp.hp = bp.max_hp
 	bp.sprite.scale = Vector2(2.2, 2.2)
 	bp.sprite.position.y = -70.0
 	bp.aggro = 0  # player
