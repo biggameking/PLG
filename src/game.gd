@@ -81,6 +81,14 @@ func sphere_tiers() -> Array:
 			out.append(id)
 	return out
 
+func unequip_if_gone(id: String) -> void:
+	if player == null:
+		return
+	for slot in ["weapon", "armor"]:
+		if player.equipment.get(slot) == id and item_count(id) <= 0:
+			player.equipment[slot] = ""
+			log_msg("%s left your hands" % ItemData.ITEMS.get(id, {}).get("name", id))
+
 func add_item(id: String, n: int) -> void:
 	items[id] = items.get(id, 0) + n
 	if n > 0:
@@ -97,6 +105,7 @@ func add_item(id: String, n: int) -> void:
 				items[id] += spill # pre-player init: keep the overflow
 	if items[id] <= 0:
 		items.erase(id)
+	unequip_if_gone(id)
 
 func item_count(id: String) -> int:
 	return items.get(id, 0)
@@ -210,6 +219,7 @@ func chest_deposit_all(st) -> int:
 			st["store"][iid] = st["store"].get(iid, 0) + c
 			n += c
 			items.erase(iid)
+			unequip_if_gone(iid)
 	if skipped > 0:
 		log_msg("Chest full - %d item(s) kept in bag" % skipped)
 	return n
@@ -231,6 +241,7 @@ func respawn_player() -> void:
 			spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8))
 			dropped += items[id]
 			items.erase(id) # don't leave ghost "x0" rows in the bag
+			unequip_if_gone(id)
 	if dropped > 0:
 		log_msg("You dropped %d items where you fell!" % dropped)
 	if player.mount != null: # dead men don't ride
