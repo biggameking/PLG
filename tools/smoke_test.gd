@@ -14,15 +14,33 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	run()
-	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
-	fo.store_string("
-".join(results))
-	fo.close()
+	# check() already appended each line; run() may have died mid-way, so only
+	# the counts go on the tail here — a missing summary = crashed run
+	var fails := 0
+	for r in results:
+		if r.begins_with("FAIL"):
+			fails += 1
+	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.READ_WRITE)
+	if fo == null:
+		fo = FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
+	if fo:
+		fo.seek_end()
+		fo.store_line("==== %d checks, %d failures ====" % [results.size(), fails])
+		fo.close()
 	quit()
 
 func check(name: String, ok: bool, detail: String = "") -> void:
 	results.append("%s %s  %s" % ["PASS" if ok else "FAIL", name, detail])
 	print(results[-1])
+	# append immediately: a runtime error aborts run() mid-way and a buffered
+	# file hides which check died last — the on-disk tail is the crash marker
+	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.READ_WRITE)
+	if fo == null:
+		fo = FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
+	if fo:
+		fo.seek_end()
+		fo.store_line(results[-1])
+		fo.close()
 
 func run() -> void:
 	results.append("main=%s" % main)
@@ -603,11 +621,12 @@ func run() -> void:
 		if q.mode == "base" and seen[q.species_id] == 1:
 			sv_pal = q
 			break
-	if sv_pal == null:
+	if sv_pal == null and not game.base_pals().is_empty():
 		sv_pal = game.base_pals()[0]
-	var sv_sex: String = sv_pal.sex
-	var sv_pass: Array = sv_pal.passives.duplicate()
-	var sv_idx: int = game.pals.find(sv_pal) # order is stable through save/load
+	check("a base pal exists for save test", sv_pal != null, "")
+	var sv_sex: String = sv_pal.sex if sv_pal else ""
+	var sv_pass: Array = sv_pal.passives.duplicate() if sv_pal else []
+	var sv_idx: int = game.pals.find(sv_pal) if sv_pal else -1 # order is stable through save/load
 	var chest2 = null
 	for kk7 in game.structures:
 		if game.structures[kk7].get("id") == "chest":
@@ -683,7 +702,7 @@ func run() -> void:
 	for w10 in re_worker_pals:
 		re_detail += "%s(js=%s,mode=%s) " % [w10.species_id, w10.job_site["id"] if w10.job_site else "-", w10.mode]
 	results.append("  re_sites=%s re_workers=[%s]" % [str(re_site_names), re_detail])
-	check("save keeps sex/passives", ok_load and re_pal != null and re_pal.sex == sv_sex and re_pal.passives == sv_pass, "%s/%s" % [re_pal.sex if re_pal else "?", str(re_pal.passives) if re_pal else "?"])
+	check("save keeps sex/passives", ok_load and (sv_pal == null or (re_pal != null and re_pal.sex == sv_sex and re_pal.passives == sv_pass)), "%s/%s" % [re_pal.sex if re_pal else "?", str(re_pal.passives) if re_pal else "?"])
 	check("save keeps chest store", chest3 == null or chest3["store"].get("test_item", 0) == 7)
 	var job_names := ""
 	for q in game.pals:

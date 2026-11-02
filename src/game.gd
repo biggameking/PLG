@@ -937,7 +937,8 @@ func box_to_party(bp: Pal) -> void:
 	bp.mode = "partner"
 	party.append(bp.uid)
 	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y) # box-out must not land inside a cliff/lake
-	entity_layer.add_child(bp)
+	if bp.get_parent() == null: # KO'd/caught box pals were removed from the tree; add-back is for them only
+		entity_layer.add_child(bp)
 	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
 
 func party_to_box(uid: int) -> void:
@@ -1229,7 +1230,9 @@ func load_game() -> bool:
 	for dd0 in d.get("drops", []):
 		spawn_drop(dd0["id"], int(dd0["n"]), Vector2(dd0["x"], dd0["y"]))
 	tech_points = d["tech_points"]; unlocked = d["unlocked"]
-	perks = d.get("perks", perks)
+	var saved_perks: Dictionary = d.get("perks", {})
+	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
+		perks[pk] = int(saved_perks.get(pk, perks[pk]))
 	player.equipment = d.get("equip", player.equipment)
 	items = d["items"]; party = d["party"]
 	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
@@ -1283,6 +1286,9 @@ func load_game() -> bool:
 		var parts: PackedStringArray = ks.split(",")
 		var sv = d["structures"][ks]
 		var sid: String = sv["id"] if sv is Dictionary else sv
+		if not StructureData.STRUCTURES.has(sid):
+			log_msg("Skipped unknown structure in save: %s" % sid)
+			continue # structure type removed in a newer build — don't brick the load
 		var s: Dictionary = StructureData.STRUCTURES[sid]
 		var tx := int(parts[0]); var ty := int(parts[1])
 		if structures.has(Vector2i(tx, ty)):
