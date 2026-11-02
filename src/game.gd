@@ -262,6 +262,8 @@ func respawn_player() -> void:
 	player.statuses.clear()
 	if palbox_pos.x >= 0:
 		player.pos = Vector2(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
+	else: # no base yet: back to the landing point, not back into the jaws
+		player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	log_msg("You wake up battered at base…")
 
 func is_night() -> bool:
