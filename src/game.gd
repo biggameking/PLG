@@ -800,11 +800,11 @@ func tick_production(dt: float) -> void:
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
-			for cn in cons: # inputs come out of the base's chest network
+			for cn in cons: # inputs come out of the base's storage network
 				var need: int = cn[1]
 				for kc in structures:
 					var sc: Dictionary = structures[kc]
-					if sc["id"] != "chest" or need <= 0:
+					if sc["id"] not in ["chest", "feed_box"] or need <= 0:
 						continue
 					var take: int = mini(need, sc["store"].get(cn[0], 0))
 					if take > 0:
@@ -824,7 +824,7 @@ func consume_ready(cons: Array) -> bool:
 		var have := 0
 		for kc in structures:
 			var sc: Dictionary = structures[kc]
-			if sc["id"] == "chest":
+			if sc["id"] in ["chest", "feed_box"]: # haulers stock food in the feed box — inputs count it too
 				have += sc["store"].get(cn[0], 0)
 		if have < cn[1]:
 			return false
