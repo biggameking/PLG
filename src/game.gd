@@ -1237,7 +1237,8 @@ func load_game() -> bool:
 	day = d["day"]; tod = d["tod"]
 	raid_t = d.get("raid_t", raid_t)
 	for dd0 in d.get("drops", []):
-		spawn_drop(dd0["id"], int(dd0["n"]), Vector2(dd0["x"], dd0["y"]))
+		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y"):
+			spawn_drop(dd0["id"], int(dd0.get("n", 1)), Vector2(dd0["x"], dd0["y"]))
 	tech_points = d["tech_points"]; unlocked = d["unlocked"]
 	var saved_perks: Dictionary = d.get("perks", {})
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
@@ -1278,7 +1279,7 @@ func load_game() -> bool:
 		np.boss = pd.get("boss", false)
 		np.san = pd.get("san", np.san)
 		np.hunger = pd.get("hunger", 0.0)
-		np.carry = pd.get("carry")
+		np.carry = pd.get("carry") if pd.get("carry") is Dictionary else null # haul_ai reads carry["id"] — a wrong-typed value would crash there
 		np.star = pd.get("star", 0)
 		np.xp = pd.get("xp", 0)
 		np.raid = pd.get("raid", false)
@@ -1286,7 +1287,7 @@ func load_game() -> bool:
 			np.set_meta("raid_t0", t - pd.get("rt0", 0.0)) # preserve despawn countdown
 		np.revive_t = t + pd.get("revive", 0.0) if pd.get("revive", 0.0) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
-		if pd.get("job"):
+		if pd.get("job") is String:
 			pending_jobs.append([np, pd["job"]])
 		if np.mode == "box":
 			box.append(np)
@@ -1305,7 +1306,7 @@ func load_game() -> bool:
 		if parts.size() < 2:
 			continue # malformed cell key — skip rather than abort the load
 		var sv = d["structures"][ks]
-		var sid: String = sv["id"] if sv is Dictionary else sv
+		var sid: String = str(sv.get("id", "")) if sv is Dictionary else str(sv)
 		if not StructureData.STRUCTURES.has(sid):
 			log_msg("Skipped unknown structure in save: %s" % sid)
 			continue # structure type removed in a newer build — don't brick the load
@@ -1321,7 +1322,8 @@ func load_game() -> bool:
 		entity_layer.add_child(spr)
 		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 		if sv is Dictionary:
-			st["store"] = sv.get("store", {})
+			if sv.get("store") is Dictionary:
+				st["store"] = sv["store"]
 			st["timer"] = sv.get("timer", 0.0)
 			if sv.get("egg"):
 				st["egg_parents"] = sv["egg"]
