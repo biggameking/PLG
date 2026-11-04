@@ -56,7 +56,7 @@ func blocked_swim(x: int, y: int, from_x: float, from_y: float) -> bool:
 	var t := tiles[i]
 	if SOLID_TILES.has(t) and t != Tile.WATER:
 		return true
-	var fi := idx(int(floor(from_x)), int(floor(from_y)))
+	var fi := idx(clampi(int(floor(from_x)), 0, WORLD_W - 1), clampi(int(floor(from_y)), 0, WORLD_H - 1)) # floor() can go -1 at the world rim — a negative index silently wraps
 	if elev[i] != elev[fi] and not ramp[i] and not ramp[fi]:
 		return true
 	return false
@@ -69,7 +69,7 @@ func blocked(x: int, y: int, from_x := -1.0, from_y := -1.0) -> bool:
 		return true
 	if from_x < 0:
 		return false
-	var fi := idx(int(floor(from_x)), int(floor(from_y)))
+	var fi := idx(clampi(int(floor(from_x)), 0, WORLD_W - 1), clampi(int(floor(from_y)), 0, WORLD_H - 1)) # same rim wrap
 	if elev[i] != elev[fi] and not ramp[i] and not ramp[fi]:
 		return true
 	return false

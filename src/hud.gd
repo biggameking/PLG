@@ -565,7 +565,7 @@ func draw_statues(r: Vector2) -> void:
 	for k in game.perks:
 		var lvl: int = game.perks[k]
 		var cost := 2 + lvl * 2
-		var txt := "%s  Lv%d/5  (cost %d)" % [PERK_LABEL[k], lvl, cost]
+		var txt := "%s  Lv%d/5  (cost %d)" % [PERK_LABEL.get(k, k), lvl, cost] # foreign saves can inject unknown perk keys
 		var rect := Rect2(r.x + 16, y - 12, 360, 20)
 		var col := Color.WHITE if lvl < 5 else Color(0.5, 0.5, 0.5)
 		if lvl < 5:

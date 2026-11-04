@@ -101,7 +101,7 @@ func add_item(id: String, n: int) -> void:
 			if player != null:
 				spawn_drop(id, spill, player.pos)
 				drops.back()["cool"] = 3.0 # don't vacuum it straight back up
-				log_msg("Bag full - %s x%d dropped" % [ItemData.ITEMS[id].get("name", id), spill])
+				log_msg("Bag full - %s x%d dropped" % [ItemData.ITEMS.get(id, {}).get("name", id), spill])
 			else:
 				items[id] += spill # pre-player init: keep the overflow
 	if items[id] <= 0:
