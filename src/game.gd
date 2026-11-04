@@ -1234,25 +1234,34 @@ func load_game() -> bool:
 	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
 		log_msg("Save layout predates the current world format - fresh terrain")
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
-	day = d["day"]; tod = d["tod"]
-	raid_t = d.get("raid_t", raid_t)
+	day = int(d["day"]); tod = float(d["tod"]) # typed vars — a foreign string would throw on assignment
+	raid_t = float(d.get("raid_t", raid_t))
 	for dd0 in d.get("drops", []):
-		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y"):
-			spawn_drop(dd0["id"], int(dd0.get("n", 1)), Vector2(dd0["x"], dd0["y"]))
-	tech_points = d["tech_points"]; unlocked = d["unlocked"]
+		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
+				and (dd0["x"] is float or dd0["x"] is int) and (dd0["y"] is float or dd0["y"] is int):
+			spawn_drop(str(dd0["id"]), int(dd0.get("n", 1)), Vector2(float(dd0["x"]), float(dd0["y"])))
+	tech_points = int(d["tech_points"])
+	unlocked = d["unlocked"].filter(func(u): return u is String)
 	var saved_perks: Dictionary = d.get("perks", {})
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
 		perks[pk] = int(saved_perks.get(pk, perks[pk]))
-	player.equipment = d.get("equip", player.equipment)
-	items = d["items"]
+	var seq = d.get("equip", {})
+	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
+		for slot in ["weapon", "armor"]:
+			var ev = seq.get(slot, "")
+			player.equipment[slot] = str(ev) if ItemData.ITEMS.has(str(ev)) else "" # unknown ids equip to nothing
+	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
+	for ik in d["items"]:
+		items[ik] = int(d["items"][ik])
 	party.clear()
 	for u in d["party"]: # typed-array assignment rejects untyped arrays from foreign saves
 		party.append(int(u))
 	var ppos = d["player"].get("pos", [player.pos.x, player.pos.y])
-	player.pos = Vector2(ppos[0], ppos[1]) if ppos is Array and ppos.size() >= 2 else player.pos # corrupt pos keeps spawn point instead of aborting
-	player.hp = d["player"].get("hp", player.hp); player.level = d["player"].get("level", 1)
-	player.xp = d["player"].get("xp", 0); player.capture_level = d["player"].get("cap_lv", 1)
-	player.hunger = d["player"].get("hunger", player.hunger)
+	if ppos is Array and ppos.size() >= 2 and (ppos[0] is float or ppos[0] is int) and (ppos[1] is float or ppos[1] is int):
+		player.pos = Vector2(float(ppos[0]), float(ppos[1])) # corrupt pos keeps spawn point instead of aborting
+	player.hp = float(d["player"].get("hp", player.hp)); player.level = int(d["player"].get("level", 1))
+	player.xp = int(d["player"].get("xp", 0)); player.capture_level = int(d["player"].get("cap_lv", 1))
+	player.hunger = float(d["player"].get("hunger", player.hunger))
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []
@@ -1263,29 +1272,32 @@ func load_game() -> bool:
 			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
 			continue # corrupt entry — don't crash on spec lookups
 		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
-		if ppos2 is not Array or ppos2.size() < 2:
+		if ppos2 is not Array or ppos2.size() < 2 or not (ppos2[0] is float or ppos2[0] is int) or not (ppos2[1] is float or ppos2[1] is int):
 			continue # no usable position — drop the entry
 		var np := preload("res://src/pal.gd").new()
-		np.setup(self, pd["sp"], int(pd.get("lv", 1)), Vector2(ppos2[0], ppos2[1]))
+		np.setup(self, pd["sp"], int(pd.get("lv", 1)), Vector2(float(ppos2[0]), float(ppos2[1])))
 		np.home = np.pos # loaded pals re-anchor at their saved spot
-		np.mode = pd.get("mode", "wild"); np.hp = pd.get("hp", np.max_hp); np.talent = int(pd.get("talent", np.talent))
+		var m0 := str(pd.get("mode", "wild"))
+		np.mode = m0 if m0 in ["wild", "partner", "base", "box"] else "wild" # foreign strings would poison every mode check
+		np.hp = float(pd.get("hp", np.max_hp)); np.talent = int(pd.get("talent", np.talent))
 		if pd.get("sex") != null:
-			np.sex = pd["sex"]
-		if pd.get("passives") != null:
+			np.sex = "F" if str(pd["sex"]) == "F" else "M"
+		if pd.get("passives") is Array:
 			np.passives = pd["passives"].filter(func(k): return PassiveData.PASSIVES.has(k)) # drop passives removed in newer builds
 		if pd.get("alpha"):
 			np.alpha = true
 			np.sprite.scale = Vector2(1.6, 1.6)
-		np.boss = pd.get("boss", false)
-		np.san = pd.get("san", np.san)
-		np.hunger = pd.get("hunger", 0.0)
+		np.boss = pd.get("boss") == true # typed bool — a foreign string would throw on assignment
+		np.san = float(pd.get("san", np.san))
+		np.hunger = float(pd.get("hunger", 0.0))
 		np.carry = pd.get("carry") if pd.get("carry") is Dictionary else null # haul_ai reads carry["id"] — a wrong-typed value would crash there
-		np.star = pd.get("star", 0)
-		np.xp = pd.get("xp", 0)
-		np.raid = pd.get("raid", false)
+		np.star = int(pd.get("star", 0))
+		np.xp = int(pd.get("xp", 0))
+		np.raid = pd.get("raid") == true
 		if np.raid:
-			np.set_meta("raid_t0", t - pd.get("rt0", 0.0)) # preserve despawn countdown
-		np.revive_t = t + pd.get("revive", 0.0) if pd.get("revive", 0.0) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
+			np.set_meta("raid_t0", t - float(pd.get("rt0", 0.0))) # preserve despawn countdown
+		var rvs = pd.get("revive", 0.0)
+		np.revive_t = t + float(rvs) if (rvs is float or rvs is int) and float(rvs) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
 		if pd.get("job") is String:
 			pending_jobs.append([np, pd["job"]])
@@ -1323,8 +1335,11 @@ func load_game() -> bool:
 		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
 		if sv is Dictionary:
 			if sv.get("store") is Dictionary:
-				st["store"] = sv["store"]
-			st["timer"] = sv.get("timer", 0.0)
+				for sk2 in sv["store"]: # counts used in +/- arithmetic everywhere — coerce, skip junk
+					var cv = sv["store"][sk2]
+					if cv is float or cv is int:
+						st["store"][str(sk2)] = int(cv)
+			st["timer"] = float(sv.get("timer", 0.0)) # st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg"):
 				st["egg_parents"] = sv["egg"]
 		for dy in range(h):
