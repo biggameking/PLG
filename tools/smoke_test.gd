@@ -990,6 +990,29 @@ func run() -> void:
 	game.load_game()
 	check("save/load", game.item_count("gold_coin") == gold0, "%d" % game.item_count("gold_coin"))
 
+	# corrupt save: missing fields / wrong types must be refused, not crash the world
+	var pals_before := game.pals.size()
+	var cf := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	cf.store_var({"seed": game.world.seed, "pals": [{"sp": "lamball"}], "player": "oops"})
+	cf.close()
+	var bad_load: bool = game.load_game()
+	check("corrupt save refused", bad_load == false and game.pals.size() == pals_before, "load=%s pals=%d" % [bad_load, game.pals.size()])
+	# truncated save: a pal entry without pos/mode keys must be skipped, not fatal
+	var tf := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	tf.store_var({"seed": game.world.seed, "day": 1, "tod": 8.0, "tech_points": 0, "unlocked": [],
+		"items": {}, "party": [], "player": {"hp": 50.0, "level": 1, "xp": 0, "cap_lv": 1},
+		"pals": [{"sp": "lamball", "lv": 3, "hp": 30.0, "talent": 50, "mode": "wild",
+				"pos": [game.player.pos.x + 1, game.player.pos.y]},
+			{"sp": "lamball", "lv": 3}], "structures": {}})
+	tf.close()
+	var tload: bool = game.load_game()
+	var loaded_ok := false
+	for q in game.pals:
+		if q.species_id == "lamball" and q.hp == 30.0:
+			loaded_ok = true
+	check("truncated save loads cleanly", tload == true and loaded_ok, "pals=%d" % game.pals.size())
+	game.save_game() # restore a sane save file for the rest of the run
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)

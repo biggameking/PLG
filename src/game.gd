@@ -1196,6 +1196,14 @@ func load_game() -> bool:
 		log_msg("Save file corrupt - starting fresh")
 		return false
 	var d: Dictionary = dv
+	for req in ["day", "tod", "tech_points", "unlocked", "items", "party", "player", "pals", "structures"]:
+		if not d.has(req):
+			log_msg("Save missing field '%s' - starting fresh" % req)
+			return false # below this point every field is assumed present
+	if d["player"] is not Dictionary or d["pals"] is not Array or d["structures"] is not Dictionary \
+			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array:
+		log_msg("Save has wrong field types - starting fresh")
+		return false
 	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
 	for p in pals:
 		p.queue_free()
@@ -1219,7 +1227,8 @@ func load_game() -> bool:
 	structures.clear()
 	world.structures.clear()
 	world.generate(d["seed"])
-	if d["decor"] is PackedByteArray and d["decor"].size() == world.decor.size():
+	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
+			and d.get("hp_map") is PackedByteArray and d["hp_map"].size() == world.hp.size():
 		world.decor = d["decor"]
 		world.hp = d["hp_map"]
 	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
@@ -1234,22 +1243,31 @@ func load_game() -> bool:
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
 		perks[pk] = int(saved_perks.get(pk, perks[pk]))
 	player.equipment = d.get("equip", player.equipment)
-	items = d["items"]; party = d["party"]
-	player.pos = Vector2(d["player"]["pos"][0], d["player"]["pos"][1])
-	player.hp = d["player"]["hp"]; player.level = d["player"]["level"]
-	player.xp = d["player"]["xp"]; player.capture_level = d["player"]["cap_lv"]
+	items = d["items"]
+	party.clear()
+	for u in d["party"]: # typed-array assignment rejects untyped arrays from foreign saves
+		party.append(int(u))
+	var ppos = d["player"].get("pos", [player.pos.x, player.pos.y])
+	player.pos = Vector2(ppos[0], ppos[1]) if ppos is Array and ppos.size() >= 2 else player.pos # corrupt pos keeps spawn point instead of aborting
+	player.hp = d["player"].get("hp", player.hp); player.level = d["player"].get("level", 1)
+	player.xp = d["player"].get("xp", 0); player.capture_level = d["player"].get("cap_lv", 1)
 	player.hunger = d["player"].get("hunger", player.hunger)
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []
 	for pd in d["pals"]:
+		if pd is not Dictionary:
+			continue # corrupt entry — keep loading the rest
 		if SpeciesData.species_of(pd.get("sp", "")).is_empty():
 			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
 			continue # corrupt entry — don't crash on spec lookups
+		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
+		if ppos2 is not Array or ppos2.size() < 2:
+			continue # no usable position — drop the entry
 		var np := preload("res://src/pal.gd").new()
-		np.setup(self, pd["sp"], pd["lv"], Vector2(pd["pos"][0], pd["pos"][1]))
+		np.setup(self, pd["sp"], int(pd.get("lv", 1)), Vector2(ppos2[0], ppos2[1]))
 		np.home = np.pos # loaded pals re-anchor at their saved spot
-		np.mode = pd["mode"]; np.hp = pd["hp"]; np.talent = pd["talent"]
+		np.mode = pd.get("mode", "wild"); np.hp = pd.get("hp", np.max_hp); np.talent = int(pd.get("talent", np.talent))
 		if pd.get("sex") != null:
 			np.sex = pd["sex"]
 		if pd.get("passives") != null:
@@ -1270,7 +1288,7 @@ func load_game() -> bool:
 		np.apply_bonuses()
 		if pd.get("job"):
 			pending_jobs.append([np, pd["job"]])
-		if pd["mode"] == "box":
+		if np.mode == "box":
 			box.append(np)
 		else:
 			entity_layer.add_child(np)
@@ -1284,6 +1302,8 @@ func load_game() -> bool:
 		party = party.filter(func(u): return find_pal(u) != null)
 	for ks in d["structures"]:
 		var parts: PackedStringArray = ks.split(",")
+		if parts.size() < 2:
+			continue # malformed cell key — skip rather than abort the load
 		var sv = d["structures"][ks]
 		var sid: String = sv["id"] if sv is Dictionary else sv
 		if not StructureData.STRUCTURES.has(sid):
@@ -1313,6 +1333,8 @@ func load_game() -> bool:
 			palbox_pos = Vector2i(tx, ty)
 	for pj in pending_jobs:
 		var parts2: PackedStringArray = pj[1].split(",")
+		if parts2.size() < 2:
+			continue # malformed job cell key
 		var cell := Vector2i(int(parts2[0]), int(parts2[1]))
 		if structures.has(cell) and pj[0].mode == "base" and pj[0] not in structures[cell]["workers"]:
 			structures[cell]["workers"].append(pj[0])
