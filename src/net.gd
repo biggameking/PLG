@@ -82,15 +82,16 @@ func state_snapshot() -> Dictionary:
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
 	for e in d.get("structures", []):
-		game.place_free(e[0], int(e[1]), int(e[2]))
-	game.tod = d.get("tod", game.tod)
-	game.day = d.get("day", game.day)
+		if e is Array and e.size() >= 3 and (e[1] is float or e[1] is int) and (e[2] is float or e[2] is int):
+			game.place_free(str(e[0]), int(e[1]), int(e[2])) # net input is untrusted — validate shape
+	game.tod = float(d.get("tod", game.tod))
+	game.day = int(d.get("day", game.day))
 	game.log_msg("Synced %d structures" % d.get("structures", []).size())
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
 	if ghosts.has(id):
-		ghosts[id].net_pos = Vector3(x, y, elev)
+		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
 
 func _on_server_disconnected() -> void:
 	for gid in ghosts.keys(): # frozen ghosts shouldn't outlive the session
@@ -111,24 +112,24 @@ func spawn_ghost(id: int) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func world_sync(s: int) -> void:
-	game.regenerate(s)
-	game.log_msg("Synced world seed %d" % s)
+	game.regenerate(int(s))
+	game.log_msg("Synced world seed %d" % int(s))
 
 @rpc("any_peer", "call_remote", "unreliable")
 func sync_pos(x: float, y: float, elev: float) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if ghosts.has(id):
-		ghosts[id].net_pos = Vector3(x, y, elev)
+		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
 	if is_host:
-		rpc("peer_pos", id, x, y, elev)  # relay so clients see each other
+		rpc("peer_pos", id, float(x), float(y), float(elev))  # relay so clients see each other
 
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
 	if from_id == multiplayer.get_unique_id():
 		return # the server relayed your own line back — hud already echoed it
-	game.log_msg("[friend] " + t)
+	game.log_msg("[friend] " + str(t))
 	if multiplayer.is_server():
-		rpc("chat", t, from_id) # ENet is a star: relay client chat to the other clients
+		rpc("chat", str(t), int(from_id)) # ENet is a star: relay client chat to the other clients
 
 func _process(dt: float) -> void:
 	if multiplayer.multiplayer_peer == null or ghosts.is_empty():
