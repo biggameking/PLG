@@ -2155,6 +2155,7 @@ func save_game() -> void:
 		"unlocked": unlocked, "items": items, "party": party,
 		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
+		"wear": player.weapon_wear,
 		"pals": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
@@ -2282,6 +2283,8 @@ func load_game() -> bool:
 		for slot in ["weapon", "armor", "acc1", "acc2"]:
 			var ev = seq.get(slot, "")
 			player.equipment[slot] = str(ev) if ItemData.ITEMS.has(str(ev)) else "" # unknown ids equip to nothing
+		var wdur: float = float(ItemData.ITEMS.get(player.equipment["weapon"], {}).get("weapon", {}).get("dur", -1))
+		player.weapon_wear = clampf(float(d.get("wear", wdur)), -1.0, maxf(wdur, 1.0)) if wdur > 0 else -1.0
 	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
 	for ik in d["items"]:
 		items[ik] = maxi(int(d["items"][ik]), 0) # negative inventory is corrupt state
@@ -3317,10 +3320,20 @@ func equip(k: String) -> void:
 		return
 	if player.equipment[slot] == k:
 		player.equipment[slot] = ""
+		if slot == "weapon":
+			player.weapon_wear = -1.0
 		log_msg("Unequipped " + it["name"])
 	else:
 		player.equipment[slot] = k
+		if slot == "weapon":
+			player.weapon_wear = float(it["weapon"].get("dur", -1)) # fresh tool, fresh count
 		log_msg("Equipped " + it["name"])
+
+func break_weapon(id: String) -> void:
+	log_msg("%s broke!" % ItemData.ITEMS.get(id, {}).get("name", id))
+	floater(player.pos, "BROKE!", "#e64533")
+	player.weapon_wear = -1.0
+	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func teach_skill_fruit(item_id: String) -> void:
 	# Skill fruit (Palworld): teaches the active pal a move of that element

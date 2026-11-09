@@ -422,7 +422,8 @@ const ITEMS = {
   "weapon": {
    "dmg": 15,
    "range": 1.8,
-   "cd": 0.5
+   "cd": 0.5,
+   "dur": 40
   },
   "desc": "Crude melee weapon."
  },
@@ -436,7 +437,8 @@ const ITEMS = {
   "weapon": {
    "dmg": 25,
    "range": 2.4,
-   "cd": 0.6
+   "cd": 0.6,
+   "dur": 50
   },
   "desc": "Poke from afar."
  },
@@ -452,7 +454,8 @@ const ITEMS = {
    "dmg": 20,
    "range": 10,
    "cd": 0.7,
-   "ammo": "arrow"
+   "ammo": "arrow",
+   "dur": 80
   },
   "desc": "Shoots arrows."
  },
@@ -468,7 +471,8 @@ const ITEMS = {
    "dmg": 60,
    "range": 12,
    "cd": 2.2,
-   "ammo": "musket_ball"
+   "ammo": "musket_ball",
+   "dur": 60
   },
   "desc": "Slow but heavy shot."
  },
@@ -482,7 +486,8 @@ const ITEMS = {
   "weapon": {
    "dmg": 18,
    "range": 1.8,
-   "cd": 0.55
+   "cd": 0.55,
+   "dur": 70
   },
   "desc": "Chops trees faster; decent weapon."
  },
@@ -496,7 +501,8 @@ const ITEMS = {
   "weapon": {
    "dmg": 18,
    "range": 1.8,
-   "cd": 0.55
+   "cd": 0.55,
+   "dur": 70
   },
   "desc": "Mines rocks faster; decent weapon."
  },
@@ -591,7 +597,8 @@ const ITEMS = {
   "weapon": {
    "dmg": 30,
    "range": 1.6,
-   "cd": 0.5
+   "cd": 0.5,
+   "dur": 50
   },
   "price": 140,
   "desc": "Palworld's grim tool: butcher a boxed pal for its drops (palbox x)."

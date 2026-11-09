@@ -863,6 +863,8 @@ const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "
 
 func _eq_line() -> String:
 	var wn: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "Fists")
+	if game.player.weapon_wear >= 0.0:
+		wn += " [%d]" % int(game.player.weapon_wear)
 	var an: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "None")
 	var acc := ""
 	for s in ["acc1", "acc2"]:

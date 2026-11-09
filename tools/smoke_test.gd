@@ -1379,6 +1379,15 @@ func run() -> void:
 	game.add_item("defense_pendant", -1); game.add_item("attack_pendant", -1)
 	check("lost acc drops", p.equipment["acc1"] == "" and p.equipment["acc2"] == "",
 		"%s/%s" % [p.equipment["acc1"], p.equipment["acc2"]])
+	# Palworld tool wear: swings cost durability, zero snaps the weapon
+	game.add_item("wooden_club", 1)
+	game.equip("wooden_club")
+	check("weapon wear starts", p.weapon_wear == 40.0, "wear %.0f" % p.weapon_wear)
+	p.atk_cd = 0.0; p.melee()
+	check("swing spends wear", p.weapon_wear == 39.0, "wear %.0f" % p.weapon_wear)
+	p.weapon_wear = 1.0; p.atk_cd = 0.0; p.melee()
+	check("weapon breaks", p.equipment["weapon"] == "" and game.item_count("wooden_club") == 0,
+		"slot=%s n=%d" % [p.equipment["weapon"], game.item_count("wooden_club")])
 	# party cap: 6th pal refused and stays in the box
 	while game.party.size() < 5:
 		var fp: Pal = load("res://src/pal.gd").new()
@@ -1966,7 +1975,7 @@ func run() -> void:
 		sleeper = game.gen_pal("lamball", 3, game.player.pos + Vector2(6, 0))
 		sleeper.mode = "wild"; sleeper.aggro = -1
 		if not game.pals.has(sleeper): game.pals.append(sleeper)
-	sleeper.aggro = -1; sleeper.hit_flash = 0; sleeper.statuses.erase("sleep")
+	sleeper.aggro = -1; sleeper.hit_flash = 0; sleeper.stun_t = 0.0; sleeper.statuses.erase("sleep")
 	sleeper.wild_ai(0.1)
 	check("wild pal sleeps at night", sleeper.has_status("sleep"), "")
 	if nightowl:
