@@ -86,6 +86,7 @@ export const ITEMS: Record<string, ItemDef> = {
   // traversal gear + skill fruits
   glider: { id: "glider", name: "Glider", glyph: "▲", color: "#a8dff0", kind: "gear", stack: 1, tech: "glider", price: 120, desc: "Ride the wind: descend any cliff safely while carried." },
   saddle: { id: "saddle", name: "Pal Saddle", glyph: "◠", color: "#8a6d4d", kind: "gear", stack: 1, tech: "saddle", price: 90, desc: "Palworld saddle: required in the pack to ride any mount, land or air." },
+  fishing_rod: { id: "fishing_rod", name: "Fishing Rod", glyph: "⁀", color: "#7fb069", kind: "gear", stack: 1, price: 80, desc: "Cast at the water's edge: bites bring loot — sometimes a live catch." },
   gauntlet_sigil: { id: "gauntlet_sigil", name: "Gauntlet Sigil", glyph: "♜", color: "#b06ee8", kind: "usable", usable: true, stack: 3, price: 0, desc: "Starts a 3-wave trial at your palbox. Tower rules: only the strong walk out." },
   ancient_part: { id: "ancient_part", name: "Ancient Part", glyph: "❖", color: "#9c8bd4", kind: "material", stack: 99, price: 40, desc: "Scrap from a lost age. Bosses drop it; ancient tech hungers for it." },
   meat_cleaver: { id: "meat_cleaver", name: "Meat Cleaver", glyph: "⚔", color: "#c0392b", kind: "weapon", stack: 1, tech: "meat_cleaver", price: 140, weapon: { dmg: 30, range: 1.6, cd: 0.5 }, desc: "Palworld's grim tool: butcher a boxed pal for its drops (palbox ✕)." },
@@ -135,5 +136,6 @@ export const RECIPES: Recipe[] = [
   { id: "gunpowder", out: ["gunpowder", 2], cost: [["venom_gland", 1], ["stone", 2]], station: "workbench", work: 40 },
   { id: "glider", out: ["glider", 1], cost: [["cloth", 4], ["fiber", 10], ["leather", 2]], station: "workbench", work: 120 },
   { id: "saddle", out: ["saddle", 1], cost: [["leather", 3], ["fiber", 8], ["wood", 4]], station: "workbench", work: 100 },
+  { id: "fishing_rod", out: ["fishing_rod", 1], cost: [["wood", 8], ["fiber", 6], ["paldium", 2]], station: "workbench", work: 80 },
   { id: "meat_cleaver", out: ["meat_cleaver", 1], cost: [["ingot", 4], ["wood", 2]], station: "workbench", work: 90 },
 ];

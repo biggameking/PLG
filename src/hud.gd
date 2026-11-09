@@ -671,6 +671,8 @@ func use_item(k: String) -> void:
 				game.add_item(k, -1)
 		"pal_egg":
 			game.deposit_egg()  # needs a free incubator nearby
+		"fishing_rod":
+			game.cast_line() # reusable — the rod never leaves the pack
 		_:
 			if k.begins_with("skill_fruit_"):
 				game.teach_skill_fruit(k)

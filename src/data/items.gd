@@ -618,6 +618,16 @@ const ITEMS = {
   "price": 90,
   "desc": "Palworld saddle: required in the pack to ride any mount, land or air."
  },
+ "fishing_rod": {
+  "id": "fishing_rod",
+  "name": "Fishing Rod",
+  "glyph": "⁀",
+  "color": "#7fb069",
+  "kind": "gear",
+  "stack": 1,
+  "price": 80,
+  "desc": "Cast at the water's edge: bites bring loot — sometimes a live catch."
+ },
  "skill_fruit_neutral": {
   "id": "skill_fruit_neutral", "name": "Neutral Skill Fruit", "glyph": "●",
   "color": "#c8d3d5", "kind": "fruit", "usable": true, "stack": 10,
@@ -1168,6 +1178,13 @@ const RECIPES = [
   "cost": [["leather", 3], ["fiber", 8], ["wood", 4]],
   "station": "workbench",
   "work": 100
+ },
+ {
+  "id": "fishing_rod",
+  "out": ["fishing_rod", 1],
+  "cost": [["wood", 8], ["fiber", 6], ["paldium", 2]],
+  "station": "workbench",
+  "work": 80
  },
  {
   "id": "meat_cleaver",

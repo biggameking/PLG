@@ -654,6 +654,40 @@ func run() -> void:
 		game.pals.erase(hq)
 		if is_instance_valid(hq):
 			hq.free()
+	# fishing: cast beside water — bites bring loot or a live aquatic catch
+	var shore := Vector2i(-1, -1)
+	for fx in range(4, World.WORLD_W - 4):
+		for fy in range(4, World.WORLD_H - 4):
+			if game.world.tiles[game.world.idx(fx, fy)] != World.Tile.WATER:
+				continue
+			for dd2 in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var k2: Vector2i = Vector2i(fx, fy) + dd2
+				if game.world.in_bounds(k2.x, k2.y) and not game.world.blocked(k2.x, k2.y) \
+						and game.world.tiles[game.world.idx(k2.x, k2.y)] != World.Tile.WATER:
+					shore = k2
+			if shore.x >= 0:
+				break
+		if shore.x >= 0:
+			break
+	if shore.x >= 0:
+		var pos_f: Vector2 = p.pos
+		p.pos = Vector2(shore.x + 0.5, shore.y + 0.5)
+		game.add_item("fishing_rod", 1)
+		var pals_f: int = game.pals.size()
+		var items_f: int = game.item_count("pal_fluid") + game.item_count("gold_coin") + game.item_count("red_berries")
+		var bit := 0
+		for _ci in 30:
+			if game.cast_line():
+				bit += 1
+			if game.pals.size() > pals_f:
+				break
+		check("fishing", bit > 0 and (game.pals.size() > pals_f \
+				or game.item_count("pal_fluid") + game.item_count("gold_coin") + game.item_count("red_berries") > items_f) \
+				and game.item_count("fishing_rod") == 1,
+			"bites=%d pals=%d" % [bit, game.pals.size() - pals_f])
+		p.pos = pos_f
+	else:
+		check("fishing", false, "no shoreline")
 	# egg theft has a price: looting a nest angers nearby wild pals
 	var ne1: Pal = game.gen_pal("chikipi", 3, game.player.pos + Vector2(4, 0))
 	var ne2: Pal = game.gen_pal("chikipi", 3, game.player.pos + Vector2(40, 0))
@@ -850,7 +884,13 @@ func run() -> void:
 	var pos_c: Vector2 = p.pos
 	game.tod = 2.0
 	p.hp = p.max_hp; p.hunger = 80.0 # full belly — only the cold may drain us
-	p.pos = Vector2(200, 200) # wilderness — no player-built heat out here
+	var far_spot := Vector2(200, 200)
+	for cand in [Vector2(200, 200), Vector2(30, 200), Vector2(200, 30), Vector2(30, 30),
+			Vector2(115, 200), Vector2(200, 115), Vector2(115, 30)]:
+		if game.nearest_heat(cand) > 20.0:
+			far_spot = cand
+			break
+	p.pos = far_spot # wilderness — must sit beyond any lair torch ring too
 	var hp_c := p.hp
 	p.cold_t = 0.0
 	p._physics_process(4.5)
@@ -865,9 +905,10 @@ func run() -> void:
 		p._physics_process(4.5)
 		chill_near = p.hp >= hp_c2
 	# Palworld warmth: a fire pal at your side counts as a heat source too
-	var torch_pal: Pal = game.gen_pal("foxparks", 3, Vector2(201, 200))
+	var torch_pal: Pal = game.gen_pal("foxparks", 3, far_spot + Vector2(1, 0))
+	torch_pal.mode = "partner" # only YOUR fire pal snuggles — wild ones don't count
 	game.pals.append(torch_pal)
-	p.pos = Vector2(200, 200)
+	p.pos = far_spot
 	p.cold_t = 0.0
 	var hp_c3 := p.hp
 	p._physics_process(4.5)

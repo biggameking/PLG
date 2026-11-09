@@ -1511,8 +1511,9 @@ func nearest_heat(at: Vector2) -> float:
 		if structures[k]["id"] in HEAT_IDS:
 			bd = minf(bd, at.distance_to(Vector2(k.x + 0.5, k.y + 0.5)))
 	for q in pals:
-		if q.hp > 0 and "fire" in q.spec.get("elements", []):
-			bd = minf(bd, at.distance_to(q.pos))
+		if q.hp > 0 and q.mode in ["partner", "base"] \
+				and "fire" in q.spec.get("elements", []):
+			bd = minf(bd, at.distance_to(q.pos)) # only YOUR fire pal snuggles up
 	return bd
 
 func base_pals() -> Array:
@@ -1530,6 +1531,51 @@ func nearest_bed_cell(at: Vector2) -> Vector2i:
 		if d < bd:
 			bd = d; best = k
 	return best
+
+func cast_line() -> bool:
+	# Palworld fishing: stand at the water's edge, wait for a bite — mostly
+	# loot, sometimes a live aquatic pal surfaces to fight or catch
+	var c := Vector2i(int(player.pos.x), int(player.pos.y))
+	var wc := Vector2i(-1, -1)
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var k: Vector2i = c + d
+		if world.in_bounds(k.x, k.y) and world.tiles[world.idx(k.x, k.y)] == World.Tile.WATER:
+			wc = k
+			break
+	if wc.x < 0:
+		log_msg("Cast at the water's edge")
+		return false
+	var roll := rng.next()
+	if roll < 0.4 and pals.size() < MAX_PALS:
+		# a live catch: an aquatic pal from this zone's pool surfaces
+		var zone := world.zone_at(wc.x, wc.y)
+		var pool: Array = (ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
+			func(s): return "water" in SpeciesData.species_of(str(s)).get("elements", []))
+		if pool.is_empty():
+			pool = SpeciesData.SPECIES.keys().filter(
+				func(s): return "water" in SpeciesData.species_of(str(s)).get("elements", []))
+		if pool.is_empty():
+			return false
+		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+		var fp := preload("res://src/pal.gd").new()
+		entity_layer.add_child(fp)
+		fp.setup(self, sid, rng.int_range(1 + zone * 3, 4 + zone * 5), Vector2(wc.x + 0.5, wc.y + 0.5))
+		fp.home = fp.pos
+		pals.append(fp)
+		log_msg("A wild %s took the bait!" % fp.spec["name"])
+		floater(fp.pos, "SPLASH!", "#4d9de0")
+	elif roll < 0.7:
+		var n := rng.int_range(1, 2)
+		add_item("pal_fluid", n)
+		log_msg("Caught pal fluids x%d" % n)
+	elif roll < 0.9:
+		add_item("gold_coin", rng.int_range(4, 12))
+		log_msg("A soggy coin purse!")
+	else:
+		add_item("red_berries", 2)
+		log_msg("Just weeds and berries.")
+	floater(Vector2(wc.x + 0.5, wc.y + 0.5), "~splash~", "#9fd8ff")
+	return true
 
 func anger_nesters(at: Vector2) -> void:
 	# wild pals near a looted nest turn hostile — egg theft has a price
