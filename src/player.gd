@@ -6,6 +6,8 @@ class_name Player
 var game: Game
 var hp := 100.0
 var hunger := 80.0          # 0-100; drains ~100 over ~22 min
+var stamina := 100.0        # Palworld stamina: sprint/swim/dodge burn it
+var stam_wait := 0.0        # regen delay after a drain
 var cold_t := 0.0           # night-chill accumulator — resets by the fire
 var max_hp := 100.0
 var level := 1
@@ -39,8 +41,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		sphere_sel = (sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
 	if statuses.get("sleep", 0) > game.t:
 		return # asleep: no dodge / attack / throw
-	if event.is_action_pressed("dodge") and dodge_t <= 0:
+	if event.is_action_pressed("dodge") and dodge_t <= 0 and stamina >= 15.0:
 		dodge_t = 0.35
+		stamina -= 15.0; stam_wait = 0.8 # a roll costs a chunk of stamina
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if game.panel != "":
 			return
@@ -180,6 +183,20 @@ func _physics_process(dt: float) -> void:
 	if iv.length_squared() > 0.01:
 		facing = iv.normalized()
 	hunger = maxf(0.0, hunger - dt * 0.075 * (3.0 if swimming() else 1.0)) # a swim works up an appetite
+	# Palworld stamina: swimming burns it — run dry mid-water and you drown
+	var stam_drain := 0.0
+	if swimming():
+		stam_drain = 4.0 * dt
+		if stamina <= 0.0:
+			hp = maxf(1.0, hp - dt * 3.0) # exhausted swimmer: sinking damage
+	if iv.length() > 0 and Input.is_action_pressed("sprint") and mount == null:
+		stam_drain += 12.0 * dt
+	if stam_drain > 0.0:
+		stamina = maxf(0.0, stamina - stam_drain); stam_wait = 0.8
+	else:
+		stam_wait -= dt
+		if stam_wait <= 0.0:
+			stamina = minf(100.0, stamina + 25.0 * dt) # quick catch-up
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
 	# Palworld night chill: past dusk and away from firelight, the cold
@@ -198,7 +215,8 @@ func _physics_process(dt: float) -> void:
 	if mount != null:
 		mount.pos = pos # ridden pal travels with the player
 	if iv.length() > 0 and dodge_t <= 0:
-		var sp := speed * spd_mult * (1.7 if Input.is_action_pressed("sprint") else 1.0)
+		var sp := speed * spd_mult * (1.7 if Input.is_action_pressed("sprint") \
+				and (stamina > 0.0 or mount != null) else 1.0)
 		var step := iv.normalized() * sp * dt
 		var nx: float = pos.x + step.x
 		var ny: float = pos.y + step.y

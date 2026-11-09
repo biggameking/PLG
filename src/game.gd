@@ -2343,7 +2343,7 @@ func save_game() -> void:
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
-			"hunger": player.hunger,
+			"hunger": player.hunger, "stamina": player.stamina,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
 		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
 	}
@@ -2473,6 +2473,7 @@ func load_game() -> bool:
 	player.hp = float(d["player"].get("hp", player.hp)); player.level = clampi(int(d["player"].get("level", 1)), 1, 60) # level<=0 makes derived max_hp negative
 	player.xp = maxi(int(d["player"].get("xp", 0)), 0); player.capture_level = clampi(int(d["player"].get("cap_lv", 1)), 1, 20)
 	player.hunger = clampf(float(d["player"].get("hunger", player.hunger)), 0.0, 100.0)
+	player.stamina = clampf(float(d["player"].get("stamina", 100.0)), 0.0, 100.0) # old saves start rested
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []

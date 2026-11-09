@@ -677,7 +677,7 @@ func run() -> void:
 	p.hp = 100
 	game.add_item("hide_armor", 1)
 	game.equip("hide_armor")
-	check("armor reduces damage", p.equipment["armor"] == "hide_armor" and p.armor_def() == 4, "def %d" % p.armor_def())
+	check("armor reduces damage", p.equipment["armor"] == "hide_armor" and p.armor_def() - int(game.partner_aura("def")) == 4, "def %d" % p.armor_def())
 	p.hp = hp_p
 
 	# equip weapon + ranged shot
@@ -1527,20 +1527,20 @@ func run() -> void:
 	# metal + dragon armor equip
 	game.add_item("metal_armor", 1); game.add_item("dragon_scale", 1)
 	game.equip("metal_armor")
-	var d9: int = p.armor_def()
+	var d9: int = p.armor_def() - int(game.partner_aura("def"))
 	game.equip("dragon_scale")
-	check("armor tiers", d9 == 9 and p.armor_def() == 14, "%d/%d" % [d9, p.armor_def()])
+	check("armor tiers", d9 == 9 and p.armor_def() - int(game.partner_aura("def")) == 14, "%d/%d" % [d9, p.armor_def()])
 	# Palworld trinkets: two accessory slots, effects stack
 	game.add_item("defense_pendant", 1); game.add_item("attack_pendant", 1)
 	game.equip("defense_pendant")
-	check("acc fills slot", p.equipment["acc1"] == "defense_pendant" and p.armor_def() == 19,
+	check("acc fills slot", p.equipment["acc1"] == "defense_pendant" and p.armor_def() - int(game.partner_aura("def")) == 19,
 		"acc1=%s def=%d" % [p.equipment["acc1"], p.armor_def()])
 	game.equip("attack_pendant")
 	check("acc second slot", p.equipment["acc2"] == "attack_pendant", "acc2=%s" % p.equipment["acc2"])
 	check("acc stacks", p.acc_total("atk") > 0.11 and p.acc_total("def") > 4.5,
 		"atk=%.2f def=%.1f" % [p.acc_total("atk"), p.acc_total("def")])
 	game.equip("defense_pendant") # re-click frees its slot
-	check("acc unequips", p.equipment["acc1"] == "" and p.armor_def() == 14)
+	check("acc unequips", p.equipment["acc1"] == "" and p.armor_def() - int(game.partner_aura("def")) == 14)
 	game.add_item("defense_pendant", -1); game.add_item("attack_pendant", -1)
 	check("lost acc drops", p.equipment["acc1"] == "" and p.equipment["acc2"] == "",
 		"%s/%s" % [p.equipment["acc1"], p.equipment["acc2"]])
@@ -1631,6 +1631,35 @@ func run() -> void:
 		check("swim hungers", absf(90.0 - p.hunger - 0.225) < 0.01,
 			"drain=%.3f" % (90.0 - p.hunger))
 		p.pos = dry_pos
+	# stamina (Palworld SP): sprint and swimming drain it; a dry swim drowns
+	if wcell.x >= 0:
+		var st_dry: Vector2 = p.pos
+		p.stamina = 2.0
+		var shp0: float = p.hp
+		p.pos = wcell
+		p._physics_process(1.0) # swim burns 4/s — empties the bar
+		check("swim drains stamina", p.stamina == 0.0)
+		p._physics_process(1.0)
+		check("dry swimmer sinks", p.hp < shp0)
+		p.pos = st_dry
+	p.stamina = 50.0; p.stam_wait = -1.0
+	p._physics_process(0.5) # idle regen kicks in fast
+	check("stamina regens", p.stamina > 60.0, "sp=%.1f" % p.stamina)
+	var dev := InputEventAction.new()
+	dev.action = "dodge"; dev.pressed = true
+	var sp0b: float = p.stamina
+	p._unhandled_input(dev)
+	check("dodge costs stamina", absf(sp0b - p.stamina - 15.0) < 0.01 and p.dodge_t > 0.0)
+	p.dodge_t = 0.0
+	p.stamina = 10.0
+	p._unhandled_input(dev)
+	check("tired = no roll", p.dodge_t <= 0.0)
+	p.stamina = 100.0
+	Input.action_press("move_right"); Input.action_press("sprint")
+	p._physics_process(1.0)
+	check("sprint drains stamina", p.stamina < 90.0, "sp=%.1f" % p.stamina)
+	Input.action_release("move_right"); Input.action_release("sprint")
+	p.stamina = 100.0
 	for tpal in [surf, landm]:
 		game.pals.erase(tpal)
 		if tpal.get_parent(): tpal.get_parent().remove_child(tpal)

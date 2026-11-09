@@ -336,9 +336,13 @@ func _draw() -> void:
 	var r := get_viewport_rect().size
 	draw_rect(Rect2(12, 10, 224, 18), Color(0, 0, 0, 0.55))
 	draw_rect(Rect2(14, 12, int(220 * clampf(pl.hp / pl.max_hp, 0, 1)), 14), Color("#4caf50"))
-	draw_rect(Rect2(12, 30, 224, 10), Color(0, 0, 0, 0.55))
+	draw_rect(Rect2(12, 30, 224, 6), Color(0, 0, 0, 0.55))
 	var hc: Color = Color("#e6a23c") if pl.hunger >= 25 else Color("#e0503c")
-	draw_rect(Rect2(14, 32, int(220 * clampf(pl.hunger / 100.0, 0, 1)), 6), hc)
+	draw_rect(Rect2(14, 31, int(220 * clampf(pl.hunger / 100.0, 0, 1)), 4), hc)
+	# Palworld SP bar under the hunger sliver — sprints and swims burn it
+	draw_rect(Rect2(12, 37, 224, 5), Color(0, 0, 0, 0.55))
+	var spc: Color = Color("#3cb7e0") if pl.stamina > 15.0 else Color("#e0503c")
+	draw_rect(Rect2(14, 38, int(220 * clampf(pl.stamina / 100.0, 0, 1)), 3), spc)
 	draw_string(font, Vector2(16, 25), "HP %d/%d  Lv%d  XP%d" % [int(pl.hp), int(pl.max_hp), pl.level, pl.xp],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	var tiers := game.sphere_tiers()
