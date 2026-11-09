@@ -57,6 +57,9 @@ func melee() -> void:
 		return
 	var w: Dictionary = ItemData.ITEMS.get(equipment["weapon"], {})
 	var wd: Dictionary = w.get("weapon", {})
+	if w.get("id") == "sphere_launcher":
+		launch_sphere(wd)
+		return
 	if wd.get("range", 0) > 3:
 		shoot_weapon(wd)
 		wear_tick()
@@ -83,6 +86,36 @@ func melee() -> void:
 		game.sfx_play("hit")
 	else:
 		game.try_harvest(pos, facing)
+
+func launch_sphere(wd: Dictionary) -> void:
+	# Palworld's sphere launcher: slings the selected ball downrange at the
+	# wild pal nearest the facing line — long-range catch, no stealth crawl
+	var tiers := game.sphere_tiers()
+	if tiers.is_empty():
+		game.log_msg("No spheres loaded!")
+		return
+	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
+	var sid: String = tiers[sphere_sel]
+	var best: Pal = null
+	var best_dot := 0.3
+	var reach: float = wd.get("range", 8.0)
+	for p in game.pals:
+		if p.mode != "wild" or p.hp <= 0:
+			continue
+		var off: Vector2 = p.pos - pos
+		var d := off.length()
+		if d > reach or d < 0.5:
+			continue
+		var dot := off.normalized().dot(facing.normalized())
+		if dot > best_dot:
+			best_dot = dot; best = p
+	if best == null:
+		game.log_msg("No pal in the line of fire")
+		return
+	atk_cd = wd.get("cd", 1.0)
+	wear_tick()
+	game.add_item(sid, -1)
+	game.sphere_fly(sid, best)
 
 func throw_sphere() -> void:
 	var tiers := game.sphere_tiers()

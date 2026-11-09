@@ -476,6 +476,23 @@ const ITEMS = {
   },
   "desc": "Slow but heavy shot."
  },
+ "sphere_launcher": {
+  "id": "sphere_launcher",
+  "tech": "sphere_launcher",
+  "name": "Sphere Launcher",
+  "glyph": "◎",
+  "color": "#7a5fa8",
+  "kind": "weapon",
+  "stack": 1,
+  "price": 300,
+  "weapon": {
+   "dmg": 5,
+   "range": 8,
+   "cd": 1.0,
+   "dur": 40
+  },
+  "desc": "Hurls your selected sphere downrange — catches without creeping close."
+ },
  "metal_axe": {
   "id": "metal_axe",
   "name": "Metal Axe",
@@ -938,6 +955,29 @@ const RECIPES = [
   ],
   "station": "workbench",
   "work": 60
+ },
+ {
+  "id": "sphere_launcher",
+  "out": [
+   "sphere_launcher",
+   1
+  ],
+  "cost": [
+   [
+    "ingot",
+    8
+   ],
+   [
+    "paldium",
+    4
+   ],
+   [
+    "nails",
+    2
+   ]
+  ],
+  "station": "workbench",
+  "work": 300
  },
  {
   "id": "axe",

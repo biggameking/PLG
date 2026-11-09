@@ -1047,6 +1047,13 @@ const TECH = [
   "name": "Tanzee Assault Rifle",
   "tier": 5,
   "cost": 2
+ },
+ {
+  "id": "sphere_launcher",
+  "name": "Sphere Launcher",
+  "tier": 5,
+  "cost": 2,
+  "parts": 2
  }
 ]
 

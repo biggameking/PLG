@@ -125,6 +125,30 @@ func run() -> void:
 	if tgt.mode in ["box", "bench"]:
 		check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
 
+	# sphere launcher: slings the selected ball at the pal on the facing line
+	game.add_item("sphere_launcher", 1)
+	game.add_item("pal_sphere", 2)
+	var lw0: String = p.equipment["weapon"]
+	game.equip("sphere_launcher")
+	var lp: Pal = game.gen_pal("lamball", 2, p.pos + p.facing.normalized() * 4.0)
+	lp.mode = "wild"; lp.aggro = -1
+	game.pals.append(lp)
+	p.atk_cd = 0.0
+	var sc0: int = game.item_count("pal_sphere")
+	p.melee()
+	check("launcher fires sphere", game.spheres_flying.size() == 1 and game.item_count("pal_sphere") == sc0 - 1,
+		"flying=%d spheres=%d->%d" % [game.spheres_flying.size(), sc0, game.item_count("pal_sphere")])
+	for spx in game.spheres_flying:
+		spx["node"].queue_free()
+	game.spheres_flying.clear()
+	game.pals.erase(lp)
+	if lp.get_parent(): lp.get_parent().remove_child(lp)
+	lp.free()
+	if lw0 != "":
+		game.equip(lw0)
+	else:
+		p.equipment["weapon"] = ""
+
 	# palbox + party
 	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20)
 	var placed := false
