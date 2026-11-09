@@ -756,11 +756,14 @@ func run() -> void:
 		if game.structures[ks]["id"] == "waypoint":
 			wpts += 1
 	check("waypoints seeded", wpts >= 1, "n=%d" % wpts)
-	if game.palbox_pos.x >= 0:
+	if game.palbox_pos.x >= 0 and wpts >= 1:
 		p.pos = Vector2(5, 5)
 		game.use_waypoint()
-		check("waypoint blinks", p.pos.distance_to(
-			Vector2(game.palbox_pos.x + 0.5, game.palbox_pos.y + 2.5)) < 6.0)
+		check("waypoint opens net", game.panel == "travel" and game.travel_nodes().size() >= 2)
+		var pbk: Vector2i = game.nearest_palbox(p.pos)
+		game.travel_to(pbk)
+		check("waypoint blinks", game.panel == "" and p.pos.distance_to(
+			Vector2(pbk.x + 0.5, pbk.y + 2.5)) < 6.0)
 	# outpost palbox: a second box joins the shared network, nearest answers
 	var ob_ok := false
 	var pbx0 := int(game.palbox_pos.x); var pby0 := int(game.palbox_pos.y)

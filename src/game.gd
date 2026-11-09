@@ -656,17 +656,35 @@ func respawn_player() -> void:
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5)
 	log_msg("You wake up battered at base…")
 
+func travel_nodes() -> Array:
+	# every waypoint stone + every palbox terminal is a node on the net
+	var out := []
+	for k in structures:
+		var sid: String = structures[k]["id"]
+		if sid == "waypoint" or sid == "palbox":
+			out.append({"key": k, "id": sid,
+				"dist": player.pos.distance_to(Vector2(k.x, k.y))})
+	out.sort_custom(func(a, b): return a["dist"] < b["dist"])
+	return out
+
 func use_waypoint() -> void:
-	# Palworld fast travel, bounded: a touched waypoint blinks you home —
-	# outpost palboxes answer too, so pick whichever is closest
-	if palbox_pos.x < 0:
-		log_msg("The waypoint hums… but there's no palbox to answer")
+	# Palworld fast travel: touched stone opens the travel net
+	if travel_nodes().size() < 2:
+		log_msg("The waypoint hums… but there's nowhere to go yet")
 		return
-	var nb := nearest_palbox(player.pos)
-	player.pos = nearest_free(nb.x + 0.5, nb.y + 2.5)
+	panel = "travel"
+
+func travel_to(k: Vector2i) -> void:
+	if not structures.has(k):
+		return
+	var sid: String = structures[k]["id"]
+	if sid != "waypoint" and sid != "palbox":
+		return
+	player.pos = nearest_free(k.x + 0.5, k.y + 2.5)
 	player.sync_screen()
+	panel = ""
 	floater(player.pos, "blink!", "#7fc8f8")
-	log_msg("The waypoint pulls you back to base")
+	log_msg("The waypoint net pulls you across the island")
 
 func is_night() -> bool:
 	return tod >= 21.0 or tod < 5.0

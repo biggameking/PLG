@@ -178,6 +178,8 @@ func run_click(cr: Dictionary) -> void:
 			game.butcher_pal(cr["arg"])
 		"fav":
 			game.toggle_fav(cr["arg"])
+		"travel":
+			game.travel_to(cr["arg"])
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -388,6 +390,8 @@ func _draw() -> void:
 			draw_shop(r)
 		"dex":
 			draw_dex(r)
+		"travel":
+			draw_travel(r)
 		"chat":
 			draw_chat(r)
 		"join":
@@ -722,6 +726,29 @@ func draw_join(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), "Join IP (blank=localhost): " + join_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9fd8ff"))
+
+func draw_travel(r: Vector2) -> void:
+	var nodes := game.travel_nodes()
+	var rr := Rect2(r.x / 2 - 200, 80, 400, 90 + nodes.size() * 20)
+	draw_rect(rr, Color(0, 0, 0, 0.85))
+	draw_string(font, rr.position + Vector2(16, 24), "WAYPOINT NET",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#7fc8f8"))
+	var y := rr.position.y + 50
+	var me := Vector2i(game.player.pos)
+	for n in nodes:
+		var k: Vector2i = n["key"]
+		var nm := "Palbox" if n["id"] == "palbox" else "Waypoint"
+		var here := (k - me).length() < 3.0
+		var rect := Rect2(rr.position.x + 16, y - 12, 360, 18)
+		if not here:
+			click_rects.append({"rect": rect, "act": "travel", "arg": k})
+		var col := Color(0.5, 0.55, 0.6) if here else Color.WHITE
+		draw_string(font, Vector2(rect.position.x, y), "%s%s  (%d,%d)  %dm" %
+			[nm, "  ·here·" if here else "", k.x, k.y, int(n["dist"])],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
+		y += 20
+	draw_string(font, Vector2(rr.position.x + 16, rr.end.y - 14),
+		"click a node to blink there · esc closes", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.6, 0.65))
 
 func draw_dex(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 560)
