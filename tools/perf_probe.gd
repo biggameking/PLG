@@ -17,5 +17,5 @@ func _boot() -> void:
 		game._process(0.016)
 	print("=== PERF game-tick: %d ms for 200 ticks, structures=%d ===" % [Time.get_ticks_msec() - t0, game.structures.size()])
 	quit(0)
-func _init() -> void:
-	_boot.call_deferred()
+func _initialize() -> void:
+	call_deferred("_boot")
