@@ -1238,6 +1238,10 @@ func _process(dt: float) -> void:
 	tick_production(dt)
 	tick_merchant(dt)
 	tick_boss_respawns()
+	spoil_t += dt
+	if spoil_t >= 480.0: # perishables rot on their own clock — local bag, client-safe
+		spoil_t = 0.0
+		tick_spoilage()
 	tick_gauntlet()
 	tick_repairs(dt)
 	tick_crafts(dt)
@@ -1802,6 +1806,40 @@ func tick_box(dt: float) -> void: # Palworld palbox is a clinic — wounds mend 
 	for bp in bench: # spheres rest in the same clinic light
 		if bp.hp < bp.max_hp:
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt) # ~33s to full
+
+func cooler_active() -> bool:
+	# Palworld cold chain: an ice box with a cooling pal on duty keeps the
+	# larder from turning — same SAN/hunger/sleep gates as any work shift
+	for key in structures:
+		var st = structures[key]
+		if key != cell_of(st) or st["id"] != "cooler":
+			continue
+		for w in st["workers"]:
+			if is_instance_valid(w) and w.mode == "base" \
+					and w.san >= 15.0 and w.hunger < 80.0 and not w.has_status("sleep"):
+				return true
+	return false
+
+func tick_spoilage() -> void:
+	if cooler_active():
+		return
+	var rot := 0
+	for id in items.keys(): # snapshot: removing keys while iterating is fine on a copy
+		var it: Dictionary = ItemData.ITEMS.get(id, {})
+		if not it.get("perish"):
+			continue
+		var n: int = int(items[id])
+		if n < 4:
+			continue # a leftover handful keeps; real stacks turn
+		var gone := mini(n, int(ceil(n * 0.15)))
+		add_item(id, -gone)
+		add_item("spoiled_food", gone)
+		rot += gone
+	if rot > 0:
+		floater(player.pos, "%d food spoiled" % rot, "#8a7a50")
+		log_msg("%d perishable item%s turned — staff an ice box" % [rot, "s" if rot != 1 else ""])
+
+var spoil_t := 0.0
 
 func tick_production(dt: float) -> void:
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper

@@ -20,6 +20,15 @@ const ITEMS = {
   "stack": 999,
   "desc": "Basic building material."
  },
+ "spoiled_food": {
+  "id": "spoiled_food",
+  "name": "Spoiled Food",
+  "glyph": "☒",
+  "color": "#6a5a3a",
+  "kind": "material",
+  "price": 1,
+  "desc": "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it."
+ },
  "fiber": {
   "id": "fiber",
   "name": "Fiber",
@@ -206,6 +215,7 @@ const ITEMS = {
   "glyph": "•",
   "color": "#e64533",
   "kind": "food",
+  "perish": 1,
   "stack": 999,
   "food": 15,
   "hp": 0,
@@ -227,6 +237,7 @@ const ITEMS = {
   "glyph": "♣",
   "color": "#a08830",
   "kind": "food",
+  "perish": 1,
   "stack": 999,
   "food": 12,
   "desc": "Forest fungus."
@@ -237,6 +248,7 @@ const ITEMS = {
   "glyph": "○",
   "color": "#ede0c8",
   "kind": "food",
+  "perish": 1,
   "stack": 999,
   "food": 20,
   "desc": "Chikipi egg."
@@ -247,6 +259,7 @@ const ITEMS = {
   "glyph": "○",
   "color": "#e8f0f2",
   "kind": "food",
+  "perish": 1,
   "stack": 999,
   "food": 15,
   "desc": "Fresh milk."
@@ -297,6 +310,7 @@ const ITEMS = {
   "glyph": "♦",
   "color": "#f2a0b5",
   "kind": "food",
+  "perish": 1,
   "stack": 999,
   "food": 30,
   "desc": "Poultry meat."
@@ -307,6 +321,7 @@ const ITEMS = {
   "glyph": "♦",
   "color": "#e64533",
   "kind": "food",
+  "perish": 1,
   "stack": 999,
   "food": 35,
   "desc": "Mutton."

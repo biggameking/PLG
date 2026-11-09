@@ -823,6 +823,38 @@ func run() -> void:
 	else:
 		check("giga works rolls", false, "factory=%s chest=%s" % [g2_st != null, chest6 != null])
 
+	# cold chain (Palworld fridge loop): perishables rot over time, a staffed
+	# ice box halts it; a sleeping cooler pal does not
+	game.items["egg"] = 20
+	game.items["lamball_mutton"] = 10
+	game.tick_spoilage()
+	var rot_n: int = game.items.get("spoiled_food", 0)
+	check("perishables turn", rot_n >= 4 and game.items["egg"] < 20,
+		"spoiled=%d eggs=%d" % [rot_n, game.items.get("egg", 0)])
+	game.items.erase("spoiled_food")
+	var ic_k: Vector2i = free_xy.call("cooler")
+	var ic_st = game.structures.get(ic_k) if ic_k.x >= 0 else null
+	if ic_st:
+		var chiller: Pal = game.gen_pal("pengullet", 5, game.player.pos)
+		if chiller == null:
+			chiller = game.gen_pal("penking", 5, game.player.pos)
+		chiller.mode = "base"; chiller.san = 90.0; chiller.hunger = 10.0; chiller.ailment = ""
+		chiller.passives = []; chiller.statuses.clear()
+		ic_st["workers"] = [chiller]; chiller.job_site = ic_st
+		var egg0: int = game.items.get("egg", 0)
+		game.tick_spoilage()
+		var kept: bool = game.items.get("spoiled_food", 0) == 0 and game.items.get("egg", 0) == egg0
+		chiller.statuses["sleep"] = game.t + 2.0 # a dozing cooler pal can't hold the frost
+		game.tick_spoilage()
+		var dozed: bool = game.items.get("spoiled_food", 0) > 0
+		check("ice box preserves", kept and dozed,
+			"kept=%s dozed=%s" % [kept, dozed])
+		ic_st["workers"] = []; chiller.job_site = null
+		game.pals.erase(chiller); chiller.free()
+		game.items.erase("spoiled_food")
+	else:
+		check("ice box preserves", false, "no cooler spot")
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
