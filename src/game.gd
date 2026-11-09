@@ -2331,6 +2331,13 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 				mult *= 0.85
 			elif elem == "water":
 				mult *= 1.15
+		if tp.has_status("freeze"):
+			# a solid-frozen target shatters — the hit lands heavy and thaws it
+			# out. Checked before soak so the ice that freezes it this same hit
+			# doesn't shatter in the same instant
+			mult *= 1.5
+			tp.statuses.erase("freeze")
+			floater(tp.pos, "SHATTERED", "#7fc8f8")
 		if tp.has_status("soak"):
 			# Palworld element combos: a wet target takes the hit differently —
 			# electricity arcs through, ice locks solid, fire just boils off

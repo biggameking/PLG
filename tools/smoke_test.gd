@@ -752,6 +752,16 @@ func run() -> void:
 	cmb.add_status("soak", 5.0)
 	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["flameBurst"])
 	check("wet+fire boils", not cmb.has_status("soak") and not cmb.has_status("freeze"))
+	# freeze shatter: a solid-frozen target cracks for +50% and thaws on the hit
+	cmb.statuses.clear(); cmb.hp = 99999
+	var fzs := game.rng.s
+	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["stoneShot"])
+	var d_nz := 99999.0 - cmb.hp
+	cmb.hp = 99999; cmb.add_status("freeze", 5.0); game.rng.s = fzs
+	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["stoneShot"])
+	var d_fz := 99999.0 - cmb.hp
+	check("freeze shatters", d_fz > d_nz and absf(d_fz / d_nz - 1.5) < 0.05
+		and not cmb.has_status("freeze"), "norm=%d frozen=%d" % [int(d_nz), int(d_fz)])
 	game.pals.erase(cmb)
 	if cmb.get_parent(): cmb.get_parent().remove_child(cmb)
 	cmb.free()
