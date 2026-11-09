@@ -95,10 +95,19 @@ func throw_sphere() -> void:
 	game.add_item(sid, -1)
 	game.sphere_fly(sid, best)
 
+func flying() -> bool:
+	return mount != null and SpeciesData.body_of(mount.species_id) == "bird"
+
 func can_enter(nx: float, ny: float) -> bool:
 	var tx := int(nx); var ty := int(ny)
 	if not world.blocked(tx, ty, pos.x, pos.y):
 		return true
+	# flying mount (Palworld): a bird carries you over water and cliffs both ways
+	if flying() and world.in_bounds(tx, ty):
+		var i := world.idx(tx, ty)
+		if world.decor[i] == World.Decor.NONE and not world.solid_structure(i):
+			return true
+		return false # trees/rocks/walls still block a flyer
 	# glider (Palworld): riding the wind down a cliff is safe — uphill is not
 	if game.item_count("glider") > 0 and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
@@ -185,7 +194,9 @@ func try_mount() -> void:
 	var best: Pal = null
 	var bd := 1.4
 	for p in game.pals:
-		if p.uid in game.party and p.mode == "partner" and SpeciesData.mountable(p.species_id):
+		# Palworld: land mounts AND rideable flyers (bird body) take a saddle
+		if p.uid in game.party and p.mode == "partner" \
+				and (SpeciesData.mountable(p.species_id) or SpeciesData.body_of(p.species_id) == "bird"):
 			var d := pos.distance_to(p.pos)
 			if d < bd:
 				bd = d

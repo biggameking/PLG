@@ -516,6 +516,21 @@ func run() -> void:
 	p.try_mount()
 	var m_ok: bool = (p.mount == snak) == SpeciesData.mountable("kelpsea")
 	check("mount gate", m_ok)
+	# Palworld flyers: a bird-body party pal takes the saddle and crosses water
+	var bird: Pal = game.gen_pal("chikipi", 4, p.pos)
+	game.pals.append(bird); game.party.append(bird.uid); bird.mode = "partner"
+	p.try_mount()
+	var wcell := Vector2(-1, -1)
+	for i2 in World.WORLD_W * World.WORLD_H:
+		if game.world.tiles[i2] == World.Tile.WATER and game.world.decor[i2] == World.Decor.NONE \
+				and not game.world.solid_structure(i2):
+			wcell = Vector2(i2 % World.WORLD_W + 0.5, i2 / World.WORLD_W + 0.5)
+			break
+	check("bird mount flies", p.mount == bird and p.flying() and wcell.x >= 0 and p.can_enter(wcell.x, wcell.y))
+	p.mount = null; bird.mode = "wild" # leave the world the way the test found it
+	game.party.erase(bird.uid); game.pals.erase(bird)
+	if bird.get_parent(): bird.get_parent().remove_child(bird)
+	bird.free()
 	for q in game.pals:  # mount flips pals to partner; restore so ranch pair survives
 		if q.mode == "partner":
 			q.mode = "base"
