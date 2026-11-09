@@ -2058,10 +2058,12 @@ func run() -> void:
 		for cm in [["bow", 1], ["fiber", 12], ["nails", 6], ["leather", 6]]:
 			game.add_item(cm[0], cm[1])
 		var mk0: int = game.item_count("bow_mk2")
+		var sch_keep: int = game.items.get("schematic_bow", 0) # earlier bosses may
+		game.items.erase("schematic_bow")                     # have donated one already
 		game.craft("bow_mk2")
 		check("schematic gates craft", game.item_count("bow_mk2") == mk0,
 			"crafted without paper")
-		game.add_item("schematic_bow", 1)
+		game.add_item("schematic_bow", sch_keep + 1)
 		var sch0: int = game.items.get("schematic_bow", 0)
 		game.craft("bow_mk2")
 		check("mk2 forged", game.item_count("bow_mk2") == mk0 + 1
