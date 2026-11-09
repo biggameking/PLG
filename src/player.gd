@@ -60,7 +60,7 @@ func melee() -> void:
 		return
 	atk_cd = wd.get("cd", 0.45)
 	wear_tick()
-	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08 + acc_total("atk"))
+	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08 + acc_total("atk") + game.partner_aura("atk"))
 	var reach: float = wd.get("range", 1.6)
 	var hit_any := false
 	for p in game.pals.duplicate():
@@ -162,7 +162,7 @@ func speed_mult() -> float:
 		m *= 0.5
 	if statuses.get("soak", 0) > game.t:
 		m *= 0.7
-	m *= 1.0 + game.perks["speed"] * 0.06 + acc_total("spd")
+	m *= 1.0 + game.perks["speed"] * 0.06 + acc_total("spd") + game.partner_aura("speed")
 	return m
 
 func _physics_process(dt: float) -> void:
@@ -270,7 +270,7 @@ func shoot_weapon(wd: Dictionary) -> void:
 	game.fire_player_shot(tw, wd)
 
 func armor_def() -> int:
-	return int(ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0)) + int(acc_total("def"))
+	return int(ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0)) + int(acc_total("def") + game.partner_aura("def"))
 
 func wear_tick() -> void: # Palworld tools wear out — a swing costs a use
 	if weapon_wear > 0.0:

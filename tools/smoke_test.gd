@@ -245,6 +245,23 @@ func run() -> void:
 			game.pals.erase(prey)
 			if prey.get_parent(): prey.get_parent().remove_child(prey)
 			prey.free()
+		# partner auras (Palworld): the fielded species buffs its handler
+		var lm: Pal = game.gen_pal("lifmunk", 5, p.pos)
+		lm.mode = "box"; game.box.append(lm); game.box_pal(lm)
+		game.box_to_party(lm); game.send_out(lm.uid)
+		var def0 := p.armor_def()
+		check("atk aura on field", absf(game.partner_aura("atk") - 0.10) < 0.001)
+		var dm: Pal = game.gen_pal("dumud", 5, p.pos)
+		dm.mode = "box"; game.box.append(dm); game.box_pal(dm)
+		game.box_to_party(dm); game.send_out(dm.uid)
+		check("def aura on field", p.armor_def() == def0 + 4)
+		game.retract_out()
+		check("aura ends in ball", game.partner_aura("atk") == 0.0 and p.armor_def() == def0)
+		for apal in [lm, dm]:
+			game.pals.erase(apal); game.party.erase(apal.uid); game.bench.erase(apal)
+			if apal.get_parent(): apal.get_parent().remove_child(apal)
+			apal.free()
+		game.send_out(game.party[0]) # restore a field pal for later checks
 		# palbox growth: workforce slots scale with player level, hard cap 20
 		var lv0: int = game.player.level
 		game.player.level = 1

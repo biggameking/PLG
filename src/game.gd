@@ -1916,6 +1916,23 @@ func make_active(uid: int) -> void:
 
 const STANCES := ["auto", "aggressive", "passive"]
 
+# Palworld partner passives: a fielded species quietly buffs its handler
+const PARTNER_AURAS := {
+	"direhowl": {"speed": 0.08},   # pack-runner keeps your legs quick
+	"eikthyrdeer": {"speed": 0.06},
+	"lifmunk": {"atk": 0.10},      # gun-happy spotter sharpens your aim
+	"foxparks": {"atk": 0.08},
+	"tanzee": {"atk": 0.06},
+	"dumud": {"def": 4.0},         # thick hide lessons rub off
+	"pengullet": {"def": 3.0},
+}
+
+func partner_aura(stat: String) -> float:
+	var p := party_pal()
+	if p == null or p.hp <= 0:
+		return 0.0
+	return float(PARTNER_AURAS.get(p.species_id, {}).get(stat, 0.0))
+
 func cycle_stance(uid: int) -> void:
 	# Palworld pal commands: the field pal obeys a standing order
 	var p: Pal = find_pal(uid)
@@ -2211,7 +2228,7 @@ func update_projectiles(dt: float) -> void:
 				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
-						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
+						var d := Combat.damage(pr["dmg"] * 2.0 * (1.0 + partner_aura("atk")), 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
 						p.hit(d, mult, true)
 						dead = true
 						break
