@@ -1938,7 +1938,7 @@ func save_game() -> void:
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
-			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment,
+			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment, "sb": p.soul_boost,
 			"lucky": p.lucky, "extra": p.extra_skills,
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
@@ -1946,7 +1946,7 @@ func save_game() -> void:
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
 			"fav": bp.fav,
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
-			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry,
+			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry, "sb": bp.soul_boost,
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
 			"revive": maxf(0.0, bp.revive_t - t)})
 	var structs := {}
@@ -2156,6 +2156,7 @@ func load_game() -> bool:
 		if al in Pal.AILMENTS:
 			np.ailment = al # unknown/blank ailments fall to healthy
 		np.fav = pd.get("fav") == true # anything but a real bool stays unlocked
+		np.soul_boost = clampi(int(pd.get("sb", 0)), 0, 10)
 		if pd.get("lucky") is bool:
 			np.lucky = pd["lucky"]
 		if np.lucky and "lucky" not in np.passives:
@@ -2778,6 +2779,26 @@ func upgrade_perk(k: String) -> void:
 		player.max_hp = 100 + (player.level - 1) * 10 + perks["hp"] * 12 # level hp + perk hp
 		player.hp = player.max_hp
 	log_msg("Statue upgraded: %s Lv%d" % [k, perks[k]])
+
+func soul_infuse(uid: int) -> void:
+	# Palworld statue-of-power for pals: feed effigies into one pal's soul
+	var target: Pal = null
+	for q in pals:
+		if q.uid == uid and q.mode in ["partner", "base"]:
+			target = q
+	for bp in box:
+		if bp.uid == uid:
+			target = bp
+	if target == null or target.soul_boost >= 10:
+		return
+	var cost := 1 + target.soul_boost
+	if item_count("lifmunk_effigy") < cost:
+		log_msg("Need %d effigies to infuse %s" % [cost, target.spec["name"]])
+		return
+	add_item("lifmunk_effigy", -cost)
+	target.soul_boost += 1
+	target.apply_bonuses()
+	log_msg("%s's soul burns brighter (+%d)" % [target.spec["name"], target.soul_boost])
 
 func partner_skill() -> void:
 	if party.is_empty():

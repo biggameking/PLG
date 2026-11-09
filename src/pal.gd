@@ -27,6 +27,7 @@ var job_site = null
 var sex := "M"
 var alpha := false
 var fav := false            # heart-locked: butcher/sell/condense all skip it
+var soul_boost := 0         # statue infusions, 0..10 — +4% stats each
 var boss := false
 var passives := []
 var extra_skills := []        # taught via skill fruits — survives beyond the level table
@@ -582,6 +583,9 @@ func apply_bonuses() -> void:
 	atk_bonus *= star_mult
 	def_bonus *= star_mult
 	max_hp = Combat.stat_at(spec["hp"], level, talent) * star_mult
+	# statue souls: each infusion is a flat +4% across the board
+	var soul := 1.0 + soul_boost * 0.04
+	atk_bonus *= soul; def_bonus *= soul; max_hp *= soul
 	if lucky: # rare variant hits harder and tanks harder
 		atk_bonus *= 1.2
 		def_bonus *= 1.2

@@ -484,6 +484,28 @@ func run() -> void:
 	game.upgrade_perk("speed")
 	check("stat point spend", game.perks["speed"] == 1 and game.stat_pts == 0 \
 			and game.item_count("lifmunk_effigy") == 6, "pts=%d eff=%d" % [game.stat_pts, game.item_count("lifmunk_effigy")])
+	# soul infusion: effigies harden an owned pal, ride the save, cap at 10
+	var soul_t: Pal = null
+	for q in game.pals:
+		if q.mode in ["partner", "base"]:
+			soul_t = q; break
+	if soul_t == null and not game.box.is_empty():
+		soul_t = game.box[0]
+	if soul_t == null:
+		soul_t = game.gen_pal("lamball", 3, p.pos)
+		soul_t.mode = "box"; game.box.append(soul_t); game.box_pal(soul_t)
+	var atk_s := soul_t.atk_bonus
+	var eff_s := game.item_count("lifmunk_effigy")
+	game.soul_infuse(soul_t.uid)
+	check("soul infuse", soul_t.soul_boost == 1 and soul_t.atk_bonus > atk_s \
+			and game.item_count("lifmunk_effigy") == eff_s - 1,
+		"boost=%d atk %.2f->%.2f" % [soul_t.soul_boost, atk_s, soul_t.atk_bonus])
+	soul_t.soul_boost = 9; soul_t.apply_bonuses()
+	game.add_item("lifmunk_effigy", 20) # the 10th soul costs 10
+	game.soul_infuse(soul_t.uid) # 10th soul lands, the 11th is refused
+	game.soul_infuse(soul_t.uid)
+	check("soul cap", soul_t.soul_boost == 10)
+	soul_t.soul_boost = 0; soul_t.apply_bonuses() # reset — don't leak stats into combat checks
 
 	# breeding
 	game.add_item("wood", 40); game.add_item("stone", 20); game.add_item("fiber", 20)

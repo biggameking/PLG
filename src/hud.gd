@@ -184,6 +184,8 @@ func run_click(cr: Dictionary) -> void:
 			game.equip(cr["arg"])
 		"perk":
 			game.upgrade_perk(cr["arg"])
+		"infuse":
+			game.soul_infuse(cr["arg"])
 		"chest_dep", "chest_wd":
 			var st = game.chest_ref
 			var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
@@ -841,6 +843,27 @@ func draw_statues(r: Vector2) -> void:
 			click_rects.append({"rect": rect, "act": "perk", "arg": k})
 		draw_string(font, Vector2(rect.position.x, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 		y += 24
+	# soul infusion: the same effigies harden a pal you own
+	y += 10
+	draw_string(font, Vector2(r.x + 16, y - 16), "SOUL INFUSION (+4%/soul)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c08cff"))
+	var infused := []
+	for uid in game.party:
+		var qp: Pal = game.find_pal(uid)
+		if qp != null:
+			infused.append(qp)
+	for bp2 in game.box:
+		infused.append(bp2)
+	for q2 in infused:
+		var cost2: int = 1 + q2.soul_boost
+		var full: bool = q2.soul_boost >= 10
+		var rect2 := Rect2(r.x + 16, y - 12, 360, 20)
+		if not full:
+			click_rects.append({"rect": rect2, "act": "infuse", "arg": q2.uid})
+		var col2 := Color(0.5, 0.5, 0.5) if full else Color.WHITE
+		draw_string(font, Vector2(rect2.position.x, y), "%s Lv%d  soul+%d  (cost %d)" %
+			[str(q2.spec["name"]).left(14), q2.level, q2.soul_boost, cost2],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col2)
+		y += 20
 
 func draw_equipment_line() -> void:
 	draw_string(font, Vector2(14, 80), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))
