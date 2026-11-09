@@ -391,6 +391,20 @@ func run() -> void:
 		if q.boss:
 			boss_ok = true
 	check("raid summon", game.pals.size() == n1 + 1 and boss_ok)
+	# gauntlet trial: 3 escalating waves, then the tower pays out
+	game.add_item("gauntlet_sigil", 1)
+	check("gauntlet starts", game.start_gauntlet() and game.gauntlet["wave"] == 1
+		and game.gauntlet["left"] > 0)
+	check("gauntlet busy", not game.start_gauntlet()) # one trial at a time
+	var waves_run := 0
+	while not game.gauntlet.is_empty() and waves_run < 5:
+		waves_run += 1
+		for q in game.pals.duplicate():
+			if q.has_meta("gauntlet"):
+				game.kill_pal(q, true)
+		game.tick_gauntlet()
+	check("gauntlet clears", game.gauntlet.is_empty() and waves_run == 3
+		and game.item_count("gauntlet_sigil") >= 1, "waves=%d" % waves_run)
 	# worldgen legendary den: an uncapturable lv50 giant guards deep zone 3
 	var legend: Pal = null
 	for q in game.pals:
@@ -784,7 +798,8 @@ func run() -> void:
 	var med: Dictionary = ItemData.ITEMS["medical_supplies"]
 	p.hp = mini(p.max_hp, p.hp + med["heal"])
 	game.add_item("medical_supplies", -1)
-	check("medicine heals", p.hp == p.max_hp and game.item_count("medical_supplies") == 1, "hp %d" % p.hp)
+	check("medicine heals", p.hp == mini(p.max_hp, 10 + med["heal"])
+		and game.item_count("medical_supplies") == 1, "hp %d" % p.hp)
 	# sigil consumed on use
 	var sig0 := game.item_count("boss_sigil")
 	game.add_item("boss_sigil", 1)

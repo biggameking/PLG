@@ -86,6 +86,7 @@ export const ITEMS: Record<string, ItemDef> = {
   // traversal gear + skill fruits
   glider: { id: "glider", name: "Glider", glyph: "▲", color: "#a8dff0", kind: "gear", stack: 1, tech: "glider", price: 120, desc: "Ride the wind: descend any cliff safely while carried." },
   saddle: { id: "saddle", name: "Pal Saddle", glyph: "◠", color: "#8a6d4d", kind: "gear", stack: 1, tech: "saddle", price: 90, desc: "Palworld saddle: required in the pack to ride any mount, land or air." },
+  gauntlet_sigil: { id: "gauntlet_sigil", name: "Gauntlet Sigil", glyph: "♜", color: "#b06ee8", kind: "sigil", usable: true, stack: 3, price: 0, desc: "Starts a 3-wave trial at your palbox. Tower rules: only the strong walk out." },
   skill_fruit_neutral: { id: "skill_fruit_neutral", name: "Neutral Skill Fruit", glyph: "●", color: "#c8d3d5", kind: "fruit", usable: true, stack: 10, elem: "neutral", price: 60, desc: "Teaches the active pal a neutral move." },
   skill_fruit_fire: { id: "skill_fruit_fire", name: "Fire Skill Fruit", glyph: "●", color: "#e8963c", kind: "fruit", usable: true, stack: 10, elem: "fire", price: 60, desc: "Teaches the active pal a fire move." },
   skill_fruit_water: { id: "skill_fruit_water", name: "Water Skill Fruit", glyph: "●", color: "#4d9de0", kind: "fruit", usable: true, stack: 10, elem: "water", price: 60, desc: "Teaches the active pal a water move." },

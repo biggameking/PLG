@@ -607,6 +607,9 @@ func use_item(k: String) -> void:
 		"boss_sigil":
 			if game.summon_raid():
 				game.add_item(k, -1)
+		"gauntlet_sigil":
+			if game.start_gauntlet():
+				game.add_item(k, -1)
 		"pal_egg":
 			game.deposit_egg()  # needs a free incubator nearby
 		_:

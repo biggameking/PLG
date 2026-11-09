@@ -343,8 +343,12 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		box_pal(p)
 		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
 	else:
-		if (p.alpha or p.boss) and boss_respawns.size() < MAX_RESPAWNS:
-			# Palworld dens refill: a slain boss returns to its anchor ~1.5 days on
+		if p.has_meta("gauntlet") and not gauntlet.is_empty():
+			gauntlet["left"] -= 1
+		if (p.alpha or p.boss) and not p.raid and p.home != Vector2.ZERO \
+				and boss_respawns.size() < MAX_RESPAWNS:
+			# Palworld dens refill: a slain boss returns to its anchor ~1.5 days
+			# on. Raid/gauntlet attackers have no den — they stay dead.
 			boss_respawns.append({"sid": p.species_id, "lv": p.level,
 				"pos": [p.home.x, p.home.y], "alpha": p.alpha, "boss": p.boss,
 				"at": t + DAY_LEN * 1.5})
@@ -372,6 +376,69 @@ func tick_boss_respawns() -> void:
 		np.home = at
 		pals.append(np)
 		log_msg("A boss stirs again at its den")
+
+# ---------- gauntlet trial ----------
+# Palworld's tower fights, distilled: a sigil starts a 3-wave escalating
+# battle at the palbox. Transient like a raid — never saved, never net-synced.
+var gauntlet := {} # {"wave": int, "left": int} — empty while idle
+
+func start_gauntlet() -> bool:
+	if not gauntlet.is_empty():
+		log_msg("A gauntlet is already running")
+		return false
+	if palbox_pos.x < 0:
+		log_msg("The gauntlet needs a palbox to answer to")
+		return false
+	gauntlet = {"wave": 0, "left": 0}
+	gauntlet_next_wave()
+	return true
+
+func gauntlet_next_wave() -> void:
+	gauntlet["wave"] += 1
+	var w: int = gauntlet["wave"]
+	# [pool, count, [lv_lo, lv_hi], boss?] — wave 3 caps with a true boss
+	var groups := []
+	match w:
+		1: groups = [[SpeciesGen.zone_pool(2), 2, [20, 26], false]]
+		2: groups = [[SpeciesGen.zone_pool(2) + SpeciesGen.zone_pool(3), 2, [30, 36], false]]
+		_: groups = [[SpeciesGen.zone_pool(3), 2, [38, 42], false],
+			[SpeciesGen.zone_pool(3), 1, [48, 50], true]]
+	for grp in groups:
+		var pool: Array = grp[0]
+		for i in int(grp[1]):
+			if pool.is_empty() or pals.size() >= MAX_PALS:
+				continue
+			var np := preload("res://src/pal.gd").new()
+			np.alpha = true
+			np.boss = bool(grp[3])
+			entity_layer.add_child(np)
+			np.setup(self, pool[rng.int_range(0, pool.size() - 1)],
+				rng.int_range(int(grp[2][0]), int(grp[2][1])),
+				nearest_free(palbox_pos.x + 2.5 + i, palbox_pos.y + 2.5 + i))
+			if np.boss:
+				np.sprite.scale = Vector2(2.2, 2.2)
+				np.sprite.position.y = -70.0
+			np.aggro = 0
+			np.raid = true # den-respawn skips raiders — the tower stays dead too
+			np.set_meta("gauntlet", true)
+			np.set_meta("raid_t0", t)
+			pals.append(np)
+			gauntlet["left"] += 1
+	log_msg("Gauntlet wave %d! %d foes" % [w, gauntlet["left"]])
+
+func tick_gauntlet() -> void:
+	if gauntlet.is_empty() or gauntlet["left"] > 0:
+		return
+	if gauntlet["wave"] < 3:
+		gauntlet_next_wave()
+		return
+	gauntlet = {}
+	add_item("legendary_sphere", 2)
+	add_item("lifmunk_effigy", 5)
+	add_item("gold_coin", 150)
+	add_item("gauntlet_sigil", 1) # it pays for the next run — if you survive
+	log_msg("GAUNTLET CLEARED! Legendary spheres + effigies + gold")
+	floater(player.pos, "GAUNTLET CLEARED!", "#ffd76e")
 
 func hurt_player(atk: float, from: Pal) -> void:
 	if player.dodge_t > 0:
@@ -758,6 +825,7 @@ func _process(dt: float) -> void:
 	tick_production(dt)
 	tick_merchant(dt)
 	tick_boss_respawns()
+	tick_gauntlet()
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1550,6 +1618,7 @@ func load_game() -> bool:
 		if is_instance_valid(dd0["node"]):
 			dd0["node"].queue_free()
 	drops.clear()
+	gauntlet = {} # a save can't pause mid-trial — survivors stay plain raiders
 	for k in structures.keys():
 		structures[k]["node"].queue_free()
 	structures.clear()
@@ -2130,6 +2199,7 @@ func regenerate(s: int) -> void:
 	palbox_pos = Vector2i(-1, -1)
 	grotto_pos = Vector2i(-1, -1)
 	boss_respawns.clear() # the old world's dens died with it
+	gauntlet = {} # and so did any trial in progress
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)

@@ -565,6 +565,14 @@ const ITEMS = {
   "stack": 5,
   "price": 0
  },
+ "gauntlet_sigil": {
+  "id": "gauntlet_sigil",
+  "name": "Gauntlet Sigil",
+  "desc": "Starts a 3-wave trial at your palbox. Tower rules: only the strong walk out.",
+  "usable": true,
+  "stack": 3,
+  "price": 0
+ },
  "glider": {
   "id": "glider",
   "name": "Glider",
