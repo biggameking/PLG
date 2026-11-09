@@ -28,6 +28,10 @@ export interface StructureDef {
   feedBox?: boolean;
   light?: number;         // light radius
   anchor?: boolean;       // palbox
+  hp?: number;            // structural HP — raiders chew through buildings
+  walkable?: boolean;     // entities may cross (spikes still hurt hostiles)
+  spike?: number;         // damage per tick to hostiles standing on it
+  incubator?: boolean;    // hatches deposited pal eggs on a timer
   playerBed?: boolean;
   desc: string;
 }
@@ -142,6 +146,22 @@ export const STRUCTURES: Record<string, StructureDef> = {
     playerBed: true,
     desc: "Sleep to skip to morning and heal.",
   },
+  incubator: {
+    id: "incubator", name: "Egg Incubator", glyph: "◍", color: "#f2a0b5", w: 2, h: 2,
+    cost: [["paldium", 2], ["stone", 10], ["cloth", 2]],
+    incubator: true, hp: 200, light: 2,
+    desc: "Hatches pal eggs over time. A nearby campfire speeds it up.",
+  },
+  wooden_wall: {
+    id: "wooden_wall", name: "Wooden Wall", glyph: "┃", color: "#8a6d4d", w: 1, h: 1,
+    cost: [["wood", 2]], hp: 300,
+    desc: "Blocks movement. Raiders must chew through it.",
+  },
+  spikes: {
+    id: "spikes", name: "Wooden Spikes", glyph: "╳", color: "#a98a5e", w: 1, h: 1,
+    cost: [["wood", 4], ["stone", 2]], walkable: true, spike: 6, hp: 100,
+    desc: "Hostiles stepping on it bleed. Walkable, but rude.",
+  },
 };
 
 export interface TechNode {
@@ -180,4 +200,8 @@ export const TECH: TechNode[] = [
   { id: "musket_ball", name: "Musket Ball", tier: 6, cost: 1 },
   { id: "ultra_sphere", name: "Ultra Sphere", tier: 7, cost: 4 },
   { id: "legendary_sphere", name: "Legendary Sphere", tier: 8, cost: 5 },
+  { id: "wooden_wall", name: "Wooden Wall", tier: 2, cost: 1 },
+  { id: "spikes", name: "Wooden Spikes", tier: 3, cost: 1 },
+  { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2 },
+  { id: "glider", name: "Glider", tier: 4, cost: 2 },
 ];

@@ -53,6 +53,29 @@ var chest_ref = null
 var condense_arm := 0.0
 const DAY_LEN := 240.0     # seconds per game day
 
+# ---- hard caps: nothing per-frame/per-event may grow without bound ----
+# Any unbounded collection is a memory leak in waiting; every list that
+# accepts runtime appends must evict/expire or refuse past these limits.
+const MAX_DROPS := 400        # ground loot; oldest decays first anyway
+const MAX_PROJECTILES := 200  # raid volleys can spike these hard
+const MAX_FLOATERS := 80      # cosmetic text — cheap insurance
+const MAX_PALS := 220         # wild + owned + raid; AI tick cost scales with this
+const MAX_BOX := 400          # stored pals are out-of-tree nodes — real bytes
+const MAX_EGG_QUEUE := 32     # ranch parentage queue (eggs can also be sold/eaten)
+const MAX_MERCH_STOCK := 64   # merchant inventory refresh
+
+func _exit_tree() -> void:
+	# Orphan sweep: nodes DETACHED from the tree are not freed by the engine —
+	# box pals are remove_child'd Node2Ds and leak at quit otherwise.
+	for bp in box:
+		if is_instance_valid(bp):
+			bp.free() # not in tree: free(), never queue_free()
+	box.clear()
+	for bp in pals:
+		if is_instance_valid(bp) and bp.get_parent() == null:
+			bp.free()
+	pals.clear()
+
 @onready var entity_layer: Node2D = $YSort/Entities
 @onready var drawer = $World/Terrain
 
@@ -117,6 +140,8 @@ func log_msg(msg: String) -> void:
 		messages.pop_front()
 
 func floater(pos: Vector2, text: String, color: String) -> void:
+	if floaters.size() >= MAX_FLOATERS:
+		floaters.pop_front() # cosmetic spam is evictable
 	floaters.push_back({"p": pos, "t": text, "c": color, "age": 0.0})
 
 # ---------- wild pals ----------
@@ -134,7 +159,7 @@ func spawn_wild() -> void:
 	for wp in pals:
 		if wp.mode == "wild":
 			wild_n += 1
-	while wild_n < want and tries < 4000:
+	while wild_n < want and pals.size() < MAX_PALS and tries < 4000:
 		tries += 1
 		var x := rng.int_range(4, World.WORLD_W - 5)
 		var y := rng.int_range(4, World.WORLD_H - 5)
@@ -154,11 +179,22 @@ func spawn_wild() -> void:
 		var lv := rng.int_range(1 + zone * 3, 4 + zone * 5)
 		var p := preload("res://src/pal.gd").new()
 		p.alpha = zone >= 2 and rng.chance(0.08)
+		p.lucky = not p.alpha and rng.chance(0.015) # Palworld "Lucky" rare variant
 		entity_layer.add_child(p)
-		p.setup(self, sid, lv + (6 if p.alpha else 0), Vector2(x + 0.5, y + 0.5))
+		p.setup(self, sid, lv + (6 if p.alpha else 0) + (3 if p.lucky else 0), Vector2(x + 0.5, y + 0.5))
+		if p.lucky:
+			floater(p.pos, "☆ LUCKY ☆", "#ffd76e")
 		p.home = p.pos # lair anchor — alphas tether here
 		pals.append(p)
 		wild_n += 1
+
+func gen_pal(sp_id: String, lv: int, at: Vector2) -> Pal:
+	# test/dev factory: a live pal in the entity layer; caller picks its mode
+	var p := preload("res://src/pal.gd").new()
+	entity_layer.add_child(p)
+	p.setup(self, sp_id, lv, at)
+	p.home = at
+	return p
 
 func find_pal(uid: int) -> Pal:
 	for p in pals:
@@ -177,7 +213,10 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 	player.dismount_if(p)
 	var owned := p.mode in ["partner", "base"]
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
-		var mult := 4 if p.alpha else 1
+		var mult := 4 if p.alpha else (3 if p.lucky else 1)
+		if p.lucky:
+			add_item("gold_coin", rng.int_range(3, 8)) # lucky pals bleed money
+			log_msg("Lucky %s dropped gold!" % p.spec["name"])
 		if p.boss:
 			add_item("legendary_sphere", 1)
 			add_item("lifmunk_effigy", 3)
@@ -351,12 +390,25 @@ func resolve_sphere(sp) -> void:
 		return
 	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
 	var hp_frac := maxf(0, target.hp) / target.max_hp
-	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, target.spec["capturePower"],
+	var cap_pow: float = target.spec["capturePower"] * (1.35 if target.lucky else 1.0) # luckies resist
+	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
 		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
 	if randf() < chance:
+		if party.size() >= 5 and box.size() >= MAX_BOX: # backstop: an over-stuffed box is real memory
+			floater(target.pos, "BOX FULL", "#e8963c")
+			log_msg("Palbox is full (%d) - can't store %s" % [MAX_BOX, target.spec["name"]])
+			target.aggro = -1
+			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
 		gain_xp(target.level * 3)
+		# Palworld catch-count bonus: every 10th of a species pays a fat bonus
+		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
+		if catch_counts[target.species_id] % 10 == 0:
+			var bonus := target.level * 8
+			gain_xp(bonus)
+			floater(target.pos, "CATCH x%d! +%dxp" % [catch_counts[target.species_id], bonus], "#ffd76e")
+			log_msg("%dth %s caught - bonus XP!" % [catch_counts[target.species_id], target.spec["name"]])
 		target.statuses.clear()
 		target.aggro = -1
 		if party.size() < 5: # Palworld rule: catch joins the party until it's full
@@ -407,6 +459,8 @@ func spawn_drop(id: String, n: int, at: Vector2) -> void:
 			for xx in range(2, 8):
 				img.set_pixel(xx, yy, c)
 		_drop_tex[id] = ImageTexture.create_from_image(img)
+	if drops.size() >= MAX_DROPS:
+		take_drop(drops.front()) # flood backstop: oldest bag evaporates
 	var spr := Sprite2D.new()
 	spr.texture = _drop_tex[id]
 	var p := Iso.to_screen(at.x, at.y, world.elev_at(int(at.x), int(at.y)))
@@ -497,6 +551,31 @@ func eat_from_bag() -> int:
 	add_item(best_id, -1)
 	return best_v
 
+func take_medicine(from_bag: bool) -> bool:
+	# sick pals self-medicate (Palworld): partner eats from the player's bag,
+	# base workers pull from the feed box / any chest holding medicine.
+	if from_bag:
+		for id in items.keys():
+			if items[id] > 0 and ItemData.ITEMS.get(id, {}).get("kind") == "medicine":
+				add_item(id, -1)
+				return true
+		return false
+	var best = null; var best_id := ""; var best_v := 1 << 30
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st["id"] not in ["feed_box", "chest"]:
+			continue
+		for id in st.get("store", {}).keys():
+			var hv: int = ItemData.ITEMS.get(id, {}).get("heal", 0)
+			if ItemData.ITEMS.get(id, {}).get("kind") == "medicine" and st["store"][id] > 0 and hv < best_v:
+				best_v = hv; best_id = id; best = st
+	if best == null:
+		return false
+	best["store"][best_id] -= 1
+	if best["store"][best_id] <= 0:
+		best["store"].erase(best_id)
+	return true
+
 func chest_can_take(st: Dictionary, id: String) -> bool:
 	var store: Dictionary = st.get("store", {})
 	if store.has(id):
@@ -553,6 +632,7 @@ func _process(dt: float) -> void:
 			resolve_sphere(sp)
 			spheres_flying.erase(sp)
 	tick_production(dt)
+	tick_merchant(dt)
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -664,6 +744,8 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		add_item(c[0], -c[1])
 	var spr := Sprite2D.new()
 	spr.texture = load("res://assets/structures/%s.png" % sid)
+	if spr.texture == null: # missing art must not crash placement (or orphan the node)
+		spr.texture = load("res://assets/structures/chest.png")
 	var w: int = s.get("w", 2)
 	var h: int = s.get("h", 2)
 	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
@@ -671,7 +753,9 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	entity_layer.add_child(spr)
 	if s.get("light", 0) > 0:
 		add_glow(spr, s["light"])
-	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
+	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
+		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
+		"walkable": s.get("walkable", false), "spike": s.get("spike", 0)}
 	for dy in range(h):
 		for dx in range(w):
 			var ci0 := world.idx(tx + dx, ty + dy)
@@ -705,7 +789,9 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 	entity_layer.add_child(spr)
 	if s.get("light", 0) > 0:
 		add_glow(spr, s["light"])
-	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
+	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
+		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
+		"walkable": s.get("walkable", false), "spike": s.get("spike", 0)}
 	for dy in range(h):
 		for dx in range(w):
 			structures[Vector2i(tx + dx, ty + dy)] = st
@@ -744,6 +830,47 @@ func demolish_at(at: Vector2) -> bool:
 		palbox_pos = Vector2i(-1, -1)
 	log_msg("Demolished %s (50%% refund)" % StructureData.STRUCTURES[sid]["name"])
 	return true
+
+# raiders chew on the base itself (Palworld): structures carry hp and drop
+# their contents when razed. The palbox is hardened — losing the anchor
+# would orphan every base pal's job and the respawn point.
+func hit_structure(cell: Vector2i, dmg: int) -> void:
+	var st = structures.get(cell)
+	if st == null:
+		return
+	var anchor: bool = StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false)
+	if anchor: # the palbox holds every stored pal — losing it would orphan the box
+		st["hp"] = maxf(1.0, st.get("hp", 4000) - dmg)
+		floater(Vector2(cell.x + 0.5, cell.y + 0.5), "ANCHORED", "#4dd0e1")
+		return
+	st["hp"] = st.get("hp", 200) - dmg
+	floater(Vector2(cell.x + 0.5, cell.y + 0.5), "-%d" % dmg, "#e8963c")
+	if st["hp"] <= 0:
+		raze_structure(st)
+
+func raze_structure(st) -> void:
+	var sid: String = st.get("id", "?")
+	var cells := []
+	for k in structures:
+		if structures[k] == st:
+			cells.append(k)
+	for w in st["workers"].duplicate():
+		st["workers"].erase(w)
+		w.job_site = null
+	for it in st.get("store", {}).keys(): # contents spill as loot — no vanishing stock
+		if not cells.is_empty():
+			spawn_drop(it, st["store"][it], Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
+	st["store"] = {}
+	for k in cells:
+		structures.erase(k)
+		world.structures.erase(world.idx(k.x, k.y))
+	if is_instance_valid(st.get("node")):
+		st["node"].queue_free()
+	if chest_ref == st:
+		chest_ref = null
+	if sid == "palbox":
+		palbox_pos = Vector2i(-1, -1)
+	log_msg("%s was destroyed in the raid!" % StructureData.STRUCTURES.get(sid, {}).get("name", sid))
 
 func tech_node(sid: String) -> Dictionary:
 	for t in StructureData.TECH:
@@ -840,6 +967,19 @@ func tick_production(dt: float) -> void:
 		if st["id"] == "ranch":
 			tick_ranch(key, st, dt)
 			continue
+		if st["id"] == "incubator":
+			var inc = st.get("egg_inc")
+			if inc is Dictionary and t >= float(inc.get("ready_t", 0.0)):
+				hatch_incubated(key, st)
+			continue
+		if st.get("spike", 0) > 0:
+			st["timer"] += dt # damage hostiles standing on the spikes every half second
+			if st["timer"] >= 0.5:
+				st["timer"] = 0.0
+				for p in pals.duplicate():
+					if p.mode == "wild" and p.hp > 0 and (p.raid or p.aggro >= 0) \
+							and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
+						p.take_dps(int(st["spike"]))
 		var prod: Array = job.get("produces", [])
 		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0)
 		if prod.is_empty() or active.is_empty():
@@ -847,9 +987,9 @@ func tick_production(dt: float) -> void:
 		var cons: Array = job.get("consumes", [])
 		if not cons.is_empty() and not consume_ready(cons):
 			continue # starved for inputs — no free production
-		var work_sum := 0.0 # each worker contributes by its Artisan/etc passives
+		var work_sum := 0.0 # each worker contributes by its Artisan/etc passives; sick pals drag
 		for w in active:
-			work_sum += w.passive_mult("work")
+			work_sum += w.passive_mult("work") * w.work_mult()
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * work_sum
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
@@ -871,7 +1011,7 @@ func tick_production(dt: float) -> void:
 			var t := ""
 			for pr in prod:
 				t += "+%d %s  " % [pr[1], pr[0]]
-			floaters.push_back({"p": Vector2(key.x + 0.5, key.y + 0.5), "t": t.strip_edges(), "c": "#a8e6a1", "age": 0.0})
+			floater(Vector2(key.x + 0.5, key.y + 0.5), t.strip_edges(), "#a8e6a1")
 
 func consume_ready(cons: Array) -> bool:
 	for cn in cons:
@@ -1039,6 +1179,10 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 						skill_hit(caster, p, sk)
 			floater(caster.pos, sk["name"] + "!", "#ffd76e")
 		_: # projectile
+			if projectiles.size() >= MAX_PROJECTILES:
+				var old = projectiles.pop_front()
+				if is_instance_valid(old.get("node")):
+					old["node"].queue_free() # volley backstop: oldest shot fizzles
 			var spr := Sprite2D.new()
 			var at := AtlasTexture.new()
 			at.atlas = orb_tex
@@ -1073,8 +1217,8 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 		var mult := Combat.effectiveness(elem, tp.elem())
 		if tp.has_status("soak") and elem == "electric":
 			mult *= 1.5
-		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus,
-			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus, mult, rng)
+		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus * caster.atk_mult(),
+			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus * tp.def_mult(), mult, rng)
 		tp.hit(d, mult, caster.mode != "wild")
 		tp.apply_skill_status(sk)
 		if caster.mode == "partner":
@@ -1105,7 +1249,7 @@ func update_projectiles(dt: float) -> void:
 				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
-						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus, mult, rng)
+						var d := Combat.damage(pr["dmg"] * 2.0, 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
 						p.hit(d, mult, true)
 						dead = true
 						break
@@ -1155,24 +1299,28 @@ func save_game() -> void:
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
-			"star": p.star, "xp": p.xp, "raid": p.raid,
+			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment,
+			"lucky": p.lucky, "extra": p.extra_skills,
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry,
+			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
 			"revive": maxf(0.0, bp.revive_t - t)})
 	var structs := {}
 	for k in structures:
-		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents"), "timer": structures[k].get("timer", 0.0)}
+		var inc = structures[k].get("egg_inc")
+		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents"), "timer": structures[k].get("timer", 0.0), "hp": structures[k].get("hp", 200),
+			"inc": ({"pair": inc.get("pair"), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
 		"unlocked": unlocked, "items": items, "party": party,
 		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
 		"perks": perks, "equip": player.equipment,
-		"pals": pals_data, "structures": structs,
+		"pals": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
@@ -1205,6 +1353,7 @@ func load_game() -> bool:
 		log_msg("Save has wrong field types - starting fresh")
 		return false
 	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
+	despawn_merchant() # the trader's stock and node don't cross a load
 	for p in pals:
 		p.queue_free()
 	pals.clear()
@@ -1245,6 +1394,10 @@ func load_game() -> bool:
 	var saved_perks: Dictionary = d.get("perks", {})
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
 		perks[pk] = int(saved_perks.get(pk, perks[pk]))
+	catch_counts.clear()
+	if d.get("catches") is Dictionary:
+		for ck in d["catches"]:
+			catch_counts[str(ck)] = maxi(int(d["catches"][ck]), 0) # foreign counts can't poison the %10 bonus
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
 		for slot in ["weapon", "armor"]:
@@ -1307,6 +1460,18 @@ func load_game() -> bool:
 		np.xp = maxi(int(pd.get("xp", 0)), 0)
 		if pd.get("raid") is bool:
 			np.raid = pd["raid"]
+		var al := str(pd.get("ail", ""))
+		if al in Pal.AILMENTS:
+			np.ailment = al # unknown/blank ailments fall to healthy
+		if pd.get("lucky") is bool:
+			np.lucky = pd["lucky"]
+		if np.lucky and "lucky" not in np.passives:
+			np.passives.append("lucky") # setup() ran before the flag landed — inject its passive here
+		if pd.get("extra") is Array:
+			np.extra_skills = pd["extra"].filter(func(k): return SkillData.SKILLS.has(k)) # drop skills removed in newer builds
+		if np.lucky:
+			np.sprite.scale = Vector2(1.5, 1.5)
+			np.sprite.position.y = -48.0
 		if np.raid:
 			np.set_meta("raid_t0", t - float(pd.get("rt0", 0.0))) # preserve despawn countdown
 		var rvs = pd.get("revive", 0.0)
@@ -1348,7 +1513,9 @@ func load_game() -> bool:
 		var pp := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 		spr.position = Vector2(pp.x, pp.y - spr.texture.get_height() * 0.5 + 8)
 		entity_layer.add_child(spr)
-		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {}}
+		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
+			"hp": clampi(int(sv.get("hp", 200)) if sv is Dictionary else 200, 1, 99999),
+			"walkable": s.get("walkable", false), "spike": s.get("spike", 0)}
 		if sv is Dictionary:
 			if sv.get("store") is Dictionary:
 				for sk2 in sv["store"]: # counts used in +/- arithmetic everywhere — coerce, skip junk
@@ -1358,6 +1525,9 @@ func load_game() -> bool:
 			st["timer"] = maxf(float(sv.get("timer", 0.0)), 0.0) # negative timer fires production instantly; st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg"):
 				st["egg_parents"] = sv["egg"]
+			if sv.get("inc") is Dictionary and sid == "incubator":
+				var inc_d: Dictionary = sv["inc"]
+				st["egg_inc"] = {"pair": inc_d.get("pair"), "ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0)}
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
@@ -1430,6 +1600,15 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if not (has_m and has_f):
 		st["timer"] = 0.0
 		return
+	# Palworld rule: breeding burns a cake per egg, pulled from base storage
+	if not consume_ready([["cake", 1]]):
+		if not st.get("cake_warned", false):
+			st["cake_warned"] = true
+			floater(Vector2(key.x + 0.5, key.y + 0.5), "needs cake!", "#f2a0b5")
+			log_msg("Ranch needs a cake (chest/feed box) to breed")
+		st["timer"] = 0.0
+		return
+	st["cake_warned"] = false
 	st["timer"] += (dt * (1.0 + perks["work"] * 0.1))
 	var rate := 60.0
 	if st["timer"] < rate:
@@ -1445,43 +1624,98 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 			b = w
 	if a == null or b == null:
 		return
+	pull_from_storage("cake", 1)
 	if not st.has("egg_parents") or st["egg_parents"] == null:
 		st["egg_parents"] = []
-	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent]) # FIFO queue, one entry per egg
+	if st["egg_parents"].size() >= MAX_EGG_QUEUE:
+		st["egg_parents"].pop_front() # eggs get sold/eaten/destroyed — oldest parentage is expendable
+	# parentage carries species, talent AND passives (Palworld inheritance)
+	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent,
+		a.passives.duplicate(), b.passives.duplicate()])
 	st["store"]["pal_egg"] = st["store"].get("pal_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
 
-func hatch_egg() -> void:
+func pull_from_storage(id: String, need: int) -> int:
+	# shared consumer: production inputs and cake come out of chests/feed boxes
+	var left := need
+	for kc in structures:
+		var sc: Dictionary = structures[kc]
+		if sc["id"] not in ["chest", "feed_box"] or left <= 0:
+			continue
+		var take: int = mini(left, sc.get("store", {}).get(id, 0))
+		if take > 0:
+			sc["store"][id] -= take
+			if sc["store"][id] <= 0:
+				sc["store"].erase(id)
+			left -= take
+	return need - left
+
+func deposit_egg() -> void:
+	# Palworld: eggs go into an incubator; hatching takes real time
 	if item_count("pal_egg") <= 0:
 		return
-	var pair = null
+	var site = null; var bd := 20.0
 	for k in structures:
-		var q = structures[k].get("egg_parents")
+		var st: Dictionary = structures[k]
+		if st["id"] != "incubator" or st.has("egg_inc"):
+			continue
+		var dd := player.pos.distance_squared_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if dd < bd:
+			bd = dd; site = k
+	if site == null:
+		log_msg("Need a free incubator nearby")
+		return
+	add_item("pal_egg", -1)
+	var pair = null
+	for k2 in structures:
+		var q = structures[k2].get("egg_parents")
 		if q is Array and q.size() > 0:
-			pair = q.pop_front() # oldest egg's parents
+			pair = q.pop_front() # oldest egg's parentage
 			break
+	var dur := 90.0
+	for k3 in structures: # a warm incubator runs faster (Palworld temperature rule)
+		if structures[k3]["id"] == "campfire" and Vector2(k3.x, k3.y).distance_squared_to(Vector2(site.x, site.y)) < 36.0:
+			dur = 60.0
+			break
+	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + dur}
+	log_msg("Egg incubating - ready in %ds%s" % [int(dur), " (warm)" if dur < 90.0 else ""])
+
+func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
+	var inc = st.get("egg_inc")
+	st.erase("egg_inc")
+	var pair = inc.get("pair") if inc is Dictionary else null
 	var sp_id: String
 	var talent_v: int
-	if pair is not Array or pair.size() < 4: # old saves stored a single flat pair, or nothing
-		pair = null
-	if pair:
+	var inherited := []
+	if pair is Array and pair.size() >= 4:
 		sp_id = pair[rng.int_range(0, 1)]
 		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
-	else:
+		if pair.size() >= 6 and pair[4] is Array and pair[5] is Array:
+			for pk in pair[4] + pair[5]: # Palworld: passives run in the bloodline
+				if pk not in inherited:
+					inherited.append(pk)
+	else: # found egg with no recorded parentage — wild genetics
 		var keys: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
 		sp_id = keys[rng.int_range(0, keys.size() - 1)]
 		talent_v = rng.int_range(0, 100)
 	if SpeciesData.species_of(sp_id).is_empty() and SpeciesGen.SPECIES.get(sp_id, {}).is_empty():
-		# parent species no longer exists in data — don't hatch into a broken pal
 		var keys2: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
 		sp_id = keys2[rng.int_range(0, keys2.size() - 1)]
-	add_item("pal_egg", -1)
-	var at: Vector2 = nearest_free(player.pos.x + 1.0, player.pos.y + 0.5) # don't hatch into a wall
+	var at: Vector2 = nearest_free(key.x + 1.0, key.y + 2.5) # don't hatch into a wall
 	var np := preload("res://src/pal.gd").new()
 	entity_layer.add_child(np)
 	np.setup(self, sp_id, 1, at)
 	np.talent = talent_v # setup() rolls a fresh talent — overwrite then re-derive stats
+	np.passives.clear()
+	for pk in inherited: # each bloodline passive passes down at 70%
+		if PassiveData.PASSIVES.has(pk) and rng.chance(0.7):
+			np.passives.append(pk)
+	var keys_p := PassiveData.PASSIVES.keys()
+	if np.passives.is_empty() or rng.chance(0.15): # mutation keeps breeding interesting
+		var npk: String = keys_p[rng.int_range(0, keys_p.size() - 1)]
+		if npk not in np.passives:
+			np.passives.append(npk)
 	np.apply_bonuses()
 	np.hp = np.max_hp
 	if palbox_pos.x >= 0:
@@ -1562,6 +1796,7 @@ func regenerate(s: int) -> void:
 	spheres_flying.clear()
 	palbox_pos = Vector2i(-1, -1)
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
+	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
 	drawer.setup(world)
 	queue_redraw_decor() # the decor pool is keyed by cell — old-world sprites must be rebuilt
@@ -1623,6 +1858,10 @@ func partner_skill() -> void:
 	log_msg("%s casts %s!" % [p.spec["name"], best["name"]])
 
 func fire_player_shot(tw: Vector2, wd: Dictionary) -> void:
+	if projectiles.size() >= MAX_PROJECTILES:
+		var old = projectiles.pop_front()
+		if is_instance_valid(old.get("node")):
+			old["node"].queue_free()
 	var spr := Sprite2D.new()
 	var at := AtlasTexture.new()
 	at.atlas = orb_tex
@@ -1652,3 +1891,128 @@ func equip(k: String) -> void:
 	else:
 		player.equipment[slot] = k
 		log_msg("Equipped " + it["name"])
+
+func teach_skill_fruit(item_id: String) -> void:
+	# Skill fruit (Palworld): teaches the active pal a move of that element
+	if party.is_empty():
+		log_msg("No active pal to teach")
+		return
+	var p := find_pal(party[0])
+	if p == null or p.hp <= 0:
+		log_msg("Active pal is down")
+		return
+	var elem: String = ItemData.ITEMS.get(item_id, {}).get("elem", "")
+	var pool := []
+	for sid in SkillData.SKILLS:
+		var sk: Dictionary = SkillData.SKILLS[sid]
+		if sk.get("element", "neutral") == elem and sk.get("power", 0) > 0:
+			pool.append(sid)
+	pool = pool.filter(func(s): return s not in p.learned_skills())
+	if pool.is_empty():
+		log_msg("%s already knows every %s move" % [p.spec["name"], elem])
+		return
+	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+	add_item(item_id, -1)
+	p.extra_skills.append(sid)
+	log_msg("%s learned %s!" % [p.spec["name"], SkillData.SKILLS[sid].get("name", sid)])
+	floater(p.pos, "+ skill!", "#a8e6a1")
+
+# ---------- wandering merchant ----------
+# A trader visits for the day every so often — buys junk, sells goods for
+# gold_coin. Transient by design: never saved, despawns at dusk.
+var merchant: Entity = null
+var merchant_stock := []
+var merchant_home := Vector2.ZERO
+var merchant_tgt := Vector2.ZERO # Pal already owns `target` — Entity must not
+var merchant_wander_t := 0.0
+var last_merchant_day := -1
+var _tod_prev := 0.0
+var catch_counts := {} # species_id -> caught count (10th-of-kind pays a bonus)
+
+const MERCH_POOL := ["pal_sphere", "mega_sphere", "low_medical", "medical_supplies",
+	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",
+	"skill_fruit_neutral", "skill_fruit_fire", "skill_fruit_water", "skill_fruit_grass",
+	"skill_fruit_electric", "skill_fruit_ice", "skill_fruit_ground", "skill_fruit_dark",
+	"skill_fruit_dragon", "cake", "pal_egg"]
+
+func gen_merchant_stock() -> void:
+	merchant_stock.clear()
+	var pool := MERCH_POOL.duplicate()
+	var n := mini(8 + rng.int_range(0, 4), pool.size())
+	for i in n:
+		var idx := rng.int_range(0, pool.size() - 1)
+		var id: String = pool[idx]
+		pool.remove_at(idx)
+		var price: int = ItemData.ITEMS.get(id, {}).get("price", 15)
+		if price <= 0:
+			price = 25 # priceless items still trade — at a markup
+		merchant_stock.append({"id": id, "n": rng.int_range(1, 4), "price": price})
+
+func spawn_merchant() -> void:
+	if merchant != null or pals.size() >= MAX_PALS - 1:
+		return
+	var a := rng.next() * TAU
+	var at := nearest_free(player.pos.x + cos(a) * 10.0, player.pos.y + sin(a) * 10.0)
+	merchant = preload("res://src/entity.gd").new()
+	merchant.world = world
+	merchant.pos = at
+	merchant.speed = 1.6
+	entity_layer.add_child(merchant)
+	merchant.setup_visuals("res://assets/pals/player_f0.png", "res://assets/pals/player_f1.png")
+	merchant.sprite.modulate = Color(1.5, 1.0, 0.45) # a warmly-dressed stranger
+	merchant_home = at
+	gen_merchant_stock()
+	log_msg("A wandering merchant has arrived! (E to trade)")
+	floater(at, "Merchant!", "#e8d44d")
+
+func despawn_merchant() -> void:
+	if merchant == null:
+		return
+	if is_instance_valid(merchant):
+		floater(merchant.pos, "safe travels…", "#c8d3d5")
+		merchant.queue_free()
+	merchant = null
+	merchant_stock.clear()
+	log_msg("The merchant moved on")
+
+func tick_merchant(dt: float) -> void:
+	# arrival roll at 07:00 once per day from day 2 onward; leaves at dusk
+	if tod >= 7.0 and _tod_prev < 7.0 and day >= 2 and last_merchant_day != day:
+		last_merchant_day = day
+		if rng.chance(0.6):
+			spawn_merchant()
+	_tod_prev = tod
+	if merchant == null:
+		return
+	if tod >= 19.0 or tod < 5.0:
+		despawn_merchant()
+		return
+	merchant_wander_t -= dt
+	if merchant_wander_t <= 0:
+		merchant_wander_t = 2.5 + rng.next() * 2.5
+		var a := rng.next() * TAU
+		merchant_tgt = merchant_home + Vector2(cos(a), sin(a)) * 2.0
+	merchant.step_toward(merchant_tgt, dt)
+	merchant.sync_screen()
+
+func buy_from_merchant(idx: int) -> void:
+	if merchant == null or idx < 0 or idx >= merchant_stock.size():
+		return
+	var it: Dictionary = merchant_stock[idx]
+	if it["n"] <= 0:
+		return
+	if item_count("gold_coin") < it["price"]:
+		log_msg("Need %d gold" % it["price"])
+		return
+	add_item("gold_coin", -it["price"])
+	add_item(it["id"], 1)
+	it["n"] -= 1
+	log_msg("Bought %s (%dg)" % [ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]), it["price"]])
+
+func sell_to_merchant(id: String) -> void:
+	if merchant == null or item_count(id) <= 0:
+		return
+	var unit: int = maxi(1, int(ItemData.ITEMS.get(id, {}).get("price", 0) * 0.5))
+	add_item(id, -1)
+	add_item("gold_coin", unit)
+	log_msg("Sold %s (+%dg)" % [ItemData.ITEMS.get(id, {}).get("name", id), unit])

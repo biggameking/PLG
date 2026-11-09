@@ -582,6 +582,70 @@ const STRUCTURES = {
   ],
   "playerBed": true,
   "desc": "Sleep to skip to morning and heal."
+ },
+ "incubator": {
+  "id": "incubator",
+  "name": "Egg Incubator",
+  "glyph": "◍",
+  "color": "#f2a0b5",
+  "w": 2,
+  "h": 2,
+  "cost": [
+   [
+    "paldium",
+    2
+   ],
+   [
+    "stone",
+    10
+   ],
+   [
+    "cloth",
+    2
+   ]
+  ],
+  "incubator": true,
+  "hp": 200,
+  "light": 2,
+  "desc": "Hatches pal eggs over time. A nearby campfire speeds it up."
+ },
+ "wooden_wall": {
+  "id": "wooden_wall",
+  "name": "Wooden Wall",
+  "glyph": "┃",
+  "color": "#8a6d4d",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    2
+   ]
+  ],
+  "hp": 300,
+  "desc": "Blocks movement. Raiders must chew through it."
+ },
+ "spikes": {
+  "id": "spikes",
+  "name": "Wooden Spikes",
+  "glyph": "╳",
+  "color": "#a98a5e",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    4
+   ],
+   [
+    "stone",
+    2
+   ]
+  ],
+  "walkable": true,
+  "spike": 6,
+  "hp": 100,
+  "desc": "Hostiles stepping on it bleed. Walkable, but rude."
  }
 }
 
@@ -641,6 +705,12 @@ const TECH = [
   "cost": 2
  },
  {
+  "id": "wooden_wall",
+  "name": "Wooden Wall",
+  "tier": 2,
+  "cost": 1
+ },
+ {
   "id": "arrow",
   "name": "Arrow",
   "tier": 2,
@@ -689,6 +759,12 @@ const TECH = [
   "cost": 1
  },
  {
+  "id": "spikes",
+  "name": "Wooden Spikes",
+  "tier": 3,
+  "cost": 1
+ },
+ {
   "id": "furnace",
   "name": "Primitive Furnace",
   "tier": 4,
@@ -697,6 +773,18 @@ const TECH = [
  {
   "id": "mill",
   "name": "Mill",
+  "tier": 4,
+  "cost": 2
+ },
+ {
+  "id": "incubator",
+  "name": "Egg Incubator",
+  "tier": 4,
+  "cost": 2
+ },
+ {
+  "id": "glider",
+  "name": "Glider",
   "tier": 4,
   "cost": 2
  },

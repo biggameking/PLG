@@ -65,7 +65,7 @@ func melee() -> void:
 		if pos.distance_to(p.pos) > reach:
 			continue
 		var mult := Combat.effectiveness("neutral", p.elem())
-		var d := Combat.damage(atk, 34, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus, mult, game.rng)
+		var d := Combat.damage(atk, 34, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, game.rng)
 		p.hit(d, mult, true)
 		hit_any = true
 	if not hit_any:
@@ -94,6 +94,20 @@ func throw_sphere() -> void:
 		return
 	game.add_item(sid, -1)
 	game.sphere_fly(sid, best)
+
+func can_enter(nx: float, ny: float) -> bool:
+	var tx := int(nx); var ty := int(ny)
+	if not world.blocked(tx, ty, pos.x, pos.y):
+		return true
+	# glider (Palworld): riding the wind down a cliff is safe — uphill is not
+	if game.item_count("glider") > 0 and world.in_bounds(tx, ty):
+		var i := world.idx(tx, ty)
+		if world.tiles[i] != World.Tile.WATER and world.decor[i] == World.Decor.NONE \
+				and not world.solid_structure(i):
+			var fi := world.idx(clampi(int(pos.x), 0, World.WORLD_W - 1), clampi(int(pos.y), 0, World.WORLD_H - 1))
+			if world.elev[i] < world.elev[fi]:
+				return true
+	return false
 
 func speed_mult() -> float:
 	var m := 1.0
@@ -135,9 +149,9 @@ func _physics_process(dt: float) -> void:
 		var step := iv.normalized() * sp * dt
 		var nx: float = pos.x + step.x
 		var ny: float = pos.y + step.y
-		if not world.blocked(int(nx), int(pos.y), pos.x, pos.y):
+		if can_enter(nx, pos.y):
 			pos.x = nx
-		if not world.blocked(int(pos.x), int(ny), pos.x, pos.y):
+		if can_enter(pos.x, ny):
 			pos.y = ny
 		moving = true
 		if iv.x > 0.02:
@@ -149,9 +163,9 @@ func _physics_process(dt: float) -> void:
 		var v := facing * 0.4 + Input.get_vector("move_left", "move_right", "move_up", "move_down") * 0.6
 		var nx: float = pos.x + v.normalized().x * 9.0 * dt
 		var ny: float = pos.y + v.normalized().y * 9.0 * dt
-		if not world.blocked(int(nx), int(pos.y), pos.x, pos.y):
+		if can_enter(nx, pos.y):
 			pos.x = nx
-		if not world.blocked(int(pos.x), int(ny), pos.x, pos.y):
+		if can_enter(pos.x, ny):
 			pos.y = ny
 		moving = true
 	sync_screen()

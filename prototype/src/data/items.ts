@@ -4,7 +4,7 @@ export interface ItemDef {
   name: string;
   glyph: string;
   color: string;
-  kind: "material" | "food" | "sphere" | "weapon" | "ammo" | "medicine" | "seed";
+  kind: "material" | "food" | "sphere" | "weapon" | "ammo" | "medicine" | "seed" | "gear" | "fruit" | "usable";
   stack: number;
   food?: number;     // nutrition restored
   hp?: number;       // hp restored
@@ -12,6 +12,10 @@ export interface ItemDef {
   spherePower?: number; // capture stat
   weapon?: { dmg: number; range: number; cd: number; ammo?: string };
   heal?: number;
+  usable?: boolean;  // can be activated from the inventory panel
+  elem?: string;     // skill-fruit element
+  tech?: string;     // tech node gating its recipe
+  price?: number;    // merchant trade value in gold coins
   desc: string;
 }
 
@@ -78,6 +82,18 @@ export const ITEMS: Record<string, ItemDef> = {
   // medicine
   low_medical: { id: "low_medical", name: "Low Grade Medical Supplies", glyph: "✚", color: "#4caf50", kind: "medicine", stack: 50, heal: 50, desc: "Heals pals/player." },
   medical_supplies: { id: "medical_supplies", name: "Medical Supplies", glyph: "✚", color: "#4dd0e1", kind: "medicine", stack: 50, heal: 150, desc: "Strong medicine." },
+
+  // traversal gear + skill fruits
+  glider: { id: "glider", name: "Glider", glyph: "▲", color: "#a8dff0", kind: "gear", stack: 1, tech: "glider", price: 120, desc: "Ride the wind: descend any cliff safely while carried." },
+  skill_fruit_neutral: { id: "skill_fruit_neutral", name: "Neutral Skill Fruit", glyph: "●", color: "#c8d3d5", kind: "fruit", usable: true, stack: 10, elem: "neutral", price: 60, desc: "Teaches the active pal a neutral move." },
+  skill_fruit_fire: { id: "skill_fruit_fire", name: "Fire Skill Fruit", glyph: "●", color: "#e8963c", kind: "fruit", usable: true, stack: 10, elem: "fire", price: 60, desc: "Teaches the active pal a fire move." },
+  skill_fruit_water: { id: "skill_fruit_water", name: "Water Skill Fruit", glyph: "●", color: "#4d9de0", kind: "fruit", usable: true, stack: 10, elem: "water", price: 60, desc: "Teaches the active pal a water move." },
+  skill_fruit_grass: { id: "skill_fruit_grass", name: "Grass Skill Fruit", glyph: "●", color: "#4caf50", kind: "fruit", usable: true, stack: 10, elem: "grass", price: 60, desc: "Teaches the active pal a grass move." },
+  skill_fruit_electric: { id: "skill_fruit_electric", name: "Electric Skill Fruit", glyph: "●", color: "#e8d44d", kind: "fruit", usable: true, stack: 10, elem: "electric", price: 60, desc: "Teaches the active pal an electric move." },
+  skill_fruit_ice: { id: "skill_fruit_ice", name: "Ice Skill Fruit", glyph: "●", color: "#a8dff0", kind: "fruit", usable: true, stack: 10, elem: "ice", price: 60, desc: "Teaches the active pal an ice move." },
+  skill_fruit_ground: { id: "skill_fruit_ground", name: "Ground Skill Fruit", glyph: "●", color: "#b8935f", kind: "fruit", usable: true, stack: 10, elem: "ground", price: 60, desc: "Teaches the active pal a ground move." },
+  skill_fruit_dark: { id: "skill_fruit_dark", name: "Dark Skill Fruit", glyph: "●", color: "#7a5ac9", kind: "fruit", usable: true, stack: 10, elem: "dark", price: 60, desc: "Teaches the active pal a dark move." },
+  skill_fruit_dragon: { id: "skill_fruit_dragon", name: "Dragon Skill Fruit", glyph: "●", color: "#e64533", kind: "fruit", usable: true, stack: 10, elem: "dragon", price: 80, desc: "Teaches the active pal a dragon move." },
 };
 
 export interface Recipe {
@@ -113,4 +129,5 @@ export const RECIPES: Recipe[] = [
   { id: "bread", out: ["bread", 1], cost: [["flour", 2]], station: "campfire", work: 80 },
   { id: "cake", out: ["cake", 1], cost: [["flour", 2], ["milk", 2], ["egg", 1], ["red_berries", 3]], station: "campfire", work: 150 },
   { id: "gunpowder", out: ["gunpowder", 2], cost: [["venom_gland", 1], ["stone", 2]], station: "workbench", work: 40 },
+  { id: "glider", out: ["glider", 1], cost: [["cloth", 4], ["fiber", 10], ["leather", 2]], station: "workbench", work: 120 },
 ];

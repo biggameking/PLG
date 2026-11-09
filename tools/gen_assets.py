@@ -742,6 +742,27 @@ def make_structure(sid, color, w, h):
         d.polygon([(W//2 - 14, 20), (W//2 + 12, 12), (W//2 + 16, 18), (W//2 - 10, 26)],
                   fill=hxc("#2f2a24") + (255,))
         d.ellipse([W//2 + 12, 16, W//2 + 20, 24], fill=hxc("#a45ec0") + (255,))
+    elif sid == "incubator":
+        # glass dome over a glowing egg on a padded base
+        d.rectangle([W//2 - 20, 40, W//2 + 20, 48], fill=hxc("#5e462e") + (255,))
+        d.ellipse([W//2 - 10, 26, W//2 + 10, 44], fill=hxc("#f5e6c8") + (255,))
+        d.ellipse([W//2 - 14, 14, W//2 + 14, 42], outline=hxc("#aef0fa") + (255,), width=3)
+        d.ellipse([W//2 - 4, 30, W//2 + 4, 40], fill=hxc("#ffd76e") + (255,))
+    elif sid == "wooden_wall":
+        # vertical planks + cross brace
+        for i in range(5):
+            x = W//2 - 20 + i * 9
+            d.rectangle([x, 14, x + 7, 46], fill=hxc("#8a6d4d") + (255,))
+            d.line([(x, 14), (x, 46)], fill=hxc("#5e462e") + (255,))
+        d.line([(W//2 - 22, 24), (W//2 + 22, 24)], fill=hxc("#a98a5e") + (255,), width=3)
+        d.line([(W//2 - 22, 38), (W//2 + 22, 38)], fill=hxc("#a98a5e") + (255,), width=3)
+    elif sid == "spikes":
+        # flat board bristling with sharpened stakes
+        d.rectangle([W//2 - 22, 42, W//2 + 22, 48], fill=hxc("#5e462e") + (255,))
+        for i in range(4):
+            x = W//2 - 16 + i * 11
+            d.polygon([(x - 4, 44), (x + 4, 44), (x, 24)], fill=hxc("#c4a678") + (255,))
+            d.line([(x, 30), (x, 24)], fill=hxc("#ede0c8") + (255,))
     elif sid == "workbench":
         for dx in (-20, 16):
             d.rectangle([W//2 + dx, 38, W//2 + dx + 5, 52], fill=hxc("#5e462e") + (255,))
@@ -762,7 +783,8 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "torch": ("#e8963c", 1, 1), "straw_bed": ("#b8a468", 2, 1),
     "gathering_site": ("#7d9a4a", 2, 2), "pharmacy": ("#8fd0a0", 2, 1),
     "cooler": ("#a8dff0", 1, 1), "oil_extractor": ("#4d565c", 2, 2),
-    "pal_condenser": ("#7a5ac9", 2, 1),
+    "pal_condenser": ("#7a5ac9", 2, 1), "incubator": ("#f2a0b5", 2, 2),
+    "wooden_wall": ("#8a6d4d", 1, 1), "spikes": ("#a98a5e", 1, 1),
 }
 
 # =========================================================================

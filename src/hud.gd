@@ -148,6 +148,10 @@ func run_click(cr: Dictionary) -> void:
 			game.party_to_box(cr["arg"])
 		"use_item":
 			use_item(cr["arg"])
+		"buy":
+			game.buy_from_merchant(cr["arg"])
+		"sell":
+			game.sell_to_merchant(cr["arg"])
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -165,6 +169,9 @@ func run_click(cr: Dictionary) -> void:
 				game.log_msg("Took %d items" % game.chest_withdraw_all(st))
 
 func interact() -> void:
+	if game.merchant != null and game.player.pos.distance_to(game.merchant.pos) < 2.4:
+		game.panel = "shop"
+		return
 	var f: Vector2 = game.player.facing
 	var probe := Vector2(signf(f.x), 0) if absf(f.x) >= absf(f.y) else Vector2(0, signf(f.y))
 	var st = game.structure_at(game.player.pos + probe * 0.8)
@@ -210,6 +217,18 @@ func interact() -> void:
 				return
 			"pal_condenser":
 				game.condense_active()
+				return
+			"incubator":
+				var inc = st.get("egg_inc")
+				if inc is Dictionary:
+					game.log_msg("Incubating: %ds left" % int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t)))
+				elif game.item_count("pal_egg") > 0:
+					game.deposit_egg()
+				else:
+					game.log_msg("Incubator empty - bring a pal egg")
+				return
+			"wooden_wall", "spikes":
+				game.log_msg("%s (HP %d)" % [StructureData.STRUCTURES[st["id"]]["name"], int(st.get("hp", 0))])
 				return
 	if game.has_structure("palbox"):
 		game.panel = "palbox"
@@ -310,6 +329,8 @@ func _draw() -> void:
 			draw_inv(r)
 		"palbox":
 			draw_palbox(r)
+		"shop":
+			draw_shop(r)
 		"chat":
 			draw_chat(r)
 		"join":
@@ -321,7 +342,8 @@ func _draw() -> void:
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
 			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter",
-			"HOST j   JOIN k (type host IP, enter)",
+			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
+			"Glider descends cliffs. Sick pals need medicine in feed box/bag.",
 		]
 		draw_rect(Rect2(10, r.y - 136, 580, 96), Color(0, 0, 0, 0.7))
 		for i in range(lines.size()):
@@ -473,8 +495,10 @@ func draw_palbox(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
-		draw_string(font, Vector2(rect.position.x, y), "%s %s%s Lv%d %s HP%d/%d" % [p.spec["name"], p.sex, star_str(p), p.level, passive_str(p).left(14), int(p.hp), int(p.max_hp)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+		draw_string(font, Vector2(rect.position.x, y), "%s%s %s%s Lv%d %s HP%d/%d" % [p.spec["name"],
+			"☆" if p.lucky else "", p.sex, star_str(p), p.level,
+			(p.ailment + "! ") if p.ailment != "" else passive_str(p).left(14), int(p.hp), int(p.max_hp)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if p.ailment != "" else Color.WHITE)
 		y += 17
 	y += 10
 	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % game.box.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
@@ -490,10 +514,53 @@ func draw_palbox(r: Vector2) -> void:
 		var rect := Rect2(cx0, y0 - 11, colw - 10, 16)
 		click_rects.append({"rect": rect, "act": "box_out", "arg": bp})
 		var ko: bool = bp.hp <= 0
-		var label := "%s %s%s Lv%d HP%d/%d%s" % [bp.spec["name"], bp.sex, star_str(bp), bp.level,
-			int(maxi(0, bp.hp)), int(bp.max_hp), " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else ""]
+		var label := "%s%s %s%s Lv%d HP%d/%d%s%s" % [bp.spec["name"], "☆" if bp.lucky else "", bp.sex, star_str(bp), bp.level,
+			int(maxi(0, bp.hp)), int(bp.max_hp), " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else "",
+			" [%s]" % bp.ailment if bp.ailment != "" else ""]
 		draw_string(font, Vector2(cx0, y0), label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if ko else Color("#c8d3d5"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if ko or bp.ailment != "" else Color("#c8d3d5"))
+
+func draw_shop(r: Vector2) -> void:
+	var rr := Rect2(r.x / 2 - 300, 60, 600, 480)
+	draw_rect(rr, Color(0, 0, 0, 0.85))
+	draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 24),
+		"MERCHANT  (gold: %d)" % game.item_count("gold_coin"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8d44d"))
+	if game.merchant == null:
+		draw_string(font, rr.position + Vector2(16, 50), "The merchant has left.",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c8d3d5"))
+		return
+	var y := rr.position.y + 48
+	draw_string(font, Vector2(rr.position.x + 16, y), "BUY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
+	draw_string(font, Vector2(rr.position.x + 316, y), "SELL (50%)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
+	y += 20
+	var sy := y
+	for i in range(game.merchant_stock.size()):
+		var it: Dictionary = game.merchant_stock[i]
+		var nm: String = ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])
+		var rect := Rect2(rr.position.x + 16, y - 12, 270, 16)
+		if it["n"] > 0:
+			click_rects.append({"rect": rect, "act": "buy", "arg": i})
+		var col := Color.WHITE if it["n"] > 0 else Color(0.45, 0.45, 0.45)
+		draw_string(font, Vector2(rect.position.x, y), "%s x%d  %dg" % [nm.left(16), it["n"], it["price"]],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
+		y += 17
+		if y > rr.end.y - 14:
+			break
+	y = sy
+	var skeys := game.items.keys()
+	skeys.sort()
+	for k in skeys:
+		var price: int = ItemData.ITEMS.get(k, {}).get("price", 0)
+		if price <= 0 or k == "gold_coin" or game.items[k] <= 0:
+			continue
+		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
+		click_rects.append({"rect": rect, "act": "sell", "arg": k})
+		draw_string(font, Vector2(rect.position.x, y), "%s x%d  +%dg" % [ItemData.ITEMS[k]["name"].left(16),
+			game.items[k], maxi(1, int(price * 0.5))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+		y += 17
+		if y > rr.end.y - 14:
+			break
 
 func use_item(k: String) -> void:
 	match k:
@@ -501,8 +568,11 @@ func use_item(k: String) -> void:
 			if game.summon_raid():
 				game.add_item(k, -1)
 		"pal_egg":
-			game.hatch_egg()  # consumes inside
+			game.deposit_egg()  # needs a free incubator nearby
 		_:
+			if k.begins_with("skill_fruit_"):
+				game.teach_skill_fruit(k)
+				return
 			var it: Dictionary = ItemData.ITEMS.get(k, {})
 			if it.get("heal", 0) > 0:
 				if game.player.hp >= game.player.max_hp:

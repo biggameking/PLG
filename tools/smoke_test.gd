@@ -281,12 +281,35 @@ func run() -> void:
 	if m_pal and f_pal and st_r:
 		st_r["workers"].append(m_pal); st_r["workers"].append(f_pal)
 		m_pal.job_site = st_r; f_pal.job_site = st_r
+		# Palworld rule: no cake, no breeding — the ranch stalls with a warning
+		game.tick_ranch(ranch_k, st_r, 61.0)
+		check("ranch stalls without cake", st_r["store"].get("pal_egg", 0) == 0 and st_r.get("cake_warned", false))
+		# stock a cake: chest storage feeds the breeding loop
+		var chest_st = null
+		for kk in game.structures:
+			if game.structures[kk]["id"] == "chest":
+				chest_st = game.structures[kk]
+		if chest_st == null:
+			game.place_free("chest", ranch_k.x + 4, ranch_k.y)
+			chest_st = game.structures.get(Vector2i(ranch_k.x + 4, ranch_k.y))
+		chest_st["store"]["cake"] = 1
 		game.tick_ranch(ranch_k, st_r, 61.0)
 		check("ranch egg", st_r["store"].get("pal_egg", 0) >= 1)
+		check("cake consumed", chest_st["store"].get("cake", 0) == 0)
+		# parentage now carries passives for inheritance
+		check("egg records passives", st_r["egg_parents"].size() > 0 and st_r["egg_parents"][0].size() >= 6)
 		game.add_item("pal_egg", 1) # egg reaches the bag via haulers/player pickup
+		# Palworld: eggs hatch in an incubator over time, not in the hand
+		game.add_item("paldium", 4); game.add_item("stone", 12); game.add_item("cloth", 2)
+		var inc_k: Vector2i = free_xy.call("incubator")
+		var inc_st = game.structures.get(inc_k)
+		game.deposit_egg()
+		check("egg deposited", inc_st != null and inc_st.has("egg_inc") and game.item_count("pal_egg") == 0)
 		var n0 := game.pals.size()
-		game.hatch_egg()
-		check("hatch egg", game.pals.size() == n0 + 1 and game.item_count("pal_egg") == 0)
+		if inc_st:
+			inc_st["egg_inc"]["ready_t"] = game.t - 1.0 # fast-forward
+			game.hatch_incubated(inc_k, inc_st)
+		check("hatch egg", game.pals.size() == n0 + 1 and not (inc_st and inc_st.has("egg_inc")))
 	else:
 		var dbg := ""
 		for q in game.pals:
@@ -1028,6 +1051,168 @@ func run() -> void:
 			fok = true # mode 7 -> "wild" fallback, sex 9 -> "M", boss "yes" -> skipped (not a real bool)
 	check("foreign-typed save coerces", fload == true and fok and game.player.hp is float and game.item_count("wood") == 12, "pals=%d" % game.pals.size())
 	game.save_game() # restore a sane save file for the rest of the run
+
+	# ---- new palworld-loop systems ----
+	# ailments: sustained low SAN sickens a base pal; medicine cures it
+	var sicky: Pal = null
+	for q in game.pals:
+		if q.mode == "base":
+			sicky = q
+			break
+	if sicky == null:
+		sicky = game.gen_pal("lamball", 3, game.player.pos + Vector2(3, 0))
+		sicky.mode = "base"
+		game.pals.append(sicky)
+	sicky.ailment = ""
+	sicky.san = 5.0
+	sicky.low_san_t = 61.0
+	for _i in 3: # needs tick throttles at 1s intervals
+		sicky._physics_process(1.0)
+	check("low SAN -> ailment", sicky.ailment in Pal.AILMENTS, "ail=%s" % sicky.ailment)
+	var w0 := sicky.work_mult()
+	sicky.ailment = "depressed"
+	check("ailment slows work", sicky.work_mult() < w0 or w0 < 1.0, "mult=%.2f" % sicky.work_mult())
+	game.add_item("low_medical", 1)
+	sicky.ailment = "weakened"
+	sicky.mode = "partner" # partners self-medicate from the player's bag
+	for _i in 4:
+		sicky._physics_process(1.0)
+	sicky.mode = "base"
+	check("medicine cures ailment", sicky.ailment == "", "ail=%s" % sicky.ailment)
+
+	# lucky variant: flagged pals carry the passive + stat buffs, drop gold on kill
+	var luck: Pal = game.gen_pal("lamball", 5, game.player.pos + Vector2(4, 0))
+	luck.lucky = true
+	luck.setup(game, "lamball", 8, luck.pos)
+	game.pals.append(luck)
+	check("lucky passive + hp buff", "lucky" in luck.passives and luck.max_hp > Combat.stat_at(luck.spec["hp"], 8, luck.talent),
+		"hp=%.0f" % luck.max_hp)
+	var gold0b := game.item_count("gold_coin")
+	game.kill_pal(luck, true)
+	check("lucky drops gold", game.item_count("gold_coin") > gold0b, "+%d" % (game.item_count("gold_coin") - gold0b))
+
+	# skill fruit: teaches the active pal an extra move of that element
+	if game.party.is_empty():
+		var sp2: Pal = game.gen_pal("lamball", 3, game.player.pos + Vector2(2, 0))
+		sp2.mode = "partner"
+		game.pals.append(sp2)
+		game.party.append(sp2.uid)
+	if not game.party.is_empty():
+		var ap: Pal = game.find_pal(game.party[0])
+		var n_sk := ap.learned_skills().size()
+		game.add_item("skill_fruit_fire", 1)
+		game.teach_skill_fruit("skill_fruit_fire")
+		var learned := ap.extra_skills.size() > 0 and ap.learned_skills().size() >= n_sk
+		check("skill fruit teaches", learned and game.item_count("skill_fruit_fire") == 0,
+			"extra=%s" % str(ap.extra_skills))
+	else:
+		check("skill fruit teaches", false, "empty party")
+
+	# catch count: every 10th same-species catch pays a bonus
+	var dummy: Pal = game.gen_pal("lamball", 2, game.player.pos + Vector2(5, 0))
+	game.pals.append(dummy)
+	dummy.hp = maxf(1.0, dummy.max_hp * 0.05) # near-KO keeps the capture roll ~0.97
+	game.catch_counts["lamball"] = 9 # next catch is the 10th
+	var plvc := game.player.level; var pxpc := game.player.xp
+	for _try in 10: # capture is a dice roll — keep throwing until it lands
+		if game.catch_counts.get("lamball", 0) >= 10:
+			break
+		game.resolve_sphere({"sid": "pal_sphere", "target": dummy})
+	check("10th catch bonus", game.catch_counts.get("lamball", 0) == 10 and (game.player.level > plvc or game.player.xp > pxpc + dummy.level * 3),
+		"cnt=%d xp=%d" % [game.catch_counts.get("lamball", 0), game.player.xp - pxpc])
+
+	# merchant: spawn/stock/buy/sell/despawn round trip
+	game.spawn_merchant()
+	check("merchant spawned", game.merchant != null and game.merchant_stock.size() > 0, "stock=%d" % game.merchant_stock.size())
+	if game.merchant != null and game.merchant_stock.size() > 0:
+		game.add_item("gold_coin", 1000)
+		var g0m := game.item_count("gold_coin")
+		var it0: Dictionary = game.merchant_stock[0]
+		game.buy_from_merchant(0)
+		check("merchant buy", game.item_count(it0["id"]) > 0 and game.item_count("gold_coin") < g0m)
+		var s0m := game.item_count("gold_coin")
+		game.sell_to_merchant("wood")
+		check("merchant sell", game.item_count("gold_coin") > s0m)
+	game.despawn_merchant()
+	check("merchant leaves clean", game.merchant == null and game.merchant_stock.is_empty())
+
+	# base defense: walls block, spikes are walkable but hurt hostiles
+	game.add_item("wood", 60); game.add_item("stone", 20)
+	var spk_k: Vector2i = free_xy.call("spikes")
+	var spk_st = game.structures.get(spk_k)
+	check("spikes walkable", spk_st != null and spk_st.get("walkable", false) == true
+		and not game.world.solid_structure(game.world.idx(spk_k.x, spk_k.y)))
+	var raider2: Pal = game.gen_pal("direhowl", 5, Vector2(spk_k.x, spk_k.y) + Vector2(0.5, 0.5))
+	raider2.mode = "wild"; raider2.raid = true; raider2.aggro = 0
+	game.pals.append(raider2)
+	var hp0r := raider2.hp
+	game.tick_production(1.0) # spikes tick inside production sweep
+	check("spikes hurt raider", raider2.hp < hp0r, "hp %.0f->%.0f" % [hp0r, raider2.hp])
+	# raiders chew adjacent solid structures; hp0 structures get razed
+	var wall_k: Vector2i = free_xy.call("wooden_wall")
+	var wall_st = game.structures.get(wall_k)
+	check("wall has hp", wall_st != null and wall_st.get("hp", 0) == 300)
+	if wall_st:
+		game.hit_structure(wall_k, 999)
+		check("structure razes", not game.structures.has(wall_k), "still standing")
+	# palbox anchor must survive razing attempts
+	var pb_st = game.structures.get(game.palbox_pos)
+	if pb_st:
+		game.hit_structure(game.palbox_pos, 99999)
+		check("palbox unrazable", game.structures.has(game.palbox_pos) and pb_st.get("hp", 0) >= 1)
+
+	# glider: carried item unlocks one-way descent, not climbing
+	game.add_item("glider", 1)
+	check("glider item held", game.item_count("glider") == 1)
+	# scan for a high cell with a clean lower neighbour (glider rules)
+	var cliff_e := -1; var low_c := -1
+	for i2 in range(0, World.WORLD_W * World.WORLD_H):
+		if game.world.elev[i2] < 1:
+			continue
+		var cx2: int = i2 % World.WORLD_W; var cy2: int = i2 / World.WORLD_W
+		for nb in [Vector2i(cx2 + 1, cy2), Vector2i(cx2 - 1, cy2), Vector2i(cx2, cy2 + 1), Vector2i(cx2, cy2 - 1)]:
+			if not game.world.in_bounds(nb.x, nb.y):
+				continue
+			var ni := game.world.idx(nb.x, nb.y)
+			if game.world.elev[ni] < game.world.elev[i2] and game.world.tiles[ni] != World.Tile.WATER \
+					and game.world.decor[ni] == World.Decor.NONE and not game.world.solid_structure(ni):
+				cliff_e = i2; low_c = ni
+				break
+		if low_c >= 0:
+			break
+	if cliff_e >= 0:
+		var cx2: int = cliff_e % World.WORLD_W; var cy2: int = cliff_e / World.WORLD_W
+		var lx := low_c % World.WORLD_W; var ly: int = low_c / World.WORLD_W
+		game.player.pos = Vector2(cx2 + 0.5, cy2 + 0.5)
+		check("glider descends", game.player.can_enter(lx + 0.5, ly + 0.5))
+		game.player.pos = Vector2(lx + 0.5, ly + 0.5)
+		check("glider can't climb", not game.player.can_enter(cx2 + 0.5, cy2 + 0.5))
+		game.player.pos = Vector2(game.world.spawn) + Vector2(0.5, 0.5)
+	game.add_item("glider", -1)
+
+	# memory caps: runtime collections refuse runaway growth
+	for _i in game.MAX_DROPS + 50:
+		game.spawn_drop("stone", 1, game.player.pos + Vector2(6, 0))
+	check("drop cap", game.drops.size() <= game.MAX_DROPS, "drops=%d" % game.drops.size())
+	for _i in 300:
+		game.floater(game.player.pos, "x", "#ffffff")
+	check("floater cap", game.floaters.size() <= game.MAX_FLOATERS, "floaters=%d" % game.floaters.size())
+	var pf0 := game.projectiles.size()
+	for _i in game.MAX_PROJECTILES + 20:
+		game.projectiles.append({"pos": game.player.pos, "dir": Vector2(1, 0), "elev": 0,
+			"speed": 8.0, "ttl": 0.001, "dmg": 1, "from": "player",
+			"node": Sprite2D.new()})
+		game.entity_layer.add_child(game.projectiles[-1]["node"])
+	game.update_projectiles(0.01)
+	check("projectile cap", game.projectiles.size() <= game.MAX_PROJECTILES, "proj=%d" % game.projectiles.size())
+	for dd in game.drops: # clear() would orphan the drop nodes in entity_layer
+		if is_instance_valid(dd.get("node")):
+			dd["node"].queue_free()
+	game.drops.clear()
+	for pj in game.projectiles:
+		if is_instance_valid(pj.get("node")):
+			pj["node"].queue_free()
+	game.projectiles.clear()
 
 	# net host (no client join in same proc)
 	game.net.host()

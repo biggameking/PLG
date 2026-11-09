@@ -565,6 +565,62 @@ const ITEMS = {
   "stack": 5,
   "price": 0
  },
+ "glider": {
+  "id": "glider",
+  "name": "Glider",
+  "glyph": "▲",
+  "color": "#a8dff0",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "glider",
+  "price": 120,
+  "desc": "Ride the wind: descend any cliff safely while carried."
+ },
+ "skill_fruit_neutral": {
+  "id": "skill_fruit_neutral", "name": "Neutral Skill Fruit", "glyph": "●",
+  "color": "#c8d3d5", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "neutral", "price": 60, "desc": "Teaches the active pal a neutral move."
+ },
+ "skill_fruit_fire": {
+  "id": "skill_fruit_fire", "name": "Fire Skill Fruit", "glyph": "●",
+  "color": "#e8963c", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "fire", "price": 60, "desc": "Teaches the active pal a fire move."
+ },
+ "skill_fruit_water": {
+  "id": "skill_fruit_water", "name": "Water Skill Fruit", "glyph": "●",
+  "color": "#4d9de0", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "water", "price": 60, "desc": "Teaches the active pal a water move."
+ },
+ "skill_fruit_grass": {
+  "id": "skill_fruit_grass", "name": "Grass Skill Fruit", "glyph": "●",
+  "color": "#4caf50", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "grass", "price": 60, "desc": "Teaches the active pal a grass move."
+ },
+ "skill_fruit_electric": {
+  "id": "skill_fruit_electric", "name": "Electric Skill Fruit", "glyph": "●",
+  "color": "#e8d44d", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "electric", "price": 60, "desc": "Teaches the active pal an electric move."
+ },
+ "skill_fruit_ice": {
+  "id": "skill_fruit_ice", "name": "Ice Skill Fruit", "glyph": "●",
+  "color": "#a8dff0", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "ice", "price": 60, "desc": "Teaches the active pal an ice move."
+ },
+ "skill_fruit_ground": {
+  "id": "skill_fruit_ground", "name": "Ground Skill Fruit", "glyph": "●",
+  "color": "#b8935f", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "ground", "price": 60, "desc": "Teaches the active pal a ground move."
+ },
+ "skill_fruit_dark": {
+  "id": "skill_fruit_dark", "name": "Dark Skill Fruit", "glyph": "●",
+  "color": "#a45ec0", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "dark", "price": 60, "desc": "Teaches the active pal a dark move."
+ },
+ "skill_fruit_dragon": {
+  "id": "skill_fruit_dragon", "name": "Dragon Skill Fruit", "glyph": "●",
+  "color": "#4d6fd1", "kind": "fruit", "usable": true, "stack": 10,
+  "elem": "dragon", "price": 60, "desc": "Teaches the active pal a dragon move."
+ },
  "hide_armor": {
   "id": "hide_armor",
   "name": "Hide Armor",
@@ -1054,6 +1110,14 @@ const RECIPES = [
   ],
   "station": "campfire",
   "work": 150
+ },
+ {
+  "id": "glider",
+  "tech": "glider",
+  "out": ["glider", 1],
+  "cost": [["cloth", 4], ["fiber", 10], ["leather", 2]],
+  "station": "workbench",
+  "work": 120
  },
  {
   "id": "gunpowder",

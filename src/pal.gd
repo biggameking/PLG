@@ -27,11 +27,15 @@ var sex := "M"
 var alpha := false
 var boss := false
 var passives := []
+var extra_skills := []        # taught via skill fruits — survives beyond the level table
 var ai_accum := 0.0
 var needs_t := 0.0
 var skill_cd := {}
 var stun_t := 0.0
 var revive_t := 0.0         # >0 while knocked out in the box
+var ailment := ""           # "" | depressed | sprain | ulcer | weakened (Palworld SAN sickness)
+var low_san_t := 0.0        # sustained seconds under SAN 15 — onset timer
+var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
@@ -51,12 +55,17 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	uid = game.next_uid()
 	sex = "M" if game.rng.chance(0.5) else "F"
 	roll_passives()
+	if lucky and "lucky" not in passives:
+		passives.append("lucky") # Lucky pals always carry their signature passive
 	apply_bonuses() # folds passives + star/alpha/boss hp multipliers into max_hp
 	hp = max_hp
 	setup_visuals("res://assets/pals/%s_f0.png" % sp_id, "res://assets/pals/%s_f1.png" % sp_id)
 	if alpha:
 		sprite.scale = Vector2(1.6, 1.6)
 		sprite.position.y = -51.0
+	elif lucky:
+		sprite.scale = Vector2(1.5, 1.5)
+		sprite.position.y = -48.0
 
 func base_move_speed() -> float:
 	# species.gd stores tiles/sec (2-3.5); species_gen.gd carries stat-scale
@@ -105,7 +114,21 @@ func status_speed_mult() -> float:
 		m *= 0.5
 	if has_status("soak"):
 		m *= 0.7
+	if ailment == "sprain":
+		m *= 0.6
 	return m
+
+# Palworld ailments: a sick pal underperforms until it gets medicine.
+const AILMENTS := ["depressed", "sprain", "ulcer", "weakened"]
+func work_mult() -> float:
+	match ailment:
+		"depressed": return 0.4
+		"sprain": return 0.6
+		_: return 1.0
+func atk_mult() -> float:
+	return 0.7 if ailment == "weakened" else 1.0
+func def_mult() -> float:
+	return 0.7 if ailment == "weakened" else 1.0
 
 func _physics_process(dt: float) -> void:
 	if hp <= 0:
@@ -136,9 +159,24 @@ func _physics_process(dt: float) -> void:
 			base_ai(dt)
 	sync_screen()
 
+func chew_adjacent_structure() -> bool:
+	# raid pressure (Palworld): walls and buildings are obstacles raiders break
+	var c := Vector2i(int(pos.x), int(pos.y))
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var k: Vector2i = c + d
+		var st = game.structures.get(k)
+		if st != null and not st.get("walkable", false):
+			atk_cd = 1.1
+			game.hit_structure(k, maxi(3, int(spec.get("atk", 40) * 0.25)))
+			return true
+	return false
+
 func wild_ai(dt: float) -> void:
 	var pl := game.player
 	var dist := pos.distance_to(pl.pos)
+	if raid and atk_cd <= 0 and chew_adjacent_structure():
+		sync_screen()
+		return
 	# night: non-nocturnal wild pals sleep — sneak in for catch/backstab;
 	# dark-element and apex hostiles stay awake
 	if game.is_night() and aggro < 0 and hit_flash <= 0 and "dark" not in spec.get("elements", []) and hostile() < 2:
@@ -256,8 +294,8 @@ func partner_ai(dt: float) -> void:
 			elif atk_cd <= 0:
 				atk_cd = 1.0
 				var mult := Combat.effectiveness("neutral", best.elem())
-				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus, 30,
-					Combat.stat_at(best.spec["def"], best.level, best.talent) * best.def_bonus, mult, game.rng)
+				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus * atk_mult(), 30,
+					Combat.stat_at(best.spec["def"], best.level, best.talent) * best.def_bonus * best.def_mult(), mult, game.rng)
 				best.hit(d, mult, true)
 		elif bd > 5.0:
 			step_toward(best.pos, dt)
@@ -283,8 +321,8 @@ func base_ai(dt: float) -> void:
 			elif atk_cd <= 0:
 				atk_cd = 1.0
 				var mult := Combat.effectiveness("neutral", foe.elem())
-				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus, 25,
-					Combat.stat_at(foe.spec["def"], foe.level, foe.talent) * foe.def_bonus, mult, game.rng)
+				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus * atk_mult(), 25,
+					Combat.stat_at(foe.spec["def"], foe.level, foe.talent) * foe.def_bonus * foe.def_mult(), mult, game.rng)
 				foe.hit(d, mult, true)
 		return
 	if job_site:
@@ -375,8 +413,25 @@ func tick_needs(dt: float) -> void:
 	needs_t = 0
 	if mode not in ["base", "partner"]: # wild pals have no needs (Palworld rule) —
 		return                       # starvation left them at 0hp forever otherwise
-	hunger = minf(100.0, hunger + 0.5 * passive_mult("food"))  # Glutton eats more
+	hunger = minf(100.0, hunger + 0.5 * passive_mult("food") * (2.0 if ailment == "ulcer" else 1.0))  # Glutton eats more; ulcers starve fast
 	san = maxf(0.0, san - (0.2 if job_site else 0.05) / passive_mult("san"))  # Zen/Pacifist hold SAN longer
+	# low SAN is the sickness trigger (Palworld): sustained misery -> ailment
+	if ailment == "":
+		if san < 15.0:
+			low_san_t += 1.0
+			if low_san_t > 60.0:
+				ailment = AILMENTS[game.rng.int_range(0, AILMENTS.size() - 1)]
+				game.log_msg("%s developed %s! Give it medicine." % [spec["name"], ailment])
+				game.floater(pos, ailment.to_upper(), "#d06a6a")
+				low_san_t = 0.0
+		else:
+			low_san_t = 0.0
+	else: # sick pals self-medicate: base stock for workers, the bag for partners
+		if game.take_medicine(mode == "partner"):
+			ailment = ""
+			san = minf(100.0, san + 30.0)
+			game.log_msg("%s took medicine - recovered" % spec["name"])
+			game.floater(pos, "cured!", "#a8e6a1")
 	if hunger > 70:
 		var ate := 0
 		if mode == "base" and game.has_structure("feed_box"):
@@ -400,6 +455,9 @@ func learned_skills() -> Array:
 	for e in spec.get("skills", []):
 		if level >= e[0]:
 			out.append(e[1])
+	for sid in extra_skills: # skill-fruit moves — no level gate once taught
+		if sid not in out:
+			out.append(sid)
 	return out
 
 func tick_statuses(dt: float) -> void:
@@ -477,6 +535,10 @@ func apply_bonuses() -> void:
 	atk_bonus *= star_mult
 	def_bonus *= star_mult
 	max_hp = Combat.stat_at(spec["hp"], level, talent) * star_mult
+	if lucky: # rare variant hits harder and tanks harder
+		atk_bonus *= 1.2
+		def_bonus *= 1.2
+		max_hp *= 1.5
 	if alpha:
 		max_hp *= 4.0
 	if boss:

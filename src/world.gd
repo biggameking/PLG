@@ -46,12 +46,16 @@ func elev_at(x: int, y: int) -> int:
 func zone_at(x: int, y: int) -> int:
 	return spawn_zone[idx(x, y)] if in_bounds(x, y) else 3
 
+func solid_structure(i: int) -> bool:
+	# spikes etc. are structures you can stand on — flagged walkable at placement
+	return structures.has(i) and not structures[i].get("walkable", false)
+
 func blocked_swim(x: int, y: int, from_x: float, from_y: float) -> bool:
 	# aquatic pals: water is open, everything else still blocks
 	if not in_bounds(x, y):
 		return true
 	var i := idx(x, y)
-	if decor[i] != Decor.NONE or structures.has(i):
+	if decor[i] != Decor.NONE or solid_structure(i):
 		return true
 	var t := tiles[i]
 	if SOLID_TILES.has(t) and t != Tile.WATER:
@@ -65,7 +69,7 @@ func blocked(x: int, y: int, from_x := -1.0, from_y := -1.0) -> bool:
 	if not in_bounds(x, y):
 		return true
 	var i := idx(x, y)
-	if SOLID_TILES.has(tiles[i]) or decor[i] != Decor.NONE or structures.has(i):
+	if SOLID_TILES.has(tiles[i]) or decor[i] != Decor.NONE or solid_structure(i):
 		return true
 	if from_x < 0:
 		return false
