@@ -167,6 +167,24 @@ func _ready() -> void:
 	box_holder.process_mode = Node.PROCESS_MODE_DISABLED # boxed pals don't tick
 	add_child(box_holder)
 	rng = Rng.new(int(Time.get_unix_time_from_system()) & 0x7FFFFFFF)
+	# procedural SFX: streams synthesized once, played through a fixed pool —
+	# no assets to ship, nothing to leak
+	for i in 8:
+		var ap := AudioStreamPlayer.new()
+		add_child(ap)
+		sfx_pool.append(ap)
+	var SfxLib := preload("res://src/sfx.gd")
+	SFX = {
+		"throw": SfxLib.noise(0.12, 0.35, 10.0),
+		"catch": SfxLib.arp([660, 880, 1320], 0.09, 0.45),
+		"fail": SfxLib.tone(220, 0.18, 0.4, 0.7),
+		"level": SfxLib.arp([523, 659, 784, 1046], 0.08, 0.4),
+		"build": SfxLib.noise(0.2, 0.5, 7.0),
+		"break": SfxLib.noise(0.3, 0.55, 12.0),
+		"horn": SfxLib.tone(98, 0.8, 0.5, 0.85),
+		"ko": SfxLib.tone(160, 0.5, 0.45, 0.6),
+		"hit": SfxLib.noise(0.07, 0.3, 14.0),
+	}
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
 	# player
@@ -215,6 +233,18 @@ func add_item(id: String, n: int) -> void:
 
 func item_count(id: String) -> int:
 	return items.get(id, 0)
+
+var SFX := {}
+var sfx_pool := []
+var sfx_idx := 0
+func sfx_play(k: String) -> void:
+	var s = SFX.get(k)
+	if s == null or sfx_pool.is_empty():
+		return
+	var ap: AudioStreamPlayer = sfx_pool[sfx_idx]
+	sfx_idx = (sfx_idx + 1) % sfx_pool.size()
+	ap.stream = s
+	ap.play()
 
 func log_msg(msg: String) -> void:
 	messages.push_back(msg)
@@ -384,6 +414,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		p.revive_t = t + 300.0  # Palworld-style revive timer
 		box.append(p)
 		box_pal(p)
+		sfx_play("ko")
 		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
 	else:
 		if p.has_meta("gauntlet") and not gauntlet.is_empty():
@@ -611,6 +642,7 @@ func sphere_fly(sid: String, target: Pal) -> void:
 			old["node"].queue_free()
 	spheres_flying.append({"sid": sid, "target": target, "t": 0.0,
 		"node": spr, "from": player.pos})
+	sfx_play("throw")
 
 func generator_active() -> bool:
 	for kg in structures:
@@ -771,6 +803,7 @@ func resolve_sphere(sp) -> void:
 			target.aggro = -1
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
+		sfx_play("catch")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
 		gain_xp(target.level * 3)
 		# Palworld catch-count bonus: every 10th of a species pays a fat bonus
@@ -793,6 +826,7 @@ func resolve_sphere(sp) -> void:
 			box_pal(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
+		sfx_play("fail")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
 		target.aggro = 0 if target.hostile() >= 1 else -1
 
@@ -1291,6 +1325,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 			extra_boxes.append(Vector2i(tx, ty))
 			log_msg("Outpost palbox online — shared box network")
 	log_msg("Built %s" % s["name"])
+	sfx_play("build")
 	return true
 
 func place_free(sid: String, tx: int, ty: int) -> bool:
@@ -1571,6 +1606,7 @@ func gain_xp(n: int) -> void:
 		tech_points += 2
 		stat_pts += 1 # Palworld: every level banks a stat point for the statue
 		log_msg("Level up! Lv%d (+2 tech, +1 stat)" % player.level)
+		sfx_play("level")
 
 func tick_box(dt: float) -> void: # Palworld palbox is a clinic — wounds mend inside
 	for bp in box:
@@ -2509,6 +2545,7 @@ func tick_raid(dt: float) -> void:
 		raid_theme = "" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)]
 		var howl: String = ("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob"
 		log_msg("Raid party spotted — a %s is coming for the palbox!" % howl)
+		sfx_play("horn")
 		floater(player.pos, "RAID INCOMING", "#e8452f")
 	if raid_t <= 0:
 		raid_t = 240.0 + rng.next() * 180.0
@@ -3340,6 +3377,7 @@ func equip(k: String) -> void:
 
 func break_weapon(id: String) -> void:
 	log_msg("%s broke!" % ItemData.ITEMS.get(id, {}).get("name", id))
+	sfx_play("break")
 	floater(player.pos, "BROKE!", "#e64533")
 	player.weapon_wear = -1.0
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot

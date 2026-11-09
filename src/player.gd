@@ -76,7 +76,9 @@ func melee() -> void:
 		else:
 			p.hit(d, mult, true)
 		hit_any = true
-	if not hit_any:
+	if hit_any:
+		game.sfx_play("hit")
+	else:
 		game.try_harvest(pos, facing)
 
 func throw_sphere() -> void:
