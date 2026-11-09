@@ -447,7 +447,21 @@ func run() -> void:
 		var pg_hit: bool = game.run_partner_skill(pg, wt.pos, game.PARTNER_SKILLS["pengullet"])
 		check("penguin cannon", pg_hit and wt.hp < wthp3, "hp=%.0f" % wt.hp)
 		check("cannon needs launcher", not game.partner_gear_ok("pengullet"))
-		for tmp2 in [cr, lay, pg]:
+		# Roly Poly (Palworld's lamball shield): an absorb bubble that pops
+		var lb: Pal = game.gen_pal("lamball", 10, p.pos)
+		lb.mode = "partner"
+		game.run_partner_skill(lb, p.pos, game.PARTNER_SKILLS["lamball"])
+		var hp_s0 := p.hp
+		p.dodge_t = 0.0
+		game.hurt_player(30.0, lb)
+		var blocked: bool = p.hp >= hp_s0
+		p.shield_n = 4.0 # nearly spent — the next hit should leak through
+		game.hurt_player(30.0, lb)
+		var leaked: bool = p.hp < hp_s0
+		p.hp = hp_s0; p.shield_t = 0.0; p.shield_n = 0.0
+		check("roly poly shield", blocked and leaked,
+			"blocked=%s leaked=%s" % [blocked, leaked])
+		for tmp2 in [cr, lay, pg, lb]:
 			if is_instance_valid(tmp2) and tmp2.get_parent():
 				tmp2.get_parent().remove_child(tmp2)
 			if is_instance_valid(tmp2):

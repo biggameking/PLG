@@ -704,7 +704,9 @@ func hurt_player(atk: float, from: Pal) -> void:
 		return
 	var def := 20.0 + player.level * 3.0
 	var d := maxi(1, int(round(25.0 * (2.0 * atk) / maxf(1.0, atk + 2.0 * def) * (0.9 + rng.next() * 0.2))))
-	var final := maxi(1, d - player.armor_def())
+	var final := player.absorb_hit(maxi(1, d - player.armor_def()))
+	if final <= 0:
+		return # the bubble ate it whole — no wear, no flash
 	player.hp -= final
 	player.hit_flash = 0.4
 	floater(player.pos, "-" + str(final), "#e64533")
@@ -2511,7 +2513,9 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	if target_ent is Player:
 		if player.dodge_t > 0:
 			return
-		var final := maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def())
+		var final := player.absorb_hit(maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def()))
+		if final <= 0:
+			return
 		player.hp -= final
 		player.hit_flash = 0.4
 		floater(player.pos, "-" + str(final), "#e64533") # show post-armor damage like hurt_player
@@ -3801,6 +3805,7 @@ const PARTNER_SKILLS := {
 	"mozzarina":{"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
 	"chikipi":  {"cd": 25.0, "range": 0.0, "name": "Egg-cellent Lay"},
 	"pengullet":{"cd": 8.0, "range": 9.0, "name": "Penguin Cannon"},
+	"lamball":  {"cd": 20.0, "range": 0.0, "name": "Roly Poly"},
 }
 
 # Palworld pal gear: a bespoke active needs its species item crafted in the
@@ -3913,6 +3918,11 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 		"mozzarina": # the big jersey — two bottles per squeeze
 			add_item("milk", 2)
 			floater(p.pos, "milk x2!", "#f8f4f0")
+			return true
+		"lamball": # Roly Poly: the plush ball rolls under you — an 8s absorb bubble
+			player.shield_t = t + 8.0
+			player.shield_n = 40.0 + p.level * 2.0
+			floater(player.pos, "ROLY POLY!", "#a8d8ff")
 			return true
 		"chikipi": # it lays, you pocket
 			add_item("egg", 1)

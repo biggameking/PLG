@@ -9,6 +9,19 @@ var hunger := 80.0          # 0-100; drains ~100 over ~22 min
 var stamina := 100.0        # Palworld stamina: sprint/swim/dodge burn it
 var stam_wait := 0.0        # regen delay after a drain
 var cold_t := 0.0           # night-chill accumulator — resets by the fire
+var shield_t := 0.0         # Roly Poly bubble: deadline (game.t)
+var shield_n := 0.0         # absorb pool left in the bubble
+
+func absorb_hit(final: int) -> int:
+	# Palworld's Lamball partner skill — a plush ball eats the hit for you
+	if shield_t <= game.t or final <= 0:
+		return final
+	var got := mini(final, int(shield_n))
+	shield_n -= got
+	if shield_n <= 0.0:
+		shield_t = 0.0 # the bubble pops once it's spent
+	game.floater(pos, "blocked!", "#a8d8ff")
+	return final - got
 var max_hp := 100.0
 var level := 1
 var xp := 0
