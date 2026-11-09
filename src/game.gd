@@ -1576,6 +1576,12 @@ func raze_structure(st) -> void:
 	for w in st["workers"].duplicate():
 		st["workers"].erase(w)
 		w.job_site = null
+	var xp2: Pal = st.get("exp_pal") # a razed post calls its expedition pal home early
+	if is_instance_valid(xp2) and xp2.mode == "expedition":
+		xp2.mode = "base"; xp2.visible = true
+		xp2.job_site = null
+		if not cells.is_empty():
+			xp2.pos = Vector2(cells[0].x + 0.5, cells[0].y + 0.5)
 	for it in st.get("store", {}).keys(): # contents spill as loot — no vanishing stock
 		if not cells.is_empty():
 			spawn_drop(it, st["store"][it], Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
@@ -1812,6 +1818,16 @@ func tick_production(dt: float) -> void:
 				if t >= float(inc.get("ready_t", 0.0)):
 					hatch_incubated(key, st)
 			continue
+		if st["id"] == "expedition_post":
+			var end: float = float(st.get("exp_end", 0.0))
+			if end > 0.0 and t >= end:
+				st["exp_end"] = 0.0
+				st["exp_cd"] = t + 120.0 # a breather at post before the next march
+				var xp: Pal = st.get("exp_pal")
+				st["exp_pal"] = null
+				if is_instance_valid(xp) and xp.mode == "expedition":
+					return_expedition(xp, st, key)
+			continue
 		if st.get("spike", 0) > 0:
 			st["timer"] += dt # damage hostiles standing on the spikes every half second
 			if st["timer"] >= 0.5:
@@ -1886,6 +1902,37 @@ func tick_production(dt: float) -> void:
 			for pr in prod:
 				t += "+%d %s  " % [pr[1], pr[0]]
 			floater(Vector2(key.x + 0.5, key.y + 0.5), t.strip_edges(), "#a8e6a1")
+
+func return_expedition(p: Pal, st: Dictionary, key: Vector2i) -> void:
+	p.mode = "base"
+	p.visible = true
+	p.pos = Vector2(key.x + 0.5, key.y + 1.4) # lands just south of the post
+	# Palworld expeditions tire the crew — the haul costs SAN and a meal
+	p.san = maxf(0.0, p.san - 15.0)
+	p.hunger = minf(100.0, p.hunger + 25.0)
+	var rolls: int = 2 + p.level / 10 + (2 if p.lucky else 0)
+	var table := [["wood", 40], ["stone", 40], ["ore", 25], ["fiber", 25],
+		["paldium", 15], ["gold_coin", 8]]
+	var oe: String = p.elem()[0] if not p.elem().is_empty() else "neutral"
+	if oe != "neutral" and ItemData.ITEMS.has("%s_organ" % oe):
+		table.append(["%s_organ" % oe, 12]) # haul matches the pal's element
+	var wsum := 0
+	for e2 in table:
+		wsum += e2[1]
+	var got := {}
+	for i in rolls:
+		var r: int = rng.int_range(1, wsum)
+		var pick := "wood"
+		for e2 in table:
+			r -= e2[1]
+			if r <= 0:
+				pick = e2[0]
+				break
+		got[pick] = int(got.get(pick, 0)) + 1 + p.level / 15
+	for k in got:
+		st["store"][k] = int(st["store"].get(k, 0)) + int(got[k])
+	log_msg("%s returns from expedition: %s" % [p.spec.get("name", p.species_id), str(got)])
+	floater(Vector2(key.x + 0.5, key.y + 0.5), "EXPEDITION!", "#ffe08a")
 
 func consume_ready(cons: Array) -> bool:
 	for cn in cons:
@@ -2292,7 +2339,7 @@ func find_work_site(p: Pal, reach: float) -> Variant:
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
 		var jb: Dictionary = s.get("job", {})
-		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power":
+		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition":
 			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
 		var need: String = jb.get("workType", "")
 		if need != "" and p.spec.get("work", {}).get(need, 0) == 0 \
@@ -2500,9 +2547,9 @@ func save_game() -> void:
 	var pals_data := []
 	for p in pals:
 		var jc = null
-		if p.mode == "base": # only base pals hold jobs; anything else in workers is stale
+		if p.mode == "base" or p.mode == "expedition": # only base pals hold jobs; anything else in workers is stale
 			for kj in structures:
-				if p in structures[kj]["workers"]:
+				if p in structures[kj]["workers"] or structures[kj].get("exp_pal") == p:
 					jc = "%d,%d" % [kj.x, kj.y]
 					break
 		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
@@ -2541,6 +2588,7 @@ func save_game() -> void:
 		seen_st[st] = true
 		var inc = st.get("egg_inc")
 		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200), "loot": st.get("loot", false),
+			"exp": ({"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t), "cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)} if st["id"] == "expedition_post" else null),
 			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
@@ -2742,7 +2790,9 @@ func load_game() -> bool:
 				and (hm[1] is float or hm[1] is int):
 			np.home = Vector2(float(hm[0]), float(hm[1])) # herd anchors ride the save
 		var m0 := str(pd.get("mode", "wild"))
-		np.mode = m0 if m0 in ["wild", "partner", "base", "box", "bench"] else "wild" # foreign strings would poison every mode check
+		np.mode = m0 if m0 in ["wild", "partner", "base", "box", "bench", "expedition"] else "wild" # foreign strings would poison every mode check
+		if np.mode == "expedition":
+			np.visible = false # off-map until its post calls it home
 		np.hp = float(pd.get("hp", np.max_hp)); np.talent = clampi(int(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
 		if pd.get("sex") != null:
 			np.sex = "F" if str(pd["sex"]) == "F" else "M"
@@ -2851,6 +2901,12 @@ func load_game() -> bool:
 			st["timer"] = maxf(float(sv.get("timer", 0.0)), 0.0) # negative timer fires production instantly; st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg"):
 				st["egg_parents"] = sv["egg"]
+			if sv.get("exp") is Dictionary and sid == "expedition_post":
+				var exp_d: Dictionary = sv["exp"]
+				var left: float = float(exp_d.get("left", 0.0))
+				if left > 0.0:
+					st["exp_end"] = t + clampf(left, 1.0, 900.0) # foreign timers can't pin a pal away forever
+				st["exp_cd"] = t + maxf(float(exp_d.get("cd", 0.0)), 0.0)
 			if sv.get("inc") is Dictionary and sid == "incubator":
 				var inc_d: Dictionary = sv["inc"]
 				st["egg_inc"] = {"pair": inc_d.get("pair"), "huge": inc_d.get("huge") == true,
@@ -2874,9 +2930,24 @@ func load_game() -> bool:
 		if parts2.size() < 2:
 			continue # malformed job cell key
 		var cell := Vector2i(int(parts2[0]), int(parts2[1]))
-		if structures.has(cell) and pj[0].mode == "base" and pj[0] not in structures[cell]["workers"]:
+		if structures.has(cell) and pj[0].mode in ["base", "expedition"] and pj[0] not in structures[cell]["workers"]:
 			structures[cell]["workers"].append(pj[0])
 			pj[0].job_site = structures[cell]
+	for lp2 in pals:
+		if lp2.mode != "expedition":
+			continue
+		var home2 := false
+		for k2 in structures:
+			var s2: Dictionary = structures[k2]
+			if s2["id"] == "expedition_post" and lp2 in s2["workers"]:
+				s2["exp_pal"] = lp2 # re-link the post so tick_production can call it home
+				if float(s2.get("exp_end", 0.0)) <= 0.0:
+					s2["exp_end"] = t + 60.0 # save predates the field — bring them home soon
+				home2 = true
+				break
+		if not home2: # the post is gone — the pal walks back in
+			lp2.mode = "base"
+			lp2.visible = true
 	log_msg("Loaded.")
 	return true
 

@@ -191,6 +191,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
       produces: [["pal_sphere", 1]] },
     desc: "Palworld's assembly line — a handy pal rolls a sphere off the belt.",
   },
+  expedition_post: {
+    id: "expedition_post", name: "Expedition Post", glyph: "⚑", color: "#c9a15a", w: 2, h: 1,
+    cost: [["wood", 30], ["stone", 15], ["ingot", 4], ["cloth", 2]],
+    job: { kind: "expedition", workType: "gathering", amount: 600 },
+    desc: "Assign a gatherer and it marches off-post, returning with a haul keyed to its element.",
+  },
   watch_tower: {
     id: "watch_tower", name: "Watch Tower", glyph: "♜", color: "#c9a86a", w: 1, h: 1,
     cost: [["wood", 20], ["stone", 10], ["ingot", 2]], turret: 14, hp: 300, light: 1,
@@ -252,4 +258,5 @@ export const TECH: TechNode[] = [
   { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2, parts: 2 },
   { id: "watch_tower", name: "Watch Tower", tier: 4, cost: 2, parts: 1 },
   { id: "sphere_factory", name: "Sphere Works", tier: 5, cost: 3, parts: 1 },
+  { id: "expedition_post", name: "Expedition Post", tier: 7, cost: 3, parts: 1 },
 ];

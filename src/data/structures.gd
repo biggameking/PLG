@@ -490,6 +490,34 @@ const STRUCTURES = {
    "produces": [["pal_sphere", 1]]},
   "desc": "Palworld's assembly line — a handy pal rolls a sphere off the belt."
  },
+ "expedition_post": {
+  "id": "expedition_post",
+  "name": "Expedition Post",
+  "glyph": "⚑",
+  "color": "#c9a15a",
+  "w": 2,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    30
+   ],
+   [
+    "stone",
+    15
+   ],
+   [
+    "ingot",
+    4
+   ],
+   [
+    "cloth",
+    2
+   ]
+  ],
+  "job": {"kind": "expedition", "workType": "gathering", "amount": 600},
+  "desc": "Assign a gatherer and it marches off-post, returning with a haul keyed to its element."
+ },
  "pal_condenser": {
   "id": "pal_condenser",
   "name": "Pal Condenser",
@@ -1089,6 +1117,13 @@ const TECH = [
   "id": "sphere_factory",
   "name": "Sphere Works",
   "tier": 5,
+  "cost": 3,
+  "parts": 1
+ },
+ {
+  "id": "expedition_post",
+  "name": "Expedition Post",
+  "tier": 7,
   "cost": 3,
   "parts": 1
  }

@@ -750,7 +750,8 @@ func run() -> void:
 		hw.mode = "base"; hw.san = 90.0; hw.ailment = ""; hw.passives = []
 		var saved_hw: Array = sf_st["workers"].duplicate()
 		sf_st["workers"] = [hw]; hw.job_site = sf_st
-		sf_st["timer"] = 199.0
+		hw.talent = 50 # a bottom-rolled talent scales work_sum below the 200 mark
+		sf_st["timer"] = 199.5
 		game.tick_production(1.0)
 		check("sphere works rolls", sf_st["store"].get("pal_sphere", 0) >= 1,
 			"store=%s" % str(sf_st["store"]))
@@ -758,6 +759,39 @@ func run() -> void:
 		game.pals.erase(hw); hw.free()
 	else:
 		check("sphere works rolls", false, "factory=%s chest=%s" % [sf_st != null, chest5 != null])
+
+	# expedition post (Palworld dispatch): a posted gatherer marches off, then
+	# returns with loot — tired and hungry, just like the real thing
+	for c0 in StructureData.STRUCTURES["expedition_post"]["cost"]:
+		game.add_item(c0[0], c0[1])
+	var xp_k: Vector2i = free_xy.call("expedition_post")
+	var xp_st = game.structures.get(xp_k) if xp_k.x >= 0 else null
+	if xp_st:
+		var scout: Pal = game.gen_pal("cattiva", 10, p.pos)
+		scout.mode = "base"; scout.san = 90.0; scout.hunger = 10.0
+		game.pals.append(scout)
+		xp_st["workers"] = [scout]; scout.job_site = xp_st
+		scout.pos = Vector2(xp_k.x + 0.5, xp_k.y + 0.5) # standing on the post
+		var tod_x := game.tod
+		game.tod = 12.0 # pals march by day — night sends them to bed first
+		scout._physics_process(0.1) # arrival -> departure
+		game.tod = tod_x
+		check("expedition departs", scout.mode == "expedition" and not scout.visible
+			and float(xp_st.get("exp_end", 0.0)) > game.t,
+			"mode=%s end=%s" % [scout.mode, str(xp_st.get("exp_end"))])
+		var san0: float = scout.san
+		xp_st["exp_end"] = game.t - 1.0 # time it home
+		game.tick_production(0.1)
+		var loot_n := 0
+		for k in xp_st["store"]:
+			loot_n += int(xp_st["store"][k])
+		check("expedition returns with haul", scout.mode == "base" and scout.visible
+			and loot_n >= 2 and scout.san < san0 and float(xp_st.get("exp_cd", 0.0)) > game.t,
+			"mode=%s loot=%d san=%.0f" % [scout.mode, loot_n, scout.san])
+		xp_st["workers"] = []; scout.job_site = null
+		game.pals.erase(scout); scout.free()
+	else:
+		check("expedition departs", false, "post not placed")
 
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
@@ -1010,7 +1044,11 @@ func run() -> void:
 		game.add_item("paldium", 4); game.add_item("stone", 12); game.add_item("cloth", 2)
 		var inc_k: Vector2i = free_xy.call("incubator")
 		var inc_st = game.structures.get(inc_k)
+		var inc_pos0: Vector2 = p.pos # deposit_egg only reaches within 20 cells
+		if inc_k.x >= 0:
+			p.pos = Vector2(inc_k.x + 0.5, inc_k.y + 0.5)
 		game.deposit_egg()
+		p.pos = inc_pos0
 		check("egg deposited", inc_st != null and inc_st.has("egg_inc") and game.item_count("pal_egg") == 0)
 		var n0 := game.pals.size()
 		if inc_st:

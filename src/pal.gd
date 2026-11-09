@@ -439,7 +439,21 @@ func base_ai(dt: float) -> void:
 				site_cell = k
 				break
 		if site_cell.x >= 0:
-			step_toward(Vector2(site_cell.x + 0.5, site_cell.y + 0.5), dt)
+			var sp2 := Vector2(site_cell.x + 0.5, site_cell.y + 0.5)
+			if job_site.get("id") == "expedition_post" and pos.distance_to(sp2) < 1.6 \
+					and float(job_site.get("exp_end", 0.0)) <= 0.0 \
+					and game.t >= float(job_site.get("exp_cd", 0.0)):
+				# Palworld expedition: the posted gatherer marches off-map and
+				# comes back later with a haul keyed to its element
+				mode = "expedition"
+				visible = false
+				var glv: int = int(spec.get("work", {}).get("gathering", 0))
+				var dur: float = 600.0 * (1.0 - 0.05 * mini(glv, 4))
+				job_site["exp_end"] = game.t + maxf(dur, 240.0)
+				job_site["exp_pal"] = self
+				game.log_msg("%s sets off on an expedition" % spec.get("name", species_id))
+				return
+			step_toward(sp2, dt)
 	elif spec.get("work", {}).get("transporting", 0) > 0:
 		haul_ai(dt)
 	else:

@@ -796,6 +796,14 @@ def make_structure(sid, color, w, h):
         d.ellipse([W//2 - 8, 14, W//2 + 8, 30], fill=hxc("#e05050") + (255,))
         d.rectangle([W//2 - 8, 21, W//2 + 8, 24], fill=hxc("#ede0c8") + (255,))
         d.ellipse([W//2 - 4, 15, W//2 - 1, 18], fill=hxc("#f8f4f0") + (255,))
+    elif sid == "expedition_post":
+        # rally flag over a supply crate — Palworld's dispatch camp
+        d.rectangle([W//2 - 20, 34, W//2 - 6, 44], fill=hxc("#8a6d4d") + (255,))
+        d.rectangle([W//2 - 20, 38, W//2 - 6, 40], fill=hxc("#5e462e") + (255,))
+        d.line([(W//2 + 6, 46), (W//2 + 6, 12)], fill=hxc("#5e462e") + (255,), width=3)
+        d.polygon([(W//2 + 6, 12), (W//2 + 6, 24), (W//2 + 24, 18)],
+                  fill=hxc("#e05050") + (255,))
+        d.ellipse([W//2 + 4, 10, W//2 + 8, 14], fill=hxc("#ede0c8") + (255,))
     elif sid == "waypoint":
         # standing stone with a glowing paldium core
         d.polygon([(W//2 - 10, 48), (W//2 + 10, 48), (W//2 + 7, 16), (W//2 - 7, 16)],
@@ -832,6 +840,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "monitoring_stand": ("#d06a6a", 1, 1),
     "waypoint": ("#7fc8f8", 1, 1), "watch_tower": ("#c9a86a", 1, 1),
     "sphere_factory": ("#4dd0e1", 2, 1),
+    "expedition_post": ("#c9a15a", 2, 1),
 }
 
 # =========================================================================
