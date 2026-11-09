@@ -265,6 +265,23 @@ func spawn_wild() -> void:
 		p.home = p.pos # lair anchor — alphas tether here
 		pals.append(p)
 		wild_n += 1
+		# Palworld herds: same-species pals roam in loose packs — followers
+		# share the leader's species/level band and anchor to its home cell
+		if rng.chance(0.35) and not p.alpha:
+			for _i in rng.int_range(1, 2):
+				if wild_n >= want or pals.size() >= MAX_PALS:
+					break
+				var mx := x + rng.int_range(-2, 2)
+				var my := y + rng.int_range(-2, 2)
+				var m_in_water: bool = world.tiles[world.idx(mx, my)] == World.Tile.WATER
+				if m_in_water != in_water or (not m_in_water and world.blocked(mx, my)):
+					continue
+				var mp := preload("res://src/pal.gd").new()
+				entity_layer.add_child(mp)
+				mp.setup(self, sid, maxi(1, lv + rng.int_range(-2, 2)), Vector2(mx + 0.5, my + 0.5))
+				mp.home = p.home
+				pals.append(mp)
+				wild_n += 1
 
 func pick_wild_species(pool: Array) -> String:
 	# Palworld day/night ecology: dark pals are nocturnal — they only spawn
@@ -1773,6 +1790,7 @@ func save_game() -> void:
 					jc = "%d,%d" % [kj.x, kj.y]
 					break
 		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
+			"home": [p.home.x, p.home.y], # pack members share a leader's anchor — re-anchoring on load would dissolve every herd
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
@@ -1951,6 +1969,10 @@ func load_game() -> bool:
 		var np := preload("res://src/pal.gd").new()
 		np.setup(self, pd["sp"], clampi(int(pd.get("lv", 1)), 1, 60), Vector2(float(ppos2[0]), float(ppos2[1]))) # lv<=0 makes stat_at return negative max_hp — an instant corpse
 		np.home = np.pos # loaded pals re-anchor at their saved spot
+		var hm = pd.get("home")
+		if hm is Array and hm.size() == 2 and (hm[0] is float or hm[0] is int) \
+				and (hm[1] is float or hm[1] is int):
+			np.home = Vector2(float(hm[0]), float(hm[1])) # herd anchors ride the save
 		var m0 := str(pd.get("mode", "wild"))
 		np.mode = m0 if m0 in ["wild", "partner", "base", "box"] else "wild" # foreign strings would poison every mode check
 		np.hp = float(pd.get("hp", np.max_hp)); np.talent = clampi(int(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative

@@ -606,6 +606,28 @@ func run() -> void:
 		if dd["id"] == "pal_egg":
 			nest_eggs += 1
 	check("wild egg nests", nest_eggs >= 1, "n=%d" % nest_eggs)
+	# Palworld herds: same-species pals spawn in packs sharing one home cell.
+	# Loaded saves may predate home persistence — cull 20 wilds and re-seed
+	# the top-up so a pack is all but guaranteed regardless of world age.
+	var rs: int = game.rng.s
+	var culled := 0
+	for q in game.pals.duplicate():
+		if q.mode == "wild" and culled < 20:
+			game.pals.erase(q); q.queue_free(); culled += 1
+	game.rng.s = 77777
+	game.spawn_wild()
+	game.rng.s = rs
+	var herd := false
+	for a in game.pals:
+		if a.mode != "wild" or a.alpha:
+			continue
+		for b in game.pals:
+			if b != a and b.mode == "wild" and b.species_id == a.species_id \
+					and b.home == a.home: # pack followers anchor to the leader's cell — wanderers drift, homes don't
+				herd = true
+		if herd:
+			break
+	check("wild herds", herd)
 	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
 	var wpts := 0
 	for ks in game.structures:
