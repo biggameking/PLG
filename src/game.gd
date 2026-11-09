@@ -1298,7 +1298,11 @@ func load_game() -> bool:
 			np.boss = pd["boss"] # only a real bool assigns — GDScript has no bool() ctor and String==true throws
 		np.san = clampf(float(pd.get("san", np.san)), 0.0, 200.0)
 		np.hunger = clampf(float(pd.get("hunger", 0.0)), 0.0, 100.0)
-		np.carry = pd.get("carry") if pd.get("carry") is Dictionary else null # haul_ai reads carry["id"] — a wrong-typed value would crash there
+		var cv2 = pd.get("carry")
+		if cv2 is Dictionary and cv2.has("id") and (cv2.get("n", 0) is float or cv2.get("n", 0) is int):
+			np.carry = {"id": str(cv2["id"]), "n": maxi(int(cv2["n"]), 0)} # haul_ai reads carry["id"]/carry["n"] — a dict missing either crashes every frame
+		else:
+			np.carry = null
 		np.star = clampi(int(pd.get("star", 0)), 0, 4) # CONDENSE_COST tops at 4 — a foreign star=999 makes pow(1.15,999) overflow the stat line
 		np.xp = maxi(int(pd.get("xp", 0)), 0)
 		if pd.get("raid") is bool:
