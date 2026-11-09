@@ -142,6 +142,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     light: 4,
     desc: "Simple light source.",
   },
+  waypoint: {
+    id: "waypoint", name: "Waypoint", glyph: "◇", color: "#7fc8f8", w: 1, h: 1,
+    cost: [["stone", 20], ["paldium", 5]],
+    light: 5, hp: 400,
+    desc: "Palworld fast-travel stone: touch it to blink back to your palbox.",
+  },
   straw_bed: {
     id: "straw_bed", name: "Straw Bed", glyph: "▭", color: "#b8a468", w: 2, h: 1,
     cost: [["wood", 10], ["fiber", 8]],
@@ -220,6 +226,7 @@ export const TECH: TechNode[] = [
   { id: "glider", name: "Glider", tier: 4, cost: 2 },
   { id: "saddle", name: "Pal Saddle", tier: 3, cost: 1 },
   { id: "meat_cleaver", name: "Meat Cleaver", tier: 3, cost: 1 },
+  { id: "waypoint", name: "Waypoint", tier: 4, cost: 2 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
   { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2 },
 ];

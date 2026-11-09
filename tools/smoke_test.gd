@@ -445,6 +445,17 @@ func run() -> void:
 		if dd["id"] == "pal_egg":
 			nest_eggs += 1
 	check("wild egg nests", nest_eggs >= 1, "n=%d" % nest_eggs)
+	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
+	var wpts := 0
+	for ks in game.structures:
+		if game.structures[ks]["id"] == "waypoint":
+			wpts += 1
+	check("waypoints seeded", wpts >= 1, "n=%d" % wpts)
+	if game.palbox_pos.x >= 0:
+		p.pos = Vector2(5, 5)
+		game.use_waypoint()
+		check("waypoint blinks", p.pos.distance_to(
+			Vector2(game.palbox_pos.x + 0.5, game.palbox_pos.y + 2.5)) < 6.0)
 	# den refill: a slain boss schedules a respawn at its home ~1.5 days on
 	if legend:
 		var lhome: Vector2 = legend.home

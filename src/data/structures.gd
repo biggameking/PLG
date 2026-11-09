@@ -563,6 +563,27 @@ const STRUCTURES = {
   "light": 4,
   "desc": "Simple light source."
  },
+ "waypoint": {
+  "id": "waypoint",
+  "name": "Waypoint",
+  "glyph": "◇",
+  "color": "#7fc8f8",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "stone",
+    20
+   ],
+   [
+    "paldium",
+    5
+   ]
+  ],
+  "light": 5,
+  "hp": 400,
+  "desc": "Palworld fast-travel stone: touch it to blink back to your palbox."
+ },
  "straw_bed": {
   "id": "straw_bed",
   "name": "Straw Bed",
@@ -850,6 +871,12 @@ const TECH = [
   "name": "Meat Cleaver",
   "tier": 3,
   "cost": 1
+ },
+ {
+  "id": "waypoint",
+  "name": "Waypoint",
+  "tier": 4,
+  "cost": 2
  },
  {
   "id": "hot_spring",

@@ -534,6 +534,16 @@ func respawn_player() -> void:
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5)
 	log_msg("You wake up battered at base…")
 
+func use_waypoint() -> void:
+	# Palworld fast travel, bounded: a touched waypoint blinks you home
+	if palbox_pos.x < 0:
+		log_msg("The waypoint hums… but there's no palbox to answer")
+		return
+	player.pos = nearest_free(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
+	player.sync_screen()
+	floater(player.pos, "blink!", "#7fc8f8")
+	log_msg("The waypoint pulls you back to base")
+
 func is_night() -> bool:
 	return tod >= 21.0 or tod < 5.0
 
@@ -2070,7 +2080,31 @@ func spawn_lairs() -> void:
 	spawn_legendary_den()
 	spawn_grotto()
 	spawn_nests()
+	spawn_waypoints()
 	log_msg("%d boss lairs marked deep in the world" % placed)
+
+func spawn_waypoints() -> void:
+	# Palworld fast-travel stones: a few fixed waypoints out in the world,
+	# each a one-way blink back to your palbox once you've walked out
+	var placed := 0
+	var tries := 0
+	while placed < 4 and tries < 4000:
+		tries += 1
+		var tx := rng.int_range(6, World.WORLD_W - 7)
+		var ty := rng.int_range(6, World.WORLD_H - 7)
+		if world.zone_at(tx, ty) < 1 or world.blocked(tx, ty) \
+				or Vector2(tx + 0.5, ty + 0.5).distance_to(player.pos) < 20.0:
+			continue
+		var clash := false
+		for k in structures:
+			if Vector2(tx, ty).distance_to(Vector2(k.x, k.y)) < 6.0:
+				clash = true
+		if clash:
+			continue
+		if place_free("waypoint", tx, ty):
+			placed += 1
+	if placed > 0:
+		log_msg("%d waypoints hum out in the wilds" % placed)
 
 func spawn_nests() -> void:
 	# Wild egg nests (Palworld): stealable pal_egg drops scattered past zone 1

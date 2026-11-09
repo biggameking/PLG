@@ -777,6 +777,16 @@ def make_structure(sid, color, w, h):
         d.polygon([(W//2 + 3, 16), (W//2 + 18, 20), (W//2 + 3, 26)], fill=hxc("#d06a6a") + (255,))
         d.rectangle([W//2 - 10, 44, W//2 + 10, 50], fill=hxc("#8a6d4d") + (255,))
         d.ellipse([W//2 - 4, 30, W//2 + 4, 38], fill=hxc("#ede0c8") + (255,))
+    elif sid == "waypoint":
+        # standing stone with a glowing paldium core
+        d.polygon([(W//2 - 10, 48), (W//2 + 10, 48), (W//2 + 7, 16), (W//2 - 7, 16)],
+                  fill=hxc("#6b6f72") + (255,))
+        d.polygon([(W//2 - 4, 44), (W//2 + 4, 44), (W//2 + 3, 20), (W//2 - 3, 20)],
+                  fill=hxc("#7fc8f8") + (255,))
+        d.ellipse([W//2 - 3, 26, W//2 + 3, 34], fill=hxc("#d8f4fa") + (255,))
+        for i in range(3):
+            d.arc([W//2 - 14 + i * 4, 20 + i * 3, W//2 + 14 - i * 4, 40 - i * 2],
+                  300, 240, fill=hxc("#7fc8f8") + (180,), width=1)
     elif sid == "workbench":
         for dx in (-20, 16):
             d.rectangle([W//2 + dx, 38, W//2 + dx + 5, 52], fill=hxc("#5e462e") + (255,))
@@ -801,6 +811,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "wooden_wall": ("#8a6d4d", 1, 1), "spikes": ("#a98a5e", 1, 1),
     "hot_spring": ("#7ec8e3", 2, 2),
     "monitoring_stand": ("#d06a6a", 1, 1),
+    "waypoint": ("#7fc8f8", 1, 1),
 }
 
 # =========================================================================

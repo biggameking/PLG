@@ -219,6 +219,9 @@ func interact() -> void:
 			"straw_bed":
 				game.sleep_to_morning()
 				return
+			"waypoint":
+				game.use_waypoint()
+				return
 			"chest":
 				game.chest_ref = st
 				game.panel = "chest"
