@@ -248,6 +248,9 @@ func interact() -> void:
 				game.chest_ref = st
 				game.panel = "chest"
 				return
+			"monitoring_stand":
+				game.cycle_work_mode()
+				return
 			"pal_condenser":
 				game.condense_active()
 				return

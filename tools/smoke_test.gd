@@ -462,6 +462,27 @@ func run() -> void:
 			ivp.job_site = null
 			game.pals.erase(ivp); ivp.free()
 
+	# monitoring stand: E cycles the pace — output and SAN drain scale together
+	var ms_spot := Vector2i(-1, -1)
+	for r3 in range(3, 40):
+		var mx := int(p.pos.x) + r3
+		var my := int(p.pos.y)
+		if game.can_place("monitoring_stand", mx, my):
+			ms_spot = Vector2i(mx, my)
+			break
+	if ms_spot.x >= 0:
+		game.place_free("monitoring_stand", ms_spot.x, ms_spot.y)
+		var wm0 := game.work_mode
+		game.cycle_work_mode()
+		check("work mode cycles", game.work_mode == (wm0 + 1) % 3)
+		game.tick_production(0.016)
+		var want_san: float = float(Game.WORK_MODES[game.work_mode]["san"])
+		check("work mode san", absf(game.cur_san_mult - want_san) < 0.001,
+			"mult=%.2f want=%.2f" % [game.cur_san_mult, want_san])
+		game.net_remove_structure(game.structures[ms_spot])
+		game.tick_production(0.016) # stand's gone — the multiplier must let go
+		check("work mode needs stand", game.cur_san_mult == 1.0)
+
 	# missions: ordered guide rope pays out as live state satisfies rungs
 	if game.has_structure("palbox"):
 		var gold_m := game.item_count("gold_coin")
@@ -1219,9 +1240,10 @@ func run() -> void:
 		sj = sleepy
 		sj.job_site = game.structures.get(spa_xy) # any real site keeps the flag honest
 	sj.san = 90.0; sj.ailment = "" # high SAN dodges the spring recovery branch
+	game.tick_production(0.016) # the stand's pace publishes cur_san_mult
 	var san0: float = sj.san
 	sj.tick_needs(1.0)
-	var want := 0.3 / sj.passive_mult("san") # 0.2 base x 1.5 overseer
+	var want := 0.2 * game.cur_san_mult / sj.passive_mult("san") # 0.2 base x pace
 	check("stand drains SAN", mst_xy.x >= 0 and absf((san0 - sj.san) - want) < 0.01,
 		"drain=%.3f want=%.3f" % [san0 - sj.san, want])
 	# feed box eats berry when hungry

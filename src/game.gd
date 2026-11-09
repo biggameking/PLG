@@ -1570,7 +1570,9 @@ func gain_xp(n: int) -> void:
 
 func tick_production(dt: float) -> void:
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
-	var stand := 1.4 if has_structure("monitoring_stand") else 1.0 # overseer speed-up
+	var has_stand := has_structure("monitoring_stand")
+	var stand := (1.4 * float(WORK_MODES[work_mode]["prod"])) if has_stand else 1.0
+	cur_san_mult = float(WORK_MODES[work_mode]["san"]) if has_stand else 1.0
 	for key in structures:
 		var st = structures[key]
 		if key != cell_of(st):
@@ -2132,7 +2134,7 @@ func save_game() -> void:
 		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
-		"weather": weather, "wthr_t": weather_t,
+		"weather": weather, "wthr_t": weather_t, "wmode": work_mode,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -2232,6 +2234,7 @@ func load_game() -> bool:
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
+	work_mode = clampi(int(d.get("wmode", 1)), 0, WORK_MODES.size() - 1)
 	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
 	mission_flags.clear()
 	var mf = d.get("mflags", {})
@@ -2410,6 +2413,25 @@ func load_game() -> bool:
 			pj[0].job_site = structures[cell]
 	log_msg("Loaded.")
 	return true
+
+# monitoring stand work pace (Palworld: normal/hard/super-hard). Needs the
+# stand built to mean anything; default 1 preserves the classic x1.4 boost.
+var work_mode := 1
+var cur_san_mult := 1.0 # written each production tick; pals read it when working
+const WORK_MODES := [
+	{"name": "Normal", "prod": 1.0, "san": 1.0},
+	{"name": "Hard", "prod": 1.4, "san": 1.6},
+	{"name": "Overdrive", "prod": 1.9, "san": 2.4},
+]
+
+func cycle_work_mode() -> void:
+	if not has_structure("monitoring_stand"):
+		return
+	work_mode = (work_mode + 1) % WORK_MODES.size()
+	var wm: Dictionary = WORK_MODES[work_mode]
+	floater(player.pos, "Work: %s" % wm["name"], "#e8d44d")
+	log_msg("Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)"
+		% [wm["name"], wm["prod"], wm["san"]])
 
 var raid_warned := false # 30s heads-up — Palworld flashes the raid horn early
 func tick_raid(dt: float) -> void:
@@ -2915,6 +2937,7 @@ func regenerate(s: int) -> void:
 	dex_claimed = 0 # a fresh world hasn't proven its ecology yet
 	weather = "clear"
 	weather_t = 0.0
+	work_mode = 1
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object

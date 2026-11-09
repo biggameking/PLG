@@ -458,8 +458,8 @@ func tick_needs(dt: float) -> void:
 	if mode not in ["base", "partner"]: # wild pals have no needs (Palworld rule) —
 		return                       # starvation left them at 0hp forever otherwise
 	hunger = minf(100.0, hunger + 0.5 * passive_mult("food") * (2.0 if ailment == "ulcer" else 1.0))  # Glutton eats more; ulcers starve fast
-	san = maxf(0.0, san - (0.2 if job_site else 0.05) / passive_mult("san")
-		* (1.5 if job_site and game.has_structure("monitoring_stand") else 1.0))  # overseer works them ragged
+	san = maxf(0.0, san - ((0.2 * game.cur_san_mult) if job_site else 0.05)
+		/ passive_mult("san")) # the stand's work pace sets cur_san_mult
 	# low SAN is the sickness trigger (Palworld): sustained misery -> ailment
 	if ailment == "":
 		if san < 15.0:
