@@ -504,6 +504,8 @@ var mission_t := 0.0
 var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
 var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
+var weather := "clear"  # "clear" | "rain" — rolls every couple of game hours
+var weather_t := 0.0
 
 func total_catches() -> int:
 	var n := 0
@@ -545,6 +547,18 @@ func tick_dex(dt: float) -> void:
 		log_msg("PALDECK: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
 		floater(player.pos, "PALDECK MILESTONE", "#c08cff")
 		dex_claimed = tier
+
+func tick_weather(dt: float) -> void:
+	# two-state sky, ~half a game day per roll — rain waters the fields
+	# and puts water pals in their element
+	weather_t += dt
+	if weather_t < 120.0:
+		return
+	weather_t = 0.0
+	var next := "rain" if rng.chance(0.35) else "clear"
+	if next != weather:
+		weather = next
+		log_msg("Rain sweeps over the island" if weather == "rain" else "The sky clears")
 
 func tick_missions(dt: float) -> void:
 	if mission_idx >= MISSIONS.size():
@@ -982,6 +996,7 @@ func _process(dt: float) -> void:
 	tick_crafts(dt)
 	tick_missions(dt)
 	tick_dex(dt)
+	tick_weather(dt)
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1469,8 +1484,11 @@ func tick_production(dt: float) -> void:
 				lv = maxi(lv, int(w.spec.get("work", {}).get("watering", 0)))
 			# dark pals ARE the night shift — a little faster after dusk
 			var dusk := 1.15 if night and "dark" in w.spec.get("elements", []) else 1.0
-			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk
-		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum
+			# rain is a water pal's home turf
+			var dew := 1.15 if weather == "rain" and "water" in w.spec.get("elements", []) else 1.0
+			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew
+		var wet := 1.25 if weather == "rain" and s.get("farmField", false) else 1.0 # rain does the watering
+		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
@@ -1960,6 +1978,7 @@ func save_game() -> void:
 		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
+		"weather": weather, "wthr_t": weather_t,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -2056,6 +2075,8 @@ func load_game() -> bool:
 			if not SpeciesData.species_of(str(sid)).is_empty():
 				dex_seen[str(sid)] = true # unknown ids from other builds just don't get seen
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
+	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain"] else "clear"
+	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
 	mission_flags.clear()
 	var mf = d.get("mflags", {})
@@ -2720,6 +2741,8 @@ func regenerate(s: int) -> void:
 	mission_flags.clear()
 	dex_seen.clear()
 	dex_claimed = 0 # a fresh world hasn't proven its ecology yet
+	weather = "clear"
+	weather_t = 0.0
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object

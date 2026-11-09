@@ -337,8 +337,10 @@ func _draw() -> void:
 				draw_string(font, Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)],
 					HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
-	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00" % [game.day, int(game.tod)],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#e8f0f2"))
+	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00%s" % [game.day, int(game.tod),
+		"  ☂" if game.weather == "rain" else ""],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+		Color("#7fb8e8") if game.weather == "rain" else Color("#e8f0f2"))
 	if game.mission_idx < game.MISSIONS.size(): # Palworld guide rope
 		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
 		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],

@@ -385,6 +385,27 @@ func run() -> void:
 			game.tod = tod0
 		else:
 			check("dark night shift", false, "no mining site")
+		# weather: rain puts water pals in their element on the crew
+		if mine_st:
+			var wt0: String = game.weather
+			var wp2: Pal = game.gen_pal("pengullet", 5, game.player.pos)
+			wp2.mode = "base"; wp2.san = 90.0; wp2.ailment = ""; wp2.passives = []
+			var wsv2: Array = mine_st["workers"].duplicate()
+			var tsv2: float = mine_st["timer"]
+			game.tod = 12.0 # keep the night bonus out of the comparison
+			mine_st["workers"] = [wp2]; wp2.job_site = mine_st
+			game.weather = "clear"; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var dry_v: float = mine_st["timer"]
+			game.weather = "rain"; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var wet_v: float = mine_st["timer"]
+			check("rain crew bonus", dry_v > 0 and absf(wet_v / dry_v - 1.15) < 0.01,
+				"wet/dry=%.3f" % (wet_v / maxf(dry_v, 0.001)))
+			mine_st["workers"] = wsv2; mine_st["timer"] = tsv2
+			wp2.job_site = null
+			game.weather = wt0; game.tod = tod0
+			game.pals.erase(wp2); wp2.free()
 
 	# missions: ordered guide rope pays out as live state satisfies rungs
 	if game.has_structure("palbox"):
