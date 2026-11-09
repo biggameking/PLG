@@ -85,6 +85,7 @@ export const ITEMS: Record<string, ItemDef> = {
 
   // traversal gear + skill fruits
   glider: { id: "glider", name: "Glider", glyph: "▲", color: "#a8dff0", kind: "gear", stack: 1, tech: "glider", price: 120, desc: "Ride the wind: descend any cliff safely while carried." },
+  saddle: { id: "saddle", name: "Pal Saddle", glyph: "◠", color: "#8a6d4d", kind: "gear", stack: 1, tech: "saddle", price: 90, desc: "Palworld saddle: required in the pack to ride any mount, land or air." },
   skill_fruit_neutral: { id: "skill_fruit_neutral", name: "Neutral Skill Fruit", glyph: "●", color: "#c8d3d5", kind: "fruit", usable: true, stack: 10, elem: "neutral", price: 60, desc: "Teaches the active pal a neutral move." },
   skill_fruit_fire: { id: "skill_fruit_fire", name: "Fire Skill Fruit", glyph: "●", color: "#e8963c", kind: "fruit", usable: true, stack: 10, elem: "fire", price: 60, desc: "Teaches the active pal a fire move." },
   skill_fruit_water: { id: "skill_fruit_water", name: "Water Skill Fruit", glyph: "●", color: "#4d9de0", kind: "fruit", usable: true, stack: 10, elem: "water", price: 60, desc: "Teaches the active pal a water move." },
@@ -130,4 +131,5 @@ export const RECIPES: Recipe[] = [
   { id: "cake", out: ["cake", 1], cost: [["flour", 2], ["milk", 2], ["egg", 1], ["red_berries", 3]], station: "campfire", work: 150 },
   { id: "gunpowder", out: ["gunpowder", 2], cost: [["venom_gland", 1], ["stone", 2]], station: "workbench", work: 40 },
   { id: "glider", out: ["glider", 1], cost: [["cloth", 4], ["fiber", 10], ["leather", 2]], station: "workbench", work: 120 },
+  { id: "saddle", out: ["saddle", 1], cost: [["leather", 3], ["fiber", 8], ["wood", 4]], station: "workbench", work: 100 },
 ];

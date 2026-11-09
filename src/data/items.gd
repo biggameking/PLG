@@ -576,6 +576,17 @@ const ITEMS = {
   "price": 120,
   "desc": "Ride the wind: descend any cliff safely while carried."
  },
+ "saddle": {
+  "id": "saddle",
+  "name": "Pal Saddle",
+  "glyph": "◠",
+  "color": "#8a6d4d",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "saddle",
+  "price": 90,
+  "desc": "Palworld saddle: required in the pack to ride any mount, land or air."
+ },
  "skill_fruit_neutral": {
   "id": "skill_fruit_neutral", "name": "Neutral Skill Fruit", "glyph": "●",
   "color": "#c8d3d5", "kind": "fruit", "usable": true, "stack": 10,
@@ -1118,6 +1129,14 @@ const RECIPES = [
   "cost": [["cloth", 4], ["fiber", 10], ["leather", 2]],
   "station": "workbench",
   "work": 120
+ },
+ {
+  "id": "saddle",
+  "tech": "saddle",
+  "out": ["saddle", 1],
+  "cost": [["leather", 3], ["fiber", 8], ["wood", 4]],
+  "station": "workbench",
+  "work": 100
  },
  {
   "id": "gunpowder",

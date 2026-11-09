@@ -146,8 +146,9 @@ func run() -> void:
 		var bp: Pal = game.box[0]
 		game.box_to_party(bp)
 		check("box->party", bp.uid in game.party and bp.mode == "partner")
-		# mount only if mountable
+		# mount only if mountable — and saddled (Palworld pal gear)
 		if SpeciesData.mountable(bp.species_id):
+			game.add_item("saddle", 1)
 			bp.pos = p.pos + Vector2(0.5, 0)
 			p.try_mount()
 			check("mount", p.mount == bp)
@@ -556,9 +557,13 @@ func run() -> void:
 	p.try_mount()
 	var m_ok: bool = (p.mount == snak) == SpeciesData.mountable("kelpsea")
 	check("mount gate", m_ok)
-	# Palworld flyers: a bird-body party pal takes the saddle and crosses water
+	# Palworld: mounts need pal gear — no saddle, no ride
+	game.items.erase("saddle")
 	var bird: Pal = game.gen_pal("chikipi", 4, p.pos)
 	game.pals.append(bird); game.party.append(bird.uid); bird.mode = "partner"
+	p.try_mount()
+	check("mount needs saddle", p.mount == null)
+	game.add_item("saddle", 1)
 	p.try_mount()
 	var wcell := Vector2(-1, -1)
 	for i2 in World.WORLD_W * World.WORLD_H:

@@ -840,6 +840,12 @@ const TECH = [
   "cost": 2
  },
  {
+  "id": "saddle",
+  "name": "Pal Saddle",
+  "tier": 3,
+  "cost": 1
+ },
+ {
   "id": "hot_spring",
   "name": "Hot Spring",
   "tier": 5,

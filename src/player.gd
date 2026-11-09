@@ -194,8 +194,8 @@ func try_mount() -> void:
 	var best: Pal = null
 	var bd := 1.4
 	for p in game.pals:
-		# Palworld: land mounts AND rideable flyers (bird body) take a saddle
-		if p.uid in game.party and p.mode == "partner" \
+		# Palworld: land mounts AND rideable flyers (bird body) — but you need the gear
+		if p.uid in game.party and p.mode == "partner" and game.item_count("saddle") > 0 \
 				and (SpeciesData.mountable(p.species_id) or SpeciesData.body_of(p.species_id) == "bird"):
 			var d := pos.distance_to(p.pos)
 			if d < bd:
