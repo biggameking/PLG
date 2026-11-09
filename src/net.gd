@@ -146,6 +146,16 @@ func pal_sync(arr: Array) -> void:
 			p.queue_free()
 
 @rpc("authority", "call_remote", "unreliable")
+func env_sync(tod: float, day: int, weather: String) -> void:
+	if is_host:
+		return
+	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
+	game.day = int(day)
+	var w := str(weather)
+	if w in ["clear", "rain"]:
+		game.weather = w
+
+@rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
 	if ghosts.has(id):
 		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
@@ -317,6 +327,7 @@ func _process(dt: float) -> void:
 			rpc("pal_sync", pal_state_pack())
 			rpc("drop_sync", drop_state_pack())
 			rpc("struct_sync", struct_state_pack())
+			rpc("env_sync", game.tod, game.day, game.weather) # clock + sky are host truth
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
 				rpc("decor_delta", dd)

@@ -1070,10 +1070,11 @@ func queue_redraw_decor() -> void:
 
 func _process(dt: float) -> void:
 	t += dt
-	tod += dt / DAY_LEN * 24.0
-	if tod >= 24.0:
-		tod -= 24.0
-		day += 1
+	if net == null or not net.is_client(): # clients take tod from env_sync — the host's clock owns the sky
+		tod += dt / DAY_LEN * 24.0
+		if tod >= 24.0:
+			tod -= 24.0
+			day += 1
 
 	# spheres
 	for sp in spheres_flying.duplicate():
