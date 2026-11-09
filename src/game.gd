@@ -836,6 +836,7 @@ func _process(dt: float) -> void:
 	tick_merchant(dt)
 	tick_boss_respawns()
 	tick_gauntlet()
+	tick_repairs(dt)
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1039,6 +1040,27 @@ func demolish_at(at: Vector2) -> bool:
 # raiders chew on the base itself (Palworld): structures carry hp and drop
 # their contents when razed. The palbox is hardened — losing the anchor
 # would orphan every base pal's job and the respawn point.
+func tick_repairs(dt: float) -> void:
+	# Palworld: free hands patch the base up — idle handiwork-suitable pals
+	# slowly mend damaged structures (assigned pals are busy elsewhere)
+	var fixers := 0.0
+	for q in pals:
+		if q.mode == "base" and q.hp > 0 and q.san >= 15.0 and q.job_site == null \
+				and q.spec.get("work", {}).get("handiwork", 0) > 0:
+			fixers += 1.0
+	if fixers <= 0.0:
+		return
+	var seen := []
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st in seen:
+			continue # footprint cells share one st dict
+		seen.append(st)
+		var sd: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
+		var mx: float = float(sd.get("hp", 4000 if sd.get("anchor", false) else 200))
+		if st.get("hp", mx) < mx:
+			st["hp"] = minf(mx, st.get("hp", mx) + 4.0 * fixers * dt)
+
 func hit_structure(cell: Vector2i, dmg: int) -> void:
 	var st = structures.get(cell)
 	if st == null:

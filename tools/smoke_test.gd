@@ -1405,6 +1405,18 @@ func run() -> void:
 	var wall_st = game.structures.get(wall_k)
 	check("wall has hp", wall_st != null and wall_st.get("hp", 0) == 300)
 	if wall_st:
+		# idle handy base pals patch battered structures (Palworld repair)
+		var wall_hp0: float = wall_st["hp"]
+		game.hit_structure(wall_k, 40)
+		var fixp := game.gen_pal("lamball", 5, p.pos) # lamball: handiwork 1
+		fixp.mode = "base"; fixp.job_site = null; game.pals.append(fixp)
+		var dented: float = wall_st["hp"]
+		game.tick_repairs(1.0)
+		check("pals repair walls", wall_st["hp"] > dented and wall_st["hp"] <= wall_hp0,
+			"%.0f->%.0f" % [dented, wall_st["hp"]])
+		game.pals.erase(fixp)
+		if fixp.get_parent(): fixp.get_parent().remove_child(fixp)
+		fixp.free()
 		game.hit_structure(wall_k, 999)
 		check("structure razes", not game.structures.has(wall_k), "still standing")
 	# palbox anchor must survive razing attempts
