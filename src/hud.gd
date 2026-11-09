@@ -987,8 +987,11 @@ func draw_dex(r: Vector2) -> void:
 			var dnames := []
 			for dr in sp.get("drops", []):
 				dnames.append(str(ItemData.ITEMS.get(dr[0], {}).get("name", dr[0])).left(9))
-			draw_string(font, Vector2(rr.position.x + 445, y), ", ".join(dnames).left(24),
+			draw_string(font, Vector2(rr.position.x + 445, y), ", ".join(dnames).left(13),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.7, 0.65, 0.5))
+			# and which posts it can staff — the base-planning half of the entry
+			draw_string(font, Vector2(rr.position.x + 530, y), game.work_str(sp).left(10),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.75, 0.9))
 		elif game.dex_seen.has(sid):
 			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s  ·spotted·" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.65, 0.65, 0.72))
