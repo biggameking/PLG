@@ -1333,6 +1333,9 @@ func load_game() -> bool:
 			continue # structure type removed in a newer build — don't brick the load
 		var s: Dictionary = StructureData.STRUCTURES[sid]
 		var tx := int(parts[0]); var ty := int(parts[1])
+		var ww: int = s.get("w", 2); var hh: int = s.get("h", 2)
+		if tx < 0 or ty < 0 or tx + ww > World.WORLD_W or ty + hh > World.WORLD_H:
+			continue # OOB footprint would register junk cells in world.structures and park a sprite off-map
 		if structures.has(Vector2i(tx, ty)):
 			continue  # footprint cell of an already-rebuilt structure
 		var spr := Sprite2D.new()
