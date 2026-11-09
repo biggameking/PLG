@@ -2159,6 +2159,18 @@ func assign_worker() -> void:
 	else:
 		log_msg("No workplace nearby")
 
+func pet_pal(p: Pal) -> bool:
+	# Palworld's pet: a little affection tops up SAN on a per-pal cooldown
+	if p == null or p.hp <= 0 or p.mode not in ["partner", "base"]:
+		return false
+	if p.petted_t > t:
+		return false
+	p.petted_t = t + 60.0
+	p.san = minf(100.0, p.san + 8.0)
+	floater(p.pos, "♥", "#ff8ab0")
+	log_msg("You pet %s" % p.spec["name"])
+	return true
+
 func find_work_site(p: Pal, reach: float) -> Variant:
 	# nearest suitable post within reach — shared suitability rules for the
 	# manual assign tap and the idle auto-assign sweep (farm fields take

@@ -472,6 +472,16 @@ func run() -> void:
 		game.pals.erase(tpw)
 		if tpw.get_parent(): tpw.get_parent().remove_child(tpw)
 		tpw.free()
+		# Palworld's pet: a little SAN per pal on a 60s cooldown
+		tpw = game.gen_pal("lamball", 3, p.pos)
+		tpw.mode = "base"; tpw.san = 50.0; game.pals.append(tpw)
+		check("pet raises san", game.pet_pal(tpw) and tpw.san == 58.0, "san=%.0f" % tpw.san)
+		check("pet cooldown", not game.pet_pal(tpw))
+		tpw.petted_t = -60.0; tpw.san = 98.0
+		check("pet caps san", game.pet_pal(tpw) and tpw.san == 100.0)
+		game.pals.erase(tpw)
+		if tpw.get_parent(): tpw.get_parent().remove_child(tpw)
+		tpw.free()
 		var w0 := 0
 		for kk in game.structures:
 			if not game.structures[kk]["workers"].is_empty():

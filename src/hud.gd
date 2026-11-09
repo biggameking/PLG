@@ -241,6 +241,18 @@ func interact() -> void:
 	if game.merchant != null and game.player.pos.distance_to(game.merchant.pos) < 2.4:
 		game.panel = "shop"
 		return
+	# Palworld's pet: a friendly pal in arm's reach takes the E tap first —
+	# deliberate affection shouldn't lose to a structure probe
+	var pet: Pal = null
+	var pd2 := 1.4
+	for q in game.pals:
+		if q.mode not in ["partner", "base"] or q.hp <= 0 or q.petted_t > game.t:
+			continue
+		var dd: float = game.player.pos.distance_to(q.pos)
+		if dd < pd2:
+			pd2 = dd; pet = q
+	if pet != null and game.pet_pal(pet):
+		return
 	var f: Vector2 = game.player.facing
 	var probe := Vector2(signf(f.x), 0) if absf(f.x) >= absf(f.y) else Vector2(0, signf(f.y))
 	var st = game.structure_at(game.player.pos + probe * 0.8)

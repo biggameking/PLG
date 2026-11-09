@@ -39,6 +39,7 @@ var stun_t := 0.0
 var revive_t := 0.0         # >0 while knocked out in the box
 var ailment := ""           # "" | depressed | sprain | ulcer | weakened (Palworld SAN sickness)
 var stance := "auto"        # pal command: auto defends / aggressive hunts / passive holds
+var petted_t := -60.0       # last pet timestamp — affection runs on a per-pal cooldown
 var low_san_t := 0.0        # sustained seconds under SAN 15 — onset timer
 var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
