@@ -319,6 +319,8 @@ func wild_ai(dt: float) -> void:
 	step_toward(target, dt)
 	# aggro check — apex pounces from further out, ordinary hostiles at arm's length
 	var trigger := 5.0 if hostile() == 2 else 3.5
+	if game.is_night() and "dark" in spec.get("elements", []):
+		trigger += 2.0 # Palworld nocturnals: dark pals hunt wider after dusk
 	if hostile() >= 1 and dist < trigger and not has_status("sleep"):
 		aggro = 0
 

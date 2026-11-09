@@ -618,6 +618,22 @@ func run() -> void:
 			game.tod = tod0
 		else:
 			check("dark night shift", false, "no mining site")
+		# Palworld nocturnals: dark pals aggro wider after dusk
+		var lup: Pal = game.gen_pal("loupmoon", 5, p.pos + Vector2(4.5, 0))
+		lup.mode = "wild"; lup.aggro = -1
+		game.pals.append(lup)
+		game.tod = 23.0
+		lup.wild_ai(0.05)
+		var n_ag: int = lup.aggro
+		lup.aggro = -1
+		game.tod = 12.0
+		lup.wild_ai(0.05)
+		check("dark pal hunts wider at night", n_ag == 0 and lup.aggro < 0,
+			"night=%d day=%d" % [n_ag, lup.aggro])
+		game.tod = tod0
+		game.pals.erase(lup)
+		if lup.get_parent(): lup.get_parent().remove_child(lup)
+		lup.free()
 		# weather: rain puts water pals in their element on the crew
 		if mine_st:
 			var wt0: String = game.weather
