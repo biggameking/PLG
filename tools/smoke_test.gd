@@ -2217,6 +2217,16 @@ func run() -> void:
 			if tfoe.get_parent(): tfoe.get_parent().remove_child(tfoe)
 			tfoe.free()
 
+	# Palworld boss rule: a cornered alpha enrages — harder hits, faster feet
+	var rg: Pal = game.gen_pal("chikipi", 10, p.pos)
+	rg.alpha = true; rg.apply_bonuses()
+	rg.hp = rg.max_hp * 0.25
+	rg.hit(1, 1.0, false)
+	check("alpha enrages", rg.rage_mult() > 1.0 and rg.atk_mult() > 1.0 and rg._enraged,
+		"rage=%.1f" % rg.rage_mult())
+	game.pals.erase(rg)
+	if rg.get_parent(): rg.get_parent().remove_child(rg)
+	rg.free()
 	# glider: carried item unlocks one-way descent, not climbing
 	game.add_item("glider", 1)
 	check("glider item held", game.item_count("glider") == 1)

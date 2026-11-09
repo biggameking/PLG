@@ -99,6 +99,9 @@ func any_status() -> bool:
 func hit(dmg: int, mult: float, by_player: bool) -> void:
 	hp -= dmg
 	hit_flash = 0.4
+	if hp > 0 and rage_mult() > 1.0 and not _enraged:
+		_enraged = true
+		game.floater(pos, "ENRAGED!", "#ff5544")
 	game.floater(pos, str(dmg) + ("!" if mult >= 2 else ("·" if mult <= 0.6 else "")),
 		"#e8d44d" if mult >= 2 else "#e8f0f2")
 	if hp <= 0:
@@ -139,7 +142,13 @@ func work_mult() -> float:
 		"sprain": return 0.6
 		_: return 1.0
 func atk_mult() -> float:
-	return 0.7 if ailment == "weakened" else 1.0
+	return (0.7 if ailment == "weakened" else 1.0) * rage_mult()
+
+# Palworld boss rule: cornered giants fight meaner — under 30% hp they hit
+# and run 40% harder
+func rage_mult() -> float:
+	return 1.4 if (boss or alpha) and hp > 0 and hp < max_hp * 0.3 else 1.0
+var _enraged := false
 func def_mult() -> float:
 	return 0.7 if ailment == "weakened" else 1.0
 
@@ -166,7 +175,7 @@ func _physics_process(dt: float) -> void:
 	if has_status("sleep") or stun_t > 0:
 		sync_screen()
 		return
-	speed = base_move_speed() * speed_bonus * status_speed_mult() # passive speed must survive the per-frame recompute
+	speed = base_move_speed() * speed_bonus * status_speed_mult() * rage_mult() # passive speed must survive the per-frame recompute
 	atk_cd -= dt
 	# far wild pals tick their AI at ~8Hz (accumulated dt keeps speeds honest)
 	var far := mode == "wild" and pos.distance_squared_to(game.player.pos) > 784.0
@@ -222,7 +231,7 @@ func wild_ai(dt: float) -> void:
 					bd = dd; bt = bp
 			if bt != null and bd <= 1.1 and atk_cd <= 0:
 				atk_cd = 1.1
-				bt.hit(maxi(2, int(spec.get("atk", 40) * 0.4)), 1.0, false)
+				bt.hit(maxi(2, int(spec.get("atk", 40) * 0.4 * rage_mult())), 1.0, false)
 				return
 			elif bt != null:
 				if not cast_skills(bt, dt):
@@ -235,7 +244,7 @@ func wild_ai(dt: float) -> void:
 					step_toward(pl.pos, dt)
 				elif atk_cd <= 0:
 					atk_cd = 1.1
-					game.hurt_player(spec.get("atk", 50), self)
+					game.hurt_player(spec.get("atk", 50) * rage_mult(), self)
 			elif dist > spec.get("reach", 4.0):
 				step_toward(pl.pos, dt)
 			if dist > 14:
@@ -256,7 +265,7 @@ func wild_ai(dt: float) -> void:
 					step_toward(tp.pos, dt)
 				elif atk_cd <= 0:
 					atk_cd = 1.1
-					tp.hit(maxi(2, int(spec.get("atk", 40) * 0.35)), 1.0, false)
+					tp.hit(maxi(2, int(spec.get("atk", 40) * 0.35 * rage_mult())), 1.0, false)
 			elif pd > spec.get("reach", 4.0):
 				step_toward(tp.pos, dt)
 			if pd > 16:
