@@ -381,6 +381,22 @@ func run() -> void:
 			legend = q
 	check("legendary den", legend != null and legend.species_id in Game.LEGENDARY_DEN,
 		"boss=%s" % (legend.species_id if legend else "none"))
+	# sealed grotto: rock ring intact, warden inside, chest stocked
+	if game.grotto_pos.x >= 0:
+		var gp := game.grotto_pos
+		var ring_rock := game.world.decor[game.world.idx(gp.x + 3, gp.y)] == World.Decor.ROCK
+		var warden := false; var loot := false
+		for q in game.pals:
+			if q.boss and q.pos.distance_to(Vector2(gp.x + 0.5, gp.y + 0.5)) < 4.0:
+				warden = true
+		for ks in game.structures:
+			var s2: Dictionary = game.structures[ks]
+			if s2["id"] == "chest" and Vector2(ks.x, ks.y).distance_to(Vector2(gp.x, gp.y)) < 4.0 \
+					and not s2["store"].is_empty():
+				loot = true
+		check("sealed grotto", ring_rock and warden and loot, "rock=%s boss=%s loot=%s" % [ring_rock, warden, loot])
+	else:
+		check("sealed grotto", false, "no grotto_pos")
 	# boss sphere-immune
 	for q in game.pals:
 		if q.boss:

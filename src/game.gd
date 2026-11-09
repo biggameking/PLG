@@ -1942,7 +1942,55 @@ func spawn_lairs() -> void:
 			pals.append(gp)
 		placed += 1
 	spawn_legendary_den()
+	spawn_grotto()
 	log_msg("%d boss lairs marked deep in the world" % placed)
+
+var grotto_pos := Vector2i(-1, -1) # sealed dungeon marker (set at worldgen)
+
+func spawn_grotto() -> void:
+	# Palworld dungeon flavour: a rock-sealed chamber in deep zone 3 — the only
+	# way in is to break the wall (or fly a bird over it). Boss + loot inside.
+	var tries := 0
+	while tries < 6000:
+		tries += 1
+		var tx := rng.int_range(8, World.WORLD_W - 10)
+		var ty := rng.int_range(8, World.WORLD_H - 10)
+		if world.zone_at(tx, ty) < 3:
+			continue
+		var ok := true
+		for dy in range(-3, 4):
+			for dx in range(-3, 4):
+				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+					ok = false
+		if not ok:
+			continue
+		# seal the chamber: a rock ring the player has to crack open
+		for dy in range(-3, 4):
+			for dx in range(-3, 4):
+				if maxi(absi(dx), absi(dy)) == 3:
+					var i2 := world.idx(tx + dx, ty + dy)
+					world.decor[i2] = World.Decor.ROCK
+					world.hp[i2] = 60
+		# the warden: a zone-3 alpha boss, sphere-immune like all dungeon bosses
+		var pool := SpeciesGen.zone_pool(3)
+		if pool.is_empty():
+			return
+		var bp := preload("res://src/pal.gd").new()
+		bp.alpha = true
+		bp.boss = true
+		entity_layer.add_child(bp)
+		bp.setup(self, pool[rng.int_range(0, pool.size() - 1)], 40, Vector2(tx + 0.5, ty + 0.5))
+		bp.home = bp.pos # anchored to its chamber
+		pals.append(bp)
+		# treasure chest pre-stocked like a dungeon reward
+		if place_free("chest", tx + 1, ty + 1):
+			var st: Dictionary = structures[Vector2i(tx + 1, ty + 1)]
+			st["store"] = {"gold_coin": rng.int_range(20, 40), "mega_sphere": 3,
+				"pal_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
+				"electric", "ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
+		grotto_pos = Vector2i(tx, ty)
+		log_msg("A sealed grotto echoes in the deep wilds")
+		return
 
 # World bosses that only appear as den guardians — Palworld's legendary tier.
 const LEGENDARY_DEN := ["jetragon", "frostallion", "paladius", "necromus",
