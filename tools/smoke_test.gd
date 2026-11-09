@@ -228,11 +228,13 @@ func run() -> void:
 		# pal orders (Palworld command): aggressive hunts on sight, passive holds
 		var st_pal := game.party_pal()
 		if st_pal != null:
-			var prey_at := st_pal.pos + Vector2(2, 0)
-			for off in [Vector2(2, 0), Vector2(-2, 0), Vector2(0, 2), Vector2(0, -2),
-					Vector2(2, 2), Vector2(-2, -2)]: # prey must land on walkable ground — a blocked cell makes melee unreachable forever
+			var prey_at := st_pal.pos
+			for off in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1),
+					Vector2(2, 0), Vector2(-2, 0), Vector2(0, 2), Vector2(0, -2)]:
+				# prey must be reachable — the 4-arg blocked check respects cliff
+				# elevation, so a melee-only species can actually close in
 				var cand: Vector2 = st_pal.pos + off
-				if not game.world.blocked(int(cand.x), int(cand.y)):
+				if not game.world.blocked(int(cand.x), int(cand.y), st_pal.pos.x, st_pal.pos.y):
 					prey_at = cand
 					break
 			var prey: Pal = game.gen_pal("lamball", 2, prey_at)
@@ -2358,9 +2360,9 @@ func run() -> void:
 	game.tod = 23.0
 	var sleeper: Pal = null; var nightowl: Pal = null
 	for q in game.pals:
-		if q.mode == "wild" and "dark" not in q.spec.get("elements", []) and q.hostile() < 2:
-			sleeper = q
-		if q.mode == "wild" and "dark" in q.spec.get("elements", []):
+		if q.mode == "wild" and not q.raid and "dark" not in q.spec.get("elements", []) and q.hostile() < 2:
+			sleeper = q # raiders chew structures instead of sleeping — they'd never nap
+		if q.mode == "wild" and not q.raid and "dark" in q.spec.get("elements", []):
 			nightowl = q
 	if sleeper == null:
 		sleeper = game.gen_pal("lamball", 3, game.player.pos + Vector2(6, 0))
@@ -2374,7 +2376,8 @@ func run() -> void:
 		nightowl.wild_ai(0.1)
 		check("dark pal stays up", not nightowl.has_status("sleep"), "")
 	sleeper.hit(5, 1.0, true)
-	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro >= 0, "aggro=%d" % sleeper.aggro)
+	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro <= 0,
+		"aggro=%d" % sleeper.aggro) # docile pals may flee (-1) — still a valid wake reaction
 	# nocturnal ecology: dark pals own the night spawn table, sit out the day
 	check("night spawns dark", game.pick_wild_species(["depresso", "lamball"]) == "depresso")
 	# Palworld: the night shift also spawns meaner — same seed, +2 levels
