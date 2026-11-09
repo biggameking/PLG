@@ -426,9 +426,13 @@ func draw_tech(r: Vector2) -> void:
 		var t: Dictionary = StructureData.TECH[ti]
 		var k: String = t["id"]
 		var has: bool = k in game.unlocked
-		var afford: bool = game.tech_points >= t.get("cost", 0)
+		var afford: bool = game.tech_points >= t.get("cost", 0) \
+			and game.item_count("ancient_part") >= t.get("parts", 0)
 		var col := Color("#5a6068") if has else (Color.WHITE if afford else Color("#7a6a55"))
-		var label := "T%d %s [%d]%s" % [t.get("tier", 1), t.get("name", k).left(14), t.get("cost", 0), " ✓" if has else ""]
+		if t.get("parts", 0) > 0 and not has:
+			col = Color("#9c8bd4") if afford else Color("#5a4a80") # ancient tech is purple
+		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), t.get("name", k).left(14), t.get("cost", 0),
+			"+%d❖" % t["parts"] if t.get("parts", 0) > 0 else "", " ✓" if has else ""]
 		var cx0: float = rr.position.x + 12 + (ti / 18) * colw
 		var cy0: float = rr.position.y + 44 + (ti % 18) * 17
 		if cy0 > rr.end.y - 10:
