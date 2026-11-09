@@ -1859,8 +1859,17 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	else:
 		var tp: Pal = target_ent
 		var mult := Combat.effectiveness(elem, tp.elem())
-		if tp.has_status("soak") and elem == "electric":
-			mult *= 1.5
+		if tp.has_status("soak"):
+			# Palworld element combos: a wet target takes the hit differently —
+			# electricity arcs through, ice locks solid, fire just boils off
+			if elem == "electric":
+				mult *= 1.5
+			elif elem == "ice":
+				tp.statuses.erase("soak")
+				tp.add_status("freeze", 2.5)
+				floater(tp.pos, "FROZEN SOLID", "#7fc8f8")
+			elif elem == "fire":
+				tp.statuses.erase("soak")
 		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus * caster.atk_mult(),
 			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus * tp.def_mult(), mult, rng)
 		tp.hit(d, mult, caster.mode != "wild")

@@ -468,6 +468,19 @@ func run() -> void:
 	var skl: Dictionary = SkillData.SKILLS["hydroJet"]
 	game.cast_skill(sp_pal, p, skl)
 	check("cast_skill projectile", game.projectiles.size() == prj0 + 1)
+	# element combos: a soaked pal freezes under ice, boils dry under fire
+	var cmb: Pal = game.gen_pal("chikipi", 5, p.pos)
+	cmb.mode = "wild"; cmb.hp = 99999; cmb.max_hp = 99999; game.pals.append(cmb)
+	cmb.add_status("soak", 5.0)
+	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["iceMissile"])
+	check("wet+ice freezes", cmb.has_status("freeze") and not cmb.has_status("soak"))
+	cmb.statuses.clear(); cmb.hp = 99999
+	cmb.add_status("soak", 5.0)
+	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["flameBurst"])
+	check("wet+fire boils", not cmb.has_status("soak") and not cmb.has_status("freeze"))
+	game.pals.erase(cmb)
+	if cmb.get_parent(): cmb.get_parent().remove_child(cmb)
+	cmb.free()
 
 	# armor + damage reduction
 	var hp_p := p.hp
