@@ -505,6 +505,56 @@ const ITEMS = {
   },
   "desc": "Slow but heavy shot."
  },
+ "schematic_bow": {
+  "id": "schematic_bow",
+  "name": "Bow Schematic",
+  "glyph": "§",
+  "color": "#6ab8f0",
+  "kind": "material",
+  "price": 150,
+  "desc": "Blueprint for a reworked bow — keep it in the bag to craft the Mk. II."
+ },
+ "schematic_musket": {
+  "id": "schematic_musket",
+  "name": "Musket Schematic",
+  "glyph": "§",
+  "color": "#6ab8f0",
+  "kind": "material",
+  "price": 300,
+  "desc": "Blueprint for a reworked musket — keep it in the bag to craft the Mk. II."
+ },
+ "bow_mk2": {
+  "id": "bow_mk2",
+  "name": "Bow Mk. II",
+  "glyph": ")",
+  "color": "#6ab8f0",
+  "kind": "weapon",
+  "stack": 1,
+  "weapon": {
+   "dmg": 32,
+   "range": 11,
+   "cd": 0.55,
+   "ammo": "arrow",
+   "dur": 110
+  },
+  "desc": "Schematic-built: lighter draw, heavier string."
+ },
+ "musket_mk2": {
+  "id": "musket_mk2",
+  "name": "Musket Mk. II",
+  "glyph": "┐",
+  "color": "#6ab8f0",
+  "kind": "weapon",
+  "stack": 1,
+  "weapon": {
+   "dmg": 85,
+   "range": 13,
+   "cd": 2.0,
+   "ammo": "musket_ball",
+   "dur": 90
+  },
+  "desc": "Schematic-built: rifled barrel, faster lock."
+ },
  "sphere_launcher": {
   "id": "sphere_launcher",
   "tech": "sphere_launcher",
@@ -1430,6 +1480,22 @@ const RECIPES = [
   "cost": [["ingot", 8], ["wood", 6], ["paldium", 4]],
   "station": "workbench",
   "work": 180
+ },
+ {
+  "id": "bow_mk2",
+  "out": ["bow_mk2", 1],
+  "req": "schematic_bow",
+  "cost": [["bow", 1], ["fiber", 12], ["nails", 6], ["leather", 6]],
+  "station": "workbench",
+  "work": 200
+ },
+ {
+  "id": "musket_mk2",
+  "out": ["musket_mk2", 1],
+  "req": "schematic_musket",
+  "cost": [["musket", 1], ["ingot", 8], ["polymer", 4], ["nails", 6]],
+  "station": "workbench",
+  "work": 400
  },
  {
   "id": "saddle",

@@ -459,6 +459,14 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			add_item("ancient_part", rng.int_range(1, 2)) # ancient tech currency
 			if rng.chance(0.15):
 				spawn_drop("huge_pal_egg", 1, p.pos) # Palworld's huge eggs hide on alphas
+			if rng.chance(0.08): # Palworld schematics drop off elites
+				var sch: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
+				add_item(sch, 1)
+				log_msg("Found a %s!" % ItemData.ITEMS[sch]["name"])
+		if p.boss and rng.chance(0.3): # bosses teach the good blueprints
+			var sch2: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
+			add_item(sch2, 1)
+			log_msg("Found a %s!" % ItemData.ITEMS[sch2]["name"])
 		if p.boss:
 			add_item("ancient_part", rng.int_range(2, 4))
 		gain_xp(p.level * 4)
@@ -1652,6 +1660,10 @@ func craft(recipe_id: String) -> void:
 			return
 	if r.get("tech", "") != "" and r["tech"] not in unlocked:
 		log_msg("Unlock %s in the tech tree first" % r["tech"])
+		return
+	var req: String = r.get("req", "")
+	if req != "" and item_count(req) < 1:
+		log_msg("Need %s in the bag" % ItemData.ITEMS.get(req, {}).get("name", req))
 		return
 	for c in r.get("cost", []):
 		if item_count(c[0]) < c[1]:

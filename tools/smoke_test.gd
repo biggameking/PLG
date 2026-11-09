@@ -2005,6 +2005,57 @@ func run() -> void:
 	game.craft_station = cs0
 	p.equipment["armor"] = ""; p.armor_wear = -1.0
 	p.equipment["weapon"] = ""; p.weapon_wear = -1.0 # hand the test weapon back to the void
+
+	# schematics (Palworld blueprints): the req gate wants the paper in your
+	# bag, the bench rebuilds the gun, the schematic survives
+	var sc_wb := Vector2i(-1, -1)
+	for swk in game.structures:
+		if game.structures[swk]["id"] == "workbench":
+			sc_wb = swk
+			break
+	if sc_wb.x < 0:
+		sc_wb = free_xy.call("workbench")
+	var sc_pos: Vector2 = p.pos
+	if game.structures.has(sc_wb):
+		p.pos = Vector2(sc_wb.x + 1.5, sc_wb.y + 0.5)
+		for cm in [["bow", 1], ["fiber", 12], ["nails", 6], ["leather", 6]]:
+			game.add_item(cm[0], cm[1])
+		var mk0: int = game.item_count("bow_mk2")
+		game.craft("bow_mk2")
+		check("schematic gates craft", game.item_count("bow_mk2") == mk0,
+			"crafted without paper")
+		game.add_item("schematic_bow", 1)
+		var sch0: int = game.items.get("schematic_bow", 0)
+		game.craft("bow_mk2")
+		check("mk2 forged", game.item_count("bow_mk2") == mk0 + 1
+			and game.items.get("schematic_bow", 0) == sch0
+			and int(ItemData.ITEMS["bow_mk2"]["weapon"]["dmg"]) > int(ItemData.ITEMS["bow"]["weapon"]["dmg"]),
+			"mk2=%d sch=%d" % [game.item_count("bow_mk2"), game.items.get("schematic_bow", 0)])
+		game.items.erase("schematic_bow"); game.items.erase("bow_mk2")
+		p.pos = sc_pos
+	else:
+		check("mk2 forged", false, "no workbench")
+		check("schematic gates craft", false, "no workbench")
+
+	# schematic drops: bosses teach blueprints (30%) — a bounded kill batch
+	# makes a zero-drop run astronomically unlucky rather than flaky
+	var sch_hit := 0
+	var lvl0: int = p.level; var xp0: int = p.xp # boss xp would leak into later checks
+	for ki in range(25):
+		var bk: Pal = load("res://src/pal.gd").new()
+		game.entity_layer.add_child(bk)
+		bk.setup(game, "lamball", 10, p.pos + Vector2(2, 0))
+		bk.boss = true; bk.mode = "wild"; bk.hp = 1.0
+		game.kill_pal(bk, true)
+		sch_hit = game.items.get("schematic_bow", 0) + game.items.get("schematic_musket", 0)
+		if sch_hit > 0:
+			break
+	p.level = lvl0; p.xp = xp0
+	check("boss teaches blueprint", sch_hit > 0, "25 bosses, no schematic")
+	game.items.erase("schematic_bow"); game.items.erase("schematic_musket")
+	game.items.erase("legendary_sphere"); game.items.erase("lifmunk_effigy")
+	game.items.erase("gold_coin"); game.items.erase("ancient_part"); game.items.erase("pal_sphere")
+
 	# party cap: 6th pal refused and stays in the box
 	while game.party.size() < 5:
 		var fp: Pal = load("res://src/pal.gd").new()
