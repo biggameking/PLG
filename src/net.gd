@@ -317,8 +317,13 @@ func box_fingerprint() -> int:
 	var h := game.box.size() * 131 + game.party.size() * 7919
 	for bp in game.box:
 		h = (h * 31 + bp.uid + int(bp.hp) + (1 if bp.fav else 0)) & 0x7FFFFFFF
+	for bb in game.bench:
+		h = (h * 31 + bb.uid + int(bb.hp)) & 0x7FFFFFFF
 	for u in game.party:
 		h = (h * 17 + int(u)) & 0x7FFFFFFF
+	var out := game.party_pal()
+	if out != null:
+		h = (h * 13 + int(out.hp)) & 0x7FFFFFFF
 	return h
 
 func box_state_pack() -> Array:
@@ -328,8 +333,26 @@ func box_state_pack() -> Array:
 			bp.sex, bp.lucky, bp.talent, str(bp.ailment), bp.fav, int(bp.star)])
 	return arr
 
+func party_state_pack() -> Array:
+	# the client's party strip: every party member in order — the out pal and
+	# the benched spheres alike (bench pals have no world replica to read)
+	var arr := []
+	var out_pal := game.party_pal()
+	for u in game.party:
+		var p: Pal = game.find_pal(u)
+		if p == null:
+			p = game.bench_pal_of(u)
+		if p == null:
+			continue
+		arr.append([p.uid, p.species_id, p.level, int(p.hp), int(p.max_hp),
+			p.sex, p.lucky, p.talent, str(p.ailment), p.fav, int(p.star),
+			p == out_pal])
+		if arr.size() >= 8:
+			break
+	return arr
+
 @rpc("authority", "call_remote", "unreliable")
-func box_sync(arr: Array, pty: Array) -> void:
+func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 	if is_host:
 		return
 	var nb := []
@@ -347,6 +370,22 @@ func box_sync(arr: Array, pty: Array) -> void:
 		if nb.size() >= 512: # hostile/hostile host can't stuff memory either
 			break
 	game.net_box = nb
+	var np := []
+	for e2 in prows:
+		if not (e2 is Array) or e2.size() < 5 or not (e2[0] is float or e2[0] is int):
+			continue
+		np.append({"uid": int(e2[0]), "sid": str(e2[1]), "lv": clampi(int(e2[2]), 1, 60),
+			"hp": maxi(0, int(e2[3])), "max_hp": maxi(1, int(e2[4])),
+			"sex": "F" if str(e2[5]) == "F" else "M",
+			"lucky": e2.size() > 6 and e2[6] == true,
+			"talent": clampi(int(e2[7]) if e2.size() > 7 else 50, 0, 100),
+			"ailment": str(e2[8]) if e2.size() > 8 else "",
+			"fav": e2.size() > 9 and e2[9] == true,
+			"star": clampi(int(e2[10]) if e2.size() > 10 else 0, 0, 4),
+			"out": e2.size() > 11 and e2[11] == true})
+		if np.size() >= 8:
+			break
+	game.net_party = np
 	game.party.clear() # typed Array[int] — a plain Array won't assign
 	for u in pty:
 		if u is float or u is int:
@@ -399,7 +438,7 @@ func _process(dt: float) -> void:
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
 				box_sig = sig
 				box_resend = 15.0
-				rpc("box_sync", box_state_pack(), game.party.duplicate())
+				rpc("box_sync", box_state_pack(), game.party.duplicate(), party_state_pack())
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
 				rpc("decor_delta", dd)

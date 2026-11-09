@@ -397,13 +397,10 @@ func _draw() -> void:
 		var m: String = game.messages[game.messages.size() - 1 - i]
 		draw_string(font, Vector2(14, my - i * 18), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.85))
 	var py := 38
-	for uid in game.party:
-		var p := game.find_pal(uid)
-		if not p:
-			continue
+	for pr in party_rows(): # ● out / ○ in its ball — Palworld fields one
 		draw_rect(Rect2(r.x - 150, py, 138, 16), Color(0, 0, 0, 0.5))
-		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s" % [p.spec["name"], p.level,
-			"●" if p.mode == "partner" else "○"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
+		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s" % [pr["name"], pr["lv"],
+			"●" if pr["out"] else "○"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
 		py += 18
 	# build ghost preview
 	if game.panel == "build" and build_sel >= 0:
@@ -616,23 +613,19 @@ func draw_palbox(r: Vector2) -> void:
 	var y := rr.position.y + 44
 	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c8f0d0"))
 	y += 18
-	for uid in game.party:
-		var p := game.find_pal(uid)
-		if not p:
-			continue
-		var lead: bool = uid == game.party[0]
+	for pr in party_rows():
 		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
-		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
-		click_rects.append({"rect": Rect2(rect.position + Vector2(254, 0), Vector2(52, 17)), "act": "deploy", "arg": p})
+		click_rects.append({"rect": rect, "act": "party_in", "arg": pr["uid"]})
+		click_rects.append({"rect": Rect2(rect.position + Vector2(254, 0), Vector2(52, 17)), "act": "deploy", "arg": pr["arg"]})
 		draw_string(font, Vector2(rect.position + Vector2(254, 13)), "[>base]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#a8e6a1"))
-		if not lead:
-			click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": uid})
-			draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[*]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd76e"))
+		click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": pr["uid"]})
+		draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[▼]" if pr["out"] else "[*]",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd76e"))
 		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d T%d %s HP%d/%d" % [
-			"★ " if lead else "", p.spec["name"],
-			"☆" if p.lucky else "", p.sex, star_str(p), p.level, p.talent,
-			(p.ailment + "! ") if p.ailment != "" else passive_str(p).left(14), int(p.hp), int(p.max_hp)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if p.ailment != "" else Color.WHITE)
+			"● " if pr["out"] else "○ ", pr["name"],
+			"☆" if pr["lucky"] else "", pr["sex"], pr["star_s"], pr["lv"], pr["talent"],
+			(pr["ailment"] + "! ") if pr["ailment"] != "" else pr["sub"], pr["hp"], pr["max_hp"]],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if pr["ailment"] != "" else Color.WHITE)
 		y += 17
 	# deployed workforce (Palworld: pals working the base live in the world)
 	var workers := game.base_pals()
@@ -679,6 +672,36 @@ func draw_palbox(r: Vector2) -> void:
 			" [%s]" % rd["ailment"] if rd["ailment"] != "" else ""]
 		draw_string(font, Vector2(cx0, y0), label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if rd["ko"] or rd["ailment"] != "" else Color("#c8d3d5"))
+
+func party_rows() -> Array:
+	# normalized party rows: ● marks the one pal out of its ball. Host reads
+	# Pal objects (world + bench store), a client reads the net_party mirror.
+	var out := []
+	if game.net != null and game.net.is_client():
+		for d in game.net_party:
+			var sp: Dictionary = SpeciesData.species_of(str(d["sid"]))
+			var st := ""
+			for i in int(d["star"]):
+				st += "*"
+			if st != "":
+				st = " " + st
+			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]), "name": sp.get("name", str(d["sid"])),
+				"lucky": d["lucky"], "sex": d["sex"], "lv": d["lv"], "talent": d["talent"],
+				"hp": d["hp"], "max_hp": d["max_hp"], "ailment": d["ailment"],
+				"star_s": st, "out": d["out"], "sub": "resting"})
+	else:
+		var cur := game.party_pal()
+		for uid in game.party:
+			var p := game.find_pal(uid)
+			if p == null:
+				p = game.bench_pal_of(uid)
+			if p == null:
+				continue
+			out.append({"arg": p, "uid": p.uid, "name": p.spec["name"], "lucky": p.lucky,
+				"sex": p.sex, "lv": p.level, "talent": p.talent, "hp": int(p.hp),
+				"max_hp": int(p.max_hp), "ailment": p.ailment,
+				"star_s": star_str(p), "out": p == cur, "sub": passive_str(p).left(14)})
+	return out
 
 func box_rows() -> Array:
 	# normalized palbox rows: host reads live Pal objects, a client reads the
@@ -935,6 +958,8 @@ func draw_statues(r: Vector2) -> void:
 	var infused := []
 	for uid in game.party:
 		var qp: Pal = game.find_pal(uid)
+		if qp == null:
+			qp = game.bench_pal_of(uid)
 		if qp != null:
 			infused.append(qp)
 	for bp2 in game.box:

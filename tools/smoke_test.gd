@@ -120,9 +120,9 @@ func run() -> void:
 		game.resolve_sphere({"sid": "legendary_sphere", "target": tgt})
 		if tgt.mode != "wild":
 			break
-	check("caught pal captured", tgt.mode in ["partner", "box"], "mode=%s" % tgt.mode)
+	check("caught pal captured", tgt.mode in ["partner", "box", "bench"], "mode=%s" % tgt.mode)
 	check("catch box only if party full", tgt.mode != "box" or game.party.size() >= 5, "mode=%s party=%d" % [tgt.mode, game.party.size()])
-	if tgt.mode == "box":
+	if tgt.mode in ["box", "bench"]:
 		check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
 
 	# palbox + party
@@ -145,7 +145,17 @@ func run() -> void:
 	if not game.box.is_empty():
 		var bp: Pal = game.box[0]
 		game.box_to_party(bp)
-		check("box->party", bp.uid in game.party and bp.mode == "partner")
+		check("box->party", bp.uid in game.party and bp.mode in ["bench", "partner"], "mode=%s" % bp.mode)
+		# Palworld: one ball on the field — send_out swaps who's deployed
+		if game.party_pal() != bp: # box_to_party auto-fields it when nothing is out
+			game.send_out(bp.uid)
+		check("send out deploys", bp.mode == "partner" and game.party_pal() == bp
+			and game.party[0] == bp.uid and bp in game.pals)
+		var outn := 0
+		for q9 in game.pals:
+			if q9.mode == "partner":
+				outn += 1
+		check("one ball out", outn <= 1, "out=%d" % outn)
 		# mount only if mountable — and saddled (Palworld pal gear)
 		if SpeciesData.mountable(bp.species_id):
 			game.add_item(game.saddle_for(bp), 1)
@@ -176,6 +186,7 @@ func run() -> void:
 		check("recall to box", bp.mode == "box" and bp in game.box and bp not in game.pals
 			and bp.get_parent() == game.box_holder, "mode=%s" % bp.mode)
 		game.box_to_party(bp) # restore party slot for later checks
+		check("rejoin benches", bp.mode == "bench" or game.party_pal() == bp, "mode=%s" % bp.mode)
 		# work xp: base pals level from honest work, capped at 60
 		var wxp := game.gen_pal("lamball", 5, p.pos)
 		wxp.mode = "base"; game.pals.append(wxp)
@@ -191,11 +202,25 @@ func run() -> void:
 		var mp2 := game.gen_pal("chikipi", 3, p.pos)
 		mp2.mode = "box"; game.box.append(mp2); game.box_pal(mp2)
 		game.box_to_party(mp2)
-		var lead2: int = game.party[1]
-		game.make_active(lead2)
-		check("party lead swap", game.party[0] == lead2 and mp2.mode == "partner")
-		game.make_active(game.party[1]) # restore original order for later checks
+		var out0: Pal = game.party_pal()
+		var lead2: int = game.party[0]
+		for u9 in game.party: # pick anyone who ISN'T the current field pal
+			if out0 == null or u9 != out0.uid:
+				lead2 = u9
+				break
+		game.make_active(lead2) # send out another member — Palworld swaps the ball
+		check("party lead swap", game.party[0] == lead2 and game.party_pal() != null
+			and game.party_pal().uid == lead2)
+		check("old field pal benched", out0 == null or (out0.mode == "bench"
+			and out0.get_parent() == game.box_holder), "mode=%s" % (out0.mode if out0 else "-"))
+		game.make_active(game.party[1]) # swap back — out goes the previous lead
+		check("swap redeploys", game.party_pal() != null and game.party_pal().uid == game.party[0])
+		game.make_active(game.party[0]) # tapping the field pal recalls it — field empties
+		check("recall empties field", game.party_pal() == null)
+		game.send_out(game.party[0])
+		check("send out redeploys", game.party_pal() != null)
 		game.party_to_box(mp2.uid) # second member goes back to cold storage
+		check("bench pals rest", game.bench.all(func(b9): return b9.get_parent() == game.box_holder))
 		# palbox growth: workforce slots scale with player level, hard cap 20
 		var lv0: int = game.player.level
 		game.player.level = 1
@@ -885,22 +910,30 @@ func run() -> void:
 	while game.party.size() >= 5:
 		game.party_to_box(game.party[0])
 	var nbp: Pal = game.gen_pal("lamball", 7, p.pos)
-	nbp.mode = "box"; nbp.uid = 9101
+	nbp.mode = "box"; nbp.uid = game.next_uid_v + 500000 # beyond every real uid — no collisions
+	var nbuid := nbp.uid
 	game.box.append(nbp)
 	var bsig0: int = game.net.box_fingerprint()
 	var pack: Array = game.net.box_state_pack()
-	check("box pack rows", pack.size() == game.box.size() and pack.back()[0] == 9101)
-	game.net.box_sync(pack, [9101])
+	check("box pack rows", pack.size() == game.box.size() and pack.back()[0] == nbuid)
+	game.net.box_sync(pack, [nbuid])
 	check("box sync mirror", game.net_box.size() == pack.size()
-		and game.net_box.back()["sid"] == "lamball" and game.party.has(9101))
+		and game.net_box.back()["sid"] == "lamball" and game.party.has(nbuid))
 	game.net.box_sync(["junk", [1, 2]], [])
 	check("box sync drops junk", game.net_box.is_empty() and game.party.is_empty())
+	var ppack: Array = game.net.party_state_pack()
+	check("party pack rows", ppack.size() == mini(game.party.size(), 8)
+		and ppack.all(func(e9): return e9.size() >= 12), "rows=%d party=%d" % [ppack.size(), game.party.size()])
+	game.net.box_sync(pack, [nbuid], ppack)
+	check("party sync mirror", game.net_party.size() == ppack.size())
 	game.net.is_host = true
-	game.net.box_req("box_to_party", 9101)
-	check("box req promotes", nbp not in game.box and game.party.has(9101))
-	game.net.box_req("party_to_box", 9101)
-	check("box req returns", nbp in game.box and not game.party.has(9101))
-	game.net.box_req("bogus_op", 9101)
+	game.net.box_req("box_to_party", nbuid)
+	check("box req promotes", nbp not in game.box and game.party.has(nbuid))
+	game.net.box_req("party_to_box", nbuid)
+	check("box req returns", nbp in game.box and not game.party.has(nbuid),
+		"mode=%s box=%s bench=%s pals=%s party=%s" % [nbp.mode, game.box.has(nbp),
+			game.bench.has(nbp), game.pals.has(nbp), str(game.party)])
+	game.net.box_req("bogus_op", nbuid)
 	check("box req whitelist", nbp in game.box) # unknown ops no-op, pal survives
 	game.net.is_host = false
 	game.box.erase(nbp)
@@ -1784,6 +1817,13 @@ func run() -> void:
 			site_names[game.structures[kk8]["id"]] = site_names.get(game.structures[kk8]["id"], 0) + 1
 	results.append("  had=%d linked_pals=%d sites=%s pals=%d box=%d phantom=[%s]" % [had_workers, linked, str(site_names), game.pals.size(), game.box.size(), phantom])
 	var party_sz_before := game.party.size()
+	var lost_uids := [] # uids pointing at nothing — save would silently drop them
+	for pu in game.party:
+		var pl2: Pal = game.find_pal(pu)
+		if pl2 == null:
+			pl2 = game.bench_pal_of(pu)
+		if pl2 == null or pl2.mode == "box":
+			lost_uids.append("%d:%s" % [pu, pl2.mode if pl2 else "?"])
 	# unique structure instances before save (dedupe footprint cells)
 	var st_before := []
 	for kk11 in game.structures:
@@ -1807,7 +1847,11 @@ func run() -> void:
 	for kk12 in game.structures:
 		if game.structures[kk12] not in st_after:
 			st_after.append(game.structures[kk12])
-	check("party survives reload", party_sz_before == 0 or (game.party.size() == party_sz_before and game.party_pal() != null), "party=%d/%d" % [game.party.size(), party_sz_before])
+	var resolvable := 0 # benched spheres reload under the holder, not pals[]
+	for ru in game.party:
+		if game.find_pal(ru) != null or game.bench_pal_of(ru) != null:
+			resolvable += 1
+	check("party survives reload", party_sz_before == 0 or (game.party.size() == party_sz_before and resolvable == game.party.size()), "party=%d/%d res=%d lost=%s" % [game.party.size(), party_sz_before, resolvable, str(lost_uids)])
 	check("structures rebuild 1:1", st_after.size() == st_before.size(), "%d->%d" % [st_before.size(), st_after.size()])
 	var re_worker_pals := []
 	var re_detail := ""
@@ -2034,7 +2078,7 @@ func run() -> void:
 
 	# essence condenser: 4 same-species box pals -> star+1, stats x1.15
 	if game.party.size() > 0:
-		var ap2: Pal = game.find_pal(game.party[0])
+		var ap2: Pal = game.lead_pal() # condense targets the lead, out or benched
 		var star0 := ap2.star; var mhp0 := ap2.max_hp; var atk0 := ap2.atk_bonus
 		var boxn0 := game.box.size()
 		for j in 4:
@@ -2199,7 +2243,7 @@ func run() -> void:
 		game.pals.append(sp2)
 		game.party.append(sp2.uid)
 	if not game.party.is_empty():
-		var ap: Pal = game.find_pal(game.party[0])
+		var ap: Pal = game.lead_pal() # benched lead still studies fruit
 		var n_sk := ap.learned_skills().size()
 		game.add_item("skill_fruit_fire", 1)
 		game.teach_skill_fruit("skill_fruit_fire")

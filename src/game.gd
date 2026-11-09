@@ -12,6 +12,7 @@ var pals: Array[Pal] = []
 var items := {}            # item_id -> count
 var party: Array[int] = [] # pal uids
 var box: Array = []        # Pal data dicts (in palbox)
+var bench: Array = []      # party pals in their spheres — Palworld fields ONE out at a time
 var spheres_flying := []   # {sid, target, t}
 var floaters := []         # {pos, text, color, t}
 var messages := []
@@ -26,6 +27,7 @@ var craft_queue := []        # {out,n,left,cost} — station builds in progress
 var drops: Array = []        # ground drops {id,n,pos,node,did}
 var net_drops := {}          # client-side drop replicas: did -> {id,n,pos,node}
 var net_box := []            # client-side mirror of the host's box roster (dicts)
+var net_party := []          # client-side mirror of the host's party roster (dicts)
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
 var next_drop_id := 1        # host: wire key for drop_sync (never reused)
 var dirty_decor := {}        # decor cell idx -> value; host ships deltas to clients
@@ -377,6 +379,9 @@ func find_box_uid(uid: int) -> Pal:
 	for bp in box:
 		if is_instance_valid(bp) and bp.uid == uid:
 			return bp
+	for bb in bench: # spheres answer to the same uid space
+		if is_instance_valid(bb) and bb.uid == uid:
+			return bb
 	return null
 
 func find_pal(uid: int) -> Pal:
@@ -388,13 +393,22 @@ func find_pal(uid: int) -> Pal:
 func party_pal() -> Pal:
 	for uid in party:
 		var p := find_pal(uid)
-		if p:
+		if p and p.mode == "partner": # only the field pal counts — not bench/base
 			return p
 	return null
 
+func lead_pal() -> Pal:
+	# party[0] is the chosen lead — in the field or resting in its ball
+	if party.is_empty():
+		return null
+	var p := find_pal(party[0])
+	if p == null:
+		p = bench_pal_of(party[0])
+	return p
+
 func kill_pal(p: Pal, by_player: bool) -> void:
 	player.dismount_if(p)
-	var owned := p.mode in ["partner", "base"]
+	var owned := p.mode in ["partner", "base", "bench"]
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
 		var mult := 4 if p.alpha else (3 if p.lucky else 1)
 		if p.lucky:
@@ -422,6 +436,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		p.carry = null
 	pals.erase(p)
 	party.erase(p.uid)  # dead partners must free their party slot
+	bench.erase(p)      # a benched pal should never die — but never trust state
 	if p.job_site:
 		if p in p.job_site["workers"]:
 			p.job_site["workers"].erase(p)
@@ -775,6 +790,10 @@ func sleep_to_morning() -> void:
 			q.hp = q.max_hp
 			q.san = 100.0
 			q.hunger = 0.0
+	for qb in bench: # spheres rest too — Palworld party pals wake fresh
+		qb.hp = qb.max_hp
+		qb.san = 100.0
+		qb.hunger = 0.0
 	log_msg("You sleep until dawn. Day %d" % day)
 
 func summon_raid() -> bool:
@@ -835,9 +854,14 @@ func resolve_sphere(sp) -> void:
 		target.statuses.clear()
 		target.aggro = -1
 		if party.size() < 5: # Palworld rule: catch joins the party until it's full
-			target.mode = "partner"
+			target.mode = "bench"
 			party.append(target.uid)
+			bench.append(target)
+			pals.erase(target)
+			box_pal(target) # spheres ride in the same cold store as the box
 			log_msg("%s joins your party (%d/5)" % [target.spec["name"], party.size()])
+			if party_pal() == null:
+				send_out(target.uid) # an empty slot means the new catch takes the field
 		else:
 			target.mode = "box"
 			box.append(target)
@@ -994,7 +1018,7 @@ func condense_active() -> void:
 	if party.is_empty():
 		log_msg("No active pal to condense")
 		return
-	var ap0: Pal = find_pal(party[0])
+	var ap0: Pal = lead_pal()
 	if ap0 != null and ap0.star < CONDENSE_COST.size():
 		var need0: int = CONDENSE_COST[ap0.star]
 		var have0 := 0
@@ -1007,7 +1031,7 @@ func condense_active() -> void:
 				log_msg("Press E again to consume %d %s -> star %d" % [need0, ap0.spec["name"], ap0.star + 1])
 				return
 			condense_arm = 0.0
-	var ap: Pal = find_pal(party[0])
+	var ap: Pal = lead_pal()
 	if ap == null:
 		return
 	if ap.star >= CONDENSE_COST.size():
@@ -1614,6 +1638,8 @@ func gain_xp(n: int) -> void:
 	for q in pals:
 		if q.mode == "partner":
 			pal_gain_xp(q, int(n * 0.5))
+	for qb in bench: # benched pals share the field lesson too (Palworld party xp)
+		pal_gain_xp(qb, int(n * 0.25))
 	player.xp += n
 	while true: # a big kill can cross several levels
 		var need := 30 + player.level * 20
@@ -1636,6 +1662,9 @@ func tick_box(dt: float) -> void: # Palworld palbox is a clinic — wounds mend 
 				bp.hp = int(bp.max_hp * 0.3)
 				log_msg("%s has recovered" % bp.spec["name"])
 		elif bp.hp < bp.max_hp:
+			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt)
+	for bp in bench: # spheres rest in the same clinic light
+		if bp.hp < bp.max_hp:
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt) # ~33s to full
 
 func tick_production(dt: float) -> void:
@@ -1878,15 +1907,50 @@ func anger_nesters(at: Vector2) -> void:
 			q.statuses.erase("sleep")
 
 func make_active(uid: int) -> void:
-	# Palworld "send out": reorder the party so this pal leads — partner
-	# skills, mounts, skill fruits and the condenser all key on party[0]
-	var i := party.find(uid)
-	if i <= 0:
+	# Palworld "send out": one ball on the field — picking a lead swaps it in
+	var cur := party_pal()
+	if cur != null and cur.uid == uid:
+		retract_out() # tapping the field pal calls it back
 		return
-	party.remove_at(i)
+	send_out(uid)
+
+func bench_pal_of(uid: int) -> Pal:
+	for bp in bench:
+		if is_instance_valid(bp) and bp.uid == uid:
+			return bp
+	return null
+
+func retract_out() -> void:
+	# Palworld: your field pal returns to its sphere — one ball out at a time
+	var cur := party_pal()
+	if cur == null:
+		return
+	player.dismount_if(cur)
+	pals.erase(cur)
+	cur.mode = "bench"
+	bench.append(cur)
+	box_pal(cur)
+	log_msg("%s recalled" % cur.spec["name"])
+
+func send_out(uid: int) -> void:
+	# Palworld send-out: the chosen party member takes the field; whoever was
+	# out goes back into their ball. Lead slot tracks who's out.
+	var cur := party_pal()
+	if cur != null and cur.uid == uid: # tapping the out pal recalls it
+		retract_out()
+		return
+	var bp := bench_pal_of(uid)
+	if bp == null or bp.hp <= 0:
+		return
+	retract_out()
+	party.erase(uid)
 	party.push_front(uid)
-	var mp := find_pal(uid)
-	log_msg("%s leads the party" % (mp.spec["name"] if mp else "?"))
+	bench.erase(bp)
+	pals.append(bp)
+	bp.mode = "partner"
+	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y)
+	unbox_pal(bp)
+	log_msg("%s sent out!" % bp.spec["name"])
 
 func box_to_party(bp: Pal) -> void:
 	if bp.hp <= 0:
@@ -1896,12 +1960,13 @@ func box_to_party(bp: Pal) -> void:
 		log_msg("Party full (5) - send someone to the box first")
 		return
 	box.erase(bp)
-	pals.append(bp)
-	bp.mode = "partner"
+	party.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	party.append(bp.uid)
-	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y) # box-out must not land inside a cliff/lake
-	unbox_pal(bp) # box pals live under box_holder — move them back to the world
-	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
+	bp.mode = "bench" # Palworld: new members wait in their ball until sent out
+	bench.append(bp)
+	log_msg("%s joined the bench (%d/5)" % [bp.spec["name"], party.size()])
+	if party_pal() == null:
+		send_out(bp.uid)
 
 const MAX_BASE_PALS := 20 # absolute workforce cap — more mouths than this starve the loop anyway
 
@@ -1924,7 +1989,8 @@ func deploy_to_base(p: Pal) -> void:
 	player.dismount_if(p)
 	party.erase(p.uid)
 	box.erase(p)
-	if p.mode == "box":
+	bench.erase(p)
+	if p.mode in ["box", "bench"]:
 		unbox_pal(p) # back into the live tree before it starts working
 	if p not in pals:
 		pals.append(p)
@@ -1950,14 +2016,15 @@ func base_to_box(p: Pal) -> void:
 	log_msg("%s -> box" % p.spec["name"])
 
 func party_to_box(uid: int) -> void:
-	var mp := find_pal(uid)
-	if mp:
-		player.dismount_if(mp)
 	var p := find_pal(uid)
-	if not p:
+	if p == null:
+		p = bench_pal_of(uid) # benched spheres drop straight into cold storage
+	if p == null:
 		return
+	player.dismount_if(p)
 	party.erase(uid)
 	pals.erase(p)
+	bench.erase(p)
 	if p.job_site: # leaving for the box drops the job too
 		if p in p.job_site["workers"]:
 			p.job_site["workers"].erase(p)
@@ -2195,6 +2262,13 @@ func save_game() -> void:
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry, "sb": bp.soul_boost,
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
 			"revive": maxf(0.0, bp.revive_t - t)})
+	for bp in bench: # spheres ride in the save too — party state survives a reload
+		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
+			"mode": "bench", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
+			"fav": bp.fav,
+			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
+			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "sb": bp.soul_boost,
+			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills})
 	var structs := {}
 	var seen_st := {} # one entry per structure — footprint cells share a st; writing
 	# them as separate records made rebuild order-dependent and ate buildings
@@ -2210,7 +2284,19 @@ func save_game() -> void:
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
 		"unlocked": unlocked, "items": items, "party": party,
-		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
+		"party_idx": party.map(func(u):
+			var pp: Pal = find_pal(u)
+			if pp == null:
+				pp = bench_pal_of(u)
+			if pp == null:
+				return -1
+			var i: int = pals.find(pp)
+			if i >= 0:
+				return i
+			i = box.find(pp)
+			if i >= 0:
+				return pals.size() + i
+			return pals.size() + box.size() + bench.find(pp)),
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
 		"wear": player.weapon_wear,
 		"pals": pals_data, "structures": structs, "catches": catch_counts,
@@ -2360,6 +2446,7 @@ func load_game() -> bool:
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []
+	var loaded := []
 	for pd in d["pals"]:
 		if pd is not Dictionary:
 			continue # corrupt entry — keep loading the rest
@@ -2382,7 +2469,7 @@ func load_game() -> bool:
 				and (hm[1] is float or hm[1] is int):
 			np.home = Vector2(float(hm[0]), float(hm[1])) # herd anchors ride the save
 		var m0 := str(pd.get("mode", "wild"))
-		np.mode = m0 if m0 in ["wild", "partner", "base", "box"] else "wild" # foreign strings would poison every mode check
+		np.mode = m0 if m0 in ["wild", "partner", "base", "box", "bench"] else "wild" # foreign strings would poison every mode check
 		np.hp = float(pd.get("hp", np.max_hp)); np.talent = clampi(int(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
 		if pd.get("sex") != null:
 			np.sex = "F" if str(pd["sex"]) == "F" else "M"
@@ -2428,16 +2515,20 @@ func load_game() -> bool:
 		if np.mode == "box":
 			box.append(np)
 			box_pal(np) # box pals live under the hidden holder — never parentless
+		elif np.mode == "bench":
+			bench.append(np)
+			box_pal(np) # spheres rest in the same cold store
 		else:
 			entity_layer.add_child(np)
 			pals.append(np)
+		loaded.append(np) # unified load order — party_idx indexes pals+box+bench alike
 	if d.has("party_idx"):
 		party.clear()
 		for pi in d["party_idx"]:
-			if pi is int and pi >= 0 and pi < pals.size():
-				party.append(pals[pi].uid)
+			if pi is int and pi >= 0 and pi < loaded.size():
+				party.append(loaded[pi].uid)
 	else: # pre-party_idx saves stored raw uids — new pals got fresh uids, so old refs are dead
-		party = party.filter(func(u): return find_pal(u) != null)
+		party = party.filter(func(u): return find_pal(u) != null or bench_pal_of(u) != null)
 	var pbx_sv := Vector2i(-9999, -9999) # saved primary palbox, if the save is new enough
 	var pv = d.get("pbx", [])
 	if pv is Array and pv.size() >= 2:
@@ -3068,6 +3159,9 @@ func regenerate(s: int) -> void:
 	party.clear()
 	for bp0 in box: # box pals were remove_child'd — clear() alone leaks their nodes
 		bp0.free()
+	for bb0 in bench: # spheres live under box_holder — queue_free from the parent
+		bb0.queue_free()
+	bench.clear()
 	box.clear()
 	for k in structures:
 		if is_instance_valid(structures[k]["node"]):
@@ -3146,6 +3240,9 @@ func soul_infuse(uid: int) -> void:
 	for bp in box:
 		if bp.uid == uid:
 			target = bp
+	for bb in bench:
+		if bb.uid == uid:
+			target = bb
 	if target == null or target.soul_boost >= 10:
 		return
 	var cost := 1 + target.soul_boost
@@ -3169,13 +3266,9 @@ func partner_skill() -> void:
 	if party.is_empty():
 		log_msg("No party pal")
 		return
-	var p: Pal = null
-	for q in pals:
-		if q.uid == party[0]:
-			p = q
-			break
-	if not p or p.hp <= 0:
-		log_msg("Party pal is down")
+	var p := party_pal()
+	if p == null or p.hp <= 0:
+		log_msg("Send out a pal first")
 		return
 	var m := player.get_global_mouse_position()
 	var tw0: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
@@ -3428,9 +3521,9 @@ func teach_skill_fruit(item_id: String) -> void:
 	if party.is_empty():
 		log_msg("No active pal to teach")
 		return
-	var p := find_pal(party[0])
+	var p := lead_pal() # a benched lead can still study a fruit
 	if p == null or p.hp <= 0:
-		log_msg("Active pal is down")
+		log_msg("Lead pal is down")
 		return
 	var elem: String = ItemData.ITEMS.get(item_id, {}).get("elem", "")
 	var pool := []
