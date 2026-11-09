@@ -890,6 +890,19 @@ func run() -> void:
 			inc_st["egg_inc"]["ready_t"] = game.t - 1.0 # fast-forward
 			game.hatch_incubated(inc_k, inc_st)
 		check("hatch egg", game.pals.size() == n0 + 1 and not (inc_st and inc_st.has("egg_inc")))
+		# huge egg: a guaranteed golden Lucky hatches out
+		if inc_st:
+			var lc0 := 0
+			for q5 in game.pals + game.box:
+				if q5.lucky: lc0 += 1
+			inc_st["egg_inc"] = {"pair": null, "huge": true, "ready_t": game.t - 1.0}
+			var n_h: int = game.pals.size() + game.box.size()
+			game.hatch_incubated(inc_k, inc_st)
+			var lc1 := 0
+			for q5 in game.pals + game.box:
+				if q5.lucky: lc1 += 1
+			check("huge egg lucky", game.pals.size() + game.box.size() == n_h + 1 and lc1 == lc0 + 1,
+				"lucky %d->%d" % [lc0, lc1])
 		# continuous warmth: a campfire by the incubator pulls ready_t in 1.5x
 		if inc_st:
 			var fire_k := Vector2i(-1, -1)

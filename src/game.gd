@@ -258,7 +258,7 @@ const KIND_WT := {
 }
 const ITEM_WT := {
 	"stone": 3.0, "ore": 5.0, "ingot": 6.0, "coal": 4.0,
-	"pal_egg": 5.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
+	"pal_egg": 5.0, "huge_pal_egg": 8.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
 }
 
 func item_wt(sid: String) -> float:
@@ -454,6 +454,8 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
 			add_item("lifmunk_effigy", 2)
 			add_item("ancient_part", rng.int_range(1, 2)) # ancient tech currency
+			if rng.chance(0.15):
+				spawn_drop("huge_pal_egg", 1, p.pos) # Palworld's huge eggs hide on alphas
 		if p.boss:
 			add_item("ancient_part", rng.int_range(2, 4))
 		gain_xp(p.level * 4)
@@ -2451,7 +2453,7 @@ func save_game() -> void:
 		seen_st[st] = true
 		var inc = st.get("egg_inc")
 		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200), "loot": st.get("loot", false),
-			"inc": ({"pair": inc.get("pair"), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
+			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
@@ -2754,7 +2756,8 @@ func load_game() -> bool:
 				st["egg_parents"] = sv["egg"]
 			if sv.get("inc") is Dictionary and sid == "incubator":
 				var inc_d: Dictionary = sv["inc"]
-				st["egg_inc"] = {"pair": inc_d.get("pair"), "ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0)}
+				st["egg_inc"] = {"pair": inc_d.get("pair"), "huge": inc_d.get("huge") == true,
+					"ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0)}
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
@@ -2990,8 +2993,14 @@ func pull_from_storage(id: String, need: int) -> int:
 	return need - left
 
 func deposit_egg() -> void:
-	# Palworld: eggs go into an incubator; hatching takes real time
-	if item_count("pal_egg") <= 0:
+	# Palworld: eggs go into an incubator; hatching takes real time.
+	# Huge eggs take the slot first — a guaranteed Lucky is worth it.
+	var egg_id := ""
+	if item_count("huge_pal_egg") > 0:
+		egg_id = "huge_pal_egg"
+	elif item_count("pal_egg") > 0:
+		egg_id = "pal_egg"
+	else:
 		return
 	var site = null; var bd := 20.0
 	for k in structures:
@@ -3004,7 +3013,7 @@ func deposit_egg() -> void:
 	if site == null:
 		log_msg("Need a free incubator nearby")
 		return
-	add_item("pal_egg", -1)
+	add_item(egg_id, -1)
 	var pair = null
 	for k2 in structures:
 		var q = structures[k2].get("egg_parents")
@@ -3017,10 +3026,12 @@ func deposit_egg() -> void:
 				and Vector2(k3.x - site.x, k3.y - site.y).length() <= 6.0:
 			warm_hint = true
 			break
-	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0}
+	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
+		"huge": egg_id == "huge_pal_egg"}
 	var hint := egg_hint(pair)
-	log_msg("Egg incubating - ready in 90s%s%s"
-		% ["" if warm_hint else " (a campfire would hurry it)",
+	log_msg("%s incubating - ready in 90s%s%s"
+		% ["Huge egg" if egg_id == "huge_pal_egg" else "Egg",
+			"" if warm_hint else " (a campfire would hurry it)",
 			" — " + hint if hint != "" else ""])
 
 func egg_hint(pair) -> String:
@@ -3039,6 +3050,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	var inc = st.get("egg_inc")
 	st.erase("egg_inc")
 	var pair = inc.get("pair") if inc is Dictionary else null
+	var huge := bool(inc.get("huge", false)) if inc is Dictionary else false
 	var sp_id: String
 	var talent_v: int
 	var inherited := []
@@ -3083,6 +3095,16 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		pool_s = pool_s.filter(func(k): return SkillData.SKILLS.has(k) and k not in np.learned_skills())
 		if not pool_s.is_empty():
 			np.extra_skills.append(pool_s[rng.int_range(0, pool_s.size() - 1)])
+	if huge: # Palworld's huge eggs: a guaranteed golden Lucky hatches out
+		np.lucky = true
+		if "lucky" not in np.passives:
+			np.passives.push_front("lucky")
+		while np.passives.size() > 4:
+			np.passives.pop_back()
+		np.apply_bonuses()
+		np.hp = np.max_hp
+		np.sprite.scale = Vector2(1.5, 1.5)
+		np.sprite.position.y = -48.0
 	if palbox_pos.x >= 0:
 		np.mode = "base"
 		pals.append(np)
@@ -3093,7 +3115,8 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	if pair is Array:
 		mission_flags["egg"] = true # a bred egg — wild nest finds don't count
 	floater(at, "* hatched! *", "#4dd0e1")
-	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])
+	log_msg("Egg hatched: %s%s (talent %d)!" % ["LUCKY " if huge else "",
+		np.spec["name"], talent_v])
 
 func spawn_lairs() -> void:
 	# Zone-3 boss lairs: torch ring + an Alpha guarding elite guards
@@ -3289,7 +3312,7 @@ func spawn_grotto() -> void:
 			var st2: Dictionary = structures[Vector2i(bx - 1, by - 1)]
 			st2["loot"] = true
 			st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
-				"lifmunk_effigy": 3, "pal_egg": 2}
+				"lifmunk_effigy": 3, "pal_egg": 2, "huge_pal_egg": 1}
 		grotto_room2 = Vector2i(bx, by)
 		log_msg("A sealed grotto echoes in the deep wilds — it sounds deep")
 		return

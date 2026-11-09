@@ -567,6 +567,14 @@ const ITEMS = {
   "stack": 5,
   "price": 30
  },
+ "huge_pal_egg": {
+  "id": "huge_pal_egg",
+  "name": "Huge Pal Egg",
+  "desc": "Something enormous stirs inside. Incubate for a guaranteed Lucky pal.",
+  "usable": true,
+  "stack": 5,
+  "price": 200
+ },
  "lifmunk_effigy": {
   "id": "lifmunk_effigy",
   "name": "Lifmunk Effigy",

@@ -891,8 +891,8 @@ func use_item(k: String) -> void:
 		"gauntlet_sigil":
 			if game.start_gauntlet():
 				game.add_item(k, -1)
-		"pal_egg":
-			game.deposit_egg()  # needs a free incubator nearby
+		"pal_egg", "huge_pal_egg":
+			game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
 		"fishing_rod":
 			game.cast_line() # reusable — the rod never leaves the pack
 		"memory_wipe":
