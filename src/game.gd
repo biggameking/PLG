@@ -1493,7 +1493,9 @@ func tick_production(dt: float) -> void:
 			var dusk := 1.15 if night and "dark" in w.spec.get("elements", []) else 1.0
 			# rain is a water pal's home turf
 			var dew := 1.15 if weather == "rain" and "water" in w.spec.get("elements", []) else 1.0
-			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew
+			# talent shows in the palbox — make it earn its keep on the crew too
+			var iv: float = 0.9 + w.talent * 0.004 # T0 → 0.9, T100 → 1.3
+			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv
 		var wet := 1.25 if weather == "rain" and s.get("farmField", false) else 1.0 # rain does the watering
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet
 		var rate: float = job.get("amount", 30)

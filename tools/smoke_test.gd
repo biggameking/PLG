@@ -359,7 +359,7 @@ func run() -> void:
 			var saved_timer: float = log_st2["timer"]
 			var timers := []
 			for wp in [w_lv2, w_lv1]:
-				wp.mode = "base"; wp.san = 90.0; wp.ailment = ""; wp.passives = []
+				wp.mode = "base"; wp.san = 90.0; wp.ailment = ""; wp.passives = []; wp.talent = 50
 				log_st2["workers"] = [wp]; wp.job_site = log_st2
 				log_st2["timer"] = 0.0
 				game.tick_production(1.0)
@@ -421,6 +421,23 @@ func run() -> void:
 			wp2.job_site = null
 			game.weather = wt0; game.tod = tod0
 			game.pals.erase(wp2); wp2.free()
+			# worker IVs: a T100 crew outpaces a T0 crew on the same site
+			var ivp: Pal = game.gen_pal("lifmunk", 5, game.player.pos)
+			ivp.mode = "base"; ivp.san = 90.0; ivp.ailment = ""; ivp.passives = []
+			var wsv3: Array = mine_st["workers"].duplicate()
+			var tsv3: float = mine_st["timer"]
+			var iv_vs := []
+			for tv in [0, 100]:
+				ivp.talent = tv
+				mine_st["workers"] = [ivp]; ivp.job_site = mine_st
+				mine_st["timer"] = 0.0
+				game.tick_production(1.0)
+				iv_vs.append(float(mine_st["timer"]))
+			check("talent works", absf(iv_vs[1] / maxf(0.001, iv_vs[0]) - (1.3 / 0.9)) < 0.01,
+				"T100/T0=%.3f" % (iv_vs[1] / maxf(0.001, iv_vs[0])))
+			mine_st["workers"] = wsv3; mine_st["timer"] = tsv3
+			ivp.job_site = null
+			game.pals.erase(ivp); ivp.free()
 
 	# missions: ordered guide rope pays out as live state satisfies rungs
 	if game.has_structure("palbox"):
