@@ -1518,6 +1518,19 @@ func nearest_heat(at: Vector2) -> float:
 func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 
+func nearest_bed_cell(at: Vector2) -> Vector2i:
+	# where a sleepy pal should pad off to — the closest pal bed or spring
+	var bd := 1e9
+	var best := Vector2i(-1, -1)
+	for k in structures:
+		var sid: String = structures[k]["id"]
+		if sid != "pal_bed" and sid != "hot_spring":
+			continue
+		var d := at.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if d < bd:
+			bd = d; best = k
+	return best
+
 func anger_nesters(at: Vector2) -> void:
 	# wild pals near a looted nest turn hostile — egg theft has a price
 	for q in pals:

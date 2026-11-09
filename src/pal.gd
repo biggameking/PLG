@@ -17,6 +17,7 @@ var mode := "wild"           # wild | partner | base
 var statuses := {}           # kind -> until_t
 var aggro := -1              # -1 none, 0 player, >0 pal uid
 var wander_t := 0.0
+var bed_seek := 0.0           # seconds spent shuffling toward a bed at night
 var carry = null             # {id,n} while hauling
 var home := Vector2.ZERO     # spawn anchor; alphas tether to their lair
 var target := Vector2.ZERO
@@ -329,6 +330,8 @@ func partner_ai(dt: float) -> void:
 		step_toward(pl.pos, dt)
 
 func base_ai(dt: float) -> void:
+	if not game.is_night():
+		bed_seek = 0.0 # a new day resets the bedtime walk
 	# defend the base: raiders beating on workers get fought back
 	var foe: Pal = null; var fbd := 4.0
 	for p in game.pals:
@@ -351,9 +354,18 @@ func base_ai(dt: float) -> void:
 				foe.hit(d, mult, true)
 		return
 	# Palworld night shift: diurnal pals doze off after dark — production skips
-	# sleepers; dark-element pals are nocturnal and keep the lights on
+	# sleepers; dark-element pals are nocturnal and keep the lights on.
+	# Tired pals pad over to the nearest pal bed first when one is built.
 	if game.is_night() and "dark" not in spec.get("elements", []):
+		var bc := game.nearest_bed_cell(pos)
+		if bc.x >= 0:
+			var bp := Vector2(bc.x + 0.5, bc.y + 0.5)
+			if pos.distance_to(bp) > 1.2 and bed_seek < 6.0:
+				bed_seek += dt # shuffling to bed beats dozing at the workbench
+				step_toward(bp, dt)
+				return
 		statuses["sleep"] = game.t + 2.0
+		bed_seek = 0.0
 		return
 	if job_site:
 		var site_cell: Vector2i = Vector2i(-1, -1)

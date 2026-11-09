@@ -315,7 +315,10 @@ func run() -> void:
 			var dark_night: bool = "dark" in night_w.spec.get("elements", [])
 			var all_diurnal := true
 			for w3 in log_st2["workers"]:
-				w3.base_ai(0.1) # every worker reacts to nightfall
+				for _i in 70: # a built bed makes them shuffle over first (6s cap)
+					w3.base_ai(0.1)
+					if w3.has_status("sleep"):
+						break
 				if "dark" in w3.spec.get("elements", []):
 					all_diurnal = false
 			var w2a: int = log_st2["store"].get("wood", 0)
@@ -752,6 +755,8 @@ func run() -> void:
 	for q in game.pals:
 		if q.raid and q.hp > 0:
 			game.kill_pal(q, true)
+		elif q.mode == "wild":
+			q.aggro = -1 # herd propagation leaves strays hostile — pacify leftovers
 	game.sleep_to_morning()
 	check("straw bed sleep", game.day == day0 + 1 and p.hp == p.max_hp and game.tod == 6.0)
 	# overlap: cannot build on occupied cell
