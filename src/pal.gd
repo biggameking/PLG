@@ -26,6 +26,7 @@ var spec: Dictionary = {}
 var job_site = null
 var sex := "M"
 var alpha := false
+var fav := false            # heart-locked: butcher/sell/condense all skip it
 var boss := false
 var passives := []
 var extra_skills := []        # taught via skill fruits — survives beyond the level table

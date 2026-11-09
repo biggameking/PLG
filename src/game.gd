@@ -808,8 +808,8 @@ func condense_active() -> void:
 	# fodder = same-species pals in the box (weakest first, active excluded)
 	var fodder: Array = []
 	for bp in box:
-		if bp.species_id == ap.species_id and bp.uid != ap.uid:
-			fodder.append(bp)
+		if bp.species_id == ap.species_id and bp.uid != ap.uid and not bp.fav:
+			fodder.append(bp) # heart-locked pals are never fodder
 	fodder.sort_custom(func(a, b): return a.level < b.level)
 	if fodder.size() < need:
 		log_msg("Need %d same-species pals for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
@@ -1877,6 +1877,7 @@ func save_game() -> void:
 					break
 		pals_data.append({"sp": p.species_id, "lv": p.level, "pos": [p.pos.x, p.pos.y],
 			"home": [p.home.x, p.home.y], # pack members share a leader's anchor — re-anchoring on load would dissolve every herd
+			"fav": p.fav,
 			"mode": p.mode, "hp": p.hp, "talent": p.talent, "sex": p.sex,
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
@@ -1886,6 +1887,7 @@ func save_game() -> void:
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "box", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
+			"fav": bp.fav,
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry,
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
@@ -2086,6 +2088,7 @@ func load_game() -> bool:
 		var al := str(pd.get("ail", ""))
 		if al in Pal.AILMENTS:
 			np.ailment = al # unknown/blank ailments fall to healthy
+		np.fav = pd.get("fav") == true # anything but a real bool stays unlocked
 		if pd.get("lucky") is bool:
 			np.lucky = pd["lucky"]
 		if np.lucky and "lucky" not in np.passives:
@@ -2926,12 +2929,22 @@ func sell_pal_to_merchant(uid: int) -> void:
 		return
 	for bp in box:
 		if bp.uid == uid:
+			if bp.fav:
+				log_msg("%s is heart-locked" % bp.spec["name"])
+				return
 			var gain := pal_sell_price(bp)
 			var nm: String = bp.spec["name"]
 			box.erase(bp)
 			bp.free() # box pals live under box_holder — free() is the teardown path
 			add_item("gold_coin", gain)
 			log_msg("Sold %s for %dg" % [nm, gain])
+			return
+
+func toggle_fav(uid: int) -> void:
+	# heart-lock a boxed pal — butcher, merchant sale and condense fodder all skip it
+	for bp in box:
+		if bp.uid == uid:
+			bp.fav = not bp.fav
 			return
 
 func butcher_pal(uid: int) -> void:
@@ -2941,6 +2954,9 @@ func butcher_pal(uid: int) -> void:
 		return
 	for bp in box:
 		if bp.uid == uid:
+			if bp.fav:
+				log_msg("%s is heart-locked" % bp.spec["name"])
+				return
 			var nm: String = bp.spec["name"]
 			var mult := 3 if bp.lucky else 1
 			box.erase(bp)

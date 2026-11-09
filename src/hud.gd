@@ -162,6 +162,8 @@ func run_click(cr: Dictionary) -> void:
 			game.sell_pal_to_merchant(cr["arg"])
 		"butcher":
 			game.butcher_pal(cr["arg"])
+		"fav":
+			game.toggle_fav(cr["arg"])
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -589,8 +591,12 @@ func draw_palbox(r: Vector2) -> void:
 		if cx0 + colw - 8 > rr.end.x:
 			break
 		var butcher := game.item_count("meat_cleaver") > 0
-		var rect := Rect2(cx0, y0 - 11, colw - (34 if butcher else 10), 16)
+		var rect := Rect2(cx0, y0 - 11, colw - (56 if butcher else 34), 16)
 		click_rects.append({"rect": rect, "act": "box_out", "arg": bp})
+		var frect := Rect2(cx0 + colw - (52 if butcher else 30), y0 - 11, 20, 16)
+		click_rects.append({"rect": frect, "act": "fav", "arg": bp.uid})
+		draw_string(font, Vector2(frect.position.x + 3, y0), "♥" if bp.fav else "♡",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e86a92") if bp.fav else Color(0.55, 0.55, 0.55))
 		if butcher:
 			var brect := Rect2(cx0 + colw - 30, y0 - 11, 22, 16)
 			click_rects.append({"rect": brect, "act": "butcher", "arg": bp.uid})

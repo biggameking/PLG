@@ -1748,6 +1748,18 @@ func run() -> void:
 	var dr0 := game.drops.size()
 	game.butcher_pal(bxp.uid)
 	check("butcher pal", game.box.size() == bx0 - 1 and game.drops.size() > dr0)
+	# heart-lock: a fav'd pal survives the cleaver; toggling back unlocks it
+	var fx := game.gen_pal("chikipi", 3, p.pos)
+	fx.mode = "box"; game.box.append(fx); game.box_pal(fx)
+	game.toggle_fav(fx.uid)
+	var locked: bool = fx.fav
+	var bx1 := game.box.size()
+	game.butcher_pal(fx.uid)
+	check("heart-lock", locked and game.box.size() == bx1, "box=%d" % game.box.size())
+	game.toggle_fav(fx.uid)
+	var unlocked: bool = not fx.fav
+	game.butcher_pal(fx.uid) # freed inside — read no fields off fx after this
+	check("unlock butchers", unlocked and game.box.size() == bx1 - 1)
 	game.add_item("meat_cleaver", -1)
 
 	# base defense: walls block, spikes are walkable but hurt hostiles
