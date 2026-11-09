@@ -2810,8 +2810,11 @@ func tick_raid(dt: float) -> void:
 		raid_warned = true
 		# Palworld raids read as packs — mostly one element, sometimes a mob
 		var themes := ["fire", "water", "electric", "grass", "dark", "ice", "ground", "dragon"]
-		raid_theme = "" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)]
-		var howl: String = ("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob"
+		# Palworld's signature raid: the Rayne Syndicate sends humans, not pals
+		raid_theme = "syndicate" if rng.chance(0.15) else \
+			("" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)])
+		var howl := "Syndicate squad" if raid_theme == "syndicate" else \
+			(("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob")
 		log_msg("Raid party spotted — a %s is coming for the palbox!" % howl)
 		sfx_play("horn")
 		floater(player.pos, "RAID INCOMING", "#e8452f")
@@ -2840,8 +2843,12 @@ func start_raid() -> void:
 			var hostile_pool := pool.filter(func(s): return SpeciesData.species_of(s).get("hostile", 0) >= 1)
 			if hostile_pool.is_empty():
 				hostile_pool = pool
-			var themed := hostile_pool.filter(func(s): return raid_theme != "" and raid_theme in SpeciesData.species_of(s).get("elements", []))
-			var pick_pool: Array = themed if not themed.is_empty() else hostile_pool
+			var pick_pool: Array
+			if raid_theme == "syndicate":
+				pick_pool = ["syndicate_grunt", "syndicate_sweeper"] # humans ignore zone tables
+			else:
+				var themed := hostile_pool.filter(func(s): return raid_theme != "" and raid_theme in SpeciesData.species_of(s).get("elements", []))
+				pick_pool = themed if not themed.is_empty() else hostile_pool
 			var sid: String = pick_pool[rng.int_range(0, pick_pool.size() - 1)]
 			var rp := preload("res://src/pal.gd").new()
 			entity_layer.add_child(rp)

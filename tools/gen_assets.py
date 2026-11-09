@@ -293,6 +293,8 @@ SPRITES = {
     "mozzarina":   ("cow",       ["#ede0c8", "#c9b89e", "#e8d44d"], 0.2),
     "fuack":       ("bird",      ["#4dd0e1", "#35a8b8", "#e8d44d"], 0.2),
     "player":      ("human",     ["#d17b3c", "#4d9de0", "#e8c9a0"], 0),
+    "syndicate_grunt":   ("human", ["#3a3a4a", "#2a2a35", "#e8c9a0"], 0),
+    "syndicate_sweeper": ("human", ["#5a2e4a", "#3d1f33", "#e8c9a0"], 0),
 }
 
 def render_pal(spec_id):

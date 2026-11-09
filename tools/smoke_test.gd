@@ -1317,6 +1317,19 @@ func run() -> void:
 					theme_avail = true
 			check("raid theme packs", themed_n >= 1 or not theme_avail,
 				"theme=%s matched=%d" % [game.raid_theme, themed_n])
+		# Palworld's signature raid: the Syndicate sends humans, not pals
+		var syn0 := 0
+		for q in game.pals:
+			if q.species_id.begins_with("syndicate"):
+				syn0 += 1
+		game.raid_theme = "syndicate"
+		game.start_raid()
+		game.raid_theme = ""
+		var syn1 := 0
+		for q in game.pals:
+			if q.species_id.begins_with("syndicate"):
+				syn1 += 1
+		check("syndicate squad", syn1 > syn0, "%d->%d" % [syn0, syn1])
 		for rq in game.pals.duplicate(): # fresh raiders chew walls — sweep before they bite
 			if rq.raid and not rq.boss:
 				game.pals.erase(rq)

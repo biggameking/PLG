@@ -884,6 +884,98 @@ const SPECIES = {
   ],
   "desc": "Duck pal; decent water worker.",
   "hostile": 1
+ },
+ "syndicate_grunt": {
+  "id": "syndicate_grunt",
+  "name": "Syndicate Grunt",
+  "glyph": "§",
+  "color": "#3a3a4a",
+  "elements": [
+   "dark"
+  ],
+  "hp": 80,
+  "atk": 85,
+  "def": 60,
+  "speed": 3.0,
+  "capturePower": 30,
+  "food": 3,
+  "san": 60,
+  "work": {
+   "handiwork": 1
+  },
+  "skills": [
+   [
+    1,
+    "airCannon"
+   ],
+   [
+    6,
+    "darkBall"
+   ]
+  ],
+  "drops": [
+   [
+    "gold_coin",
+    2,
+    6
+   ],
+   [
+    "arrow",
+    2,
+    5
+   ]
+  ],
+  "desc": "A poacher for the Rayne Syndicate. Terrible worker, worse intentions.",
+  "hostile": 2
+ },
+ "syndicate_sweeper": {
+  "id": "syndicate_sweeper",
+  "name": "Syndicate Sweeper",
+  "glyph": "§",
+  "color": "#5a2e4a",
+  "elements": [
+   "dark"
+  ],
+  "hp": 120,
+  "atk": 110,
+  "def": 80,
+  "speed": 2.8,
+  "capturePower": 20,
+  "food": 4,
+  "san": 60,
+  "work": {
+   "handiwork": 1,
+   "lumbering": 1
+  },
+  "skills": [
+   [
+    1,
+    "darkBall"
+   ],
+   [
+    10,
+    "nightmare"
+   ]
+  ],
+  "drops": [
+   [
+    "gold_coin",
+    4,
+    10
+   ],
+   [
+    "musket_ball",
+    2,
+    5
+   ],
+   [
+    "gunpowder",
+    1,
+    2
+   ]
+  ],
+  "desc": "Syndicate muscle. Their idea of negotiation is a rifle butt.",
+  "hostile": 2
  }
 }
 
@@ -1785,7 +1877,8 @@ const BODY := {
  "pengullet":"bird","penking":"bird","eikthyrdeer":"deer","lifmunk":"mouse",
  "tanzee":"monkey","sparkit":"mouse","jolthog":"hedgehog","dumud":"serpent",
  "depresso":"blob","daedream":"ghost","mau":"kitty","rushoar":"boar",
- "cremis":"kitty","mozzarina":"cow","fuack":"bird","player":"human"
+ "cremis":"kitty","mozzarina":"cow","fuack":"bird","player":"human",
+ "syndicate_grunt":"human","syndicate_sweeper":"human"
 }
 const MOUNTABLE := ["quadruped","deer","cow","boar"]
 static func body_of(id: String) -> String:
