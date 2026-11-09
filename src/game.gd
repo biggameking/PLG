@@ -2469,6 +2469,22 @@ func sell_pal_to_merchant(uid: int) -> void:
 			log_msg("Sold %s for %dg" % [nm, gain])
 			return
 
+func butcher_pal(uid: int) -> void:
+	# Palworld's meat cleaver: sacrifice a boxed pal, it spills its drops
+	if item_count("meat_cleaver") <= 0:
+		log_msg("You need a Meat Cleaver for that")
+		return
+	for bp in box:
+		if bp.uid == uid:
+			var nm: String = bp.spec["name"]
+			var mult := 3 if bp.lucky else 1
+			box.erase(bp)
+			for dr in bp.spec.get("drops", []):
+				spawn_drop(dr[0], rng.int_range(dr[1], dr[2]) * mult, player.pos)
+			bp.free() # box-holder path — same teardown as condense/sell
+			log_msg("You butchered %s… it dropped its goods" % nm)
+			return
+
 func sell_to_merchant(id: String) -> void:
 	if merchant == null or item_count(id) <= 0:
 		return

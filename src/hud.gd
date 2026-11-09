@@ -158,6 +158,8 @@ func run_click(cr: Dictionary) -> void:
 			game.sell_to_merchant(cr["arg"])
 		"sell_pal":
 			game.sell_pal_to_merchant(cr["arg"])
+		"butcher":
+			game.butcher_pal(cr["arg"])
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -535,8 +537,14 @@ func draw_palbox(r: Vector2) -> void:
 		var y0: float = y + (bi % rows) * 16
 		if cx0 + colw - 8 > rr.end.x:
 			break
-		var rect := Rect2(cx0, y0 - 11, colw - 10, 16)
+		var butcher := game.item_count("meat_cleaver") > 0
+		var rect := Rect2(cx0, y0 - 11, colw - (34 if butcher else 10), 16)
 		click_rects.append({"rect": rect, "act": "box_out", "arg": bp})
+		if butcher:
+			var brect := Rect2(cx0 + colw - 30, y0 - 11, 22, 16)
+			click_rects.append({"rect": brect, "act": "butcher", "arg": bp.uid})
+			draw_string(font, Vector2(brect.position.x + 3, y0), "[x]",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c0392b"))
 		var ko: bool = bp.hp <= 0
 		var label := "%s%s %s%s Lv%d HP%d/%d%s%s" % [bp.spec["name"], "☆" if bp.lucky else "", bp.sex, star_str(bp), bp.level,
 			int(maxi(0, bp.hp)), int(bp.max_hp), " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else "",

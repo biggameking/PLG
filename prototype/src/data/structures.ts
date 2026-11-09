@@ -219,6 +219,7 @@ export const TECH: TechNode[] = [
   { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2 },
   { id: "glider", name: "Glider", tier: 4, cost: 2 },
   { id: "saddle", name: "Pal Saddle", tier: 3, cost: 1 },
+  { id: "meat_cleaver", name: "Meat Cleaver", tier: 3, cost: 1 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
   { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2 },
 ];

@@ -846,6 +846,12 @@ const TECH = [
   "cost": 1
  },
  {
+  "id": "meat_cleaver",
+  "name": "Meat Cleaver",
+  "tier": 3,
+  "cost": 1
+ },
+ {
   "id": "hot_spring",
   "name": "Hot Spring",
   "tier": 5,

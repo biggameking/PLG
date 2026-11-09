@@ -1358,6 +1358,16 @@ func run() -> void:
 	game.despawn_merchant()
 	check("merchant leaves clean", game.merchant == null and game.merchant_stock.is_empty())
 
+	# meat cleaver: butcher a boxed pal, its drops spill on the ground
+	game.add_item("meat_cleaver", 1)
+	var bxp := game.gen_pal("chikipi", 3, p.pos)
+	bxp.mode = "box"; game.box.append(bxp); game.box_pal(bxp)
+	var bx0 := game.box.size()
+	var dr0 := game.drops.size()
+	game.butcher_pal(bxp.uid)
+	check("butcher pal", game.box.size() == bx0 - 1 and game.drops.size() > dr0)
+	game.add_item("meat_cleaver", -1)
+
 	# base defense: walls block, spikes are walkable but hurt hostiles
 	game.add_item("wood", 60); game.add_item("stone", 20)
 	var spk_k: Vector2i = free_xy.call("spikes")

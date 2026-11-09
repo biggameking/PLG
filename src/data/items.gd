@@ -573,6 +573,22 @@ const ITEMS = {
   "stack": 3,
   "price": 0
  },
+ "meat_cleaver": {
+  "id": "meat_cleaver",
+  "tech": "meat_cleaver",
+  "name": "Meat Cleaver",
+  "glyph": "⚔",
+  "color": "#c0392b",
+  "kind": "weapon",
+  "stack": 1,
+  "weapon": {
+   "dmg": 30,
+   "range": 1.6,
+   "cd": 0.5
+  },
+  "price": 140,
+  "desc": "Palworld's grim tool: butcher a boxed pal for its drops (palbox x)."
+ },
  "glider": {
   "id": "glider",
   "name": "Glider",
@@ -1145,6 +1161,14 @@ const RECIPES = [
   "cost": [["leather", 3], ["fiber", 8], ["wood", 4]],
   "station": "workbench",
   "work": 100
+ },
+ {
+  "id": "meat_cleaver",
+  "tech": "meat_cleaver",
+  "out": ["meat_cleaver", 1],
+  "cost": [["ingot", 4], ["wood", 2]],
+  "station": "workbench",
+  "work": 90
  },
  {
   "id": "gunpowder",
