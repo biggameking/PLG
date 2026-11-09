@@ -557,6 +557,13 @@ const ITEMS = {
   "stack": 99,
   "price": 0
  },
+ "ancient_part": {
+  "id": "ancient_part",
+  "name": "Ancient Part",
+  "desc": "Scrap from a lost age. Bosses drop it; ancient tech hungers for it.",
+  "stack": 99,
+  "price": 40
+ },
  "boss_sigil": {
   "id": "boss_sigil",
   "name": "Boss Sigil",

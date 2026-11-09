@@ -201,6 +201,19 @@ func run() -> void:
 	var tid: String = StructureData.TECH[0]["id"]
 	game.unlock(tid)
 	check("tech unlock", tid in game.unlocked)
+	# ancient tech: parts-gated nodes refuse without boss-dropped parts
+	var lv1: int = game.player.level
+	game.tech_points += 10
+	game.player.level = 40
+	game.items.erase("ancient_part")
+	game.unlock("incubator")
+	var gate1: bool = "incubator" not in game.unlocked
+	game.add_item("ancient_part", 2)
+	game.unlock("incubator")
+	check("ancient tech gate", gate1 and "incubator" in game.unlocked
+		and game.item_count("ancient_part") == 0,
+		"gate1=%s parts=%d" % [gate1, game.item_count("ancient_part")])
+	game.player.level = lv1 # restore — later checks assume the fresh-run level
 	var wood0 := game.item_count("wood")
 	game.craft("club")
 	check("craft club", game.item_count("wooden_club") == 1 and game.item_count("wood") == wood0 - 5)

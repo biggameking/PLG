@@ -341,6 +341,9 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			add_item("pal_sphere", 1)
 			log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
 			add_item("lifmunk_effigy", 2)
+			add_item("ancient_part", rng.int_range(1, 2)) # ancient tech currency
+		if p.boss:
+			add_item("ancient_part", rng.int_range(2, 4))
 		gain_xp(p.level * 4)
 	if p.carry != null: # a hauler's load doesn't die with it
 		spawn_drop(p.carry["id"], p.carry["n"], p.pos)
@@ -1174,6 +1177,11 @@ func unlock(sid: String) -> void:
 	if tech_points < t.get("cost", 0):
 		log_msg("Need %d tech points" % t.get("cost", 0))
 		return
+	if item_count("ancient_part") < t.get("parts", 0): # ancient-tech nodes eat boss drops
+		log_msg("Need %d ancient parts" % t.get("parts", 0))
+		return
+	if int(t.get("parts", 0)) > 0:
+		add_item("ancient_part", -int(t["parts"]))
 	tech_points -= t.get("cost", 0)
 	unlocked.append(sid)
 	log_msg("Unlocked %s" % t.get("name", sid))

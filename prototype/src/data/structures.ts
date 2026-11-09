@@ -189,6 +189,7 @@ export interface TechNode {
   name: string;
   tier: number;
   cost: number;         // tech points
+  parts?: number;       // ancient-tech: consumes ancient_part drops
 }
 
 export const TECH: TechNode[] = [
@@ -216,17 +217,17 @@ export const TECH: TechNode[] = [
   { id: "ore_mine", name: "Ore Excavation Site", tier: 5, cost: 3 },
   { id: "generator", name: "Power Generator", tier: 5, cost: 3 },
   { id: "giga_sphere", name: "Giga Sphere", tier: 5, cost: 3 },
-  { id: "musket", name: "Musket", tier: 6, cost: 3 },
+  { id: "musket", name: "Musket", tier: 6, cost: 3, parts: 3 },
   { id: "musket_ball", name: "Musket Ball", tier: 6, cost: 1 },
   { id: "ultra_sphere", name: "Ultra Sphere", tier: 7, cost: 4 },
   { id: "legendary_sphere", name: "Legendary Sphere", tier: 8, cost: 5 },
   { id: "wooden_wall", name: "Wooden Wall", tier: 2, cost: 1 },
   { id: "spikes", name: "Wooden Spikes", tier: 3, cost: 1 },
-  { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2 },
+  { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2, parts: 2 },
   { id: "glider", name: "Glider", tier: 4, cost: 2 },
   { id: "saddle", name: "Pal Saddle", tier: 3, cost: 1 },
   { id: "meat_cleaver", name: "Meat Cleaver", tier: 3, cost: 1 },
   { id: "waypoint", name: "Waypoint", tier: 4, cost: 2 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
-  { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2 },
+  { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2, parts: 2 },
 ];

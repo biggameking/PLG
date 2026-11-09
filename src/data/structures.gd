@@ -852,7 +852,8 @@ const TECH = [
   "id": "incubator",
   "name": "Egg Incubator",
   "tier": 4,
-  "cost": 2
+  "cost": 2,
+  "parts": 2
  },
  {
   "id": "glider",
@@ -888,7 +889,8 @@ const TECH = [
   "id": "monitoring_stand",
   "name": "Monitoring Stand",
   "tier": 5,
-  "cost": 2
+  "cost": 2,
+  "parts": 2
  },
  {
   "id": "mega_sphere",
@@ -936,7 +938,8 @@ const TECH = [
   "id": "musket",
   "name": "Musket",
   "tier": 6,
-  "cost": 3
+  "cost": 3,
+  "parts": 3
  },
  {
   "id": "cooler",
@@ -948,7 +951,8 @@ const TECH = [
   "id": "oil_extractor",
   "name": "Oil Extractor",
   "tier": 7,
-  "cost": 3
+  "cost": 3,
+  "parts": 4
  },
  {
   "id": "musket_ball",
@@ -960,7 +964,8 @@ const TECH = [
   "id": "pal_condenser",
   "name": "Pal Condenser",
   "tier": 6,
-  "cost": 3
+  "cost": 3,
+  "parts": 3
  },
  {
   "id": "ultra_sphere",
