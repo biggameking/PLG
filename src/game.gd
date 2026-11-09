@@ -3383,6 +3383,15 @@ const PARTNER_SKILLS := {
 	"tanzee":  {"cd": 5.0, "range": 8.0, "name": "Rifle Shot"},
 }
 
+# Palworld pal gear: a bespoke active needs its species item crafted in the
+# pack — the harness/SMG/rifle are what make the skill real, not the pal.
+const PARTNER_GEAR := {
+	"foxparks": "foxparks_harness", "lifmunk": "lifmunk_smg", "tanzee": "tanzee_rifle",
+}
+func partner_gear_ok(sid: String) -> bool:
+	var gid: String = PARTNER_GEAR.get(sid, "")
+	return gid == "" or item_count(gid) > 0
+
 func partner_skill() -> void:
 	if party.is_empty():
 		log_msg("No party pal")
@@ -3394,6 +3403,10 @@ func partner_skill() -> void:
 	var m := player.get_global_mouse_position()
 	var tw0: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
 	var psk = PARTNER_SKILLS.get(p.species_id)
+	if psk != null and not partner_gear_ok(p.species_id):
+		log_msg("%s's %s needs its pal gear — unlock %s in the tech tree"
+			% [p.spec["name"], psk["name"], PARTNER_GEAR[p.species_id]])
+		psk = null # the pal falls back to its strongest learned move instead
 	if psk != null:
 		if p.skill_cd.get("partner", 0) > t:
 			log_msg("%s is reloading" % p.spec["name"])

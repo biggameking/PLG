@@ -342,6 +342,11 @@ func run() -> void:
 		# out-of-reach aims whiff — off-map aim finds nothing
 		check("partner skill whiffs", not game.run_partner_skill(tz,
 			Vector2(-100, -100), game.PARTNER_SKILLS["tanzee"]))
+		# pal gear gates the bespoke actives (Palworld's crafted harness rule)
+		check("gear gates partner", not game.partner_gear_ok("foxparks"))
+		game.add_item("foxparks_harness", 1)
+		check("harness unlocks skill", game.partner_gear_ok("foxparks"))
+		game.items.erase("foxparks_harness")
 		game.pals.erase(wt)
 		for tmp in [wt, fp, tz]:
 			if is_instance_valid(tmp) and tmp.get_parent():

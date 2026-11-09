@@ -669,6 +669,39 @@ const ITEMS = {
   "price": 180,
   "desc": "Palworld hookshot: haul yourself UP a cliff face — one-way, no descents."
  },
+ "foxparks_harness": {
+  "id": "foxparks_harness",
+  "name": "Foxparks Harness",
+  "glyph": "◠",
+  "color": "#e88a4d",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "foxparks_harness",
+  "price": 200,
+  "desc": "Pal gear: unlocks Foxparks' Flamethrower partner skill."
+ },
+ "lifmunk_smg": {
+  "id": "lifmunk_smg",
+  "name": "Lifmunk SMG",
+  "glyph": "┐",
+  "color": "#8ab86a",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "lifmunk_smg",
+  "price": 240,
+  "desc": "Pal gear: unlocks Lifmunk's SMG Burst partner skill."
+ },
+ "tanzee_rifle": {
+  "id": "tanzee_rifle",
+  "name": "Tanzee Assault Rifle",
+  "glyph": "┐",
+  "color": "#6a9ab8",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "tanzee_rifle",
+  "price": 260,
+  "desc": "Pal gear: unlocks Tanzee's Rifle Shot partner skill."
+ },
  "fishing_rod": {
   "id": "fishing_rod",
   "name": "Fishing Rod",
@@ -1281,6 +1314,30 @@ const RECIPES = [
   "cost": [["ingot", 4], ["fiber", 10], ["paldium", 3]],
   "station": "workbench",
   "work": 140
+ },
+ {
+  "id": "foxparks_harness",
+  "tech": "foxparks_harness",
+  "out": ["foxparks_harness", 1],
+  "cost": [["leather", 4], ["fiber", 8], ["ingot", 2], ["paldium", 2]],
+  "station": "workbench",
+  "work": 120
+ },
+ {
+  "id": "lifmunk_smg",
+  "tech": "lifmunk_smg",
+  "out": ["lifmunk_smg", 1],
+  "cost": [["ingot", 6], ["wood", 4], ["paldium", 3]],
+  "station": "workbench",
+  "work": 160
+ },
+ {
+  "id": "tanzee_rifle",
+  "tech": "tanzee_rifle",
+  "out": ["tanzee_rifle", 1],
+  "cost": [["ingot", 8], ["wood", 6], ["paldium", 4]],
+  "station": "workbench",
+  "work": 180
  },
  {
   "id": "saddle",

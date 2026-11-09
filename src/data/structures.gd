@@ -1029,6 +1029,24 @@ const TECH = [
   "tier": 4,
   "cost": 2,
   "parts": 1
+ },
+ {
+  "id": "foxparks_harness",
+  "name": "Foxparks Harness",
+  "tier": 4,
+  "cost": 2
+ },
+ {
+  "id": "lifmunk_smg",
+  "name": "Lifmunk SMG",
+  "tier": 4,
+  "cost": 2
+ },
+ {
+  "id": "tanzee_rifle",
+  "name": "Tanzee Assault Rifle",
+  "tier": 5,
+  "cost": 2
  }
 ]
 
