@@ -1914,6 +1914,18 @@ func make_active(uid: int) -> void:
 		return
 	send_out(uid)
 
+const STANCES := ["auto", "aggressive", "passive"]
+
+func cycle_stance(uid: int) -> void:
+	# Palworld pal commands: the field pal obeys a standing order
+	var p: Pal = find_pal(uid)
+	if p == null:
+		p = bench_pal_of(uid)
+	if p == null:
+		return
+	p.stance = STANCES[(STANCES.find(p.stance) + 1) % STANCES.size()]
+	log_msg("%s: %s" % [p.spec["name"], p.stance])
+
 func bench_pal_of(uid: int) -> Pal:
 	for bp in bench:
 		if is_instance_valid(bp) and bp.uid == uid:
@@ -2252,7 +2264,7 @@ func save_game() -> void:
 			"passives": p.passives, "alpha": p.alpha, "boss": p.boss,
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
 			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment, "sb": p.soul_boost,
-			"lucky": p.lucky, "extra": p.extra_skills,
+			"lucky": p.lucky, "extra": p.extra_skills, "stance": p.stance,
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -2268,7 +2280,8 @@ func save_game() -> void:
 			"fav": bp.fav,
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "sb": bp.soul_boost,
-			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills})
+			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
+			"stance": bp.stance})
 	var structs := {}
 	var seen_st := {} # one entry per structure — footprint cells share a st; writing
 	# them as separate records made rebuild order-dependent and ate buildings
@@ -2494,6 +2507,9 @@ func load_game() -> bool:
 		var al := str(pd.get("ail", ""))
 		if al in Pal.AILMENTS:
 			np.ailment = al # unknown/blank ailments fall to healthy
+		var stn := str(pd.get("stance", "auto"))
+		if stn in STANCES:
+			np.stance = stn # a foreign stance string stays at default
 		np.fav = pd.get("fav") == true # anything but a real bool stays unlocked
 		np.soul_boost = clampi(int(pd.get("sb", 0)), 0, 10)
 		if pd.get("lucky") is bool:

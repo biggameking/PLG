@@ -221,6 +221,30 @@ func run() -> void:
 		check("send out redeploys", game.party_pal() != null)
 		game.party_to_box(mp2.uid) # second member goes back to cold storage
 		check("bench pals rest", game.bench.all(func(b9): return b9.get_parent() == game.box_holder))
+		# pal orders (Palworld command): aggressive hunts on sight, passive holds
+		var st_pal := game.party_pal()
+		if st_pal != null:
+			var prey: Pal = game.gen_pal("lamball", 2, st_pal.pos + Vector2(2, 0))
+			prey.mode = "wild"; prey.max_hp = 4000; prey.hp = 4000
+			game.pals.append(prey)
+			game.cycle_stance(st_pal.uid) # auto -> aggressive
+			check("stance cycles", st_pal.stance == "aggressive")
+			var hp9 := prey.hp
+			for i9 in 60:
+				st_pal.partner_ai(0.1)
+				if prey.hp < hp9:
+					break
+			check("aggressive hunts on sight", prey.hp < hp9, "hp=%d" % prey.hp)
+			game.cycle_stance(st_pal.uid) # aggressive -> passive
+			prey.hp = 4000; prey.aggro = 0 # charging the player — still holds
+			var d0 := st_pal.pos.distance_to(prey.pos)
+			st_pal.partner_ai(0.1)
+			check("passive holds", prey.hp == 4000 and st_pal.stance == "passive",
+				"hp=%d d=%.1f" % [prey.hp, d0])
+			game.cycle_stance(st_pal.uid) # back to auto
+			game.pals.erase(prey)
+			if prey.get_parent(): prey.get_parent().remove_child(prey)
+			prey.free()
 		# palbox growth: workforce slots scale with player level, hard cap 20
 		var lv0: int = game.player.level
 		game.player.level = 1
@@ -923,7 +947,7 @@ func run() -> void:
 	check("box sync drops junk", game.net_box.is_empty() and game.party.is_empty())
 	var ppack: Array = game.net.party_state_pack()
 	check("party pack rows", ppack.size() == mini(game.party.size(), 8)
-		and ppack.all(func(e9): return e9.size() >= 12), "rows=%d party=%d" % [ppack.size(), game.party.size()])
+		and ppack.all(func(e9): return e9.size() >= 13), "rows=%d party=%d" % [ppack.size(), game.party.size()])
 	game.net.box_sync(pack, [nbuid], ppack)
 	check("party sync mirror", game.net_party.size() == ppack.size())
 	game.net.is_host = true

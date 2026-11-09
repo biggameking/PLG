@@ -346,7 +346,7 @@ func party_state_pack() -> Array:
 			continue
 		arr.append([p.uid, p.species_id, p.level, int(p.hp), int(p.max_hp),
 			p.sex, p.lucky, p.talent, str(p.ailment), p.fav, int(p.star),
-			p == out_pal])
+			p == out_pal, p.stance])
 		if arr.size() >= 8:
 			break
 	return arr
@@ -382,7 +382,8 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 			"ailment": str(e2[8]) if e2.size() > 8 else "",
 			"fav": e2.size() > 9 and e2[9] == true,
 			"star": clampi(int(e2[10]) if e2.size() > 10 else 0, 0, 4),
-			"out": e2.size() > 11 and e2[11] == true})
+			"out": e2.size() > 11 and e2[11] == true,
+			"stance": str(e2[12]) if e2.size() > 12 else "auto"})
 		if np.size() >= 8:
 			break
 	game.net_party = np
@@ -409,6 +410,7 @@ func box_req(op: String, uid: int) -> void:
 		"base_to_box": game.base_to_box(p)
 		"toggle_fav": game.toggle_fav(p.uid)
 		"make_active": game.make_active(p.uid)
+		"cycle_stance": game.cycle_stance(p.uid)
 		"butcher_pal": game.butcher_pal(p.uid)
 		"sell_pal": game.sell_pal_to_merchant(p.uid)
 

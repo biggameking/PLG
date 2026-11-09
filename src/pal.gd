@@ -38,6 +38,7 @@ var skill_cd := {}
 var stun_t := 0.0
 var revive_t := 0.0         # >0 while knocked out in the box
 var ailment := ""           # "" | depressed | sprain | ulcer | weakened (Palworld SAN sickness)
+var stance := "auto"        # pal command: auto defends / aggressive hunts / passive holds
 var low_san_t := 0.0        # sustained seconds under SAN 15 — onset timer
 var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
@@ -316,19 +317,22 @@ func partner_ai(dt: float) -> void:
 		pos = game.player.pos
 		return
 	var pl := game.player
-	# attack nearest wild pal threatening player
+	# attack nearest wild pal threatening player — stance tunes who counts
+	# (Palworld pal commands: auto defends, aggressive hunts on sight)
 	var best: Pal = null
-	var bd := 6.0
-	for p in game.pals:
-		if p.mode != "wild" or p.hp <= 0:
-			continue
-		# threats: hunting the player, hunting me, hunting any party member, or raiders
-		if p.aggro != 0 and p.aggro != uid and not p.raid and not (p.aggro > 0 and p.aggro in game.party):
-			continue
-		var d := pos.distance_to(p.pos)
-		if d < bd:
-			bd = d
-			best = p
+	var bd := 6.0 if stance != "aggressive" else 9.0
+	if stance != "passive":
+		for p in game.pals:
+			if p.mode != "wild" or p.hp <= 0:
+				continue
+			if stance != "aggressive" \
+					and p.aggro != 0 and p.aggro != uid and not p.raid \
+					and not (p.aggro > 0 and p.aggro in game.party):
+				continue # threats: hunting the player, me, a party member, or raiders
+			var d := pos.distance_to(p.pos)
+			if d < bd:
+				bd = d
+				best = p
 	if best:
 		if not cast_skills(best, dt):
 			if bd > 1.0:

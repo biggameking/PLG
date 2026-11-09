@@ -108,6 +108,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("party_toggle"):
 		game.assign_worker()
 		return
+	if event.is_action_pressed("pal_stance"):
+		# Palworld pal command: cycle the field pal's standing order
+		if game.net != null and game.net.is_client():
+			for d in game.net_party:
+				if d.get("out", false):
+					game.net.rpc("box_req", "cycle_stance", int(d["uid"]))
+					break
+		elif game.party_pal() != null:
+			game.cycle_stance(game.party_pal().uid)
+		return
 	if event.is_action_pressed("demolish"):
 		game.demolish_at(mouse_tile())
 		return
@@ -410,8 +420,9 @@ func _draw() -> void:
 	var py := 38
 	for pr in party_rows(): # ● out / ○ in its ball — Palworld fields one
 		draw_rect(Rect2(r.x - 150, py, 138, 16), Color(0, 0, 0, 0.5))
-		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s" % [pr["name"], pr["lv"],
-			"●" if pr["out"] else "○"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
+		var tag := "!" if pr["stance"] == "aggressive" else ("." if pr["stance"] == "passive" else "")
+		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s%s" % [pr["name"], pr["lv"],
+			"●" if pr["out"] else "○", tag], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
 		py += 18
 	# build ghost preview
 	if game.panel == "build" and build_sel >= 0:
@@ -461,6 +472,7 @@ func _draw() -> void:
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
 			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  PALDECK p  CHAT enter",
 			"1-5 sends that party pal out (press again to recall) — one ball on the field",
+			"v cycles the field pal's orders: auto / aggressive / passive",
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
 			"Glider descends cliffs. Sick pals need medicine in feed box/bag.",
 		]
@@ -700,7 +712,7 @@ func party_rows() -> Array:
 			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]), "name": sp.get("name", str(d["sid"])),
 				"lucky": d["lucky"], "sex": d["sex"], "lv": d["lv"], "talent": d["talent"],
 				"hp": d["hp"], "max_hp": d["max_hp"], "ailment": d["ailment"],
-				"star_s": st, "out": d["out"], "sub": "resting"})
+				"star_s": st, "out": d["out"], "sub": "resting", "stance": str(d.get("stance", "auto"))})
 	else:
 		var cur := game.party_pal()
 		for uid in game.party:
@@ -712,7 +724,8 @@ func party_rows() -> Array:
 			out.append({"arg": p, "uid": p.uid, "name": p.spec["name"], "lucky": p.lucky,
 				"sex": p.sex, "lv": p.level, "talent": p.talent, "hp": int(p.hp),
 				"max_hp": int(p.max_hp), "ailment": p.ailment,
-				"star_s": star_str(p), "out": p == cur, "sub": passive_str(p).left(14)})
+				"star_s": star_str(p), "out": p == cur, "sub": passive_str(p).left(14),
+				"stance": p.stance})
 	return out
 
 func box_rows() -> Array:
