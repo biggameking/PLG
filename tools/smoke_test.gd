@@ -628,6 +628,23 @@ func run() -> void:
 		if herd:
 			break
 	check("wild herds", herd)
+	# herds turn as one: hitting a packmate pulls the flock into the fight
+	var hd1: Pal = game.gen_pal("lamball", 3, game.player.pos + Vector2(6, 0))
+	var hd2: Pal = game.gen_pal("lamball", 3, game.player.pos + Vector2(7, 0))
+	var hd3: Pal = game.gen_pal("lamball", 3, game.player.pos + Vector2(8, 0))
+	hd1.home = Vector2(50, 50)
+	hd2.home = Vector2.ZERO # a stray near a pack is NOT kin — must not be dragged in
+	hd3.home = hd1.home
+	game.pals.append(hd1); game.pals.append(hd2); game.pals.append(hd3)
+	while is_instance_valid(hd1) and hd1.hp > 1 and hd1.aggro != 0: # fleers roll 50% — tap until it stands and fights
+		hd1.hit(1, 1.0, true)
+	check("herd turns as one", is_instance_valid(hd1) and hd1.aggro == 0 \
+			and hd3.aggro == 0 and hd2.aggro < 0,
+		"hd1=%d hd3=%d hd2=%d" % [hd1.aggro if is_instance_valid(hd1) else -9, hd3.aggro, hd2.aggro])
+	for hq in [hd1, hd2, hd3]:
+		game.pals.erase(hq)
+		if is_instance_valid(hq):
+			hq.free()
 	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
 	var wpts := 0
 	for ks in game.structures:

@@ -107,6 +107,13 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 				aggro = -1
 			else:
 				aggro = 0
+			# Palworld herds turn as one: a packmate under attack pulls the
+			# whole flock into the same fight-or-flight stance
+			for m in game.pals:
+				if m != self and m.mode == "wild" and m.hp > 0 and m.home == home \
+						and m.home != Vector2.ZERO and m.aggro < 0:
+					m.aggro = aggro
+					m.statuses.erase("sleep")
 
 func elem() -> Array:
 	return spec.get("elements", ["neutral"])
