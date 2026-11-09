@@ -548,6 +548,17 @@ const ITEMS = {
   "heal": 150,
   "desc": "Strong medicine."
  },
+ "memory_wipe": {
+  "id": "memory_wipe",
+  "name": "Memory Wiping Medicine",
+  "glyph": "◌",
+  "color": "#c08cff",
+  "kind": "medicine",
+  "usable": true,
+  "stack": 10,
+  "price": 120,
+  "desc": "Palworld respec: refunds every statue perk as stat points."
+ },
  "pal_egg": {
   "id": "pal_egg",
   "name": "Pal Egg",
@@ -1125,6 +1136,29 @@ const RECIPES = [
   ],
   "station": "workbench",
   "work": 200
+ },
+ {
+  "id": "memory_wipe",
+  "out": [
+   "memory_wipe",
+   1
+  ],
+  "cost": [
+   [
+    "medical_supplies",
+    2
+   ],
+   [
+    "horn",
+    2
+   ],
+   [
+    "pal_fluid",
+    2
+   ]
+  ],
+  "station": "workbench",
+  "work": 300
  },
  {
   "id": "baked_berries",

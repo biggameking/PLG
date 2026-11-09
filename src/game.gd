@@ -3302,6 +3302,24 @@ func upgrade_perk(k: String) -> void:
 		player.hp = player.max_hp
 	log_msg("Statue upgraded: %s Lv%d" % [k, perks[k]])
 
+func respec() -> bool:
+	# Palworld's memory-wiping medicine: every perk rank folds back into
+	# stat points — spend them fresh, no effigies refunded
+	var total := 0
+	for k in perks:
+		total += int(perks[k])
+	if total == 0:
+		log_msg("No perks to forget")
+		return false
+	for k in perks:
+		perks[k] = 0
+	stat_pts += total
+	player.capture_level = 1 + perks["capture"]
+	player.max_hp = 100 + (player.level - 1) * 10 + perks["hp"] * 12
+	player.hp = minf(player.hp, player.max_hp) # forgot the hp ranks — max shrank
+	log_msg("Memory wiped: %d stat points returned" % total)
+	return true
+
 func soul_infuse(uid: int) -> void:
 	# Palworld statue-of-power for pals: feed effigies into one pal's soul
 	var target: Pal = null
@@ -3628,7 +3646,7 @@ const MERCH_POOL := ["pal_sphere", "mega_sphere", "low_medical", "medical_suppli
 	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",
 	"skill_fruit_neutral", "skill_fruit_fire", "skill_fruit_water", "skill_fruit_grass",
 	"skill_fruit_electric", "skill_fruit_ice", "skill_fruit_ground", "skill_fruit_dark",
-	"skill_fruit_dragon", "cake", "pal_egg"]
+	"skill_fruit_dragon", "cake", "pal_egg", "memory_wipe"]
 
 func gen_merchant_stock() -> void:
 	merchant_stock.clear()

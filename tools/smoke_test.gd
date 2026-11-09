@@ -745,6 +745,20 @@ func run() -> void:
 	game.upgrade_perk("speed")
 	check("stat point spend", game.perks["speed"] == 1 and game.stat_pts == 0 \
 			and game.item_count("lifmunk_effigy") == 6, "pts=%d eff=%d" % [game.stat_pts, game.item_count("lifmunk_effigy")])
+	# memory wipe: perk ranks fold back into stat points (Palworld respec)
+	game.stat_pts = 0
+	var perkw := 0
+	for k in game.perks:
+		perkw += int(game.perks[k])
+	game.respec()
+	check("memory wipe", game.stat_pts == perkw and game.perks["capture"] == 0
+		and p.max_hp == 100 + (p.level - 1) * 10 and p.capture_level == 1,
+		"pts=%d perkw=%d" % [game.stat_pts, perkw])
+	game.perks["capture"] = 1; game.perks["hp"] = 1; game.perks["speed"] = 1
+	game.stat_pts = 0
+	p.capture_level = 1 + game.perks["capture"]
+	p.max_hp = 100 + (p.level - 1) * 10 + game.perks["hp"] * 12
+	p.hp = minf(p.hp, p.max_hp)
 	# soul infusion: effigies harden an owned pal, ride the save, cap at 10
 	var soul_t: Pal = null
 	for q in game.pals:

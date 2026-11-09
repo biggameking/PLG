@@ -837,6 +837,9 @@ func use_item(k: String) -> void:
 			game.deposit_egg()  # needs a free incubator nearby
 		"fishing_rod":
 			game.cast_line() # reusable — the rod never leaves the pack
+		"memory_wipe":
+			if game.respec():
+				game.add_item(k, -1)
 		_:
 			if k.begins_with("skill_fruit_"):
 				game.teach_skill_fruit(k)
