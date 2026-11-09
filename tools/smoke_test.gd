@@ -138,12 +138,26 @@ func run() -> void:
 	p.melee()
 	check("launcher fires sphere", game.spheres_flying.size() == 1 and game.item_count("pal_sphere") == sc0 - 1,
 		"flying=%d spheres=%d->%d" % [game.spheres_flying.size(), sc0, game.item_count("pal_sphere")])
+	# Palworld wobble: a landed sphere rocks ~1.35s before the verdict lands
+	if game.spheres_flying.size() == 1:
+		var wsp: Dictionary = game.spheres_flying[0]
+		wsp["t"] = 0.5 # skip the lob
+		game._process(0.2)
+		check("sphere wobbles", game.spheres_flying.has(wsp) and wsp.get("wt", 0.0) > 0.0,
+			"flying=%d wt=%s" % [game.spheres_flying.size(), str(wsp.get("wt"))])
+		game._process(1.4)
+		check("wobble resolves", not game.spheres_flying.has(wsp),
+			"still flying=%d" % game.spheres_flying.size())
 	for spx in game.spheres_flying:
-		spx["node"].queue_free()
+		if is_instance_valid(spx["node"]):
+			spx["node"].queue_free()
 	game.spheres_flying.clear()
 	game.pals.erase(lp)
-	if lp.get_parent(): lp.get_parent().remove_child(lp)
-	lp.free()
+	# a lucky catch shelves the pal — pull its roster entries before freeing
+	game.bench.erase(lp); game.box.erase(lp); game.party.erase(lp.uid)
+	if is_instance_valid(lp):
+		if lp.get_parent(): lp.get_parent().remove_child(lp)
+		lp.free()
 	if lw0 != "":
 		game.equip(lw0)
 	else:

@@ -1202,6 +1202,18 @@ func _process(dt: float) -> void:
 			var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
 			sp["node"].position = Vector2(pp.x, pp.y - 14 - arc)
 		if sp["t"] > 0.45:
+			# Palworld wobble theatre: the ball lands and rocks a beat before
+			# the verdict — 3 shakes of tension, then resolve
+			if not sp.has("wt"):
+				sp["wt"] = 0.0
+			sp["wt"] += dt
+			if is_instance_valid(tg) and is_instance_valid(sp["node"]):
+				var rock: float = sin(sp["wt"] * 18.0) * (6.0 if sp["wt"] < 0.9 else 3.0)
+				var wpp := Iso.to_screen(tg.pos.x, tg.pos.y,
+					world.elev_at(int(tg.pos.x), int(tg.pos.y)))
+				sp["node"].position = Vector2(wpp.x + rock, wpp.y - 14)
+			if sp["wt"] < 1.35:
+				continue
 			if is_instance_valid(sp["node"]):
 				sp["node"].queue_free()
 			resolve_sphere(sp)
