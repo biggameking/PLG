@@ -352,6 +352,26 @@ func _draw() -> void:
 		draw_rect(Rect2(r.x / 2 - 80, 8, 160, 22), Color(0.5, 0.06, 0.06, 0.7))
 		draw_string(font, Vector2(r.x / 2 - 62, 24), "RAID IN %ds" % int(ceilf(game.raid_t)),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ff8d7e"))
+	# boss bar: nearest alpha/boss in the fray gets a name + hp strip
+	var boss: Pal = null
+	var bd := 18.0
+	for q in game.pals:
+		if q.hp <= 0 or not (q.boss or q.alpha):
+			continue
+		if q.mode == "box" or q.mode == "partner":
+			continue
+		var dd: float = q.pos.distance_to(game.player.pos)
+		if dd < bd:
+			bd = dd; boss = q
+	if boss:
+		var frac: float = clampf(boss.hp / boss.max_hp, 0.0, 1.0)
+		var bw := 240.0
+		draw_rect(Rect2(r.x / 2 - bw / 2, 34, bw, 16), Color(0, 0, 0, 0.6))
+		draw_rect(Rect2(r.x / 2 - bw / 2 + 1, 35, (bw - 2) * frac, 14),
+			Color("#c0392b") if boss.boss else Color("#e8963c"))
+		draw_string(font, Vector2(r.x / 2 - bw / 2 + 4, 47),
+			"%s %s Lv%d" % ["BOSS" if boss.boss else "α", boss.spec["name"], boss.level],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 	if game.mission_idx < game.MISSIONS.size(): # Palworld guide rope
 		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
 		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
