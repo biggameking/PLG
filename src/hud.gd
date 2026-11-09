@@ -819,6 +819,12 @@ func draw_dex(r: Vector2) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 			draw_string(font, Vector2(rr.position.x + 320, y), "%s  ×%d" % [els.left(14), cc],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#9fd8a0"))
+			# Palworld's field guide: a caught species tells you what it drops
+			var dnames := []
+			for dr in sp.get("drops", []):
+				dnames.append(str(ItemData.ITEMS.get(dr[0], {}).get("name", dr[0])).left(9))
+			draw_string(font, Vector2(rr.position.x + 445, y), ", ".join(dnames).left(24),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.7, 0.65, 0.5))
 		elif game.dex_seen.has(sid):
 			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s  ·spotted·" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.65, 0.65, 0.72))
