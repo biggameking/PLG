@@ -2406,9 +2406,10 @@ func run() -> void:
 	var pa2 := p.pos + Vector2(4, 0)
 	for off in [Vector2(4, 0), Vector2(-4, 0), Vector2(0, 4), Vector2(0, -4)]:
 		var cc2: Vector2 = p.pos + off
-		# flee vector continues past the player line — both cells must be clear
+		# flee vector runs AWAY from the player — the cell beyond the prey
+		# must be walkable or step_toward has nowhere to go
 		if not game.world.blocked(int(cc2.x), int(cc2.y), p.pos.x, p.pos.y) \
-				and not game.world.blocked(int(p.pos.x + off.x * 2), int(p.pos.y + off.y * 2), cc2.x, cc2.y):
+				and not game.world.blocked(int(cc2.x + signi(off.x)), int(cc2.y + signi(off.y)), cc2.x, cc2.y):
 			pa2 = cc2; break
 	var prey2: Pal = game.gen_pal("lamball", 5, pa2)
 	prey2.spec = prey2.spec.duplicate(); prey2.spec["hostile"] = 1

@@ -187,6 +187,7 @@ func _ready() -> void:
 		"horn": SfxLib.tone(98, 0.8, 0.5, 0.85),
 		"ko": SfxLib.tone(160, 0.5, 0.45, 0.6),
 		"hit": SfxLib.noise(0.07, 0.3, 14.0),
+		"lucky": SfxLib.arp([880, 1174, 1568, 2093], 0.07, 0.35),
 	}
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
@@ -331,6 +332,8 @@ func spawn_wild() -> void:
 		p.setup(self, sid, lv + (6 if p.alpha else 0) + (3 if p.lucky else 0), Vector2(x + 0.5, y + 0.5))
 		if p.lucky:
 			floater(p.pos, "☆ LUCKY ☆", "#ffd76e")
+			if player.pos.distance_to(p.pos) < 24.0:
+				sfx_play("lucky") # Palworld's shiny jingle — rare luck within earshot
 		if p.alpha and rng.chance(0.4):
 			p.bounty = p.level * 2 # Palworld's wanted marks: some alphas carry a price on their head
 		p.home = p.pos # lair anchor — alphas tether here
@@ -3097,6 +3100,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 			np.extra_skills.append(pool_s[rng.int_range(0, pool_s.size() - 1)])
 	if huge: # Palworld's huge eggs: a guaranteed golden Lucky hatches out
 		np.lucky = true
+		sfx_play("lucky")
 		if "lucky" not in np.passives:
 			np.passives.push_front("lucky")
 		while np.passives.size() > 4:
