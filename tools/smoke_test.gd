@@ -462,6 +462,24 @@ func run() -> void:
 			ivp.job_site = null
 			game.pals.erase(ivp); ivp.free()
 
+			# Palworld condenser: a starred pal outworks its kin on the same site
+			var cst: Pal = game.gen_pal("lifmunk", 5, game.player.pos)
+			cst.mode = "base"; cst.san = 90.0; cst.ailment = ""; cst.passives = []
+			var wsv5: Array = mine_st["workers"].duplicate()
+			var tsv5: float = mine_st["timer"]
+			var st_vs := []
+			for sv in [0, 4]:
+				cst.star = sv
+				mine_st["workers"] = [cst]; cst.job_site = mine_st
+				mine_st["timer"] = 0.0
+				game.tick_production(1.0)
+				st_vs.append(float(mine_st["timer"]))
+			check("stars work harder", absf(st_vs[1] / maxf(0.001, st_vs[0]) - 1.4) < 0.01,
+				"star4/star0=%.3f" % (st_vs[1] / maxf(0.001, st_vs[0])))
+			mine_st["workers"] = wsv5; mine_st["timer"] = tsv5
+			cst.job_site = null
+			game.pals.erase(cst); cst.free()
+
 			# hungry pals slack off (Palworld): starving crews stop producing
 			var hg: Pal = game.gen_pal("lamball", 5, game.player.pos)
 			hg.mode = "base"; hg.san = 90.0; hg.ailment = ""

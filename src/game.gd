@@ -1660,7 +1660,8 @@ func tick_production(dt: float) -> void:
 			var dew := 1.15 if weather == "rain" and "water" in w.spec.get("elements", []) else 1.0
 			# talent shows in the palbox — make it earn its keep on the crew too
 			var iv: float = 0.9 + w.talent * 0.004 # T0 → 0.9, T100 → 1.3
-			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv
+			var cond: float = 1.0 + w.star * 0.1 # Palworld: a condensed pal outworks its kin
+			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond
 		var wet := 1.25 if weather == "rain" and s.get("farmField", false) else 1.0 # rain does the watering
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet
 		var rate: float = job.get("amount", 30)
