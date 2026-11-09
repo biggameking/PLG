@@ -186,6 +186,8 @@ func _physics_process(dt: float) -> void:
 	if has_status("sleep") or stun_t > 0:
 		if mode == "base" and has_status("sleep"):
 			san = minf(100.0, san + (3.0 if sleep_rested else 1.0) * dt)
+			# Palworld: a night in a real bed knits wounds; floor naps help less
+			hp = minf(max_hp, hp + max_hp * (0.004 if sleep_rested else 0.0015) * dt)
 		sync_screen()
 		return
 	speed = base_move_speed() * speed_bonus * status_speed_mult() * rage_mult() # passive speed must survive the per-frame recompute

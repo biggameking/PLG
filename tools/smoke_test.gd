@@ -1771,6 +1771,19 @@ func run() -> void:
 	var bed_gain: float = napper.san - san_n0
 	check("bed rest beats floor naps", rough_gain > 0.5 and bed_gain >= rough_gain * 2.5,
 		"rough=%.2f bed=%.2f" % [rough_gain, bed_gain])
+	# and wounds knit overnight — a real bed heals ~2.7x a floor nap's rate
+	napper.hp = napper.max_hp * 0.5
+	napper.sleep_rested = false
+	var hp_n0: float = napper.hp
+	napper._physics_process(1.0)
+	var rough_hp: float = napper.hp - hp_n0
+	napper.hp = napper.max_hp * 0.5
+	napper.sleep_rested = true
+	hp_n0 = napper.hp
+	napper._physics_process(1.0)
+	var bed_hp: float = napper.hp - hp_n0
+	check("sleep knits wounds", rough_hp > 0.01 and bed_hp >= rough_hp * 2.5,
+		"rough=%.3f bed=%.3f" % [rough_hp, bed_hp])
 	game.pals.erase(napper); napper.free()
 	# monitoring stand: SAN drains half again while it stands (Palworld trade-off)
 	game.add_item("wood", 10); game.add_item("stone", 10); game.add_item("ingot", 2)
