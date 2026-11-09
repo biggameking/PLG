@@ -2476,6 +2476,15 @@ func run() -> void:
 	game.kill_pal(luck, true)
 	check("lucky drops gold", game.item_count("gold_coin") > gold0b, "+%d" % (game.item_count("gold_coin") - gold0b))
 
+	# wanted marks: a flagged kill pays the bounty straight into the bag
+	var wnt: Pal = game.gen_pal("syndicate_grunt", 6, game.player.pos + Vector2(3, 0))
+	wnt.mode = "wild"; wnt.bounty = 12
+	game.pals.append(wnt)
+	var gold0w := game.item_count("gold_coin")
+	game.kill_pal(wnt, true)
+	check("bounty pays out", game.item_count("gold_coin") == gold0w + 12,
+		"+%d" % (game.item_count("gold_coin") - gold0w))
+
 	# skill fruit: teaches the active pal an extra move of that element
 	if game.party.is_empty():
 		var sp2: Pal = game.gen_pal("lamball", 3, game.player.pos + Vector2(2, 0))

@@ -331,6 +331,8 @@ func spawn_wild() -> void:
 		p.setup(self, sid, lv + (6 if p.alpha else 0) + (3 if p.lucky else 0), Vector2(x + 0.5, y + 0.5))
 		if p.lucky:
 			floater(p.pos, "☆ LUCKY ☆", "#ffd76e")
+		if p.alpha and rng.chance(0.4):
+			p.bounty = p.level * 2 # Palworld's wanted marks: some alphas carry a price on their head
 		p.home = p.pos # lair anchor — alphas tether here
 		pals.append(p)
 		wild_n += 1
@@ -441,6 +443,10 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			log_msg("RAID CLEARED! Legendary sphere + loot!")
 		if p.alpha or p.boss:
 			mission_flags["elite"] = true
+		if p.bounty > 0:
+			add_item("gold_coin", p.bounty)
+			floater(p.pos, "BOUNTY +%dg" % p.bounty, "#ffd76e")
+			log_msg("Bounty claimed on %s: +%d gold" % [p.spec["name"], p.bounty])
 		for d in p.spec.get("drops", []):
 			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 		if p.alpha:
@@ -2403,6 +2409,7 @@ func save_game() -> void:
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
 			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment, "sb": p.soul_boost,
 			"lucky": p.lucky, "extra": p.extra_skills, "stance": p.stance,
+			"bnt": p.bounty,
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -2652,6 +2659,7 @@ func load_game() -> bool:
 			np.stance = stn # a foreign stance string stays at default
 		np.fav = pd.get("fav") == true # anything but a real bool stays unlocked
 		np.soul_boost = clampi(int(pd.get("sb", 0)), 0, 10)
+		np.bounty = clampi(int(pd.get("bnt", 0)), 0, 999) # foreign saves can't mint a fortune
 		if pd.get("lucky") is bool:
 			np.lucky = pd["lucky"]
 		if np.lucky and "lucky" not in np.passives:
@@ -2853,6 +2861,8 @@ func start_raid() -> void:
 			var rp := preload("res://src/pal.gd").new()
 			entity_layer.add_child(rp)
 			rp.setup(self, sid, rng.int_range(4 + zone * 4 + day_bonus, 8 + zone * 6 + day_bonus), Vector2(tx + 0.5, ty + 0.5))
+			if sid.begins_with("syndicate") and rng.chance(0.3):
+				rp.bounty = rng.int_range(8, 18) # wanted criminals pay cash on the spot
 			# raider picks nearest non-wild pal; falls back to the player
 			rp.aggro = 0
 			rp.raid = true

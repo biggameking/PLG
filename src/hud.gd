@@ -425,7 +425,8 @@ func _draw() -> void:
 		draw_rect(Rect2(r.x / 2 - bw / 2 + 1, 35, (bw - 2) * frac, 14),
 			Color("#c0392b") if boss.boss else Color("#e8963c"))
 		draw_string(font, Vector2(r.x / 2 - bw / 2 + 4, 47),
-			"%s %s Lv%d" % ["BOSS" if boss.boss else "α", boss.spec["name"], boss.level],
+			"%s %s Lv%d%s" % ["BOSS" if boss.boss else "α", boss.spec["name"], boss.level,
+				" ☠%dg" % boss.bounty if boss.bounty > 0 else ""],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 	if game.mission_idx < game.MISSIONS.size(): # Palworld guide rope
 		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
