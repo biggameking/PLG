@@ -4180,3 +4180,12 @@ static func species_of(id: String) -> Dictionary:
 
 static func zone_pool(z: int) -> Array:
 	return ZONE.get(str(z), [])
+
+static var _zone_of := {}
+static func habitat(sid: String) -> int:
+	# Paldeck habitat: which wild band this species calls home (-1 = none)
+	if _zone_of.is_empty():
+		for z in ZONE:
+			for s2 in ZONE[z]:
+				_zone_of[s2] = int(z)
+	return int(_zone_of.get(sid, -1))

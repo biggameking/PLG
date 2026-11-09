@@ -981,7 +981,9 @@ func draw_dex(r: Vector2) -> void:
 			var els: String = "/".join(sp.get("elements", []))
 			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
-			draw_string(font, Vector2(rr.position.x + 320, y), "%s  ×%d" % [els.left(14), cc],
+			var hz := SpeciesGen.habitat(sid) # Paldeck habitat: where to hunt it
+			draw_string(font, Vector2(rr.position.x + 320, y), "%s %s×%d" % [els.left(11),
+				"z%d  " % hz if hz >= 0 else "", cc],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#9fd8a0"))
 			# Palworld's field guide: a caught species tells you what it drops
 			var dnames := []
