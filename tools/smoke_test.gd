@@ -355,6 +355,36 @@ func run() -> void:
 			check("work lv scales output", absf(lv_ratio - 1.5) < 0.01, "lv2/lv1=%.2f" % lv_ratio)
 			game.pals.erase(w_lv2); game.pals.erase(w_lv1)
 			w_lv2.free(); w_lv1.free()
+		# dark pals ARE the night shift: +15% output after dusk
+		game.add_item("stone", 20); game.add_item("wood", 10)
+		var mine_st = null
+		for kk4 in game.structures:
+			if game.structures[kk4].get("id") == "ore_mine":
+				mine_st = game.structures[kk4]
+		if mine_st == null:
+			var mk: Vector2i = free_xy.call("ore_mine")
+			if mk.x >= 0:
+				mine_st = game.structures.get(mk)
+		if mine_st:
+			var dark_w: Pal = game.gen_pal("depresso", 5, game.player.pos)
+			dark_w.mode = "base"; dark_w.san = 90.0; dark_w.ailment = ""; dark_w.passives = []
+			var saved_w: Array = mine_st["workers"].duplicate()
+			var saved_t: float = mine_st["timer"]
+			mine_st["workers"] = [dark_w]; dark_w.job_site = mine_st
+			game.tod = 12.0; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var day_v: float = mine_st["timer"]
+			game.tod = 23.0; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var night_v: float = mine_st["timer"]
+			var dk_ratio: float = night_v / maxf(0.001, day_v)
+			check("dark night shift", absf(dk_ratio - 1.15) < 0.01, "night/day=%.3f" % dk_ratio)
+			mine_st["workers"] = saved_w; mine_st["timer"] = saved_t
+			dark_w.job_site = null
+			game.pals.erase(dark_w); dark_w.free()
+			game.tod = tod0
+		else:
+			check("dark night shift", false, "no mining site")
 
 	# missions: ordered guide rope pays out as live state satisfies rungs
 	if game.has_structure("palbox"):
