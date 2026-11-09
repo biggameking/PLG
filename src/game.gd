@@ -2282,6 +2282,17 @@ func gen_merchant_stock() -> void:
 		if price <= 0:
 			price = 25 # priceless items still trade — at a markup
 		merchant_stock.append({"id": id, "n": rng.int_range(1, 4), "price": price})
+	# black-market pals (Palworld): a few capturable-free specimens, priced by
+	# zone rarity — deep-zone species cost real money
+	for i in rng.int_range(2, 3):
+		var z := rng.int_range(0, 2) if rng.chance(0.85) else 3
+		var ppool: Array = SpeciesGen.zone_pool(z)
+		if ppool.is_empty():
+			continue
+		var sid: String = ppool[rng.int_range(0, ppool.size() - 1)]
+		var plv := rng.int_range(5 + z * 6, 14 + z * 8)
+		merchant_stock.append({"pal": sid, "lv": plv, "n": 1,
+			"price": 90 + plv * 12 + z * 80})
 
 func spawn_merchant() -> void:
 	if merchant != null or pals.size() >= MAX_PALS - 1:
@@ -2338,6 +2349,22 @@ func buy_from_merchant(idx: int) -> void:
 		return
 	if item_count("gold_coin") < it["price"]:
 		log_msg("Need %d gold" % it["price"])
+		return
+	if it.has("pal"):
+		var sid := str(it["pal"])
+		if SpeciesData.species_of(sid).is_empty():
+			it["n"] = 0 # corrupted stock — retire the slot, never sell a ghost
+			return
+		if box.size() >= MAX_BOX:
+			log_msg("Palbox full - make room first")
+			return
+		var np := gen_pal(sid, int(it["lv"]), player.pos)
+		np.mode = "box"
+		box.append(np)
+		box_pal(np) # bought straight into the box — never a loose node
+		add_item("gold_coin", -it["price"])
+		it["n"] -= 1
+		log_msg("Bought a Lv%d %s! (%dg)" % [np.level, np.spec["name"], it["price"]])
 		return
 	add_item("gold_coin", -it["price"])
 	add_item(it["id"], 1)

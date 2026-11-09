@@ -1311,6 +1311,19 @@ func run() -> void:
 		var s0m := game.item_count("gold_coin")
 		game.sell_to_merchant("wood")
 		check("merchant sell", game.item_count("gold_coin") > s0m)
+		# black-market pal: buys a boxed pal, gold drops, node stays parented
+		var pi := -1
+		for i2 in game.merchant_stock.size():
+			if game.merchant_stock[i2].has("pal"):
+				pi = i2; break
+		if pi >= 0:
+			game.add_item("gold_coin", 1000)
+			var pb := game.box.size()
+			var g1m := game.item_count("gold_coin")
+			game.buy_from_merchant(pi)
+			check("merchant pal buy", game.box.size() == pb + 1
+				and game.box[pb].get_parent() == game.box_holder
+				and game.item_count("gold_coin") < g1m)
 	game.despawn_merchant()
 	check("merchant leaves clean", game.merchant == null and game.merchant_stock.is_empty())
 

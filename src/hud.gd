@@ -559,7 +559,12 @@ func draw_shop(r: Vector2) -> void:
 	var sy := y
 	for i in range(game.merchant_stock.size()):
 		var it: Dictionary = game.merchant_stock[i]
-		var nm: String = ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])
+		var nm: String
+		if it.has("pal"):
+			var sp: Dictionary = SpeciesData.species_of(str(it["pal"]))
+			nm = "Lv%d %s" % [it["lv"], sp.get("name", it["pal"])]
+		else:
+			nm = ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])
 		var rect := Rect2(rr.position.x + 16, y - 12, 270, 16)
 		if it["n"] > 0:
 			click_rects.append({"rect": rect, "act": "buy", "arg": i})
