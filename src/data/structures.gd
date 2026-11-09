@@ -718,6 +718,32 @@ const STRUCTURES = {
   "stand": true,
   "hp": 200,
   "desc": "Overseer post: +40% work speed base-wide, but SAN drains half again as fast."
+ },
+ "watch_tower": {
+  "id": "watch_tower",
+  "name": "Watch Tower",
+  "glyph": "♜",
+  "color": "#c9a86a",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    20
+   ],
+   [
+    "stone",
+    10
+   ],
+   [
+    "ingot",
+    2
+   ]
+  ],
+  "turret": 14,
+  "hp": 300,
+  "light": 1,
+  "desc": "Looses an arrow at the nearest raider or riled wild pal every few seconds."
  }
 }
 
@@ -978,6 +1004,13 @@ const TECH = [
   "name": "Legendary Sphere",
   "tier": 8,
   "cost": 5
+ },
+ {
+  "id": "watch_tower",
+  "name": "Watch Tower",
+  "tier": 4,
+  "cost": 2,
+  "parts": 1
  }
 ]
 

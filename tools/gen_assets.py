@@ -777,6 +777,14 @@ def make_structure(sid, color, w, h):
         d.polygon([(W//2 + 3, 16), (W//2 + 18, 20), (W//2 + 3, 26)], fill=hxc("#d06a6a") + (255,))
         d.rectangle([W//2 - 10, 44, W//2 + 10, 50], fill=hxc("#8a6d4d") + (255,))
         d.ellipse([W//2 - 4, 30, W//2 + 4, 38], fill=hxc("#ede0c8") + (255,))
+    elif sid == "watch_tower":
+        # stilted perch topped by a bolt thrower
+        for dx in (-12, 8):
+            d.line([(W//2 + dx, 48), (W//2 + dx + 4, 30)], fill=hxc("#5e462e") + (255,), width=2)
+        d.rectangle([W//2 - 14, 24, W//2 + 14, 30], fill=hxc("#8a6d4d") + (255,))
+        d.polygon([(W//2 - 16, 24), (W//2, 12), (W//2 + 16, 24)], fill=hxc("#a0622d") + (255,))
+        d.line([(W//2 - 8, 21), (W//2 + 8, 21)], fill=hxc("#ede0c8") + (255,), width=2)
+        d.line([(W//2, 21), (W//2, 27)], fill=hxc("#ede0c8") + (255,), width=2)
     elif sid == "waypoint":
         # standing stone with a glowing paldium core
         d.polygon([(W//2 - 10, 48), (W//2 + 10, 48), (W//2 + 7, 16), (W//2 - 7, 16)],
@@ -811,7 +819,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "wooden_wall": ("#8a6d4d", 1, 1), "spikes": ("#a98a5e", 1, 1),
     "hot_spring": ("#7ec8e3", 2, 2),
     "monitoring_stand": ("#d06a6a", 1, 1),
-    "waypoint": ("#7fc8f8", 1, 1),
+    "waypoint": ("#7fc8f8", 1, 1), "watch_tower": ("#c9a86a", 1, 1),
 }
 
 # =========================================================================

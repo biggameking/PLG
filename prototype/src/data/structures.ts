@@ -31,6 +31,7 @@ export interface StructureDef {
   hp?: number;            // structural HP — raiders chew through buildings
   walkable?: boolean;     // entities may cross (spikes still hurt hostiles)
   spike?: number;         // damage per tick to hostiles standing on it
+  turret?: number;        // damage per shot at the nearest hostile in range
   incubator?: boolean;    // hatches deposited pal eggs on a timer
   spring?: number;        // SAN recovery strength (Palworld hot spring)
   stand?: boolean;        // monitoring stand: faster work, faster SAN drain
@@ -182,6 +183,11 @@ export const STRUCTURES: Record<string, StructureDef> = {
     stand: true, hp: 200,
     desc: "Overseer post: +40% work speed base-wide, but SAN drains half again as fast.",
   },
+  watch_tower: {
+    id: "watch_tower", name: "Watch Tower", glyph: "♜", color: "#c9a86a", w: 1, h: 1,
+    cost: [["wood", 20], ["stone", 10], ["ingot", 2]], turret: 14, hp: 300, light: 1,
+    desc: "Looses an arrow at the nearest raider or riled wild pal every few seconds.",
+  },
 };
 
 export interface TechNode {
@@ -230,4 +236,5 @@ export const TECH: TechNode[] = [
   { id: "waypoint", name: "Waypoint", tier: 4, cost: 2 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
   { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2, parts: 2 },
+  { id: "watch_tower", name: "Watch Tower", tier: 4, cost: 2, parts: 1 },
 ];

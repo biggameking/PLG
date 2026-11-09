@@ -2152,6 +2152,28 @@ func run() -> void:
 		game.hit_structure(game.palbox_pos, 99999)
 		check("palbox unrazable", game.structures.has(game.palbox_pos) and pb_st.get("hp", 0) >= 1)
 
+	# watch tower: turret plinks the nearest raider/aggro'd wild in range
+	game.add_item("wood", 40); game.add_item("stone", 20); game.add_item("ingot", 4)
+	var tw_k: Vector2i = free_xy.call("watch_tower")
+	var tw_st = game.structures.get(tw_k)
+	check("tower placed", tw_st != null and int(tw_st.get("turret", 0)) > 0)
+	if tw_st:
+		var tfoe: Pal = game.gen_pal("direhowl", 5, Vector2(tw_k) + Vector2(6, 0))
+		tfoe.mode = "wild"; tfoe.raid = true; tfoe.aggro = 0
+		game.pals.append(tfoe)
+		var thp0 := tfoe.hp
+		var rhp0: float = raider2.hp if is_instance_valid(raider2) else -1.0
+		game.tick_production(1.0) # turret_cd starts cold — first sweep fires
+		# the bolt goes to the NEAREST hostile — may be raider2 at the spikes
+		var hit_any: bool = tfoe.hp < thp0 \
+			or (is_instance_valid(raider2) and raider2.hp < rhp0)
+		check("tower shoots hostile", float(tw_st["turret_cd"]) > 0.0 and hit_any,
+			"cd=%.1f tfoe %.0f->%.0f" % [tw_st["turret_cd"], thp0, tfoe.hp])
+		if tfoe.hp > 0:
+			game.pals.erase(tfoe)
+			if tfoe.get_parent(): tfoe.get_parent().remove_child(tfoe)
+			tfoe.free()
+
 	# glider: carried item unlocks one-way descent, not climbing
 	game.add_item("glider", 1)
 	check("glider item held", game.item_count("glider") == 1)
