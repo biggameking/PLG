@@ -832,6 +832,28 @@ func run() -> void:
 	check("meal lifts SAN", eater.san > san_raw + 15.0, "raw=%.1f meal=%.1f" % [san_raw, eater.san])
 	game.items = bag_save
 	game.pals.erase(eater); eater.free()
+	# night chill: deep dark away from firelight bleeds hp to a 30% floor
+	var tod_c: float = game.tod
+	var pos_c: Vector2 = p.pos
+	game.tod = 2.0
+	p.hp = p.max_hp; p.hunger = 80.0 # full belly — only the cold may drain us
+	p.pos = Vector2(200, 200) # wilderness — no player-built heat out here
+	var hp_c := p.hp
+	p.cold_t = 0.0
+	p._physics_process(4.5)
+	var chill_far: bool = p.hp < hp_c and p.hp >= p.max_hp * 0.3 - 0.01
+	game.add_item("wood", 20)
+	var fire_k: Vector2i = free_xy.call("campfire")
+	var chill_near := true
+	if fire_k.x >= 0:
+		p.pos = Vector2(fire_k.x, fire_k.y) + Vector2(0.5, 0.5)
+		p.cold_t = 0.0
+		var hp_c2 := p.hp
+		p._physics_process(4.5)
+		chill_near = p.hp >= hp_c2
+	check("night chill", chill_far and chill_near, "far=%s near=%s" % [chill_far, chill_near])
+	p.pos = pos_c; p.cold_t = 0.0
+	game.tod = tod_c
 	# monitoring stand: SAN drains half again while it stands (Palworld trade-off)
 	game.add_item("wood", 10); game.add_item("stone", 10); game.add_item("ingot", 2)
 	var mst_xy: Vector2i = free_xy.call("monitoring_stand")

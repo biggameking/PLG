@@ -1500,6 +1500,15 @@ func has_structure(sid: String) -> bool:
 			return true
 	return false
 
+const HEAT_IDS := ["campfire", "torch", "furnace", "hot_spring"]
+func nearest_heat(at: Vector2) -> float:
+	# distance to the closest warmth source — the night chill threshold
+	var bd := 1e9
+	for k in structures:
+		if structures[k]["id"] in HEAT_IDS:
+			bd = minf(bd, at.distance_to(Vector2(k.x + 0.5, k.y + 0.5)))
+	return bd
+
 func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 

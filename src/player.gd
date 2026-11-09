@@ -6,6 +6,7 @@ class_name Player
 var game: Game
 var hp := 100.0
 var hunger := 80.0          # 0-100; drains ~100 over ~22 min
+var cold_t := 0.0           # night-chill accumulator — resets by the fire
 var max_hp := 100.0
 var level := 1
 var xp := 0
@@ -152,6 +153,16 @@ func _physics_process(dt: float) -> void:
 	hunger = maxf(0.0, hunger - dt * 0.075)
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
+	# Palworld night chill: past dusk and away from firelight, the cold
+	# bleeds hp — never below 30% (a shivering warning, not an executioner)
+	if game.is_night() and hp > max_hp * 0.3 and game.nearest_heat(pos) > 10.0:
+		cold_t += dt
+		if cold_t >= 4.0:
+			cold_t = 0.0
+			hp = maxf(max_hp * 0.3, hp - 2.0)
+			game.floater(pos, "cold…", "#9fd8ff")
+	else:
+		cold_t = 0.0
 	var spd_mult := speed_mult()
 	if statuses.get("sleep", 0) > game.t:
 		iv = Vector2.ZERO
