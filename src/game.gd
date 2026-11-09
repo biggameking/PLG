@@ -1037,7 +1037,8 @@ func eat_food_item() -> int:
 	var stores := []
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st["id"] in ["feed_box", "chest"] and not st.get("store", {}).is_empty():
+		if st["id"] in ["feed_box", "chest"] and not st.get("loot", false) \
+				and not st.get("store", {}).is_empty():
 			stores.append(st)
 	for st2 in stores:
 		for id in st2["store"].keys():
@@ -1077,7 +1078,7 @@ func take_medicine(from_bag: bool) -> bool:
 	var best = null; var best_id := ""; var best_v := 1 << 30
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st["id"] not in ["feed_box", "chest"]:
+		if st["id"] not in ["feed_box", "chest"] or st.get("loot", false):
 			continue
 		for id in st.get("store", {}).keys():
 			var hv: int = ItemData.ITEMS.get(id, {}).get("heal", 0)
@@ -1106,7 +1107,7 @@ func nearest_chest_cell(at: Vector2, id: String = "") -> Vector2i:
 		var best := Vector2i(-1, -1); var bd := 1e9
 		for k in structures:
 			var st: Dictionary = structures[k]
-			if st["id"] != kind:
+			if st["id"] != kind or st.get("loot", false):
 				continue
 			if id != "" and not chest_can_take(st, id):
 				continue
@@ -1749,7 +1750,7 @@ func consume_ready(cons: Array) -> bool:
 		var have := 0
 		for kc in structures:
 			var sc: Dictionary = structures[kc]
-			if sc["id"] in ["chest", "feed_box"]: # haulers stock food in the feed box — inputs count it too
+			if sc["id"] in ["chest", "feed_box"] and not sc.get("loot", false): # haulers stock food in the feed box — inputs count it too
 				have += sc["store"].get(cn[0], 0)
 		if have < cn[1]:
 			return false
@@ -2203,7 +2204,7 @@ func save_game() -> void:
 			continue
 		seen_st[st] = true
 		var inc = st.get("egg_inc")
-		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200),
+		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200), "loot": st.get("loot", false),
 			"inc": ({"pair": inc.get("pair"), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
@@ -2469,7 +2470,8 @@ func load_game() -> bool:
 		entity_layer.add_child(spr)
 		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
 			"hp": clampi(int(sv.get("hp", 200)) if sv is Dictionary else 200, 1, 99999),
-			"walkable": s.get("walkable", false), "spike": s.get("spike", 0)}
+			"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
+			"loot": sv.get("loot", false) == true if sv is Dictionary else false}
 		if sv is Dictionary:
 			if sv.get("store") is Dictionary:
 				for sk2 in sv["store"]: # counts used in +/- arithmetic everywhere — coerce, skip junk
@@ -2697,7 +2699,7 @@ func pull_from_storage(id: String, need: int) -> int:
 	var left := need
 	for kc in structures:
 		var sc: Dictionary = structures[kc]
-		if sc["id"] not in ["chest", "feed_box"] or left <= 0:
+		if sc["id"] not in ["chest", "feed_box"] or sc.get("loot", false) or left <= 0:
 			continue
 		var take: int = mini(left, sc.get("store", {}).get(id, 0))
 		if take > 0:
@@ -2850,6 +2852,22 @@ func spawn_lairs() -> void:
 			entity_layer.add_child(gp)
 			gp.setup(self, gsid, rng.int_range(18, 26), Vector2(tx + 0.5 + (1 if i == 0 else -1), ty + 0.5))
 			pals.append(gp)
+		# Palworld den treasure: a stocked chest sits behind the boss —
+		# flagged "loot" so base haulers never trek out to rob their own prize
+		var ck := Vector2i(tx, ty + 1)
+		if place_free("chest", ck.x, ck.y):
+			var chst: Dictionary = structures.get(ck)
+			if chst != null:
+				chst["loot"] = true
+				var loot := {"gold_coin": rng.int_range(30, 80), "paldium": rng.int_range(2, 5)}
+				if rng.chance(0.5):
+					loot["ancient_part"] = 1
+				if rng.chance(0.4):
+					var fr := ["neutral","fire","water","electric","grass","ice","ground","dark","dragon"]
+					loot["skill_fruit_" + fr[rng.int_range(0, fr.size() - 1)]] = 1
+				if rng.chance(0.6):
+					loot["cake"] = rng.int_range(1, 3)
+				chst["store"] = loot
 		placed += 1
 	spawn_legendary_den()
 	spawn_grotto()

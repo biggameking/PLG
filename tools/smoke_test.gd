@@ -687,7 +687,7 @@ func run() -> void:
 		# stock a cake: chest storage feeds the breeding loop
 		var chest_st = null
 		for kk in game.structures:
-			if game.structures[kk]["id"] == "chest":
+			if game.structures[kk]["id"] == "chest" and not game.structures[kk].get("loot", false):
 				chest_st = game.structures[kk]
 		if chest_st == null:
 			game.place_free("chest", ranch_k.x + 4, ranch_k.y)
@@ -907,6 +907,20 @@ func run() -> void:
 	if nbp.get_parent(): nbp.get_parent().remove_child(nbp)
 	nbp.free()
 	check("box fingerprint shifts", game.net.box_fingerprint() != bsig0)
+	# Palworld den treasure: stocked chests wait behind the lair boss —
+	# flagged "loot" so the logistics network never drags one home
+	var loot_n := 0; var loot_stocked := 0; var loot_k := Vector2i(-1, -1)
+	for k3 in game.structures:
+		var st3: Dictionary = game.structures[k3]
+		if st3.get("loot", false):
+			loot_n += 1
+			if not st3.get("store", {}).is_empty(): loot_stocked += 1
+			loot_k = k3
+	check("lair treasure chests", loot_n >= 1 and loot_stocked == loot_n,
+		"%d/%d stocked" % [loot_stocked, loot_n])
+	if loot_k.x >= 0:
+		check("loot chest off the logistics net",
+			game.nearest_chest_cell(Vector2(loot_k.x, loot_k.y)) != loot_k)
 	game.world.decor[dci] = dcv
 	# raid boss
 	game.add_item("boss_sigil", 1)
