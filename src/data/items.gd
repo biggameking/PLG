@@ -718,7 +718,8 @@ const ITEMS = {
   "name": "Hide Armor",
   "kind": "armor",
   "armor": {"def": 4},
-  "desc": "Stitched hides. Better than skin.",
+  "warm": 1,
+  "desc": "Stitched hides. Better than skin — and warmer.",
   "stack": 1,
   "price": 40
  },
@@ -736,7 +737,8 @@ const ITEMS = {
   "name": "Dragonscale Armor",
   "kind": "armor",
   "armor": {"def": 14},
-  "desc": "Near-impenetrable plate of shed scales.",
+  "warm": 2,
+  "desc": "Near-impenetrable plate of shed scales — still warm.",
   "stack": 1,
   "price": 400
  },

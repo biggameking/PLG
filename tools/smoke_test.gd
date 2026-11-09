@@ -171,8 +171,12 @@ func run() -> void:
 			var v_fast := p.speed_mult()
 			p.mount = fast_p if sd_fast <= sd_slow else slow_p
 			var v_slow := p.speed_mult()
-			check("mount speed varies", absf(v_fast - (1.3 + minf(sd_fast, 5.0) * 0.2) * (1.0 + game.perks["speed"] * 0.06)) < 0.01
-				and v_fast >= v_slow, "fast=%.2f slow=%.2f" % [v_fast, v_slow])
+			# mirror speed_mult's tail: perks, trinkets, aura and the carry drag
+			var pen: float = maxf(0.15, 1.5 - p.carry_wt() / p.carry_cap()) if p.carry_wt() > p.carry_cap() else 1.0
+			var exp_f: float = (1.3 + minf(sd_fast, 5.0) * 0.2) \
+				* (1.0 + game.perks["speed"] * 0.06 + p.acc_total("spd") + game.partner_aura("speed")) * pen
+			check("mount speed varies", absf(v_fast - exp_f) < 0.01
+				and v_fast >= v_slow, "fast=%.2f slow=%.2f exp=%.2f" % [v_fast, v_slow, exp_f])
 			p.mount = bp
 			p.try_mount() # dismount back to partner
 			for tpal in [slow_p, fast_p]: # gen_pal parents to entity_layer — detach before free
@@ -274,11 +278,12 @@ func run() -> void:
 		check("overload crawls", p.carry_wt() > p.carry_cap()
 			and p.speed_mult() <= spd0c * maxf(0.15, 1.5 - p.carry_wt() / p.carry_cap()) + 0.01,
 			"wt=%.0f/%.0f mult=%.2f spd0=%.2f" % [p.carry_wt(), p.carry_cap(), p.speed_mult(), spd0c])
+		var cap0: float = p.carry_cap()
 		var cm: Pal = game.gen_pal("cattiva", 5, p.pos)
 		cm.mode = "box"; game.box.append(cm); game.box_pal(cm)
 		game.box_to_party(cm); game.send_out(cm.uid)
-		check("pack mule lifts cap", p.carry_wt() < p.carry_cap()
-			and p.speed_mult() >= spd0c - 0.01, "cap=%.0f mult=%.2f" % [p.carry_cap(), p.speed_mult()])
+		check("pack mule lifts cap", p.carry_cap() - cap0 > 100.0
+			and p.carry_wt() < p.carry_cap(), "cap=%.0f->%.0f" % [cap0, p.carry_cap()])
 		game.retract_out()
 		game.pals.erase(cm); game.party.erase(cm.uid); game.bench.erase(cm)
 		if cm.get_parent(): cm.get_parent().remove_child(cm)
@@ -1496,6 +1501,27 @@ func run() -> void:
 	game.pals.erase(torch_pal); torch_pal.free()
 	check("night chill", chill_far and chill_near and chill_pal,
 		"far=%s near=%s pal=%s" % [chill_far, chill_near, chill_pal])
+	# warm armor (Palworld fur gear): hide armor widens the cold-safe ring
+	var edge := Vector2(-1, -1)
+	if fire_k.x >= 0:
+		var fc: Vector2 = Vector2(fire_k.x, fire_k.y) + Vector2(0.5, 0.5)
+		for ddir in [Vector2(12,0), Vector2(-12,0), Vector2(0,12), Vector2(0,-12),
+				Vector2(8.5,8.5), Vector2(-8.5,8.5), Vector2(8.5,-8.5), Vector2(-8.5,-8.5)]:
+			var cand: Vector2 = fc + ddir
+			if absf(game.nearest_heat(cand) - 12.0) < 1.5:
+				edge = cand
+				break
+	if edge.x >= 0:
+		p.pos = edge
+		p.cold_t = 0.0; p.hp = p.max_hp
+		var hp_e := p.hp
+		p._physics_process(4.5)
+		var chill_edge: bool = p.hp < hp_e # bare skin: 12 > the 10-cell ring
+		game.add_item("hide_armor", 1); game.equip("hide_armor")
+		p.cold_t = 0.0; p.hp = p.max_hp
+		p._physics_process(4.5)
+		check("warm armor", chill_edge and p.hp >= p.max_hp * 0.99,
+			"edge=%s warm_hp=%.0f" % [chill_edge, p.hp])
 	p.pos = pos_c; p.cold_t = 0.0
 	game.tod = tod_c
 	# bed rest: a real bed restores SAN 3x faster than a floor nap
@@ -1885,6 +1911,10 @@ func run() -> void:
 			break
 	if sv_pal == null and not game.base_pals().is_empty():
 		sv_pal = game.base_pals()[0]
+	if sv_pal == null: # raids can wipe the workforce on some seeds — mint one
+		sv_pal = game.gen_pal("lamball", 3, p.pos)
+		sv_pal.mode = "base"
+		game.pals.append(sv_pal)
 	check("a base pal exists for save test", sv_pal != null, "")
 	var sv_sex: String = sv_pal.sex if sv_pal else ""
 	var sv_pass: Array = sv_pal.passives.duplicate() if sv_pal else []

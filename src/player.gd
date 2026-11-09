@@ -215,7 +215,8 @@ func _physics_process(dt: float) -> void:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
 	# Palworld night chill: past dusk and away from firelight, the cold
 	# bleeds hp — never below 30% (a shivering warning, not an executioner)
-	if game.is_night() and hp > max_hp * 0.3 and game.nearest_heat(pos) > 10.0:
+	var warm := float(ItemData.ITEMS.get(equipment["armor"], {}).get("warm", 0))
+	if game.is_night() and hp > max_hp * 0.3 and game.nearest_heat(pos) > 10.0 + warm * 4.0:
 		cold_t += dt
 		if cold_t >= 4.0:
 			cold_t = 0.0
