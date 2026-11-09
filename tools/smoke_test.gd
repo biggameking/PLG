@@ -332,6 +332,18 @@ func run() -> void:
 				dbg += "%s:%s:%s " % [q.species_id, q.sex, q.mode]
 		check("ranch egg", false, "no M/F base pals: " + dbg)
 
+	# net pal replication: valid entry spawns, malformed/foreign entries drop
+	var np0 := game.pals.size()
+	game.spawn_net_pal(["cattiva", p.pos.x + 3, p.pos.y + 3, 5, "wild", true])
+	check("net pal spawns", game.pals.size() == np0 + 1)
+	var npal: Pal = game.pals[game.pals.size() - 1]
+	check("net pal lucky", npal.lucky and "lucky" in npal.passives)
+	game.pals.erase(npal)
+	if npal.get_parent(): npal.get_parent().remove_child(npal)
+	npal.free()
+	game.spawn_net_pal(["no_such_species", 0, 0, 1, "wild"])
+	game.spawn_net_pal("garbage")
+	check("net pal rejected", game.pals.size() == np0)
 	# raid boss
 	game.add_item("boss_sigil", 1)
 	var n1 := game.pals.size()

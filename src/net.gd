@@ -77,7 +77,13 @@ func state_snapshot() -> Dictionary:
 		if st not in seen:
 			seen.append(st)
 			arr.append([st["id"], k.x, k.y])
-	return {"structures": arr, "tod": game.tod, "day": game.day}
+	# share the living population too — a joining client should see the same
+	# wild/base pals, not an empty world (capped upstream by MAX_PALS)
+	var parr := []
+	for p in game.pals:
+		if p.mode in ["wild", "base"] and p.hp > 0:
+			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky])
+	return {"structures": arr, "tod": game.tod, "day": game.day, "pals": parr}
 
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
@@ -86,7 +92,12 @@ func state_sync(d: Dictionary) -> void:
 			game.place_free(str(e[0]), int(e[1]), int(e[2])) # net input is untrusted — validate shape
 	game.tod = float(d.get("tod", game.tod))
 	game.day = int(d.get("day", game.day))
-	game.log_msg("Synced %d structures" % d.get("structures", []).size())
+	var np := 0
+	for e in d.get("pals", []):
+		var n0 := game.pals.size()
+		game.spawn_net_pal(e) # each entry re-validated game-side
+		np += 1 if game.pals.size() > n0 else 0
+	game.log_msg("Synced %d structures, %d pals" % [d.get("structures", []).size(), np])
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:

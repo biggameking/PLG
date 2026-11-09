@@ -231,13 +231,28 @@ func spawn_wild() -> void:
 		pals.append(p)
 		wild_n += 1
 
-func gen_pal(sp_id: String, lv: int, at: Vector2) -> Pal:
+func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Pal:
 	# test/dev factory: a live pal in the entity layer; caller picks its mode
 	var p := preload("res://src/pal.gd").new()
+	p.lucky = lucky # must be set before setup — passives/scale roll there
 	entity_layer.add_child(p)
 	p.setup(self, sp_id, lv, at)
 	p.home = at
 	return p
+
+func spawn_net_pal(d) -> void:
+	# client-side replica of a host pal — untrusted wire data, validate the shape
+	if pals.size() >= MAX_PALS or not (d is Array) or d.size() < 5:
+		return
+	var sp_id := str(d[0])
+	if SpeciesData.species_of(sp_id).is_empty() and SpeciesGen.SPECIES.get(sp_id, {}).is_empty():
+		return # foreign species id — drop the entry
+	if not (d[1] is float or d[1] is int) or not (d[2] is float or d[2] is int):
+		return
+	var np := gen_pal(sp_id, clampi(int(d[3]), 1, 60),
+		nearest_free(float(d[1]), float(d[2])), bool(d[5]) if d.size() > 5 else false)
+	np.mode = "base" if str(d[4]) == "base" else "wild"
+	pals.append(np)
 
 func find_pal(uid: int) -> Pal:
 	for p in pals:
