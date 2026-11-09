@@ -67,6 +67,8 @@ const MAX_MERCH_STOCK := 64   # merchant inventory refresh
 func _exit_tree() -> void:
 	# Orphan sweep: nodes DETACHED from the tree are not freed by the engine —
 	# box pals are remove_child'd Node2Ds and leak at quit otherwise.
+	if OS.has_environment("PLG_ORPHANS"):
+		print("_exit_tree sweep: box=%d pals=%d" % [box.size(), pals.size()])
 	for bp in box:
 		if is_instance_valid(bp):
 			bp.free() # not in tree: free(), never queue_free()
@@ -78,12 +80,38 @@ func _exit_tree() -> void:
 
 @onready var entity_layer: Node2D = $YSort/Entities
 @onready var drawer = $World/Terrain
+# Detached-node leak prevention: box pals live under this hidden holder instead
+# of floating parentless. Every pal is ALWAYS inside the tree — the engine
+# reclaims them at exit and no code path can orphan one.
+var box_holder: Node2D
+
+func box_pal(p: Pal) -> void:
+	# send a live pal to the box: keep it parented (to box_holder) so it can
+	# never leak; process is disabled there so stored pals cost nothing.
+	if p.get_parent() == box_holder:
+		return
+	if p.get_parent() == null:
+		box_holder.add_child(p)
+	else:
+		p.reparent(box_holder)
+
+func unbox_pal(p: Pal) -> void:
+	if p.get_parent() == entity_layer:
+		return
+	if p.get_parent() == null:
+		entity_layer.add_child(p)
+	else:
+		p.reparent(entity_layer)
 
 func next_uid() -> int:
 	next_uid_v += 1
 	return next_uid_v
 
 func _ready() -> void:
+	box_holder = Node2D.new()
+	box_holder.name = "BoxHolder"
+	box_holder.process_mode = Node.PROCESS_MODE_DISABLED # boxed pals don't tick
+	add_child(box_holder)
 	rng = Rng.new(int(Time.get_unix_time_from_system()) & 0x7FFFFFFF)
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
@@ -244,7 +272,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		p.stun_t = 0.0
 		p.revive_t = t + 300.0  # Palworld-style revive timer
 		box.append(p)
-		entity_layer.remove_child(p)
+		box_pal(p)
 		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
 	else:
 		p.queue_free()
@@ -419,7 +447,7 @@ func resolve_sphere(sp) -> void:
 			target.mode = "box"
 			box.append(target)
 			pals.erase(target)
-			entity_layer.remove_child(target)
+			box_pal(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
@@ -1077,8 +1105,7 @@ func box_to_party(bp: Pal) -> void:
 	bp.mode = "partner"
 	party.append(bp.uid)
 	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y) # box-out must not land inside a cliff/lake
-	if bp.get_parent() == null: # KO'd/caught box pals were removed from the tree; add-back is for them only
-		entity_layer.add_child(bp)
+	unbox_pal(bp) # box pals live under box_holder — move them back to the world
 	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
 
 func party_to_box(uid: int) -> void:
@@ -1100,7 +1127,7 @@ func party_to_box(uid: int) -> void:
 		log_msg("%s dropped off %d %s" % [p.spec["name"], p.carry["n"], p.carry["id"]])
 		p.carry = null
 	box.append(p)
-	entity_layer.remove_child(p)
+	box_pal(p)
 	log_msg("%s -> box" % p.spec["name"])
 
 func assign_worker() -> void:
@@ -1481,6 +1508,7 @@ func load_game() -> bool:
 			pending_jobs.append([np, pd["job"]])
 		if np.mode == "box":
 			box.append(np)
+			box_pal(np) # box pals live under the hidden holder — never parentless
 		else:
 			entity_layer.add_child(np)
 			pals.append(np)
@@ -1724,7 +1752,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	else: # no base: it goes straight to the box like any caught pal
 		np.mode = "box"
 		box.append(np)
-		entity_layer.remove_child(np)
+		box_pal(np)
 	floater(at, "* hatched! *", "#4dd0e1")
 	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])
 

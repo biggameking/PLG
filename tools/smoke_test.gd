@@ -14,6 +14,13 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	run()
+	# queue_free() defers to frame end — pump a couple of frames so the run's
+	# dead nodes actually flush before we count orphans and quit
+	await process_frame
+	await process_frame
+	if OS.has_environment("PLG_ORPHANS"):
+		print("-- orphan nodes before quit --")
+		root.print_orphan_nodes()
 	# check() already appended each line; run() may have died mid-way, so only
 	# the counts go on the tail here — a missing summary = crashed run
 	var fails := 0
@@ -586,10 +593,13 @@ func run() -> void:
 	check("hostile pal attacks", p.hp < hit0, "hp %d->%d" % [hit0, p.hp])
 	# soak amplifies electric damage
 	var sp1: Pal = load("res://src/pal.gd").new()
+	game.entity_layer.add_child(sp1) # unparented nodes leak — even in tests
 	sp1.setup(game, "lamball", 10, p.pos)
 	var e_mult0: float = Combat.effectiveness("electric", sp1.elem())
 	sp1.statuses["soak"] = game.t + 5.0
 	check("statuses tracked", sp1.has_status("soak"))
+	game.entity_layer.remove_child(sp1) # scratch pal — gone after this check
+	sp1.free()
 	# dodge roll moves player fast
 	var dpos0: Vector2 = p.pos
 	p.dodge_t = 0.35
@@ -946,6 +956,7 @@ func run() -> void:
 			fp.setup(game, ap2.species_id, 1, Vector2.ZERO)
 			fp.mode = "box"
 			game.box.append(fp)
+			game.box_pal(fp) # box pals live under the holder — never parentless
 		game.condense_active() # first press = preview
 		game.condense_active() # second press within 4s = commit
 		check("condense star+1", ap2.star == star0 + 1, "star=%d" % ap2.star)
@@ -1164,17 +1175,19 @@ func run() -> void:
 	# glider: carried item unlocks one-way descent, not climbing
 	game.add_item("glider", 1)
 	check("glider item held", game.item_count("glider") == 1)
-	# scan for a high cell with a clean lower neighbour (glider rules)
+	# scan for a true ledge: a high cell with a lower neighbour and no ramp
+	# on either side — those cross blocked() BOTH ways without a glider
 	var cliff_e := -1; var low_c := -1
 	for i2 in range(0, World.WORLD_W * World.WORLD_H):
-		if game.world.elev[i2] < 1:
+		if game.world.elev[i2] < 1 or game.world.ramp[i2] != 0:
 			continue
 		var cx2: int = i2 % World.WORLD_W; var cy2: int = i2 / World.WORLD_W
 		for nb in [Vector2i(cx2 + 1, cy2), Vector2i(cx2 - 1, cy2), Vector2i(cx2, cy2 + 1), Vector2i(cx2, cy2 - 1)]:
 			if not game.world.in_bounds(nb.x, nb.y):
 				continue
 			var ni := game.world.idx(nb.x, nb.y)
-			if game.world.elev[ni] < game.world.elev[i2] and game.world.tiles[ni] != World.Tile.WATER \
+			if game.world.elev[ni] < game.world.elev[i2] and game.world.ramp[ni] == 0 \
+					and game.world.tiles[ni] != World.Tile.WATER \
 					and game.world.decor[ni] == World.Decor.NONE and not game.world.solid_structure(ni):
 				cliff_e = i2; low_c = ni
 				break

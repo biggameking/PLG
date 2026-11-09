@@ -14,10 +14,10 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
    `MAX_*` const in `src/game.gd`. Current caps: drops 400, projectiles 200,
    floaters 80, pals 220, box 400, egg parentage 32, merchant stock 64.
    New collections need a new `MAX_*` next to them — no exceptions.
-2. **Detached nodes are your responsibility.** A `Node` removed from the tree
-   (`remove_child`) is NOT freed automatically — keep a strong ref and `free()`
-   it on cleanup paths (`load_game`, `regenerate`, `_exit_tree`). `queue_free()`
-   only on nodes still inside the tree.
+2. **No parentless pals, ever.** Box pals live under `Game.box_holder`
+   (process-disabled) via `box_pal(p)` / `unbox_pal(p)` — never `remove_child`
+   a pal into the void. Any `Node` removed from the tree must be `free()`d or
+   re-parented immediately; `queue_free()` only on nodes still inside the tree.
 3. **Textures/images are cached, not rebuilt.** `_drop_tex`, `_light_tex`,
    `map_tex` follow create-once-reuse-forever. Never allocate `Image`/
    `ImageTexture` in `_process`/`_physics_process`.

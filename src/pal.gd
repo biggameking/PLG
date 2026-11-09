@@ -54,6 +54,7 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	speed = base_move_speed()
 	uid = game.next_uid()
 	sex = "M" if game.rng.chance(0.5) else "F"
+	name = "pal_%s_%d" % [sp_id, uid] # debuggable in orphan/crash dumps
 	roll_passives()
 	if lucky and "lucky" not in passives:
 		passives.append("lucky") # Lucky pals always carry their signature passive
@@ -129,6 +130,14 @@ func atk_mult() -> float:
 	return 0.7 if ailment == "weakened" else 1.0
 func def_mult() -> float:
 	return 0.7 if ailment == "weakened" else 1.0
+
+func _notification(what: int) -> void:
+	# dev trace: a pal detached from the tree without landing in the box is a
+	# leak — UNPARENTED fires on every remove_child, so we report the mode too.
+	if what == NOTIFICATION_UNPARENTED and OS.has_environment("PLG_ORPHANS") and game != null:
+		print("unparented: %s mode=%s in_box=%s in_pals=%s" % [name, mode, game.box.has(self), game.pals.has(self)])
+		for frame in get_stack().slice(0, 4):
+			print("   <- %s:%d %s" % [frame.get("source", "?"), frame.get("line", 0), frame.get("function", "?")])
 
 func _physics_process(dt: float) -> void:
 	if hp <= 0:
