@@ -353,6 +353,13 @@ func run() -> void:
 		if q.boss:
 			boss_ok = true
 	check("raid summon", game.pals.size() == n1 + 1 and boss_ok)
+	# worldgen legendary den: an uncapturable lv50 giant guards deep zone 3
+	var legend: Pal = null
+	for q in game.pals:
+		if q.boss and q.level >= 50 and not q.raid:
+			legend = q
+	check("legendary den", legend != null and legend.species_id in Game.LEGENDARY_DEN,
+		"boss=%s" % (legend.species_id if legend else "none"))
 	# boss sphere-immune
 	for q in game.pals:
 		if q.boss:

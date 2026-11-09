@@ -1852,7 +1852,54 @@ func spawn_lairs() -> void:
 			gp.setup(self, gsid, rng.int_range(18, 26), Vector2(tx + 0.5 + (1 if i == 0 else -1), ty + 0.5))
 			pals.append(gp)
 		placed += 1
+	spawn_legendary_den()
 	log_msg("%d boss lairs marked deep in the world" % placed)
+
+# World bosses that only appear as den guardians — Palworld's legendary tier.
+const LEGENDARY_DEN := ["jetragon", "frostallion", "paladius", "necromus",
+	"astegon", "blazamut", "suzaku", "jormuntide", "quivern", "elphidran"]
+
+func spawn_legendary_den() -> void:
+	# one per world: bigger ring, an uncapturable giant, elite honour guard
+	var tries := 0
+	while tries < 6000:
+		tries += 1
+		var tx := rng.int_range(8, World.WORLD_W - 10)
+		var ty := rng.int_range(8, World.WORLD_H - 10)
+		if world.zone_at(tx, ty) < 3:
+			continue
+		var ok := true
+		for dy in range(-3, 4):
+			for dx in range(-3, 4):
+				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+					ok = false
+		if not ok:
+			continue
+		for c in [Vector2i(tx-3,ty-3),Vector2i(tx+3,ty-3),Vector2i(tx-3,ty+3),Vector2i(tx+3,ty+3),
+				Vector2i(tx,ty-3),Vector2i(tx,ty+3),Vector2i(tx-3,ty),Vector2i(tx+3,ty)]:
+			place_free("torch", c.x, c.y)
+		var pool := LEGENDARY_DEN.filter(func(s): return not SpeciesGen.SPECIES.get(s, {}).is_empty())
+		if pool.is_empty():
+			return # species data trimmed — skip the den rather than spawn a ghost
+		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+		var bp := preload("res://src/pal.gd").new()
+		bp.alpha = true
+		bp.boss = true # IMMUNE to spheres — legendaries are earned, not caught
+		entity_layer.add_child(bp)
+		bp.setup(self, sid, 50, Vector2(tx + 0.5, ty + 0.5))
+		bp.sprite.scale = Vector2(2.5, 2.5)
+		bp.sprite.position.y = -78.0
+		bp.home = bp.pos
+		pals.append(bp)
+		var guard_pool := SpeciesGen.zone_pool(3)
+		for i in mini(3, guard_pool.size()):
+			var gp := preload("res://src/pal.gd").new()
+			entity_layer.add_child(gp)
+			gp.setup(self, guard_pool[rng.int_range(0, guard_pool.size() - 1)],
+				rng.int_range(24, 32), Vector2(tx + 1.5 - i, ty + 1.5))
+			pals.append(gp)
+		log_msg("A legendary %s den glows deep in the wilds" % sid)
+		return
 
 func regenerate(s: int) -> void:
 	for p in pals:
