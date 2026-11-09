@@ -426,7 +426,7 @@ func _draw() -> void:
 					bd2 = dd
 					bp2 = q
 			if bp2:
-				var cap_pow2: float = bp2.spec["capturePower"] * (1.35 if bp2.lucky else 1.0)
+				var cap_pow2: float = game.cap_power_of(bp2)
 				var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
 					ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
 				var col := Color("#a8e6a1") if ch >= 0.5 else (Color("#e8963c") if ch >= 0.2 else Color("#e8452f"))

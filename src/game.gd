@@ -876,6 +876,12 @@ func summon_raid() -> bool:
 	log_msg("RAID BOSS: %s Lv45 approaches your base!" % bp.spec["name"])
 	return true
 
+func cap_power_of(target: Pal) -> float:
+	# luckies resist; Palworld's real gate is level — a lv50 shrugs off a
+	# ball that would bag a lv5, which is what pushes the sphere ladder
+	return float(target.spec["capturePower"]) * (1.35 if target.lucky else 1.0) \
+		* (1.0 + 0.05 * maxf(0.0, target.level - 1.0))
+
 func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
 	if not is_instance_valid(target) or target.hp <= 0 or target.mode != "wild":
@@ -891,7 +897,7 @@ func resolve_sphere(sp) -> void:
 		return
 	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
 	var hp_frac := maxf(0, target.hp) / target.max_hp
-	var cap_pow: float = target.spec["capturePower"] * (1.35 if target.lucky else 1.0) # luckies resist
+	var cap_pow: float = cap_power_of(target)
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
 		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
 	if randf() < chance:
@@ -944,7 +950,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	if sp_pow <= 0.0:
 		return # forged item ids don't get free rolls
 	var hp_frac := maxf(0, target.hp) / target.max_hp
-	var cap_pow: float = target.spec["capturePower"] * (1.35 if target.lucky else 1.0)
+	var cap_pow: float = cap_power_of(target)
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
 		sp_pow, target.any_status(), behind, cap_lv))
 	if randf() < chance:

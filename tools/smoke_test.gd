@@ -125,6 +125,15 @@ func run() -> void:
 	if tgt.mode in ["box", "bench"]:
 		check("caught pal leaves world", tgt.get_parent() != game.entity_layer)
 
+	# capture level gate (Palworld's sphere-ladder driver): a lv30 shrugs off
+	# what would bag a lv3 — same species, same hp
+	var lo_p: Pal = game.gen_pal("lamball", 3, p.pos)
+	var hi_p: Pal = game.gen_pal("lamball", 30, p.pos)
+	check("level gates capture", game.cap_power_of(hi_p) > game.cap_power_of(lo_p) * 2.0,
+		"lo=%.0f hi=%.0f" % [game.cap_power_of(lo_p), game.cap_power_of(hi_p)])
+	game.pals.erase(lo_p); lo_p.free()
+	game.pals.erase(hi_p); hi_p.free()
+
 	# sphere launcher: slings the selected ball at the pal on the facing line
 	game.add_item("sphere_launcher", 1)
 	game.add_item("pal_sphere", 2)
