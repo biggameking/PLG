@@ -35,5 +35,5 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
    rebuild. Every `spr.texture` consumer guards with the chest.png fallback.
    Far wild pals already tick at ~8Hz; keep new per-pal work behind the same
    accumulation pattern.
-7. After changes: smoke test must report 0 failures, and the exit banner must
+8. After changes: smoke test must report 0 failures, and the exit banner must
    not grow new `ObjectDB instances were leaked` counts vs. baseline.

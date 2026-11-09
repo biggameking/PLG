@@ -1281,6 +1281,17 @@ func has_structure(sid: String) -> bool:
 func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 
+func make_active(uid: int) -> void:
+	# Palworld "send out": reorder the party so this pal leads — partner
+	# skills, mounts, skill fruits and the condenser all key on party[0]
+	var i := party.find(uid)
+	if i <= 0:
+		return
+	party.remove_at(i)
+	party.push_front(uid)
+	var mp := find_pal(uid)
+	log_msg("%s leads the party" % (mp.spec["name"] if mp else "?"))
+
 func box_to_party(bp: Pal) -> void:
 	if bp.hp <= 0:
 		log_msg("%s is KO'd - wait for it to recover" % bp.spec["name"])

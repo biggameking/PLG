@@ -146,6 +146,8 @@ func run_click(cr: Dictionary) -> void:
 			game.box_to_party(cr["arg"])
 		"party_in":
 			game.party_to_box(cr["arg"])
+		"lead":
+			game.make_active(cr["arg"])
 		"deploy":
 			game.deploy_to_base(cr["arg"])
 		"base_in":
@@ -504,11 +506,16 @@ func draw_palbox(r: Vector2) -> void:
 		var p := game.find_pal(uid)
 		if not p:
 			continue
+		var lead: bool = uid == game.party[0]
 		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
 		click_rects.append({"rect": Rect2(rect.position + Vector2(254, 0), Vector2(52, 17)), "act": "deploy", "arg": p})
 		draw_string(font, Vector2(rect.position + Vector2(254, 13)), "[>base]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#a8e6a1"))
-		draw_string(font, Vector2(rect.position.x, y), "%s%s %s%s Lv%d %s HP%d/%d" % [p.spec["name"],
+		if not lead:
+			click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": uid})
+			draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[*]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd76e"))
+		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d %s HP%d/%d" % [
+			"★ " if lead else "", p.spec["name"],
 			"☆" if p.lucky else "", p.sex, star_str(p), p.level,
 			(p.ailment + "! ") if p.ailment != "" else passive_str(p).left(14), int(p.hp), int(p.max_hp)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if p.ailment != "" else Color.WHITE)

@@ -172,6 +172,15 @@ func run() -> void:
 		game.pals.erase(wxp)
 		if wxp.get_parent(): wxp.get_parent().remove_child(wxp)
 		wxp.free()
+		# send-out: reorder which pal leads (partner skills/mount key on party[0])
+		var mp2 := game.gen_pal("chikipi", 3, p.pos)
+		mp2.mode = "box"; game.box.append(mp2); game.box_pal(mp2)
+		game.box_to_party(mp2)
+		var lead2: int = game.party[1]
+		game.make_active(lead2)
+		check("party lead swap", game.party[0] == lead2 and mp2.mode == "partner")
+		game.make_active(game.party[1]) # restore original order for later checks
+		game.party_to_box(mp2.uid) # second member goes back to cold storage
 		# partner skill
 		var prj0 := game.projectiles.size()
 		game.partner_skill()
