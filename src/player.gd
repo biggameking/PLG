@@ -82,6 +82,11 @@ func melee() -> void:
 		else:
 			p.hit(d, mult, true)
 		hit_any = true
+	# Palworld crime: a swung weapon can also strike the trader — expect consequences
+	if game.merchant != null and is_instance_valid(game.merchant) \
+			and game.merchant_hp > 0 and pos.distance_to(game.merchant.pos) <= reach:
+		game.hit_merchant(atk)
+		hit_any = true
 	if hit_any:
 		game.sfx_play("hit")
 	else:

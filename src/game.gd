@@ -3846,6 +3846,7 @@ func spawn_merchant() -> void:
 	merchant.sprite.modulate = Color(1.5, 1.0, 0.45) # a warmly-dressed stranger
 	merchant_home = at
 	gen_merchant_stock()
+	merchant_hp = 60
 	log_msg("A wandering merchant has arrived! (E to trade)")
 	floater(at, "Merchant!", "#e8d44d")
 
@@ -3857,7 +3858,39 @@ func despawn_merchant() -> void:
 		merchant.queue_free()
 	merchant = null
 	merchant_stock.clear()
+	merchant_wanted = false
 	log_msg("The merchant moved on")
+
+var merchant_wanted := false # one hit squad per visit — Palworld's wanted loop
+var merchant_hp := 60          # Entity has no hp field — Pal/Player shadow it
+
+func hit_merchant(dmg: float) -> void:
+	if merchant == null or not is_instance_valid(merchant):
+		return
+	merchant_hp -= int(dmg)
+	merchant.hit_flash = 0.4
+	sfx_play("hit")
+	if not merchant_wanted:
+		merchant_wanted = true
+		# Palworld's crime loop: raise a hand at a peaceful NPC and a syndicate
+		# hit squad materializes to collect — once per visit, killable like any foe
+		var squad := mini(2 + int(day / 6.0), 4)
+		for i in squad:
+			var a := rng.next() * TAU
+			var at := nearest_free(player.pos.x + cos(a) * 5.0, player.pos.y + sin(a) * 5.0)
+			var thug := gen_pal("syndicate_grunt" if i % 2 == 0 else "syndicate_sweeper",
+				maxi(3, player.level + rng.int_range(-1, 2)), at)
+			thug.mode = "wild"; thug.aggro = 0; thug.home = player.pos
+			pals.append(thug)
+		merchant_tgt = merchant.pos + (merchant.pos - player.pos).normalized() * 20.0
+		log_msg("WANTED! The syndicate answers violence with violence")
+		floater(merchant.pos, "GUARDS!", "#ff5544")
+	if merchant_hp <= 0:
+		var drops_n := rng.int_range(30, 60)
+		spawn_drop("gold_coin", drops_n, merchant.pos)
+		floater(merchant.pos, "+%dg" % drops_n, "#ffd76e")
+		log_msg("The merchant is dead. The syndicate remembers")
+		despawn_merchant()
 
 func tick_merchant(dt: float) -> void:
 	# arrival roll at 07:00 once per day from day 2 onward; leaves at dusk

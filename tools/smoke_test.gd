@@ -2602,6 +2602,23 @@ func run() -> void:
 				game.sell_pal_to_merchant(game.box[pb].uid)
 				check("merchant pal sell", game.box.size() == pb
 					and game.item_count("gold_coin") > g2m)
+	# wanted: striking the trader calls a syndicate hit squad — once per visit
+	if game.merchant != null:
+		game.merchant.pos = p.pos + Vector2(1.0, 0.0)
+		game.merchant_hp = 60
+		var w0p: int = game.pals.size()
+		var exp_sq := mini(2 + int(game.day / 6.0), 4)
+		game.hit_merchant(10.0)
+		check("merchant crime wanted", game.merchant_wanted
+			and game.pals.size() == w0p + exp_sq
+			and game.pals[w0p].aggro == 0, "spawned=%d want=%d" % [game.pals.size() - w0p, exp_sq])
+		for q in game.pals.slice(w0p): # hit squad doesn't outlive the check
+			game.pals.erase(q)
+			if q.get_parent(): q.get_parent().remove_child(q)
+			q.free()
+		var dr0m := game.drops.size()
+		game.hit_merchant(999.0) # lethal blow: gold spills, the visit ends
+		check("merchant slain pays", game.merchant == null and game.drops.size() > dr0m)
 	game.despawn_merchant()
 	check("merchant leaves clean", game.merchant == null and game.merchant_stock.is_empty())
 
