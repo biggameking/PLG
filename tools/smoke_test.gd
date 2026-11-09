@@ -161,6 +161,17 @@ func run() -> void:
 		check("recall to box", bp.mode == "box" and bp in game.box and bp not in game.pals
 			and bp.get_parent() == game.box_holder, "mode=%s" % bp.mode)
 		game.box_to_party(bp) # restore party slot for later checks
+		# work xp: base pals level from honest work, capped at 60
+		var wxp := game.gen_pal("lamball", 5, p.pos)
+		wxp.mode = "base"; game.pals.append(wxp)
+		game.pal_gain_xp(wxp, 130)
+		var wxp_up: bool = wxp.level == 6
+		wxp.level = 59
+		game.pal_gain_xp(wxp, 99999)
+		check("work xp + cap", wxp_up and wxp.level == 60 and wxp.xp == 0)
+		game.pals.erase(wxp)
+		if wxp.get_parent(): wxp.get_parent().remove_child(wxp)
+		wxp.free()
 		# partner skill
 		var prj0 := game.projectiles.size()
 		game.partner_skill()

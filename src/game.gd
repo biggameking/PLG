@@ -1122,17 +1122,25 @@ func craft(recipe_id: String) -> void:
 	add_item(r["out"][0], r["out"][1])
 	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
 
+func pal_gain_xp(q: Pal, n: int) -> void:
+	if q.hp <= 0 or n <= 0:
+		return
+	q.xp += n
+	while q.xp >= q.level * 25:
+		q.xp -= q.level * 25
+		if q.level >= 60: # cap — surplus xp just burns off
+			q.xp = 0
+			break
+		q.level += 1
+		q.apply_bonuses() # recompute max_hp incl star/alpha/boss
+		q.hp = q.max_hp
+		log_msg("%s grew to Lv%d!" % [q.spec["name"], q.level])
+
 func gain_xp(n: int) -> void:
 	n = int(n * (1.0 + perks["xp"] * 0.08))
 	for q in pals:
-		if q.mode == "partner" and q.hp > 0:
-			q.xp += int(n * 0.5)
-			while q.xp >= q.level * 25:
-				q.xp -= q.level * 25
-				q.level += 1
-				q.apply_bonuses() # recompute max_hp incl star/alpha/boss
-				q.hp = q.max_hp
-				log_msg("%s grew to Lv%d!" % [q.spec["name"], q.level])
+		if q.mode == "partner":
+			pal_gain_xp(q, int(n * 0.5))
 	player.xp += n
 	while true: # a big kill can cross several levels
 		var need := 30 + player.level * 20
@@ -1202,6 +1210,8 @@ func tick_production(dt: float) -> void:
 						if sc["store"][cn[0]] <= 0:
 							sc["store"].erase(cn[0])
 						need -= take
+			for w in active: # Palworld: base workers level from honest work
+				pal_gain_xp(w, 3)
 			for pr in prod: # goods pile up at the site; haulers move them
 				st["store"][pr[0]] = st["store"].get(pr[0], 0) + pr[1]
 			var t := ""
