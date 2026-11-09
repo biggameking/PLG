@@ -211,6 +211,8 @@ func run_click(cr: Dictionary) -> void:
 			game.craft(cr["arg"])
 		"repair":
 			game.repair_weapon()
+		"repair_armor":
+			game.repair_armor()
 		"tech":
 			game.unlock(cr["arg"])
 		"box_out":
@@ -649,6 +651,18 @@ func draw_craft(r: Vector2) -> void:
 		draw_string(font, Vector2(rrect.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [wnm,
 			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(46)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff") if rep["afford"] else Color("#5a6068"))
+		y += 24
+	var rep_a := game.repair_quote_armor()
+	if not rep_a.is_empty():
+		var rrect_a := Rect2(rr.position.x + 16, y - 12, 440, 18)
+		click_rects.append({"rect": rrect_a, "act": "repair_armor"})
+		var acost := ""
+		for c in rep_a["cost"]:
+			acost += "%d %s, " % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])]
+		var anm: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "?")
+		draw_string(font, Vector2(rrect_a.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [anm,
+			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(46)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff") if rep_a["afford"] else Color("#5a6068"))
 		y += 24
 	for rec in ItemData.RECIPES:
 		if rec.get("station") not in [game.craft_station, "hand"]:

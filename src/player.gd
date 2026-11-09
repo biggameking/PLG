@@ -18,6 +18,7 @@ var mount: Pal = null
 var facing := Vector2(1, 0)  # last move direction, for harvest/interact
 var equipment := {"weapon": "", "armor": "", "acc1": "", "acc2": ""} # Palworld trinkets ride the acc slots
 var weapon_wear := -1.0       # uses left; -1 = unbreakable or bare hands
+var armor_wear := -1.0        # hits absorbed left; -1 = unarmored/unbreakable
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
@@ -367,6 +368,13 @@ func wear_tick() -> void: # Palworld tools wear out — a swing costs a use
 		weapon_wear -= 1.0
 		if weapon_wear <= 0.0:
 			game.break_weapon(equipment["weapon"])
+
+func wear_armor() -> void:
+	# Palworld armor wears too — every hit taken chews the plate
+	if armor_wear > 0.0:
+		armor_wear -= 1.0
+		if armor_wear <= 0.0:
+			game.break_armor(equipment["armor"])
 
 func acc_total(k: String) -> float: # Palworld trinket math — both slots stack
 	var t := 0.0

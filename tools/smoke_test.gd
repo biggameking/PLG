@@ -1915,7 +1915,33 @@ func run() -> void:
 	check("weapon repaired", p.weapon_wear == 40.0 and game.item_count("wood") == wood_before - 3,
 		"wear=%.0f wood=%d" % [p.weapon_wear, game.item_count("wood")])
 	check("full weapon no quote", game.repair_quote().is_empty(), "still quoted")
+	# armor wears the same way — hits chew the plate, the bench mends it too
+	game.add_item("hide_armor", 1)
+	game.equip("hide_armor")
+	check("armor wear on equip", p.armor_wear == 120.0, "wear=%.0f" % p.armor_wear)
+	p.armor_wear = 2.0
+	var def_a := p.armor_def()
+	var hp_a := p.hp
+	p.hp = 400.0; p.dodge_t = 0.0 # a KO or an i-frame would swallow the test hits
+	game.hurt_player(50.0, null) # first hit dents the plate
+	check("hit dents armor", p.armor_wear == 1.0, "wear=%.0f" % p.armor_wear)
+	game.hurt_player(50.0, null) # second hit cracks it
+	check("armor breaks", p.equipment["armor"] == "" and p.armor_wear < 0.0
+		and p.armor_def() < def_a, "slot=%s def=%d" % [p.equipment["armor"], p.armor_def()])
+	p.hp = hp_a # the hits were real — hand the health back
+	game.add_item("hide_armor", 1)
+	game.equip("hide_armor")
+	p.armor_wear = 60.0
+	game.craft_station = "workbench"
+	var aq := game.repair_quote_armor()
+	check("armor quote", not aq.is_empty() and aq["max"] == 120, "quote=%s" % str(aq))
+	var lea0 := game.item_count("leather") # the recipe's half-cost is in leather
+	game.add_item("leather", 5); game.add_item("fiber", 5)
+	game.repair_armor()
+	check("armor repaired", p.armor_wear == 120.0 and game.item_count("leather") == lea0 + 2,
+		"wear=%.0f leather=%d->%d" % [p.armor_wear, lea0, game.item_count("leather")])
 	game.craft_station = cs0
+	p.equipment["armor"] = ""; p.armor_wear = -1.0
 	p.equipment["weapon"] = ""; p.weapon_wear = -1.0 # hand the test weapon back to the void
 	# party cap: 6th pal refused and stays in the box
 	while game.party.size() < 5:

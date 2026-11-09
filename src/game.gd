@@ -700,6 +700,7 @@ func hurt_player(atk: float, from: Pal) -> void:
 	player.hp -= final
 	player.hit_flash = 0.4
 	floater(player.pos, "-" + str(final), "#e64533")
+	player.wear_armor() # Palworld: the plate takes the wear, not the skin
 	if player.hp <= 0:
 		respawn_player()
 
@@ -1675,21 +1676,29 @@ func craft(recipe_id: String) -> void:
 	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
 
 func repair_quote() -> Dictionary:
-	# Palworld repair: a worn weapon mends at its crafting station for half
-	# its recipe (rounded up, min 1 each). {} = nothing to repair here.
-	var wid: String = player.equipment["weapon"]
-	if wid == "" or player.weapon_wear < 0.0:
+	return repair_quote_for("weapon")
+
+func repair_quote_armor() -> Dictionary:
+	return repair_quote_for("armor")
+
+func repair_quote_for(slot: String) -> Dictionary:
+	# Palworld repair: worn gear mends at its crafting station for half its
+	# recipe (rounded up, min 1 each). {} = nothing to repair here.
+	var iid: String = player.equipment[slot]
+	var wear: float = player.weapon_wear if slot == "weapon" else player.armor_wear
+	if iid == "" or wear < 0.0:
 		return {}
-	var maxdur := int(ItemData.ITEMS.get(wid, {}).get("weapon", {}).get("dur", -1))
-	if maxdur <= 0 or int(player.weapon_wear) >= maxdur:
+	var stat_key := "weapon" if slot == "weapon" else "armor"
+	var maxdur := int(ItemData.ITEMS.get(iid, {}).get(stat_key, {}).get("dur", -1))
+	if maxdur <= 0 or int(wear) >= maxdur:
 		return {}
 	var rec := {}
 	for r0 in ItemData.RECIPES:
-		if r0["out"][0] == wid:
+		if r0["out"][0] == iid:
 			rec = r0
 			break
-	# hand-recipe weapons mend at any bench (their recipes show in every
-	# panel anyway); station recipes only at their own station
+	# hand-recipe gear mends at any bench (its recipes show in every panel
+	# anyway); station recipes only at their own station
 	var stn0: String = rec.get("station", "hand")
 	if rec.is_empty() or craft_station == "" or (stn0 != "hand" and stn0 != craft_station):
 		return {}
@@ -1713,6 +1722,18 @@ func repair_weapon() -> void:
 		add_item(c[0], -c[1])
 	player.weapon_wear = float(rep["max"])
 	log_msg("Repaired %s" % ItemData.ITEMS[player.equipment["weapon"]]["name"])
+
+func repair_armor() -> void:
+	var rep := repair_quote_armor()
+	if rep.is_empty():
+		return
+	if not rep["afford"]:
+		log_msg("Missing materials")
+		return
+	for c in rep["cost"]:
+		add_item(c[0], -c[1])
+	player.armor_wear = float(rep["max"])
+	log_msg("Repaired %s" % ItemData.ITEMS[player.equipment["armor"]]["name"])
 
 func tick_crafts(dt: float) -> void:
 	if craft_queue.is_empty():
@@ -2438,6 +2459,7 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 		player.hp -= final
 		player.hit_flash = 0.4
 		floater(player.pos, "-" + str(final), "#e64533") # show post-armor damage like hurt_player
+		player.wear_armor() # skills chew the plate same as claws do
 		var st = sk.get("status")
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
@@ -2608,7 +2630,7 @@ func save_game() -> void:
 				return pals.size() + i
 			return pals.size() + box.size() + bench.find(pp)),
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
-		"wear": player.weapon_wear,
+		"wear": player.weapon_wear, "awear": player.armor_wear,
 		"pals": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
@@ -2747,6 +2769,9 @@ func load_game() -> bool:
 		var wdur: float = float(ItemData.ITEMS.get(player.equipment["weapon"], {}).get("weapon", {}).get("dur", -1))
 		var wv = d.get("wear", wdur) # a foreign save can hand us a string — then trust the item, not the field
 		player.weapon_wear = (clampf(float(wv), -1.0, maxf(wdur, 1.0)) if (wv is float or wv is int) else wdur) if wdur > 0 else -1.0
+		var adur: float = float(ItemData.ITEMS.get(player.equipment["armor"], {}).get("armor", {}).get("dur", -1))
+		var av = d.get("awear", adur)
+		player.armor_wear = (clampf(float(av), -1.0, maxf(adur, 1.0)) if (av is float or av is int) else adur) if adur > 0 else -1.0
 	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
 	for ik in d["items"]:
 		items[ik] = maxi(int(d["items"][ik]), 0) # negative inventory is corrupt state
@@ -3970,11 +3995,15 @@ func equip(k: String) -> void:
 		player.equipment[slot] = ""
 		if slot == "weapon":
 			player.weapon_wear = -1.0
+		elif slot == "armor":
+			player.armor_wear = -1.0
 		log_msg("Unequipped " + it["name"])
 	else:
 		player.equipment[slot] = k
 		if slot == "weapon":
 			player.weapon_wear = float(it["weapon"].get("dur", -1)) # fresh tool, fresh count
+		elif slot == "armor":
+			player.armor_wear = float(it["armor"].get("dur", -1)) # fresh plate, fresh count
 		log_msg("Equipped " + it["name"])
 
 func break_weapon(id: String) -> void:
@@ -3982,6 +4011,13 @@ func break_weapon(id: String) -> void:
 	sfx_play("break")
 	floater(player.pos, "BROKE!", "#e64533")
 	player.weapon_wear = -1.0
+	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
+
+func break_armor(id: String) -> void:
+	log_msg("%s broke!" % ItemData.ITEMS.get(id, {}).get("name", id))
+	sfx_play("break")
+	floater(player.pos, "ARMOR BROKE!", "#e64533")
+	player.armor_wear = -1.0
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func teach_skill_fruit(item_id: String) -> void:
