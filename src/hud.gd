@@ -132,6 +132,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		if game.net and game.panel == "":
 			game.panel = "join"; join_buf = "" # K: type the host's IP, Enter to join
 		return
+	if event is InputEventKey and event.pressed and game.panel == "":
+		# Palworld party hotbar: 1-5 sends that slot's pal out (again recalls)
+		var k2: int = event.keycode
+		if k2 >= KEY_1 and k2 <= KEY_5:
+			var si2 := k2 - KEY_1
+			if game.net != null and game.net.is_client():
+				if si2 < game.net_party.size():
+					game.net.rpc("box_req", "make_active", int(game.net_party[si2]["uid"]))
+			elif si2 < game.party.size():
+				game.make_active(game.party[si2])
+			return
 	if event is InputEventKey and event.pressed and game.panel == "build":
 		var k: int = event.keycode
 		if k >= KEY_1 and k <= KEY_9:
@@ -449,6 +460,7 @@ func _draw() -> void:
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
 			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  PALDECK p  CHAT enter",
+			"1-5 sends that party pal out (press again to recall) — one ball on the field",
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
 			"Glider descends cliffs. Sick pals need medicine in feed box/bag.",
 		]
