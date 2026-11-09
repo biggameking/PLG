@@ -1857,7 +1857,10 @@ func load_game() -> bool:
 
 func start_raid() -> void:
 	var c := Vector2(palbox_pos.x + 0.5, palbox_pos.y + 0.5)
-	var n := 3 + rng.int_range(0, 2)
+	# Palworld escalation: raids grow with the campaign — bigger packs and
+	# meaner levels as days pass, both capped so day-40 stays survivable
+	var day_bonus := mini(day, 20)
+	var n := 3 + rng.int_range(0, 2) + mini(day / 4, 4)
 	var spawned := 0
 	for i in n:
 		var placed := false
@@ -1875,7 +1878,7 @@ func start_raid() -> void:
 			var sid: String = hostile_pool[rng.int_range(0, hostile_pool.size() - 1)]
 			var rp := preload("res://src/pal.gd").new()
 			entity_layer.add_child(rp)
-			rp.setup(self, sid, rng.int_range(4 + zone * 4, 8 + zone * 6), Vector2(tx + 0.5, ty + 0.5))
+			rp.setup(self, sid, rng.int_range(4 + zone * 4 + day_bonus, 8 + zone * 6 + day_bonus), Vector2(tx + 0.5, ty + 0.5))
 			# raider picks nearest non-wild pal; falls back to the player
 			rp.aggro = 0
 			rp.raid = true

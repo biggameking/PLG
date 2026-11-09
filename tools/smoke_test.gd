@@ -425,6 +425,20 @@ func run() -> void:
 		game.tick_gauntlet()
 	check("gauntlet clears", game.gauntlet.is_empty() and waves_run == 3
 		and game.item_count("gauntlet_sigil") >= 1, "waves=%d" % waves_run)
+	# raid escalation: late-campaign raids bring bigger, meaner packs
+	game.day = 16
+	var r0 := game.pals.size()
+	game.start_raid()
+	var new_raid := game.pals.slice(r0)
+	var min_lv := 999
+	for q in new_raid:
+		min_lv = mini(min_lv, q.level)
+	check("raid escalates", new_raid.size() >= 6 and min_lv >= 20,
+		"n=%d minlv=%d" % [new_raid.size(), min_lv])
+	for q in new_raid:
+		game.pals.erase(q)
+		q.queue_free()
+	game.day = 1
 	# worldgen legendary den: an uncapturable lv50 giant guards deep zone 3
 	var legend: Pal = null
 	for q in game.pals:
