@@ -1115,6 +1115,7 @@ func tick_repairs(dt: float) -> void:
 	var fixers := 0.0
 	for q in pals:
 		if q.mode == "base" and q.hp > 0 and q.san >= 15.0 and q.job_site == null \
+				and not q.has_status("sleep") \
 				and q.spec.get("work", {}).get("handiwork", 0) > 0:
 			fixers += 1.0
 	if fixers <= 0.0:
@@ -1251,6 +1252,7 @@ func tick_crafts(dt: float) -> void:
 	var helpers := 0.0
 	for q in pals:
 		if q.mode == "base" and q.hp > 0 and q.job_site == null \
+				and not q.has_status("sleep") \
 				and q.spec.get("work", {}).get("handiwork", 0) > 0:
 			helpers += 1.0
 	var speed := 1.0 + 0.5 * helpers
@@ -1325,7 +1327,7 @@ func tick_production(dt: float) -> void:
 							and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
 						p.take_dps(int(st["spike"]))
 		var prod: Array = job.get("produces", [])
-		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0)
+		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0 and not w.has_status("sleep"))
 		if prod.is_empty() or active.is_empty():
 			continue
 		var cons: Array = job.get("consumes", [])
@@ -2043,7 +2045,7 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	var ft: Dictionary = st.get("farm_t", {})
 	st["farm_t"] = ft
 	for w in st["workers"]:
-		if not is_instance_valid(w) or w.mode != "base" or w.san < 15.0:
+		if not is_instance_valid(w) or w.mode != "base" or w.san < 15.0 or w.has_status("sleep"):
 			continue
 		var fm: Dictionary = w.spec.get("farm", {})
 		if fm.is_empty():

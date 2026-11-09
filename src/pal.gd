@@ -343,6 +343,11 @@ func base_ai(dt: float) -> void:
 					Combat.stat_at(foe.spec["def"], foe.level, foe.talent) * foe.def_bonus * foe.def_mult(), mult, game.rng)
 				foe.hit(d, mult, true)
 		return
+	# Palworld night shift: diurnal pals doze off after dark — production skips
+	# sleepers; dark-element pals are nocturnal and keep the lights on
+	if game.is_night() and "dark" not in spec.get("elements", []):
+		statuses["sleep"] = game.t + 2.0
+		return
 	if job_site:
 		var site_cell: Vector2i = Vector2i(-1, -1)
 		for k in game.structures:

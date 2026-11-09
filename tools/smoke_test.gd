@@ -302,6 +302,37 @@ func run() -> void:
 		for kk in game.structures:
 			w1 += game.structures[kk]["store"].get("wood", 0)
 		check("production ticks", w1 > w0, "wood %d->%d (site stockpile)" % [w0, w1])
+		# Palworld night shift: diurnal base pals doze off and production skips
+		# sleepers; dark-element pals keep working through the night
+		var tod0: float = game.tod
+		game.tod = 23.0
+		var log_st2 = null
+		for kk2 in game.structures:
+			if game.structures[kk2].get("id") == "logging_site":
+				log_st2 = game.structures[kk2]
+		if log_st2 and not log_st2["workers"].is_empty():
+			var night_w: Pal = log_st2["workers"][0]
+			var dark_night: bool = "dark" in night_w.spec.get("elements", [])
+			var all_diurnal := true
+			for w3 in log_st2["workers"]:
+				w3.base_ai(0.1) # every worker reacts to nightfall
+				if "dark" in w3.spec.get("elements", []):
+					all_diurnal = false
+			var w2a: int = log_st2["store"].get("wood", 0)
+			for i in 40:
+				game.tick_production(1.0)
+			var w2b: int = log_st2["store"].get("wood", 0)
+			if dark_night:
+				check("night shift", not night_w.has_status("sleep") and w2b > w2a,
+					"dark pal works at night")
+			else:
+				check("night shift", night_w.has_status("sleep") and (not all_diurnal or w2b == w2a),
+					"sleep=%s wood %d->%d" % [night_w.has_status("sleep"), w2a, w2b])
+		else:
+			check("night shift", false, "no logging worker")
+		game.tod = tod0
+		for q in game.pals: # don't leak sleep into later checks
+			q.statuses.erase("sleep")
 
 	# skills + statuses
 	var sp_pal: Pal = game.pals[0]
@@ -1400,6 +1431,7 @@ func run() -> void:
 		if q.species_id == "lamball" and q.mode == "wild" and q.hp is float and q.sex == "M" and q.boss == false:
 			fok = true # mode 7 -> "wild" fallback, sex 9 -> "M", boss "yes" -> skipped (not a real bool)
 	check("foreign-typed save coerces", fload == true and fok and game.player.hp is float and game.item_count("wood") == 12, "pals=%d" % game.pals.size())
+	game.tod = 8.0 # float("late") coerced tod to 0.0 = night: keep later checks on day shift
 	game.save_game() # restore a sane save file for the rest of the run
 
 	# ---- new palworld-loop systems ----
