@@ -54,6 +54,7 @@ export const ITEMS: Record<string, ItemDef> = {
   jam_bun: { id: "jam_bun", name: "Jam-filled Bun", glyph: "▒", color: "#e8963c", kind: "food", stack: 999, food: 55, desc: "Sweet bun." },
   chikipi_poultry: { id: "chikipi_poultry", name: "Chikipi Poultry", glyph: "♦", color: "#f2a0b5", kind: "food", stack: 999, food: 30, desc: "Poultry meat." },
   lamball_mutton: { id: "lamball_mutton", name: "Lamball Mutton", glyph: "♦", color: "#e64533", kind: "food", stack: 999, food: 35, desc: "Mutton." },
+  roast_mutton: { id: "roast_mutton", name: "Roast Mutton", glyph: "♦", color: "#b86a30", kind: "food", stack: 999, food: 60, price: 18, desc: "Palworld's grilled lamball — smells like a full belly." },
   fried_egg: { id: "fried_egg", name: "Fried Egg", glyph: "⊙", color: "#e8d44d", kind: "food", stack: 999, food: 40, desc: "Cooked egg." },
   cake: { id: "cake", name: "Cake", glyph: "▒", color: "#f2a0b5", kind: "food", stack: 999, food: 80, san: 15, desc: "Raises SAN a lot." },
 
@@ -140,6 +141,7 @@ export const RECIPES: Recipe[] = [
   { id: "med", out: ["medical_supplies", 1], cost: [["pal_fluid", 3], ["venom_gland", 2], ["cloth", 2]], station: "workbench", work: 200 },
   { id: "baked_berries", out: ["baked_berries", 2], cost: [["red_berries", 3]], station: "campfire", work: 30 },
   { id: "fried_egg", out: ["fried_egg", 1], cost: [["egg", 1]], station: "campfire", work: 20 },
+  { id: "roast_mutton", out: ["roast_mutton", 1], cost: [["lamball_mutton", 1]], station: "campfire", work: 40 },
   { id: "jam_bun", out: ["jam_bun", 1], cost: [["flour", 1], ["red_berries", 2]], station: "campfire", work: 60 },
   { id: "flour", out: ["flour", 1], cost: [["wheat", 3]], station: "workbench", work: 40 },
   { id: "bread", out: ["bread", 1], cost: [["flour", 2]], station: "campfire", work: 80 },

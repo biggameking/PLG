@@ -310,6 +310,17 @@ const ITEMS = {
   "food": 35,
   "desc": "Mutton."
  },
+ "roast_mutton": {
+  "id": "roast_mutton",
+  "name": "Roast Mutton",
+  "glyph": "♦",
+  "color": "#b86a30",
+  "kind": "food",
+  "stack": 999,
+  "food": 60,
+  "price": 18,
+  "desc": "Palworld's grilled lamball — smells like a full belly."
+ },
  "fried_egg": {
   "id": "fried_egg",
   "name": "Fried Egg",
@@ -1255,6 +1266,21 @@ const RECIPES = [
   ],
   "station": "campfire",
   "work": 30
+ },
+ {
+  "id": "roast_mutton",
+  "out": [
+   "roast_mutton",
+   1
+  ],
+  "cost": [
+   [
+    "lamball_mutton",
+    1
+   ]
+  ],
+  "station": "campfire",
+  "work": 40
  },
  {
   "id": "fried_egg",
