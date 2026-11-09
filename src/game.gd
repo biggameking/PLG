@@ -3320,6 +3320,58 @@ func spawn_grotto() -> void:
 			st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
 				"lifmunk_effigy": 3, "pal_egg": 2, "huge_pal_egg": 1}
 		grotto_room2 = Vector2i(bx, by)
+		# third chamber (Palworld's deepest boss room): chains off room 2 in any
+		# cardinal direction that won't double back onto the first chamber.
+		var cx3 := -1
+		var cy3 := -1
+		var door3 := Vector2i.ZERO
+		for dir3: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var rx: int = bx + dir3.x * 7
+			var ry: int = by + dir3.y * 7
+			if rx == tx and ry == ty:
+				continue # that's just the way we came
+			if rx - 3 < 0 or rx + 3 >= World.WORLD_W or ry - 3 < 0 or ry + 3 >= World.WORLD_H:
+				continue
+			var fits3 := true
+			for dy3 in range(-1, 2):
+				for dx3 in range(-1, 2):
+					if world.blocked(rx + dx3, ry + dy3) or structures.has(Vector2i(rx + dx3, ry + dy3)):
+						fits3 = false
+			if fits3:
+				cx3 = rx; cy3 = ry
+				door3 = Vector2i(bx + dir3.x * 4, by + dir3.y * 4)
+				break
+		if cx3 >= 0:
+			for dy3 in range(-2, 3):
+				for dx3 in range(-2, 3):
+					if maxi(absi(dx3), absi(dy3)) == 2:
+						var j3 := world.idx(cx3 + dx3, cy3 + dy3)
+						world.decor[j3] = World.Decor.ROCK
+						world.hp[j3] = 60
+			var horiz3 := door3.y == by
+			for off3 in [-1, 1]:
+				var dc3 := door3 + (Vector2i(0, off3) if horiz3 else Vector2i(off3, 0))
+				var k3 := world.idx(dc3.x, dc3.y)
+				world.decor[k3] = World.Decor.ROCK
+				world.hp[k3] = 60
+			var bp3 := preload("res://src/pal.gd").new()
+			bp3.alpha = true
+			bp3.boss = true
+			entity_layer.add_child(bp3)
+			# the deepest room deserves legendary stock, not just any zone-3 thug
+			bp3.setup(self, LEGENDARY_DEN[rng.int_range(0, LEGENDARY_DEN.size() - 1)],
+				50, Vector2(cx3 + 0.5, cy3 + 0.5))
+			bp3.home = bp3.pos
+			pals.append(bp3)
+			if place_free("chest", cx3 + 1, cy3 - 1):
+				var st3: Dictionary = structures[Vector2i(cx3 + 1, cy3 - 1)]
+				st3["loot"] = true
+				st3["store"] = {"gold_coin": rng.int_range(60, 120), "legendary_sphere": 3,
+					"ancient_part": 2, "huge_pal_egg": 1, "lifmunk_effigy": 4,
+					"skill_fruit_" + ["neutral", "fire", "water", "grass", "electric",
+					"ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
+			log_msg("A sealed grotto echoes in the deep wilds — something huge breathes within")
+			return
 		log_msg("A sealed grotto echoes in the deep wilds — it sounds deep")
 		return
 

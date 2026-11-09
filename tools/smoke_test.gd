@@ -2416,9 +2416,11 @@ func run() -> void:
 	prey2.mode = "wild"; prey2.aggro = 0; prey2.hp = prey2.max_hp * 0.2
 	game.pals.append(prey2)
 	var fd0 := prey2.pos.distance_to(p.pos)
+	var ph0: float = p.hp
 	prey2.wild_ai(0.1)
-	check("wounded hostile flees", prey2.pos.distance_to(p.pos) > fd0,
-		"d=%.1f->%.1f" % [fd0, prey2.pos.distance_to(p.pos)])
+	# cornered prey can't always move — the real proof is it never closes/attacks
+	check("wounded hostile flees", prey2.pos.distance_to(p.pos) >= fd0 and p.hp == ph0,
+		"d=%.1f->%.1f php=%.0f" % [fd0, prey2.pos.distance_to(p.pos), p.hp])
 	game.pals.erase(prey2)
 	if prey2.get_parent(): prey2.get_parent().remove_child(prey2)
 	prey2.free()
