@@ -41,6 +41,7 @@ var ailment := ""           # "" | depressed | sprain | ulcer | weakened (Palwor
 var stance := "auto"        # pal command: auto defends / aggressive hunts / passive holds
 var petted_t := -60.0       # last pet timestamp — affection runs on a per-pal cooldown
 var bounty := 0             # >0: wanted mark — the kill pays gold on the spot
+var equipped := []          # up to 3 moves slotted at the palbox — empty = everything learned
 var low_san_t := 0.0        # sustained seconds under SAN 15 — onset timer
 var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
@@ -541,6 +542,10 @@ func tick_needs(dt: float) -> void:
 	if mode == "partner" and aggro < 0 and san < 60.0:
 		san = minf(100.0, san + 2.5)
 
+func active_skills() -> Array:
+	# Palworld loadout: only the slotted three fire; untouched pals run wide
+	return equipped if not equipped.is_empty() else learned_skills()
+
 func learned_skills() -> Array:
 	var out := []
 	for e in spec.get("skills", []):
@@ -576,7 +581,7 @@ func take_dps(n: int) -> void:
 func cast_skills(target_ent, dt: float) -> bool:
 	var dist := pos.distance_to(target_ent.pos)
 	var best: Dictionary = {}
-	for sid in learned_skills():
+	for sid in active_skills():
 		if skill_cd.get(sid, 0) > game.t:
 			continue
 		var sk: Dictionary = SkillData.SKILLS.get(sid, {})

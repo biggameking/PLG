@@ -215,6 +215,11 @@ func run_click(cr: Dictionary) -> void:
 			game.butcher_pal(cr["arg"])
 		"fav":
 			game.toggle_fav(cr["arg"])
+		"skills":
+			game.skill_target = cr["arg"]
+			game.panel = "skills"
+		"skill_tgl":
+			game.toggle_skill(cr["arg"]["p"], cr["arg"]["sid"])
 		"travel":
 			game.travel_to(cr["arg"])
 		"equip":
@@ -443,6 +448,16 @@ func _draw() -> void:
 		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s%s" % [pr["name"], pr["lv"],
 			"●" if pr["out"] else "○", tag], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
 		py += 18
+	# Palworld partner-skill readout: name + cooldown under the party strip
+	var psk_p := game.party_pal()
+	if psk_p != null and game.PARTNER_SKILLS.has(psk_p.species_id):
+		var cd_left: float = float(psk_p.skill_cd.get("partner", 0.0)) - game.t
+		draw_rect(Rect2(r.x - 150, py, 138, 16), Color(0, 0, 0, 0.5))
+		draw_string(font, Vector2(r.x - 144, py + 13),
+			"%s %s" % [game.PARTNER_SKILLS[psk_p.species_id]["name"],
+				"READY" if cd_left <= 0 else "%ds" % ceili(cd_left)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
+			Color("#ffd76e") if cd_left <= 0 else Color(0.55, 0.55, 0.6))
 	# build ghost preview
 	if game.panel == "build" and build_sel >= 0:
 		var tw := mouse_tile()
@@ -477,6 +492,8 @@ func _draw() -> void:
 			draw_shop(r)
 		"dex":
 			draw_dex(r)
+		"skills":
+			draw_skills(r)
 		"travel":
 			draw_travel(r)
 		"chat":
@@ -687,6 +704,10 @@ func draw_palbox(r: Vector2) -> void:
 		click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": pr["uid"]})
 		draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[▼]" if pr["out"] else "[*]",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd76e"))
+		if game.net == null or not game.net.is_client(): # host-owned pals only
+			click_rects.append({"rect": Rect2(rect.position + Vector2(342, 0), Vector2(34, 17)), "act": "skills", "arg": pr["arg"]})
+			draw_string(font, Vector2(rect.position + Vector2(344, 13)), "[mv]",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#8ef0ff"))
 		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d T%d %s HP%d/%d" % [
 			"● " if pr["out"] else "○ ", pr["name"],
 			"☆" if pr["lucky"] else "", pr["sex"], pr["star_s"], pr["lv"], pr["talent"],
@@ -708,6 +729,10 @@ func draw_palbox(r: Vector2) -> void:
 				wp.job_site["id"] if wp.job_site else "idle",
 				" [%s]" % wp.ailment if wp.ailment != "" else ""],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if wp.ailment != "" else Color("#a8dff0"))
+			if game.net == null or not game.net.is_client():
+				click_rects.append({"rect": Rect2(wrect.position + Vector2(258, 0), Vector2(34, 17)), "act": "skills", "arg": wp})
+				draw_string(font, Vector2(wrect.position.x + 260, y), "[mv]",
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#8ef0ff"))
 			y += 17
 	y += 10
 	var brows := box_rows()
@@ -1052,3 +1077,34 @@ func draw_statues(r: Vector2) -> void:
 
 func draw_equipment_line() -> void:
 	draw_string(font, Vector2(14, 80), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))
+
+func draw_skills(r: Vector2) -> void:
+	# Palworld move loadout: slot up to 3 of the pal's learned moves —
+	# an empty loadout means "use everything learned" (the old default)
+	var rr := Rect2(r.x / 2 - 220, 140, 440, 300)
+	draw_rect(rr, Color(0, 0, 0, 0.85))
+	var tp := game.skill_target
+	if tp == null or not is_instance_valid(tp):
+		draw_string(font, rr.position + Vector2(16, 24), "No pal selected",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
+		return
+	draw_string(font, rr.position + Vector2(16, 24),
+		"%s — slot up to 3 moves (Esc closes)" % tp.spec["name"],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#8ef0ff"))
+	var y := rr.position.y + 50
+	for sid in tp.learned_skills():
+		var sk: Dictionary = SkillData.SKILLS.get(sid, {})
+		var on: bool = sid in tp.equipped
+		var rect := Rect2(rr.position.x + 16, y - 12, 400, 18)
+		click_rects.append({"rect": rect, "act": "skill_tgl", "arg": {"p": tp, "sid": sid}})
+		draw_string(font, Vector2(rect.position.x, y), "%s %s  pow%d  cd%ds" %
+			["[x]" if on else "[ ]", str(sk.get("name", sid)).left(18),
+				int(sk.get("power", 0)), int(sk.get("cooldown", 2))],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
+			Color("#ffd76e") if on else Color(0.75, 0.75, 0.8))
+		y += 19
+	y += 8
+	draw_string(font, Vector2(rr.position.x + 16, y),
+		"empty loadout = all learned moves fire",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.6, 0.6, 0.65))
+

@@ -2170,6 +2170,20 @@ func assign_worker() -> void:
 	else:
 		log_msg("No workplace nearby")
 
+var skill_target: Pal = null # palbox move-loadout panel's subject
+func toggle_skill(p: Pal, sid: String) -> void:
+	# Palworld's move loadout: slot up to 3 of the pal's learned moves
+	if p == null or sid not in p.learned_skills():
+		return
+	if sid in p.equipped:
+		p.equipped.erase(sid)
+	elif p.equipped.size() >= 3:
+		log_msg("%s's loadout is full — unslot a move first" % p.spec["name"])
+		return
+	else:
+		p.equipped.append(sid)
+	log_msg("%s moves: %s" % [p.spec["name"], str(p.equipped)])
+
 func tick_death_marks() -> void:
 	# reaching a tombstone retires it — the pack itself is handled by the drops
 	for i in range(death_marks.size() - 1, -1, -1):
@@ -2409,7 +2423,7 @@ func save_game() -> void:
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
 			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment, "sb": p.soul_boost,
 			"lucky": p.lucky, "extra": p.extra_skills, "stance": p.stance,
-			"bnt": p.bounty,
+			"bnt": p.bounty, "eq": p.equipped,
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -2417,7 +2431,7 @@ func save_game() -> void:
 			"fav": bp.fav,
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry, "sb": bp.soul_boost,
-			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
+			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills, "eq": bp.equipped,
 			"revive": maxf(0.0, bp.revive_t - t)})
 	for bp in bench: # spheres ride in the save too — party state survives a reload
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -2426,7 +2440,7 @@ func save_game() -> void:
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "sb": bp.soul_boost,
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
-			"stance": bp.stance})
+			"stance": bp.stance, "eq": bp.equipped})
 	var structs := {}
 	var seen_st := {} # one entry per structure — footprint cells share a st; writing
 	# them as separate records made rebuild order-dependent and ate buildings
@@ -2666,6 +2680,8 @@ func load_game() -> bool:
 			np.passives.append("lucky") # setup() ran before the flag landed — inject its passive here
 		if pd.get("extra") is Array:
 			np.extra_skills = pd["extra"].filter(func(k): return SkillData.SKILLS.has(k)) # drop skills removed in newer builds
+		if pd.get("eq") is Array:
+			np.equipped = pd["eq"].filter(func(k): return SkillData.SKILLS.has(k)).slice(0, 3) # loadout caps at 3
 		if np.lucky:
 			np.sprite.scale = Vector2(1.5, 1.5)
 			np.sprite.position.y = -48.0

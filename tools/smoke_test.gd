@@ -2502,6 +2502,23 @@ func run() -> void:
 	else:
 		check("skill fruit teaches", false, "empty party")
 
+	# move loadout: palbox slots cap at 3 and gate what the pal casts
+	if not game.party.is_empty():
+		var lp3: Pal = game.lead_pal()
+		var learned3: Array = lp3.learned_skills()
+		if learned3.size() >= 1:
+			var sid0: String = learned3[0]
+			game.toggle_skill(lp3, sid0)
+			check("skill slotted", lp3.equipped == [sid0] and lp3.active_skills() == [sid0])
+			for sid2 in learned3: # try to slot everything — the 3rd stop holds
+				if sid2 != sid0:
+					game.toggle_skill(lp3, sid2)
+			check("loadout caps 3", lp3.equipped.size() <= mini(3, learned3.size()),
+				"eq=%d" % lp3.equipped.size())
+			game.toggle_skill(lp3, sid0)
+			check("skill unslotted", sid0 not in lp3.equipped)
+			lp3.equipped = [] # restore "everything learned" default
+
 	# catch count: every 10th same-species catch pays a bonus
 	var dummy: Pal = game.gen_pal("lamball", 2, game.player.pos + Vector2(5, 0))
 	game.pals.append(dummy)
