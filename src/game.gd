@@ -249,6 +249,22 @@ func add_item(id: String, n: int) -> void:
 func item_count(id: String) -> int:
 	return items.get(id, 0)
 
+# Palworld carry weight: every item pulls on the bag. Kind defaults,
+# a few heavy standouts get their own numbers.
+const KIND_WT := {
+	"material": 2.0, "food": 0.6, "fruit": 0.4, "medicine": 0.5,
+	"seed": 0.2, "sphere": 1.5, "ammo": 0.5, "weapon": 8.0,
+	"armor": 15.0, "accessory": 2.0, "gear": 10.0,
+}
+const ITEM_WT := {
+	"stone": 3.0, "ore": 5.0, "ingot": 6.0, "coal": 4.0,
+	"pal_egg": 5.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
+}
+
+func item_wt(sid: String) -> float:
+	var it: Dictionary = ItemData.ITEMS.get(sid, {})
+	return float(ITEM_WT.get(sid, KIND_WT.get(it.get("kind", ""), 1.0)))
+
 var SFX := {}
 var sfx_pool := []
 var sfx_idx := 0
@@ -1925,6 +1941,8 @@ const PARTNER_AURAS := {
 	"tanzee": {"atk": 0.06},
 	"dumud": {"def": 4.0},         # thick hide lessons rub off
 	"pengullet": {"def": 3.0},
+	"cattiva": {"carry": 120.0},   # Palworld's iconic pack mule
+	"lamball": {"carry": 50.0},
 }
 
 func partner_aura(stat: String) -> float:

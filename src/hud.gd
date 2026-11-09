@@ -607,6 +607,11 @@ func draw_inv(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 230, 60, 460, 500)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a8e6a1"))
+	# Palworld carry weight: the bag drags once it tops capacity
+	var pl := game.player
+	var over: bool = pl.carry_wt() > pl.carry_cap()
+	draw_string(font, Vector2(rr.position + Vector2(330, 24)), "Wt %d/%d" % [int(pl.carry_wt()), int(pl.carry_cap())],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e0503c") if over else Color("#9fd8ff"))
 	var keys := game.items.keys()
 	keys.sort()
 	var colw := 222.0

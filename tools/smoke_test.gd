@@ -262,6 +262,30 @@ func run() -> void:
 			if apal.get_parent(): apal.get_parent().remove_child(apal)
 			apal.free()
 		game.send_out(game.party[0]) # restore a field pal for later checks
+		# carry weight (Palworld): a heavy bag drags; a pack mule lifts the cap
+		var it0: Dictionary = game.items.duplicate()
+		var wt0: float = 0.0
+		for sid in it0:
+			wt0 += game.item_wt(sid) * int(it0[sid])
+		game.items = {}
+		var spd0c: float = p.speed_mult()
+		var st_n: int = int(p.carry_cap() / 3.0) + 10 # just over the base cap
+		game.items = {"stone": st_n}
+		check("overload crawls", p.carry_wt() > p.carry_cap()
+			and p.speed_mult() <= spd0c * maxf(0.15, 1.5 - p.carry_wt() / p.carry_cap()) + 0.01,
+			"wt=%.0f/%.0f mult=%.2f spd0=%.2f" % [p.carry_wt(), p.carry_cap(), p.speed_mult(), spd0c])
+		var cm: Pal = game.gen_pal("cattiva", 5, p.pos)
+		cm.mode = "box"; game.box.append(cm); game.box_pal(cm)
+		game.box_to_party(cm); game.send_out(cm.uid)
+		check("pack mule lifts cap", p.carry_wt() < p.carry_cap()
+			and p.speed_mult() >= spd0c - 0.01, "cap=%.0f mult=%.2f" % [p.carry_cap(), p.speed_mult()])
+		game.retract_out()
+		game.pals.erase(cm); game.party.erase(cm.uid); game.bench.erase(cm)
+		if cm.get_parent(): cm.get_parent().remove_child(cm)
+		cm.free()
+		game.items = it0
+		check("bag restored", absf(p.carry_wt() - wt0) < 0.01)
+		game.send_out(game.party[0])
 		# palbox growth: workforce slots scale with player level, hard cap 20
 		var lv0: int = game.player.level
 		game.player.level = 1

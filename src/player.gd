@@ -152,6 +152,16 @@ func swimming() -> bool:
 	return mount == null and world.in_bounds(int(pos.x), int(pos.y)) \
 		and world.tiles[world.idx(int(pos.x), int(pos.y))] == World.Tile.WATER
 
+# Palworld carry weight: the bag pulls you down once it tops capacity
+func carry_wt() -> float:
+	var w := 0.0
+	for sid in game.items:
+		w += game.item_wt(sid) * int(game.items[sid])
+	return w
+
+func carry_cap() -> float:
+	return 300.0 + (level - 1) * 10.0 + game.partner_aura("carry")
+
 func speed_mult() -> float:
 	var m := 1.0
 	if swimming():
@@ -166,6 +176,10 @@ func speed_mult() -> float:
 	if statuses.get("soak", 0) > game.t:
 		m *= 0.7
 	m *= 1.0 + game.perks["speed"] * 0.06 + acc_total("spd") + game.partner_aura("speed")
+	var cap := carry_cap()
+	var wt := carry_wt()
+	if wt > cap:
+		m *= maxf(0.15, 1.5 - wt / cap) # over-encumbered crawl (Palworld)
 	return m
 
 func _physics_process(dt: float) -> void:
