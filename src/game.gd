@@ -1234,13 +1234,13 @@ func load_game() -> bool:
 	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
 		log_msg("Save layout predates the current world format - fresh terrain")
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
-	day = int(d["day"]); tod = clampf(float(d["tod"]), 0.0, 24.0) # typed vars — a foreign string would throw on assignment; tod>24 would fast-forward a day per frame until under 24
+	day = maxi(int(d["day"]), 1); tod = clampf(float(d["tod"]), 0.0, 24.0) # typed vars — a foreign string would throw on assignment; tod>24 would fast-forward a day per frame until under 24
 	raid_t = float(d.get("raid_t", raid_t))
 	for dd0 in d.get("drops", []):
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
 				and (dd0["x"] is float or dd0["x"] is int) and (dd0["y"] is float or dd0["y"] is int):
-			spawn_drop(str(dd0["id"]), int(dd0.get("n", 1)), Vector2(float(dd0["x"]), float(dd0["y"])))
-	tech_points = int(d["tech_points"])
+			spawn_drop(str(dd0["id"]), maxi(int(dd0.get("n", 1)), 0), Vector2(float(dd0["x"]), float(dd0["y"]))) # negative n would corrupt the item ledger
+	tech_points = maxi(int(d["tech_points"]), 0)
 	unlocked = d["unlocked"].filter(func(u): return u is String)
 	var saved_perks: Dictionary = d.get("perks", {})
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
@@ -1252,7 +1252,7 @@ func load_game() -> bool:
 			player.equipment[slot] = str(ev) if ItemData.ITEMS.has(str(ev)) else "" # unknown ids equip to nothing
 	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
 	for ik in d["items"]:
-		items[ik] = int(d["items"][ik])
+		items[ik] = maxi(int(d["items"][ik]), 0) # negative inventory is corrupt state
 	party.clear()
 	for u in d["party"]: # typed-array assignment rejects untyped arrays from foreign saves
 		party.append(int(u))
@@ -1261,9 +1261,9 @@ func load_game() -> bool:
 		player.pos = Vector2(float(ppos[0]), float(ppos[1])) # corrupt pos keeps spawn point instead of aborting
 	if not world.in_bounds(int(player.pos.x), int(player.pos.y)) or world.blocked(int(player.pos.x), int(player.pos.y)):
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5) # OOB/blocked pos from a foreign save = softlock (every move rejected)
-	player.hp = float(d["player"].get("hp", player.hp)); player.level = int(d["player"].get("level", 1))
-	player.xp = int(d["player"].get("xp", 0)); player.capture_level = int(d["player"].get("cap_lv", 1))
-	player.hunger = float(d["player"].get("hunger", player.hunger))
+	player.hp = float(d["player"].get("hp", player.hp)); player.level = clampi(int(d["player"].get("level", 1)), 1, 60) # level<=0 makes derived max_hp negative
+	player.xp = maxi(int(d["player"].get("xp", 0)), 0); player.capture_level = clampi(int(d["player"].get("cap_lv", 1)), 1, 20)
+	player.hunger = clampf(float(d["player"].get("hunger", player.hunger)), 0.0, 100.0)
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []
@@ -1282,11 +1282,11 @@ func load_game() -> bool:
 			else:
 				ppos2 = [world.spawn.x, world.spawn.y] # OOB pal could never move again — re-anchor at spawn, don't delete it
 		var np := preload("res://src/pal.gd").new()
-		np.setup(self, pd["sp"], int(pd.get("lv", 1)), Vector2(float(ppos2[0]), float(ppos2[1])))
+		np.setup(self, pd["sp"], clampi(int(pd.get("lv", 1)), 1, 60), Vector2(float(ppos2[0]), float(ppos2[1]))) # lv<=0 makes stat_at return negative max_hp — an instant corpse
 		np.home = np.pos # loaded pals re-anchor at their saved spot
 		var m0 := str(pd.get("mode", "wild"))
 		np.mode = m0 if m0 in ["wild", "partner", "base", "box"] else "wild" # foreign strings would poison every mode check
-		np.hp = float(pd.get("hp", np.max_hp)); np.talent = int(pd.get("talent", np.talent))
+		np.hp = float(pd.get("hp", np.max_hp)); np.talent = clampi(int(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
 		if pd.get("sex") != null:
 			np.sex = "F" if str(pd["sex"]) == "F" else "M"
 		if pd.get("passives") is Array:
@@ -1296,11 +1296,11 @@ func load_game() -> bool:
 			np.sprite.scale = Vector2(1.6, 1.6)
 		if pd.get("boss") is bool:
 			np.boss = pd["boss"] # only a real bool assigns — GDScript has no bool() ctor and String==true throws
-		np.san = float(pd.get("san", np.san))
-		np.hunger = float(pd.get("hunger", 0.0))
+		np.san = clampf(float(pd.get("san", np.san)), 0.0, 200.0)
+		np.hunger = clampf(float(pd.get("hunger", 0.0)), 0.0, 100.0)
 		np.carry = pd.get("carry") if pd.get("carry") is Dictionary else null # haul_ai reads carry["id"] — a wrong-typed value would crash there
-		np.star = int(pd.get("star", 0))
-		np.xp = int(pd.get("xp", 0))
+		np.star = clampi(int(pd.get("star", 0)), 0, 4) # CONDENSE_COST tops at 4 — a foreign star=999 makes pow(1.15,999) overflow the stat line
+		np.xp = maxi(int(pd.get("xp", 0)), 0)
 		if pd.get("raid") is bool:
 			np.raid = pd["raid"]
 		if np.raid:
@@ -1347,8 +1347,8 @@ func load_game() -> bool:
 				for sk2 in sv["store"]: # counts used in +/- arithmetic everywhere — coerce, skip junk
 					var cv = sv["store"][sk2]
 					if cv is float or cv is int:
-						st["store"][str(sk2)] = int(cv)
-			st["timer"] = float(sv.get("timer", 0.0)) # st["timer"] += dt arithmetic follows — a string would throw
+						st["store"][str(sk2)] = maxi(int(cv), 0) # negative stock would make chest math lie
+			st["timer"] = maxf(float(sv.get("timer", 0.0)), 0.0) # negative timer fires production instantly; st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg"):
 				st["egg_parents"] = sv["egg"]
 		for dy in range(h):
