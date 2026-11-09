@@ -175,6 +175,17 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		rpc("peer_pos", id, float(x), float(y), float(elev))  # relay so clients see each other
 
 @rpc("any_peer", "call_remote", "unreliable")
+func pal_hit(nid: int, dmg: float) -> void:
+	# Client→host combat relay: a client's swing lands on the host's real pal.
+	# Host is the authority — validate the id, clamp the roll, resolve locally.
+	if not is_host:
+		return
+	var p := game.find_net_pal(int(nid))
+	if p == null or p.hp <= 0:
+		return
+	p.hit(clampf(float(dmg), 0.0, 2000.0), 1.0, false)
+
+@rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
 	if from_id == multiplayer.get_unique_id():
 		return # the server relayed your own line back — hud already echoed it
