@@ -796,6 +796,15 @@ def make_structure(sid, color, w, h):
         d.ellipse([W//2 - 8, 14, W//2 + 8, 30], fill=hxc("#e05050") + (255,))
         d.rectangle([W//2 - 8, 21, W//2 + 8, 24], fill=hxc("#ede0c8") + (255,))
         d.ellipse([W//2 - 4, 15, W//2 - 1, 18], fill=hxc("#f8f4f0") + (255,))
+    elif sid == "sphere_factory_2":
+        # the bigger belt — a twin-lane line rolling a giga sphere
+        d.rectangle([W//2 - 22, 30, W//2 + 22, 40], fill=hxc("#5e462e") + (255,))
+        for i in range(4):
+            x = W//2 - 18 + i * 11
+            d.ellipse([x, 32, x + 7, 38], outline=hxc("#8a6d4d") + (255,), width=2)
+        d.ellipse([W//2 - 11, 11, W//2 + 11, 31], fill=hxc("#3f7fd8") + (255,))
+        d.rectangle([W//2 - 11, 20, W//2 + 11, 24], fill=hxc("#ede0c8") + (255,))
+        d.ellipse([W//2 - 6, 13, W//2 - 2, 17], fill=hxc("#f8f4f0") + (255,))
     elif sid == "expedition_post":
         # rally flag over a supply crate — Palworld's dispatch camp
         d.rectangle([W//2 - 20, 34, W//2 - 6, 44], fill=hxc("#8a6d4d") + (255,))
@@ -840,6 +849,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "monitoring_stand": ("#d06a6a", 1, 1),
     "waypoint": ("#7fc8f8", 1, 1), "watch_tower": ("#c9a86a", 1, 1),
     "sphere_factory": ("#4dd0e1", 2, 1),
+    "sphere_factory_2": ("#4dd0e1", 2, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
 

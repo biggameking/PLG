@@ -793,6 +793,36 @@ func run() -> void:
 	else:
 		check("expedition departs", false, "post not placed")
 
+	# Giga Works (Palworld assembly line II): organ-fed belt rolls giga spheres
+	for c0 in StructureData.STRUCTURES["sphere_factory_2"]["cost"]:
+		game.add_item(c0[0], int(c0[1]))
+	var g2_k: Vector2i = free_xy.call("sphere_factory_2")
+	var g2_st = game.structures.get(g2_k) if g2_k.x >= 0 else null
+	var chest6 = null
+	for kk14 in game.structures:
+		if game.structures[kk14].get("id") == "chest" and not game.structures[kk14].get("loot", false):
+			chest6 = game.structures[kk14]
+			break
+	if chest6 == null:
+		var ck6: Vector2i = free_xy.call("chest")
+		chest6 = game.structures.get(ck6)
+	if g2_st and chest6:
+		for ci in [["paldium", 3], ["ingot", 2], ["electric_organ", 1]]:
+			chest6["store"][ci[0]] = chest6["store"].get(ci[0], 0) + ci[1]
+		var hw2: Pal = game.gen_pal("lamball", 5, game.player.pos)
+		hw2.mode = "base"; hw2.san = 90.0; hw2.ailment = ""; hw2.passives = []
+		hw2.talent = 50 # keep work_sum above the 300 mark deterministically
+		var saved_hw2: Array = g2_st["workers"].duplicate()
+		g2_st["workers"] = [hw2]; hw2.job_site = g2_st
+		g2_st["timer"] = 299.5
+		game.tick_production(1.0)
+		check("giga works rolls", g2_st["store"].get("giga_sphere", 0) >= 1,
+			"store=%s" % str(g2_st["store"]))
+		g2_st["workers"] = saved_hw2; hw2.job_site = null
+		game.pals.erase(hw2); hw2.free()
+	else:
+		check("giga works rolls", false, "factory=%s chest=%s" % [g2_st != null, chest6 != null])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

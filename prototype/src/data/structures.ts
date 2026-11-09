@@ -197,6 +197,14 @@ export const STRUCTURES: Record<string, StructureDef> = {
     job: { kind: "expedition", workType: "gathering", amount: 600 },
     desc: "Assign a gatherer and it marches off-post, returning with a haul keyed to its element.",
   },
+  sphere_factory_2: {
+    id: "sphere_factory_2", name: "Giga Works", glyph: "◉", color: "#4dd0e1", w: 2, h: 1,
+    cost: [["stone", 20], ["ingot", 8], ["paldium", 10], ["electric_organ", 4]],
+    job: { kind: "assemble", workType: "handiwork", amount: 300,
+      consumes: [["paldium", 3], ["ingot", 2], ["electric_organ", 1]],
+      produces: [["giga_sphere", 1]] },
+    desc: "Palworld assembly line II — the organ-fed belt rolls giga spheres.",
+  },
   watch_tower: {
     id: "watch_tower", name: "Watch Tower", glyph: "♜", color: "#c9a86a", w: 1, h: 1,
     cost: [["wood", 20], ["stone", 10], ["ingot", 2]], turret: 14, hp: 300, light: 1,
@@ -259,4 +267,5 @@ export const TECH: TechNode[] = [
   { id: "watch_tower", name: "Watch Tower", tier: 4, cost: 2, parts: 1 },
   { id: "sphere_factory", name: "Sphere Works", tier: 5, cost: 3, parts: 1 },
   { id: "expedition_post", name: "Expedition Post", tier: 7, cost: 3, parts: 1 },
+  { id: "sphere_factory_2", name: "Giga Works", tier: 8, cost: 4, parts: 2 },
 ];

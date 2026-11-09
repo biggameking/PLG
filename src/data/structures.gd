@@ -518,6 +518,36 @@ const STRUCTURES = {
   "job": {"kind": "expedition", "workType": "gathering", "amount": 600},
   "desc": "Assign a gatherer and it marches off-post, returning with a haul keyed to its element."
  },
+ "sphere_factory_2": {
+  "id": "sphere_factory_2",
+  "name": "Giga Works",
+  "glyph": "◉",
+  "color": "#4dd0e1",
+  "w": 2,
+  "h": 1,
+  "cost": [
+   [
+    "stone",
+    20
+   ],
+   [
+    "ingot",
+    8
+   ],
+   [
+    "paldium",
+    10
+   ],
+   [
+    "electric_organ",
+    4
+   ]
+  ],
+  "job": {"kind": "assemble", "workType": "handiwork", "amount": 300,
+   "consumes": [["paldium", 3], ["ingot", 2], ["electric_organ", 1]],
+   "produces": [["giga_sphere", 1]]},
+  "desc": "Palworld assembly line II — the organ-fed belt rolls giga spheres."
+ },
  "pal_condenser": {
   "id": "pal_condenser",
   "name": "Pal Condenser",
@@ -1126,6 +1156,13 @@ const TECH = [
   "tier": 7,
   "cost": 3,
   "parts": 1
+ },
+ {
+  "id": "sphere_factory_2",
+  "name": "Giga Works",
+  "tier": 8,
+  "cost": 4,
+  "parts": 2
  }
 ]
 
