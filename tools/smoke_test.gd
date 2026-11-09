@@ -1855,6 +1855,43 @@ func run() -> void:
 			"edge=%s warm_hp=%.0f" % [chill_edge, p.hp])
 	p.pos = pos_c; p.cold_t = 0.0
 	game.tod = tod_c
+
+	# latitude bands (Palworld snowy north / scorching south): noon in the
+	# north freezes anyway, noon in the south scorches, cooling armor saves
+	game.tod = 13.0
+	p.hp = p.max_hp; p.hunger = 80.0
+	p.equipment["armor"] = ""; p.armor_wear = -1.0
+	p.pos = Vector2(150, 10)
+	p.cold_t = 0.0
+	var hp_n := p.hp
+	p._physics_process(4.5)
+	var north_cold: bool = p.hp < hp_n
+	var south_spot := Vector2(-1, -1)
+	for sy in range(191, 218):
+		for sx in range(1, 218):
+			if game.world.tile_at(sx, sy) != World.Tile.WATER:
+				south_spot = Vector2(sx, sy) + Vector2(0.5, 0.5)
+				break
+		if south_spot.x >= 0:
+			break
+	var south_heat := false
+	var cool_ok := false
+	if south_spot.x >= 0:
+		p.pos = south_spot
+		p.cold_t = 0.0; p.hp = p.max_hp
+		var hp_s := p.hp
+		p._physics_process(4.5)
+		south_heat = p.hp < hp_s
+		game.add_item("tropic_armor", 1); game.equip("tropic_armor")
+		p.cold_t = 0.0; p.hp = p.max_hp
+		p._physics_process(4.5)
+		cool_ok = p.hp >= p.max_hp * 0.99
+	check("latitude bands", north_cold and south_heat and cool_ok,
+		"north=%s south=%s cool=%s" % [north_cold, south_heat, cool_ok])
+	p.pos = pos_c; p.cold_t = 0.0; game.tod = tod_c
+	p.equipment["armor"] = ""; p.armor_wear = -1.0
+	game.items.erase("tropic_armor")
+
 	# bed rest: a real bed restores SAN 3x faster than a floor nap
 	var napper: Pal = game.gen_pal("lamball", 3, p.pos + Vector2(6, 6))
 	napper.mode = "base"; napper.san = 40.0

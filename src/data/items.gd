@@ -880,6 +880,16 @@ const ITEMS = {
   "stack": 1,
   "price": 140
  },
+ "tropic_armor": {
+  "id": "tropic_armor",
+  "name": "Tropical Outfit",
+  "kind": "armor",
+  "armor": {"def": 5, "dur": 140},
+  "cool": 1,
+  "desc": "Open weave and a wide brim — keeps the southern sun off your neck.",
+  "stack": 1,
+  "price": 90
+ },
  "dragon_scale": {
   "id": "dragon_scale",
   "name": "Dragonscale Armor",
@@ -1568,6 +1578,13 @@ const RECIPES = [
   "cost": [["ingot", 8], ["leather", 4], ["cloth", 2]],
   "station": "workbench",
   "work": 200
+ },
+ {
+  "id": "tropic_armor",
+  "out": ["tropic_armor", 1],
+  "cost": [["cloth", 6], ["fiber", 10], ["leather", 4]],
+  "station": "workbench",
+  "work": 160
  },
  {
   "id": "dragon_scale",

@@ -258,15 +258,23 @@ func _physics_process(dt: float) -> void:
 			stamina = minf(100.0, stamina + 25.0 * dt) # quick catch-up
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
-	# Palworld night chill: past dusk and away from firelight, the cold
-	# bleeds hp — never below 30% (a shivering warning, not an executioner)
+	# Palworld night chill + latitude bands: past dusk and away from
+	# firelight the cold bleeds hp — never below 30%. The far north freezes
+	# all day; the far south scorches by day (a swim or cooling armor saves
+	# you) and snaps cold again after dark, desert-style.
 	var warm := float(ItemData.ITEMS.get(equipment["armor"], {}).get("warm", 0))
-	if game.is_night() and hp > max_hp * 0.3 and game.nearest_heat(pos) > 10.0 + warm * 4.0:
+	var cool := float(ItemData.ITEMS.get(equipment["armor"], {}).get("cool", 0))
+	var cl: String = game.world.climate_at(pos)
+	var swim: bool = game.world.tile_at(int(pos.x), int(pos.y)) == World.Tile.WATER
+	var freezing: bool = cl == "cold" or game.is_night()
+	var scorching: bool = cl == "hot" and not game.is_night() and not swim and cool <= 0.0
+	if hp > max_hp * 0.3 and ((freezing and game.nearest_heat(pos) > 10.0 + warm * 4.0) or scorching):
 		cold_t += dt
 		if cold_t >= 4.0:
 			cold_t = 0.0
 			hp = maxf(max_hp * 0.3, hp - 2.0)
-			game.floater(pos, "cold…", "#9fd8ff")
+			game.floater(pos, "heat…" if scorching else "cold…",
+				"#ff9a4a" if scorching else "#9fd8ff")
 	else:
 		cold_t = 0.0
 	var spd_mult := speed_mult()

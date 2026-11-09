@@ -37,6 +37,15 @@ func in_bounds(x: int, y: int) -> bool:
 func tile_at(x: int, y: int) -> int:
 	return tiles[idx(x, y)] if in_bounds(x, y) else Tile.WATER
 
+func climate_at(p: Vector2) -> String:
+	# Palworld's latitude bands: the far north freezes around the clock, the
+	# far south scorches under the sun — the midlands keep their mild nights
+	if p.y < 30.0:
+		return "cold"
+	if p.y > WORLD_H - 30.0:
+		return "hot"
+	return ""
+
 func decor_at(x: int, y: int) -> int:
 	return decor[idx(x, y)] if in_bounds(x, y) else Decor.NONE
 
