@@ -353,6 +353,17 @@ func run() -> void:
 			game.pals.erase(w_lv2); game.pals.erase(w_lv1)
 			w_lv2.free(); w_lv1.free()
 
+	# missions: ordered guide rope pays out as live state satisfies rungs
+	if game.has_structure("palbox"):
+		var gold_m := game.item_count("gold_coin")
+		var idx0: int = game.mission_idx
+		game.tick_missions(1.1)
+		check("missions", game.mission_idx > idx0 and game.mission_idx <= game.MISSIONS.size() \
+				and game.item_count("gold_coin") > gold_m, "idx %d->%d" % [idx0, game.mission_idx])
+		game.mission_idx = 999 # past-the-end idx must clamp, not crash
+		game.save_game(); game.load_game()
+		check("missions persist", game.mission_idx == game.MISSIONS.size())
+
 	# skills + statuses
 	var sp_pal: Pal = game.pals[0]
 	sp_pal.statuses["burn"] = game.t + 3

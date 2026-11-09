@@ -321,6 +321,10 @@ func _draw() -> void:
 	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
 	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00" % [game.day, int(game.tod)],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#e8f0f2"))
+	if game.mission_idx < game.MISSIONS.size(): # Palworld guide rope
+		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
+		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff"))
 	var my := r.y - 24
 	for i in range(game.messages.size()):
 		var m: String = game.messages[game.messages.size() - 1 - i]

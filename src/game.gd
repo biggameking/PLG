@@ -335,6 +335,8 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			add_item("lifmunk_effigy", 3)
 			add_item("gold_coin", 10)
 			log_msg("RAID CLEARED! Legendary sphere + loot!")
+		if p.alpha or p.boss:
+			mission_flags["elite"] = true
 		for d in p.spec.get("drops", []):
 			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 		if p.alpha:
@@ -459,6 +461,68 @@ func tick_gauntlet() -> void:
 	add_item("gauntlet_sigil", 1) # it pays for the next run — if you survive
 	log_msg("GAUNTLET CLEARED! Legendary spheres + effigies + gold")
 	floater(player.pos, "GAUNTLET CLEARED!", "#ffd76e")
+	mission_flags["gauntlet"] = true
+
+# ---------- base missions ----------
+# Palworld's guide rope: an ordered checklist of base milestones that pays
+# out gold + tech points. Checked against live state once a second — never
+# event-driven, so a missed signal can only delay a reward, not lose it.
+const MISSIONS := [
+	{"text": "Build a Palbox", "gold": 30, "tp": 1},
+	{"text": "Catch 3 pals", "gold": 40, "tp": 1},
+	{"text": "Deploy a pal to base (palbox)", "gold": 40, "tp": 1},
+	{"text": "Build a Logging Site", "gold": 50, "tp": 1},
+	{"text": "Craft a pal sphere", "gold": 50, "tp": 1},
+	{"text": "Build a Ranch", "gold": 60, "tp": 1},
+	{"text": "Build a Pal Bed", "gold": 60, "tp": 1},
+	{"text": "Defeat an alpha or boss", "gold": 100, "tp": 2},
+	{"text": "Hatch a bred egg", "gold": 100, "tp": 2},
+	{"text": "Clear the gauntlet sigil", "gold": 200, "tp": 3},
+]
+const MISSION_KEYS := ["palbox", "catch3", "deploy", "logger", "sphere",
+	"ranch", "bed", "elite", "egg", "gauntlet"]
+var mission_idx := 0
+var mission_flags := {} # event-only goals: crafted sphere, elite kill, ...
+var mission_t := 0.0
+
+func total_catches() -> int:
+	var n := 0
+	for k in catch_counts:
+		n += int(catch_counts[k])
+	return n
+
+func mission_done(idx: int) -> bool:
+	match MISSION_KEYS[idx]:
+		"palbox": return has_structure("palbox")
+		"catch3": return total_catches() >= 3
+		"deploy": return base_pals().size() >= 1
+		"logger": return has_structure("logging_site")
+		"sphere": return mission_flags.has("sphere")
+		"ranch": return has_structure("ranch")
+		"bed": return has_structure("pal_bed")
+		"elite": return mission_flags.has("elite")
+		"egg": return mission_flags.has("egg")
+		"gauntlet": return mission_flags.has("gauntlet")
+	return false
+
+func note_crafted(out_id: String) -> void:
+	if "sphere" in out_id:
+		mission_flags["sphere"] = true
+
+func tick_missions(dt: float) -> void:
+	if mission_idx >= MISSIONS.size():
+		return
+	mission_t += dt
+	if mission_t < 1.0:
+		return
+	mission_t = 0.0
+	while mission_idx < MISSIONS.size() and mission_done(mission_idx): # backlog pays out in order — bounded by MISSIONS.size()
+		var m: Dictionary = MISSIONS[mission_idx]
+		mission_idx += 1
+		add_item("gold_coin", int(m["gold"]))
+		tech_points += int(m["tp"])
+		log_msg("MISSION: %s — done! +%dg +%d tech" % [m["text"], int(m["gold"]), int(m["tp"])])
+		floater(player.pos, "MISSION DONE", "#8ef0ff")
 
 func hurt_player(atk: float, from: Pal) -> void:
 	if player.dodge_t > 0:
@@ -861,6 +925,7 @@ func _process(dt: float) -> void:
 	tick_gauntlet()
 	tick_repairs(dt)
 	tick_crafts(dt)
+	tick_missions(dt)
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1243,6 +1308,7 @@ func craft(recipe_id: String) -> void:
 	for c in r.get("cost", []):
 		add_item(c[0], -c[1])
 	add_item(r["out"][0], r["out"][1])
+	note_crafted(r["out"][0])
 	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
 
 func tick_crafts(dt: float) -> void:
@@ -1261,6 +1327,7 @@ func tick_crafts(dt: float) -> void:
 		cq["left"] -= dt * speed
 		if cq["left"] <= 0:
 			add_item(cq["out"], cq["n"])
+			note_crafted(cq["out"])
 			log_msg("Crafted %s x%d" % [ItemData.ITEMS[cq["out"]]["name"], cq["n"]])
 			craft_queue.remove_at(i)
 
@@ -1746,6 +1813,7 @@ func save_game() -> void:
 				r["at"] = maxf(0.0, br["at"] - t) # store remaining time — t restarts on load
 				return r),
 		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
+		"missions": mission_idx, "mflags": mission_flags,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -1835,6 +1903,15 @@ func load_game() -> bool:
 	if d.get("catches") is Dictionary:
 		for ck in d["catches"]:
 			catch_counts[str(ck)] = maxi(int(d["catches"][ck]), 0) # foreign counts can't poison the %10 bonus
+	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
+	mission_flags.clear()
+	var mf = d.get("mflags", {})
+	if mf is Dictionary: # bounded: only real mission keys, bools only
+		for mk in MISSION_KEYS:
+			if mf.get(mk) is bool and mf[mk]:
+				mission_flags[mk] = true
+		if mission_flags.size() >= 64: # paranoia cap — same contract as every runtime set
+			mission_flags.clear()
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
 		for slot in ["weapon", "armor"]:
@@ -2216,6 +2293,8 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		np.mode = "box"
 		box.append(np)
 		box_pal(np)
+	if pair is Array:
+		mission_flags["egg"] = true # a bred egg — wild nest finds don't count
 	floater(at, "* hatched! *", "#4dd0e1")
 	log_msg("Egg hatched: %s (talent %d)!" % [np.spec["name"], talent_v])
 
@@ -2479,6 +2558,9 @@ func regenerate(s: int) -> void:
 	boss_respawns.clear() # the old world's dens died with it
 	gauntlet = {} # and so did any trial in progress
 	craft_queue.clear() # queued builds die with the world too
+	mission_idx = 0 # missions belong to the world they were earned in
+	mission_flags.clear()
+	mission_t = 0.0
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
