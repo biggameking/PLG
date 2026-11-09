@@ -512,6 +512,9 @@ func _draw() -> void:
 		if game.palbox_pos.x >= 0:
 			var pb := mr.position + Vector2(game.palbox_pos.x / float(game.world.WORLD_W) * ms, game.palbox_pos.y / float(game.world.WORLD_H) * ms)
 			draw_rect(Rect2(pb - Vector2(2, 2), Vector2(4, 4)), Color(1, 0.55, 0.1))
+		for dm in game.death_marks: # Palworld tombstones — guide the corpse run
+			var dp := mr.position + Vector2(dm.x / game.world.WORLD_W * ms, dm.y / game.world.WORLD_H * ms)
+			draw_rect(Rect2(dp - Vector2(2, 2), Vector2(4, 4)), Color(0.95, 0.2, 0.2))
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()

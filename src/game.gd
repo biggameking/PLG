@@ -739,6 +739,7 @@ func chest_withdraw_all(st) -> int:
 	st["store"] = {}
 	return n
 
+var death_marks: Array[Vector2] = [] # map tombstones where you dropped your pack (session-only)
 func respawn_player() -> void:
 	# Palworld rule: your pack spills where you fell; walk back to reclaim
 	var dropped := 0
@@ -751,6 +752,9 @@ func respawn_player() -> void:
 			unequip_if_gone(id)
 	if dropped > 0:
 		log_msg("You dropped %d items where you fell!" % dropped)
+		death_marks.append(player.pos) # Palworld tombstone: the map remembers the spill
+		if death_marks.size() > 3:
+			death_marks.pop_front() # only the freshest few spills earn a mark
 	if player.mount != null: # dead men don't ride
 		player.mount.visible = true
 		player.mount = null
@@ -1203,6 +1207,7 @@ func _process(dt: float) -> void:
 	tick_weather(dt)
 	update_projectiles(dt)
 	tick_box(dt)
+	tick_death_marks()
 	# floaters age
 	for f in floaters:
 		f["age"] += dt
@@ -2158,6 +2163,12 @@ func assign_worker() -> void:
 		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
 	else:
 		log_msg("No workplace nearby")
+
+func tick_death_marks() -> void:
+	# reaching a tombstone retires it — the pack itself is handled by the drops
+	for i in range(death_marks.size() - 1, -1, -1):
+		if player.pos.distance_to(death_marks[i]) < 2.0:
+			death_marks.remove_at(i)
 
 func pet_pal(p: Pal) -> bool:
 	# Palworld's pet: a little affection tops up SAN on a per-pal cooldown

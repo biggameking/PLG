@@ -1423,6 +1423,13 @@ func run() -> void:
 	check("respawn restores hp", p.hp == int(p.max_hp * 0.5))
 	check("death drops inventory", game.drops.size() > dcnt0 and game.item_count("wood") == 0,
 		"drops %d->%d" % [dcnt0, game.drops.size()])
+	# Palworld tombstone: the map marks the spill and clears it on the corpse run
+	check("death mark set", game.death_marks.size() >= 1)
+	if game.death_marks.size() >= 1:
+		p.pos = game.death_marks[game.death_marks.size() - 1]
+		game.tick_death_marks()
+		check("corpse run clears", game.death_marks.size() == 0)
+		p.pos = game.nearest_free(game.palbox_pos.x + 0.5, game.palbox_pos.y + 2.5)
 	game.add_item("wood", 200); game.add_item("stone", 100); game.add_item("paldium", 20); game.add_item("fiber", 40)
 	# straw bed: raid boss alive -> sleep refused; after killing it -> works
 	var day0: int = game.day
