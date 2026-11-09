@@ -605,6 +605,10 @@ func sphere_fly(sid: String, target: Pal) -> void:
 	var p0 := Iso.to_screen(player.pos.x, player.pos.y, world.elev_at(int(player.pos.x), int(player.pos.y)))
 	spr.position = Vector2(p0.x, p0.y - 14)
 	entity_layer.add_child(spr)
+	if spheres_flying.size() >= 16: # click-spam cap: the oldest ball misses
+		var old = spheres_flying.pop_front()
+		if is_instance_valid(old["node"]):
+			old["node"].queue_free()
 	spheres_flying.append({"sid": sid, "target": target, "t": 0.0,
 		"node": spr, "from": player.pos})
 
