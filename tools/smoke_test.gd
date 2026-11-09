@@ -1056,7 +1056,10 @@ func run() -> void:
 		check("dark pal stays up", not nightowl.has_status("sleep"), "")
 	sleeper.hit(5, 1.0, true)
 	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro >= 0, "aggro=%d" % sleeper.aggro)
+	# nocturnal ecology: dark pals own the night spawn table, sit out the day
+	check("night spawns dark", game.pick_wild_species(["depresso", "lamball"]) == "depresso")
 	game.tod = 12.0
+	check("day spawns diurnal", game.pick_wild_species(["depresso", "lamball"]) == "lamball")
 
 	# player hunger: drain, slow when low, food restores
 	game.player.hunger = 20.0

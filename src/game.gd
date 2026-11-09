@@ -210,7 +210,7 @@ func spawn_wild() -> void:
 			continue # don't pop a pal into existence on top of the player
 		var zone := world.zone_at(x, y)
 		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
-		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+		var sid := pick_wild_species(pool)
 		var sp: Dictionary = SpeciesData.species_of(sid)
 		var aquatic: bool = "water" in sp.get("elements", [])
 		var in_water: bool = world.tiles[world.idx(x, y)] == World.Tile.WATER
@@ -230,6 +230,19 @@ func spawn_wild() -> void:
 		p.home = p.pos # lair anchor — alphas tether here
 		pals.append(p)
 		wild_n += 1
+
+func pick_wild_species(pool: Array) -> String:
+	# Palworld day/night ecology: dark pals are nocturnal — they only spawn
+	# after dusk, and they dominate the night table in mixed zones.
+	var dark := pool.filter(func(s): return "dark" in SpeciesData.species_of(str(s)).get("elements", []))
+	if is_night():
+		if not dark.is_empty():
+			return dark[rng.int_range(0, dark.size() - 1)]
+	else:
+		var diurnal := pool.filter(func(s): return s not in dark)
+		if not diurnal.is_empty():
+			return diurnal[rng.int_range(0, diurnal.size() - 1)]
+	return pool[rng.int_range(0, pool.size() - 1)]
 
 func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Pal:
 	# test/dev factory: a live pal in the entity layer; caller picks its mode
