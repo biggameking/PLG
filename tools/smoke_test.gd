@@ -2160,6 +2160,16 @@ func run() -> void:
 	for kk11 in game.structures:
 		if game.structures[kk11] not in st_before:
 			st_before.append(game.structures[kk11])
+	# fog of war: sight peels the map back and the save keeps the peel
+	var ex_ct := 0
+	for b in game.explored:
+		if b != 0: ex_ct += 1
+	game.reveal_at(p.pos + Vector2(15, 0), 10.0)
+	var ex_ct2 := 0
+	for b in game.explored:
+		if b != 0: ex_ct2 += 1
+	check("exploring reveals map", ex_ct2 > ex_ct, "%d->%d" % [ex_ct, ex_ct2])
+	game.explored[123] = 1
 	game.save_game()
 	# mutate state then reload
 	for q in game.pals:
@@ -2167,6 +2177,8 @@ func run() -> void:
 	if chest2:
 		chest2["store"].clear()
 	var ok_load := game.load_game()
+	check("fog survives reload", game.explored.size() == game.world.WORLD_W * game.world.WORLD_H
+		and game.explored[123] == 1, "size=%d cell=%d" % [game.explored.size(), game.explored[123]])
 	var re_pal: Pal = null
 	if sv_idx >= 0 and sv_idx < game.pals.size():
 		re_pal = game.pals[sv_idx]

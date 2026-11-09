@@ -606,6 +606,8 @@ var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
 var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of game hours
 var weather_t := 0.0
+var explored := PackedByteArray() # fog of war — one byte per world cell
+var reveal_t := 0.0               # throttle: sight updates twice a second
 
 func total_catches() -> int:
 	var n := 0
@@ -647,6 +649,16 @@ func tick_dex(dt: float) -> void:
 		log_msg("PALDECK: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
 		floater(player.pos, "PALDECK MILESTONE", "#c08cff")
 		dex_claimed = tier
+
+func reveal_at(c: Vector2, r: float) -> void:
+	# Palworld fog of war: walking peels the dark back a sight-radius at a time
+	if explored.size() != world.WORLD_W * world.WORLD_H:
+		explored.resize(world.WORLD_W * world.WORLD_H)
+	var cx := int(c.x); var cy := int(c.y); var ri := int(ceil(r))
+	for y in range(maxi(0, cy - ri), mini(world.WORLD_H - 1, cy + ri) + 1):
+		for x in range(maxi(0, cx - ri), mini(world.WORLD_W - 1, cx + ri) + 1):
+			if Vector2(x - cx, y - cy).length() <= r:
+				explored[y * world.WORLD_W + x] = 1
 
 func tick_weather(dt: float) -> void:
 	# two-state sky, ~half a game day per roll — rain waters the fields
@@ -1228,6 +1240,10 @@ func _process(dt: float) -> void:
 	tick_crafts(dt)
 	tick_assign(dt)
 	tick_missions(dt)
+	reveal_t += dt # fog of war: sight peels twice a second, wherever you stand
+	if reveal_t >= 0.5:
+		reveal_t = 0.0
+		reveal_at(player.pos, 12.0)
 	tick_dex(dt)
 	tick_weather(dt)
 	update_projectiles(dt)
@@ -2556,6 +2572,7 @@ func save_game() -> void:
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
+		"explored": explored,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger, "stamina": player.stamina,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level,
@@ -2656,6 +2673,11 @@ func load_game() -> bool:
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
+	var ex = d.get("explored", null) # fog of war rides the save — or starts dark
+	if ex is PackedByteArray and ex.size() == world.WORLD_W * world.WORLD_H:
+		explored = ex
+	else:
+		explored.clear(); explored.resize(world.WORLD_W * world.WORLD_H)
 	work_mode = clampi(int(d.get("wmode", 1)), 0, WORK_MODES.size() - 1)
 	base_level = clampi(int(d.get("blev", 1)), 1, BASE_LEVEL_MAX) # foreign save can't over-level the base
 	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
@@ -3534,6 +3556,8 @@ func regenerate(s: int) -> void:
 	dex_claimed = 0 # a fresh world hasn't proven its ecology yet
 	weather = "clear"
 	weather_t = 0.0
+	explored.clear() # a fresh world is unexplored from edge to edge
+	explored.resize(world.WORLD_W * world.WORLD_H)
 	work_mode = 1
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character

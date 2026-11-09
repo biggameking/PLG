@@ -13,6 +13,9 @@ var join_buf := ""
 
 var map_img: Image = null
 var map_tex: ImageTexture = null # cached — was rebuilt every frame the map was open
+var fog_img: Image = null        # Palworld fog of war — dark where unexplored
+var fog_tex: ImageTexture = null
+var fog_t := 0.0                 # rebake throttle while the map is open
 var map_show := false
 
 func bake_minimap() -> void:
@@ -32,6 +35,21 @@ func bake_minimap() -> void:
 			map_img.set_pixel(x, y, c)
 
 	map_tex = ImageTexture.create_from_image(map_img)
+	bake_fog()
+
+func bake_fog() -> void:
+	# Palworld fog: one alpha layer over the baked terrain — dark until walked
+	var W := game.world
+	if fog_img == null or fog_img.get_width() != W.WORLD_W:
+		fog_img = Image.create(W.WORLD_W, W.WORLD_H, false, Image.FORMAT_RGBA8)
+	fog_img.fill(Color(0.015, 0.025, 0.05, 0.8))
+	var i := 0
+	for y in W.WORLD_H:
+		for x in W.WORLD_W:
+			if i < game.explored.size() and game.explored[i] != 0:
+				fog_img.set_pixel(x, y, Color(0, 0, 0, 0))
+			i += 1
+	fog_tex = ImageTexture.create_from_image(fog_img)
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -533,6 +551,12 @@ func _draw() -> void:
 		draw_rect(mr.grow(2), Color(0, 0, 0, 0.7))
 		if map_tex != null:
 			draw_texture_rect(map_tex, mr, false)
+		fog_t -= 0.016 # draw runs per-frame; rebake the fog ~2x a second
+		if fog_t <= 0.0:
+			fog_t = 0.5
+			bake_fog()
+		if fog_tex != null:
+			draw_texture_rect(fog_tex, mr, false)
 		var plp := game.player.pos
 		var pp := mr.position + Vector2(plp.x / game.world.WORLD_W * ms, plp.y / game.world.WORLD_H * ms)
 		draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), Color.WHITE)
