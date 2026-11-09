@@ -327,10 +327,12 @@ func run() -> void:
 			game.hatch_incubated(inc_k, inc_st)
 		check("hatch egg", game.pals.size() == n0 + 1 and not (inc_st and inc_st.has("egg_inc")))
 		# signature pair -> fixed third species (Palworld breeding combos)
-		var combo_st := {"egg_inc": {"pair": ["lamball", "chikipi", 50, 50, [], []], "ready_t": game.t}}
+		var combo_st := {"egg_inc": {"pair": ["lamball", "chikipi", 50, 50, [], [], ["shockwave"], []], "ready_t": game.t}}
 		game.hatch_incubated(Vector2i(int(game.player.pos.x) + 2, int(game.player.pos.y)), combo_st)
 		var cb := game.pals[game.pals.size() - 1]
 		check("breed combo", cb.species_id == "cattiva")
+		check("egg move inherited", "shockwave" in cb.extra_skills or "shockwave" in cb.learned_skills(),
+			"extra=%s" % str(cb.extra_skills))
 		game.pals.erase(cb)
 		if cb.get_parent(): cb.get_parent().remove_child(cb)
 		cb.free()

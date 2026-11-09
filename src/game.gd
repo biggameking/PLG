@@ -1793,9 +1793,11 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 		st["egg_parents"] = []
 	if st["egg_parents"].size() >= MAX_EGG_QUEUE:
 		st["egg_parents"].pop_front() # eggs get sold/eaten/destroyed — oldest parentage is expendable
-	# parentage carries species, talent AND passives (Palworld inheritance)
+	# parentage carries species, talent, passives AND the move pool
+	# (Palworld: offspring can hatch knowing a parent's skill)
 	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent,
-		a.passives.duplicate(), b.passives.duplicate()])
+		a.passives.duplicate(), b.passives.duplicate(),
+		a.learned_skills(), b.learned_skills()])
 	st["store"]["pal_egg"] = st["store"].get("pal_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
@@ -1886,6 +1888,11 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 			np.passives.append(npk)
 	np.apply_bonuses()
 	np.hp = np.max_hp
+	if pair is Array and pair.size() >= 8: # egg moves: hatch with a parent skill
+		var pool_s: Array = (pair[6] if pair[6] is Array else []) + (pair[7] if pair[7] is Array else [])
+		pool_s = pool_s.filter(func(k): return SkillData.SKILLS.has(k) and k not in np.learned_skills())
+		if not pool_s.is_empty():
+			np.extra_skills.append(pool_s[rng.int_range(0, pool_s.size() - 1)])
 	if palbox_pos.x >= 0:
 		np.mode = "base"
 		pals.append(np)
