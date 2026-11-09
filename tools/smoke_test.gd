@@ -2030,6 +2030,17 @@ func run() -> void:
 	game.add_item("medical_supplies", -1)
 	check("medicine heals", p.hp == mini(p.max_hp, 10 + med["heal"])
 		and game.item_count("medical_supplies") == 1, "hp %d" % p.hp)
+	# Palworld meal buff: a cooked meal grants one timed stat bonus
+	var hudm: Node = main.get_node("UILayer/HUD")
+	p.hunger = 30.0
+	game.add_item("jam_bun", 1)
+	hudm.use_item("jam_bun")
+	check("meal buff grants", p.meal_t > 0.0 and p.meal_bonus("atk") > 0.0,
+		"t=%.1f buff=%s" % [p.meal_t, str(p.meal_buff)])
+	p.meal_t = 0.01
+	p._physics_process(0.1)
+	check("meal buff expires", p.meal_buff.is_empty() and p.meal_bonus("atk") == 0.0,
+		"t=%.1f buff=%s" % [p.meal_t, str(p.meal_buff)])
 	# sigil consumed on use
 	var sig0 := game.item_count("boss_sigil")
 	game.add_item("boss_sigil", 1)

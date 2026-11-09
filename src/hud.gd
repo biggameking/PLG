@@ -378,6 +378,13 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		sx += 74
 	draw_equipment_line() # was never called — gear row under the sphere chips
+	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # Palworld meal timer chip
+		var btxt := ""
+		for bk in pl.meal_buff:
+			btxt += "%s+%d%% " % [bk.to_upper(), int(float(pl.meal_buff[bk]) * 100)]
+		draw_rect(Rect2(240, 24, 112, 16), Color(0, 0, 0, 0.55))
+		draw_string(font, Vector2(244, 36), "%s %d:%02d" % [btxt.strip_edges(), int(pl.meal_t) / 60, int(pl.meal_t) % 60],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8b95f"))
 	if pl.aiming:
 		draw_string(font, Vector2(12, 96), "AIM — click a pal to throw (Q cancel)",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#4dd0e1"))
@@ -917,6 +924,14 @@ func use_item(k: String) -> void:
 				game.player.hunger = minf(100.0, game.player.hunger + it["food"])
 				game.add_item(k, -1)
 				game.log_msg("+%d food" % it["food"])
+				var bf: Dictionary = it.get("buff", {})
+				if not bf.is_empty(): # Palworld meal bonus: one timed buff at a time
+					game.player.eat_buff(bf)
+					var bstr := ""
+					for bk in bf:
+						if bk != "t":
+							bstr += ("+" if bstr == "" else ",+") + str(bk).to_upper()
+					game.log_msg("Meal buff: %s for %ds" % [bstr, int(bf.get("t", 300))])
 			else:
 				game.log_msg("Can't use " + k)
 

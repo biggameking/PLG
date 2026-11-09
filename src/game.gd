@@ -2393,7 +2393,7 @@ func update_projectiles(dt: float) -> void:
 				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
-						var d := Combat.damage(pr["dmg"] * 2.0 * (1.0 + partner_aura("atk")), 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
+						var d := Combat.damage(pr["dmg"] * 2.0 * (1.0 + partner_aura("atk") + player.meal_bonus("atk")), 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
 						p.hit(d, mult, true)
 						dead = true
 						break
@@ -2510,7 +2510,8 @@ func save_game() -> void:
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger, "stamina": player.stamina,
-			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
+			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level,
+			"meal": player.meal_buff, "meal_t": player.meal_t},
 		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
 	}
 	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
@@ -2641,6 +2642,8 @@ func load_game() -> bool:
 	player.xp = maxi(int(d["player"].get("xp", 0)), 0); player.capture_level = clampi(int(d["player"].get("cap_lv", 1)), 1, 20)
 	player.hunger = clampf(float(d["player"].get("hunger", player.hunger)), 0.0, 100.0)
 	player.stamina = clampf(float(d["player"].get("stamina", 100.0)), 0.0, 100.0) # old saves start rested
+	player.meal_buff = d["player"].get("meal", {})
+	player.meal_t = clampf(float(d["player"].get("meal_t", 0.0)), 0.0, 600.0) # cap restored buffs
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []

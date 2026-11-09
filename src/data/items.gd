@@ -288,7 +288,8 @@ const ITEMS = {
   "kind": "food",
   "stack": 999,
   "food": 55,
-  "desc": "Sweet bun."
+  "buff": {"atk": 0.1, "t": 300},
+  "desc": "Sweet bun. +10% attack for a while."
  },
  "chikipi_poultry": {
   "id": "chikipi_poultry",
@@ -319,7 +320,8 @@ const ITEMS = {
   "stack": 999,
   "food": 60,
   "price": 18,
-  "desc": "Palworld's grilled lamball — smells like a full belly."
+  "buff": {"def": 0.1, "t": 300},
+  "desc": "Palworld's grilled lamball — +10% defense for a while."
  },
  "fried_egg": {
   "id": "fried_egg",
@@ -329,7 +331,8 @@ const ITEMS = {
   "kind": "food",
   "stack": 999,
   "food": 40,
-  "desc": "Cooked egg."
+  "buff": {"spd": 0.1, "t": 300},
+  "desc": "Cooked egg. +10% speed for a while."
  },
  "cake": {
   "id": "cake",

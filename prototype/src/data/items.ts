@@ -16,6 +16,7 @@ export interface ItemDef {
   elem?: string;     // skill-fruit element
   tech?: string;     // tech node gating its recipe
   price?: number;    // merchant trade value in gold coins
+  buff?: { atk?: number; def?: number; spd?: number; t: number }; // Palworld meal buff — timed % bonus
   desc: string;
 }
 
@@ -51,11 +52,11 @@ export const ITEMS: Record<string, ItemDef> = {
   wheat: { id: "wheat", name: "Wheat", glyph: "ψ", color: "#b8a468", kind: "food", stack: 999, food: 5, desc: "Mill into flour." },
   flour: { id: "flour", name: "Flour", glyph: "░", color: "#ede0c8", kind: "material", stack: 999, desc: "For baking." },
   bread: { id: "bread", name: "Bread", glyph: "▒", color: "#b8a468", kind: "food", stack: 999, food: 40, desc: "Filling loaf." },
-  jam_bun: { id: "jam_bun", name: "Jam-filled Bun", glyph: "▒", color: "#e8963c", kind: "food", stack: 999, food: 55, desc: "Sweet bun." },
+  jam_bun: { id: "jam_bun", name: "Jam-filled Bun", glyph: "▒", color: "#e8963c", kind: "food", stack: 999, food: 55, buff: { atk: 0.1, t: 300 }, desc: "Sweet bun. +10% attack for a while." },
   chikipi_poultry: { id: "chikipi_poultry", name: "Chikipi Poultry", glyph: "♦", color: "#f2a0b5", kind: "food", stack: 999, food: 30, desc: "Poultry meat." },
   lamball_mutton: { id: "lamball_mutton", name: "Lamball Mutton", glyph: "♦", color: "#e64533", kind: "food", stack: 999, food: 35, desc: "Mutton." },
-  roast_mutton: { id: "roast_mutton", name: "Roast Mutton", glyph: "♦", color: "#b86a30", kind: "food", stack: 999, food: 60, price: 18, desc: "Palworld's grilled lamball — smells like a full belly." },
-  fried_egg: { id: "fried_egg", name: "Fried Egg", glyph: "⊙", color: "#e8d44d", kind: "food", stack: 999, food: 40, desc: "Cooked egg." },
+  roast_mutton: { id: "roast_mutton", name: "Roast Mutton", glyph: "♦", color: "#b86a30", kind: "food", stack: 999, food: 60, price: 18, buff: { def: 0.1, t: 300 }, desc: "Palworld's grilled lamball — +10% defense for a while." },
+  fried_egg: { id: "fried_egg", name: "Fried Egg", glyph: "⊙", color: "#e8d44d", kind: "food", stack: 999, food: 40, buff: { spd: 0.1, t: 300 }, desc: "Cooked egg. +10% speed for a while." },
   cake: { id: "cake", name: "Cake", glyph: "▒", color: "#f2a0b5", kind: "food", stack: 999, food: 80, san: 15, desc: "Raises SAN a lot." },
 
   // seeds

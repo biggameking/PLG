@@ -22,6 +22,8 @@ var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
 var statuses := {}
+var meal_buff := {}          # one active food buff {atk|def|spd: frac} — Palworld meal bonus
+var meal_t := 0.0            # seconds left on the meal buff
 
 func setup(g: Game, at: Vector2) -> void:
 	game = g
@@ -66,7 +68,7 @@ func melee() -> void:
 		return
 	atk_cd = wd.get("cd", 0.45)
 	wear_tick()
-	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08 + acc_total("atk") + game.partner_aura("atk"))
+	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08 + acc_total("atk") + game.partner_aura("atk") + meal_bonus("atk"))
 	var reach: float = wd.get("range", 1.6)
 	var hit_any := false
 	for p in game.pals.duplicate():
@@ -213,7 +215,7 @@ func speed_mult() -> float:
 		m *= 0.5
 	if statuses.get("soak", 0) > game.t:
 		m *= 0.7
-	m *= 1.0 + game.perks["speed"] * 0.06 + acc_total("spd") + game.partner_aura("speed")
+	m *= 1.0 + game.perks["speed"] * 0.06 + acc_total("spd") + game.partner_aura("speed") + meal_bonus("spd")
 	var cap := carry_cap()
 	var wt := carry_wt()
 	if wt > cap:
@@ -235,6 +237,10 @@ func _physics_process(dt: float) -> void:
 	if iv.length_squared() > 0.01:
 		facing = iv.normalized()
 	hunger = maxf(0.0, hunger - dt * 0.075 * (3.0 if swimming() else 1.0)) # a swim works up an appetite
+	if meal_t > 0.0:
+		meal_t -= dt
+		if meal_t <= 0.0:
+			meal_buff = {} # the meal wore off
 	# Palworld stamina: swimming burns it — run dry mid-water and you drown
 	var stam_drain := 0.0
 	if swimming():
@@ -341,7 +347,20 @@ func shoot_weapon(wd: Dictionary) -> void:
 	game.fire_player_shot(tw, wd)
 
 func armor_def() -> int:
-	return int(ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0)) + int(acc_total("def") + game.partner_aura("def"))
+	return int((ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0) + acc_total("def") + game.partner_aura("def")) * (1.0 + meal_bonus("def")))
+
+func meal_bonus(stat: String) -> float:
+	# Palworld meal bonus: one cooked-food buff at a time, timed
+	if meal_t <= 0.0:
+		return 0.0
+	return float(meal_buff.get(stat, 0.0))
+
+func eat_buff(b: Dictionary) -> void:
+	meal_buff = {"atk": b.get("atk", 0.0), "def": b.get("def", 0.0), "spd": b.get("spd", 0.0)}
+	for k in meal_buff.keys(): # keep only the stats the meal actually grants
+		if float(meal_buff[k]) <= 0.0:
+			meal_buff.erase(k)
+	meal_t = float(b.get("t", 300.0))
 
 func wear_tick() -> void: # Palworld tools wear out — a swing costs a use
 	if weapon_wear > 0.0:
