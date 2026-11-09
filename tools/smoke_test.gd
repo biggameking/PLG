@@ -1160,6 +1160,20 @@ func run() -> void:
 	game.party.erase(bird.uid); game.pals.erase(bird)
 	if bird.get_parent(): bird.get_parent().remove_child(bird)
 	bird.free()
+	# swimming mount: a water-element mount ferries you across open water
+	var surf: Pal = game.gen_pal("surfdog", 5, p.pos)
+	surf.mode = "partner"; game.pals.append(surf)
+	p.mount = surf
+	check("swim mount", wcell.x >= 0 and p.can_enter(wcell.x, wcell.y))
+	var landm: Pal = game.gen_pal("eikthyrdeer", 5, p.pos) # neutral — no surf legs
+	landm.mode = "partner"; game.pals.append(landm)
+	p.mount = landm
+	check("land mount no swim", wcell.x >= 0 and not p.can_enter(wcell.x, wcell.y))
+	p.mount = null
+	for tpal in [surf, landm]:
+		game.pals.erase(tpal)
+		if tpal.get_parent(): tpal.get_parent().remove_child(tpal)
+		tpal.free()
 	for q in game.pals:  # mount flips pals to partner; restore so ranch pair survives
 		if q.mode == "partner":
 			q.mode = "base"

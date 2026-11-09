@@ -113,6 +113,12 @@ func can_enter(nx: float, ny: float) -> bool:
 		if world.decor[i] == World.Decor.NONE and not world.solid_structure(i):
 			return true
 		return false # trees/rocks/walls still block a flyer
+	# swimming mount (Palworld): a water-element mount ferries you across water —
+	# nothing else about terrain changes: decor, structures and cliffs still block
+	if mount != null and world.in_bounds(tx, ty):
+		var i2 := world.idx(tx, ty)
+		if world.tiles[i2] == World.Tile.WATER and "water" in mount.spec.get("elements", []):
+			return world.decor[i2] == World.Decor.NONE and not world.solid_structure(i2)
 	# glider (Palworld): riding the wind down a cliff is safe — uphill is not
 	if game.item_count("glider") > 0 and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
