@@ -23,7 +23,10 @@ var raid_t := 180.0          # countdown to next base raid wave
 const MAX_CRAFT_QUEUE := 8   # Palworld timed crafting: station recipes queue up
 var queue_crafts := true     # smoke tests flip this off to keep crafts instant
 var craft_queue := []        # {out,n,left,cost} — station builds in progress
-var drops: Array = []        # ground drops {id,n,pos,node}
+var drops: Array = []        # ground drops {id,n,pos,node,did}
+var net_drops := {}          # client-side drop replicas: did -> {id,n,pos,node}
+var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
+var next_drop_id := 1        # host: wire key for drop_sync (never reused)
 var _drop_tex := {}
 var _light_tex: Texture2D = null
 
@@ -848,6 +851,13 @@ func try_harvest(at: Vector2, face: Vector2) -> void:
 
 func spawn_drop(id: String, n: int, at: Vector2) -> void:
 	# tiny tinted bag icon; drops persist until picked up (player or hauler pal)
+	if drops.size() >= MAX_DROPS:
+		take_drop(drops.front()) # flood backstop: oldest bag evaporates
+	drops.append({"id": id, "n": n, "pos": at, "node": drop_sprite(id, at),
+		"cool": 0.0, "age": 0.0, "did": next_drop_id})
+	next_drop_id += 1
+
+func drop_sprite(id: String, at: Vector2) -> Sprite2D:
 	if not _drop_tex.has(id):
 		var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
 		var c := Color(ItemData.ITEMS.get(id, {}).get("col", "#c8b070"))
@@ -856,14 +866,43 @@ func spawn_drop(id: String, n: int, at: Vector2) -> void:
 			for xx in range(2, 8):
 				img.set_pixel(xx, yy, c)
 		_drop_tex[id] = ImageTexture.create_from_image(img)
-	if drops.size() >= MAX_DROPS:
-		take_drop(drops.front()) # flood backstop: oldest bag evaporates
 	var spr := Sprite2D.new()
 	spr.texture = _drop_tex[id]
 	var p := Iso.to_screen(at.x, at.y, world.elev_at(int(at.x), int(at.y)))
 	spr.position = Vector2(p.x, p.y - 2)
 	entity_layer.add_child(spr)
-	drops.append({"id": id, "n": n, "pos": at, "node": spr, "cool": 0.0, "age": 0.0})
+	return spr
+
+# client replica set for host drops — same reconcile rules as pal_sync:
+# packet carries the whole truth, missing dids despawn
+func drop_sync(arr: Array) -> void:
+	var seen := {}
+	for e in arr:
+		if not (e is Array) or e.size() < 5 or not (e[0] is float or e[0] is int):
+			continue
+		var did := int(e[0])
+		seen[did] = true
+		if net_drops.has(did):
+			continue
+		var id := str(e[1])
+		var at := Vector2(float(e[3]), float(e[4]))
+		net_drops[did] = {"id": id, "n": int(e[2]), "pos": at, "node": drop_sprite(id, at)}
+	for did in net_drops.keys():
+		if not seen.has(did):
+			if is_instance_valid(net_drops[did]["node"]):
+				net_drops[did]["node"].queue_free()
+			net_drops.erase(did)
+			drops_wanted.erase(did)
+	for did in drops_wanted.keys(): # a denied ask retries after a beat
+		if t - drops_wanted[did] > 3.0:
+			drops_wanted.erase(did)
+
+func clear_net_drops() -> void:
+	for did in net_drops:
+		if is_instance_valid(net_drops[did]["node"]):
+			net_drops[did]["node"].queue_free()
+	net_drops.clear()
+	drops_wanted.clear()
 
 func take_drop(d: Dictionary) -> void:
 	drops.erase(d)
@@ -1063,6 +1102,15 @@ func _process(dt: float) -> void:
 			if "egg" in d["id"]:
 				anger_nesters(d["pos"]) # Palworld: parents guard their nests — egg thieves get swarmed
 			take_drop(d)
+	# client-side drop replicas: we ask, the host decides (and pays via got_loot)
+	if net != null and not net.is_host:
+		for did in net_drops.keys():
+			if drops_wanted.has(did):
+				continue
+			var dd: Dictionary = net_drops[did]
+			if player.pos.distance_squared_to(dd["pos"]) < 0.55:
+				drops_wanted[did] = t
+				net.rpc("take_drop", did)
 	# respawn trickle
 	var wild_n := 0
 	for wp in pals:
@@ -2086,6 +2134,7 @@ func load_game() -> bool:
 		if is_instance_valid(dd0["node"]):
 			dd0["node"].queue_free()
 	drops.clear()
+	clear_net_drops()
 	gauntlet = {} # a save can't pause mid-trial — survivors stay plain raiders
 	for k in structures.keys():
 		structures[k]["node"].queue_free()
@@ -2796,6 +2845,7 @@ func regenerate(s: int) -> void:
 		if is_instance_valid(dd0["node"]):
 			dd0["node"].queue_free()
 	drops.clear()
+	clear_net_drops()
 	for pr in projectiles:
 		if is_instance_valid(pr["node"]):
 			pr["node"].queue_free()

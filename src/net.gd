@@ -149,6 +149,7 @@ func _on_server_disconnected() -> void:
 		if is_instance_valid(ghosts[gid]):
 			ghosts[gid].queue_free()
 	ghosts.clear()
+	game.clear_net_drops() # replica loot dies with the session too
 	is_host = false
 	game.log_msg("Host disconnected")
 
@@ -193,6 +194,48 @@ func sphere_catch(nid: int, sid: String, behind: bool, cap_lv: int) -> void:
 	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 10),
 		multiplayer.get_remote_sender_id())
 
+# Ground loot rides the same 2Hz broadcast as pals. A client never owns a
+# drop: it walks over a replica, asks with take_drop, and the host pays out
+# with got_loot — dids are monotonic so a recycled slot can't be re-looted.
+func drop_state_pack() -> Array:
+	var arr := []
+	for d in game.drops:
+		if not d.has("did"): # pre-drop-sync saves load without one — re-key it
+			d["did"] = game.next_drop_id
+			game.next_drop_id += 1
+		arr.append([d["did"], d["id"], d["n"], d["pos"].x, d["pos"].y])
+	return arr
+
+@rpc("authority", "call_remote", "unreliable")
+func drop_sync(arr: Array) -> void:
+	if is_host:
+		return
+	game.drop_sync(arr)
+
+@rpc("any_peer", "call_remote", "reliable")
+func take_drop(did: int) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	var gp = ghosts.get(pid)
+	for d in game.drops:
+		if d.get("did", -1) != int(did):
+			continue
+		if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(d["pos"]) > 2.5:
+			return # teleport-looting: too far to have really walked over it
+		var id := String(d["id"]); var n := int(d["n"])
+		game.take_drop(d)
+		rpc_id(pid, "got_loot", id, n)
+		return
+
+@rpc("authority", "call_remote", "reliable")
+func got_loot(id: String, n: int) -> void:
+	var it: Dictionary = ItemData.ITEMS.get(str(id), {})
+	if it.is_empty():
+		return
+	game.add_item(str(id), int(n))
+	game.floater(game.player.pos, "+%d %s" % [int(n), it.get("name", id)], "#ffe08a")
+
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
 	if from_id == multiplayer.get_unique_id():
@@ -211,6 +254,7 @@ func _process(dt: float) -> void:
 		if pal_sync_t >= 0.5: # 2Hz — pals drift slowly; anything faster is noise
 			pal_sync_t = 0.0
 			rpc("pal_sync", pal_state_pack())
+			rpc("drop_sync", drop_state_pack())
 	send_timer += dt
 	if send_timer < 0.05:
 		return

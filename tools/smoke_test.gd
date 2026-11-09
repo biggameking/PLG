@@ -731,6 +731,16 @@ func run() -> void:
 	game.pals.erase(ncp2)
 	if ncp2.get_parent(): ncp2.get_parent().remove_child(ncp2)
 	ncp2.free()
+	# drop sync: replicas spawn from the wire, despawn when the host drops them
+	game.drop_sync([[55, "wood", 2, p.pos.x + 1, p.pos.y], "garbage"])
+	check("drop sync spawns", game.net_drops.has(55) and game.net_drops.size() == 1)
+	game.drop_sync([[56, "stone", 1, p.pos.x + 2, p.pos.y]])
+	check("drop sync despawns", not game.net_drops.has(55) and game.net_drops.has(56))
+	# host drops carry monotonic dids for the wire
+	var did0: int = game.next_drop_id
+	game.spawn_drop("wood", 1, p.pos + Vector2(1, 0))
+	check("drop wire id", game.drops.back()["did"] == did0 and game.next_drop_id == did0 + 1)
+	game.take_drop(game.drops.back())
 	# raid boss
 	game.add_item("boss_sigil", 1)
 	var n1 := game.pals.size()
