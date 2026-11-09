@@ -29,6 +29,48 @@ func _boot() -> void:
 	for i in 200:
 		game._process(0.016)
 	print("=== PERF game-tick: %d ms for 200 ticks, structures=%d ===" % [Time.get_ticks_msec() - t0, game.structures.size()])
+	# raid-stress: PLG_RAID=N — a hostile wave under tower fire is the
+	# heaviest live combat scene this game produces
+	var raid_n := int(OS.get_environment("PLG_RAID"))
+	if raid_n > 0:
+		var bc: Vector2 = game.palbox_pos if game.palbox_pos.x >= 0 else game.player.pos
+		var spawned := []
+		var guard := 0
+		while spawned.size() < raid_n and guard < raid_n * 40:
+			guard += 1
+			var a2: float = rng.randf() * TAU
+			var at2: Vector2 = bc + Vector2(cos(a2), sin(a2)) * rng.randf_range(6, 12)
+			if game.world.blocked(int(at2.x), int(at2.y)):
+				continue
+			var rp: Pal = game.gen_pal("syndicate_grunt", rng.randi_range(5, 15), at2)
+			rp.mode = "wild"; rp.raid = true; rp.aggro = 0
+			rp.set_meta("raid_t0", game.t)
+			game.pals.append(rp)
+			spawned.append(rp)
+		# four towers ringing the box — placement pays materials, so fund it
+		for c in StructureData.STRUCTURES["watch_tower"].get("cost", []):
+			game.add_item(c[0], int(c[1]) * 4)
+		var placed := 0
+		for a3 in range(16):
+			var at3: Vector2 = bc + Vector2(cos(a3 * TAU / 16.0), sin(a3 * TAU / 16.0)) * 3
+			if game.place_structure("watch_tower", int(at3.x), int(at3.y)):
+				placed += 1
+				if placed >= 4:
+					break
+		print("=== raid-stress: %d raiders vs %d towers ===" % [spawned.size(), placed])
+		t0 = Time.get_ticks_msec()
+		for i in 400:
+			for q in spawned: # raider AI lives in physics_process, not the game tick
+				if is_instance_valid(q):
+					q._physics_process(0.016)
+			game._process(0.016)
+		print("=== PERF raid-tick: %d ms for 400 ticks (raiders=%d alive, projectiles=%d) ===" % [
+			Time.get_ticks_msec() - t0, spawned.filter(func(q): return is_instance_valid(q) and q.hp > 0).size(),
+			game.projectiles.size()])
+		for rp in spawned:
+			if is_instance_valid(rp):
+				game.pals.erase(rp)
+				rp.free()
 	quit(0)
 func _initialize() -> void:
 	call_deferred("_boot")
