@@ -559,6 +559,34 @@ func run() -> void:
 	game.pals.erase(cmb)
 	if cmb.get_parent(): cmb.get_parent().remove_child(cmb)
 	cmb.free()
+	# weather bites in combat: rain dampens fire, feeds water (seeded — same roll)
+	var wrp: Pal = game.gen_pal("chikipi", 5, p.pos)
+	wrp.mode = "wild"; wrp.hp = 99999; wrp.max_hp = 99999; game.pals.append(wrp)
+	var wrc: Pal = game.gen_pal("lamball", 10, p.pos)
+	wrc.mode = "partner"
+	var s_held: int = game.rng.s
+	var wt_held: String = game.weather
+	var dmgs := []
+	for wv in ["clear", "rain"]:
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.skill_hit(wrc, wrp, SkillData.SKILLS["flameBurst"])
+		dmgs.append(99999 - int(wrp.hp))
+	check("rain dampens fire", dmgs[0] > 0 and absf(dmgs[1] / float(dmgs[0]) - 0.85) < 0.05,
+		"dry=%d wet=%d" % [dmgs[0], dmgs[1]])
+	var dmgs2 := []
+	for wv in ["clear", "rain"]:
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.skill_hit(wrc, wrp, SkillData.SKILLS["hydroJet"])
+		dmgs2.append(99999 - int(wrp.hp))
+	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] / float(dmgs2[0]) - 1.15) < 0.05,
+		"dry=%d wet=%d" % [dmgs2[0], dmgs2[1]])
+	game.weather = wt_held; game.rng.s = s_held + 7
+	game.pals.erase(wrp)
+	for tmp3 in [wrp, wrc]:
+		if is_instance_valid(tmp3) and tmp3.get_parent():
+			tmp3.get_parent().remove_child(tmp3)
+		if is_instance_valid(tmp3):
+			tmp3.free()
 
 	# armor + damage reduction
 	var hp_p := p.hp

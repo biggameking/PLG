@@ -1999,6 +1999,11 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	else:
 		var tp: Pal = target_ent
 		var mult := Combat.effectiveness(elem, tp.elem())
+		if weather == "rain": # rain favors water's artillery and dampens fire's
+			if elem == "fire":
+				mult *= 0.85
+			elif elem == "water":
+				mult *= 1.15
 		if tp.has_status("soak"):
 			# Palworld element combos: a wet target takes the hit differently —
 			# electricity arcs through, ice locks solid, fire just boils off
