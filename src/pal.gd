@@ -229,9 +229,11 @@ func wild_ai(dt: float) -> void:
 	if raid and atk_cd <= 0 and chew_adjacent_structure():
 		sync_screen()
 		return
-	# night: non-nocturnal wild pals sleep — sneak in for catch/backstab;
-	# dark-element and apex hostiles stay awake
-	if game.is_night() and aggro < 0 and hit_flash <= 0 and "dark" not in spec.get("elements", []) and hostile() < 2:
+	# sleep by the clock, not the species: diurnal pals doze after dark,
+	# nocturnal dark pals nap through the day — sneaking works at both ends;
+	# apex hostiles keep watch around the clock
+	var nocturnal_w: bool = "dark" in spec.get("elements", [])
+	if game.is_night() != nocturnal_w and aggro < 0 and hit_flash <= 0 and hostile() < 2:
 		statuses["sleep"] = game.t + 2.0
 		return
 	if aggro == 0:
@@ -391,8 +393,8 @@ func partner_ai(dt: float) -> void:
 		step_toward(pl.pos, dt)
 
 func base_ai(dt: float) -> void:
-	if not game.is_night():
-		bed_seek = 0.0 # a new day resets the bedtime walk
+	# bed_seek re-arms on every sleep instead — a fixed daytime reset would
+	# never let a nocturnal pal's 6s walk budget run out before dusk
 	# defend the base: raiders beating on workers get fought back (Palworld's
 	# crew covers the yard, not just arm's reach)
 	var foe: Pal = null; var fbd := 7.0
@@ -416,9 +418,11 @@ func base_ai(dt: float) -> void:
 				foe.hit(d, mult, true)
 		return
 	# Palworld night shift: diurnal pals doze off after dark — production skips
-	# sleepers; dark-element pals are nocturnal and keep the lights on.
+	# sleepers; dark-element pals are nocturnal — lights on overnight, napping
+	# through the day shift instead (otherwise their SAN never recovers).
 	# Tired pals pad over to the nearest pal bed first when one is built.
-	if game.is_night() and "dark" not in spec.get("elements", []):
+	var nocturnal: bool = "dark" in spec.get("elements", [])
+	if game.is_night() != nocturnal:
 		var bc := game.nearest_bed_cell(pos)
 		var rested := false
 		if bc.x >= 0:

@@ -2590,6 +2590,52 @@ func run() -> void:
 		nightowl.aggro = -1; nightowl.statuses.erase("sleep"); nightowl.hit_flash = 0
 		nightowl.wild_ai(0.1)
 		check("dark pal stays up", not nightowl.has_status("sleep"), "")
+	# ...but a nocturnal naps through daylight — Palworld sleep flips. Fresh
+	# depresso: the pool may only hold apex darks, and those never doze
+	var dayowl: Pal = game.gen_pal("depresso", 3, p.pos + Vector2(3, 0))
+	dayowl.mode = "wild"; dayowl.aggro = -1; dayowl.hit_flash = 0
+	game.pals.append(dayowl)
+	var tod_w2 := game.tod
+	game.tod = 12.0
+	dayowl.wild_ai(0.1)
+	check("dark pal naps by day", dayowl.has_status("sleep"), "")
+	game.tod = tod_w2
+	game.pals.erase(dayowl)
+	if dayowl.get_parent(): dayowl.get_parent().remove_child(dayowl)
+	dayowl.free()
+	# the base crew keeps the same hours — a posted dark pal dozes the day shift
+	var quiet := p.pos + Vector2(30, 0)
+	for off in [Vector2(30, 0), Vector2(-30, 0), Vector2(0, 30), Vector2(0, -30), Vector2(45, 0)]:
+		var foes := 0
+		for q2 in game.pals: # raiders and aggro'd wilds pull it into defense instead
+			if q2.mode == "wild" and q2.hp > 0 and (q2.raid or q2.aggro >= 0) \
+					and (p.pos + off).distance_to(q2.pos) < 8.0:
+				foes += 1
+		if foes == 0:
+			quiet = p.pos + off; break
+	var dbase: Pal = game.gen_pal("depresso", 4, quiet)
+	dbase.mode = "base"; dbase.san = 50.0
+	game.pals.append(dbase)
+	var tod_b2 := game.tod
+	game.tod = 12.0
+	for i in 70: # it pads to the pal bed first — sleep lands inside the 6s cap
+		dbase.base_ai(0.1)
+		if dbase.has_status("sleep"):
+			break
+	var foes2 := 0
+	var foe_k := ""
+	for q2 in game.pals:
+		if q2.mode == "wild" and q2.hp > 0 and (q2.raid or q2.aggro >= 0) \
+				and dbase.pos.distance_to(q2.pos) < 7.0:
+			foes2 += 1; foe_k = q2.species_id
+	check("base nocturnal naps by day", dbase.has_status("sleep"),
+		"pos=%s bed_seek=%.1f foes=%d(%s) bed=%s" % [dbase.pos, dbase.bed_seek,
+			foes2, foe_k, str(game.nearest_bed_cell(dbase.pos))])
+	dbase.statuses.erase("sleep")
+	game.tod = tod_b2
+	game.pals.erase(dbase)
+	if dbase.get_parent(): dbase.get_parent().remove_child(dbase)
+	dbase.free()
 	sleeper.hit(5, 1.0, true)
 	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro <= 0,
 		"aggro=%d" % sleeper.aggro) # docile pals may flee (-1) — still a valid wake reaction
