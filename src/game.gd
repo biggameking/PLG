@@ -2371,6 +2371,24 @@ func buy_from_merchant(idx: int) -> void:
 	it["n"] -= 1
 	log_msg("Bought %s (%dg)" % [ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]), it["price"]])
 
+func pal_sell_price(bp: Pal) -> int:
+	# black-market buyback: worth less than the sticker price, more if rare
+	return 40 + bp.level * 8 + (60 if bp.lucky else 0) + (80 if bp.alpha else 0) \
+		+ bp.star * 50
+
+func sell_pal_to_merchant(uid: int) -> void:
+	if merchant == null:
+		return
+	for bp in box:
+		if bp.uid == uid:
+			var gain := pal_sell_price(bp)
+			var nm: String = bp.spec["name"]
+			box.erase(bp)
+			bp.free() # box pals live under box_holder — free() is the teardown path
+			add_item("gold_coin", gain)
+			log_msg("Sold %s for %dg" % [nm, gain])
+			return
+
 func sell_to_merchant(id: String) -> void:
 	if merchant == null or item_count(id) <= 0:
 		return

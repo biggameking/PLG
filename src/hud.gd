@@ -156,6 +156,8 @@ func run_click(cr: Dictionary) -> void:
 			game.buy_from_merchant(cr["arg"])
 		"sell":
 			game.sell_to_merchant(cr["arg"])
+		"sell_pal":
+			game.sell_pal_to_merchant(cr["arg"])
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -588,6 +590,17 @@ func draw_shop(r: Vector2) -> void:
 		y += 17
 		if y > rr.end.y - 14:
 			break
+	var shown := 0
+	for bp in game.box: # black-market: sell spare pals for coin
+		if y > rr.end.y - 14 or shown >= 12:
+			break
+		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
+		click_rects.append({"rect": rect, "act": "sell_pal", "arg": bp.uid})
+		draw_string(font, Vector2(rect.position.x, y), "Lv%d %s  +%dg" % [bp.level,
+			String(bp.spec["name"]).left(14), game.pal_sell_price(bp)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8963c"))
+		y += 17
+		shown += 1
 
 func use_item(k: String) -> void:
 	match k:

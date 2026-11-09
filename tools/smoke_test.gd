@@ -1324,6 +1324,11 @@ func run() -> void:
 			check("merchant pal buy", game.box.size() == pb + 1
 				and game.box[pb].get_parent() == game.box_holder
 				and game.item_count("gold_coin") < g1m)
+			if game.box.size() > pb: # sell it straight back — box count returns
+				var g2m := game.item_count("gold_coin")
+				game.sell_pal_to_merchant(game.box[pb].uid)
+				check("merchant pal sell", game.box.size() == pb
+					and game.item_count("gold_coin") > g2m)
 	game.despawn_merchant()
 	check("merchant leaves clean", game.merchant == null and game.merchant_stock.is_empty())
 
