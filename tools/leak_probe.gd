@@ -5,7 +5,7 @@ extends SceneTree
 func _boot() -> void:
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
-	for i in 8:
+	for i in 120: # let worldgen finish — an early baseline reads warmup as growth
 		await process_frame
 	var game = main.get_node("Game")
 	var rng = RandomNumberGenerator.new()
@@ -46,6 +46,14 @@ func _boot() -> void:
 		for c in built:
 			if game.structures.has(c):
 				game.raze_structure(game.structures[c])
+		# 2b) box churn: catch -> box -> butcher round trip on disposable pals
+		game.add_item("meat_cleaver", 1)
+		for i3 in 6:
+			var cp: Pal = game.gen_pal("chikipi", 3, game.player.pos)
+			cp.mode = "box"; game.box.append(cp); game.box_pal(cp)
+			game.butcher_pal(cp.uid)
+		for d2 in game.drops.duplicate():
+			game.take_drop(d2)
 		# 3) save/load round trip rewrites the world state wholesale
 		game.save_game()
 		game.load_game()
