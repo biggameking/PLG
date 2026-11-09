@@ -2954,6 +2954,7 @@ func spawn_grotto() -> void:
 		# treasure chest pre-stocked like a dungeon reward
 		if place_free("chest", tx + 1, ty + 1):
 			var st: Dictionary = structures[Vector2i(tx + 1, ty + 1)]
+			st["loot"] = true # dungeon treasure — off the base logistics net
 			st["store"] = {"gold_coin": rng.int_range(20, 40), "mega_sphere": 3,
 				"pal_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
 				"electric", "ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
@@ -3006,6 +3007,7 @@ func spawn_grotto() -> void:
 		pals.append(bp2)
 		if place_free("chest", bx - 1, by - 1):
 			var st2: Dictionary = structures[Vector2i(bx - 1, by - 1)]
+			st2["loot"] = true
 			st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
 				"lifmunk_effigy": 3, "pal_egg": 2}
 		grotto_room2 = Vector2i(bx, by)
