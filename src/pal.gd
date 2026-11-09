@@ -523,6 +523,9 @@ func tick_needs(dt: float) -> void:
 		san = minf(100.0, san + 10.0)
 	elif mode == "base" and san < 30 and game.has_structure("pal_bed"):
 		san = minf(100.0, san + 6.0)  # resting requires being AT the base
+	# Palworld: a party pal at ease beside you recovers its spirits
+	if mode == "partner" and aggro < 0 and san < 60.0:
+		san = minf(100.0, san + 2.5)
 
 func learned_skills() -> Array:
 	var out := []

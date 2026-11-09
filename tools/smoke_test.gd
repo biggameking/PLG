@@ -1265,6 +1265,12 @@ func run() -> void:
 	check("meal lifts SAN", eater.san > san_raw + 15.0, "raw=%.1f meal=%.1f" % [san_raw, eater.san])
 	game.items = bag_save
 	game.pals.erase(eater); eater.free()
+	# a party pal at ease recovers its spirits (Palworld rest recovery)
+	var calm: Pal = game.gen_pal("lamball", 3, game.player.pos)
+	calm.mode = "partner"; calm.san = 30.0; calm.ailment = "x" # skip the medicine branch
+	calm.tick_needs(1.0)
+	check("partner rests SAN", calm.san > 30.0, "san %.1f" % calm.san)
+	game.pals.erase(calm); calm.free()
 	# night chill: deep dark away from firelight bleeds hp to a 30% floor
 	var tod_c: float = game.tod
 	var pos_c: Vector2 = p.pos
