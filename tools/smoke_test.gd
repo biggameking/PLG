@@ -867,6 +867,32 @@ func run() -> void:
 	var dcv: int = game.world.decor[dci]
 	game.decor_sync([[dci, World.Decor.NONE], "junk"])
 	check("decor delta applies", game.world.decor[dci] == World.Decor.NONE)
+	# shared box: the host's roster ships as a compact mirror; ops relay back
+	while game.party.size() >= 5:
+		game.party_to_box(game.party[0])
+	var nbp: Pal = game.gen_pal("lamball", 7, p.pos)
+	nbp.mode = "box"; nbp.uid = 9101
+	game.box.append(nbp)
+	var bsig0: int = game.net.box_fingerprint()
+	var pack: Array = game.net.box_state_pack()
+	check("box pack rows", pack.size() == game.box.size() and pack.back()[0] == 9101)
+	game.net.box_sync(pack, [9101])
+	check("box sync mirror", game.net_box.size() == pack.size()
+		and game.net_box.back()["sid"] == "lamball" and game.party.has(9101))
+	game.net.box_sync(["junk", [1, 2]], [])
+	check("box sync drops junk", game.net_box.is_empty() and game.party.is_empty())
+	game.net.is_host = true
+	game.net.box_req("box_to_party", 9101)
+	check("box req promotes", nbp not in game.box and game.party.has(9101))
+	game.net.box_req("party_to_box", 9101)
+	check("box req returns", nbp in game.box and not game.party.has(9101))
+	game.net.box_req("bogus_op", 9101)
+	check("box req whitelist", nbp in game.box) # unknown ops no-op, pal survives
+	game.net.is_host = false
+	game.box.erase(nbp)
+	if nbp.get_parent(): nbp.get_parent().remove_child(nbp)
+	nbp.free()
+	check("box fingerprint shifts", game.net.box_fingerprint() != bsig0)
 	game.world.decor[dci] = dcv
 	# raid boss
 	game.add_item("boss_sigil", 1)

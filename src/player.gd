@@ -230,6 +230,10 @@ func try_mount() -> void:
 		mount = null
 		game.log_msg("Dismounted")
 		return
+	if game.net != null and game.net.is_client():
+		# replicas are host-driven — riding one would fight its net_target lerp
+		game.log_msg("Can't ride a host pal over the wire")
+		return
 	var best: Pal = null
 	var bd := 1.4
 	for p in game.pals:

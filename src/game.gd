@@ -25,6 +25,7 @@ var queue_crafts := true     # smoke tests flip this off to keep crafts instant
 var craft_queue := []        # {out,n,left,cost} — station builds in progress
 var drops: Array = []        # ground drops {id,n,pos,node,did}
 var net_drops := {}          # client-side drop replicas: did -> {id,n,pos,node}
+var net_box := []            # client-side mirror of the host's box roster (dicts)
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
 var next_drop_id := 1        # host: wire key for drop_sync (never reused)
 var dirty_decor := {}        # decor cell idx -> value; host ships deltas to clients
@@ -362,7 +363,7 @@ func spawn_net_pal(d) -> void:
 		return
 	var np := gen_pal(sp_id, clampi(int(d[3]), 1, 60),
 		nearest_free(float(d[1]), float(d[2])), bool(d[5]) if d.size() > 5 else false)
-	np.mode = "base" if str(d[4]) == "base" else "wild"
+	np.mode = str(d[4]) if str(d[4]) in ["base", "partner", "wild"] else "wild"
 	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
 	pals.append(np)
 
@@ -372,9 +373,15 @@ func find_net_pal(nid: int) -> Pal:
 			return p
 	return null
 
+func find_box_uid(uid: int) -> Pal:
+	for bp in box:
+		if is_instance_valid(bp) and bp.uid == uid:
+			return bp
+	return null
+
 func find_pal(uid: int) -> Pal:
 	for p in pals:
-		if p.uid == uid:
+		if p.uid == uid or (p.net_id > 0 and p.net_id == uid):
 			return p
 	return null
 

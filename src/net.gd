@@ -118,7 +118,7 @@ func state_sync(d: Dictionary) -> void:
 func pal_state_pack() -> Array:
 	var arr := []
 	for p in game.pals:
-		if p.mode in ["wild", "base"] and p.hp > 0:
+		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
 			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky])
 	return arr
 
@@ -307,6 +307,72 @@ func demolish_req(tx: int, ty: int) -> void:
 		return
 	game.net_demolish(int(tx), int(ty), multiplayer.get_remote_sender_id())
 
+# Shared box: the host's palbox is the one real roster. Clients get a
+# lightweight mirror (uid/species/level/vitals, no Pal nodes) and their
+# palbox clicks travel back as box_req ops the host validates + runs.
+var box_sig := -1
+var box_resend := 0.0
+
+func box_fingerprint() -> int:
+	var h := game.box.size() * 131 + game.party.size() * 7919
+	for bp in game.box:
+		h = (h * 31 + bp.uid + int(bp.hp) + (1 if bp.fav else 0)) & 0x7FFFFFFF
+	for u in game.party:
+		h = (h * 17 + int(u)) & 0x7FFFFFFF
+	return h
+
+func box_state_pack() -> Array:
+	var arr := []
+	for bp in game.box:
+		arr.append([bp.uid, bp.species_id, bp.level, int(bp.hp), int(bp.max_hp),
+			bp.sex, bp.lucky, bp.talent, str(bp.ailment), bp.fav, int(bp.star)])
+	return arr
+
+@rpc("authority", "call_remote", "unreliable")
+func box_sync(arr: Array, pty: Array) -> void:
+	if is_host:
+		return
+	var nb := []
+	for e in arr:
+		if not (e is Array) or e.size() < 5 or not (e[0] is float or e[0] is int):
+			continue
+		nb.append({"uid": int(e[0]), "sid": str(e[1]), "lv": clampi(int(e[2]), 1, 60),
+			"hp": maxi(0, int(e[3])), "max_hp": maxi(1, int(e[4])),
+			"sex": "F" if str(e[5]) == "F" else "M",
+			"lucky": e.size() > 6 and e[6] == true,
+			"talent": clampi(int(e[7]) if e.size() > 7 else 50, 0, 100),
+			"ailment": str(e[8]) if e.size() > 8 else "",
+			"fav": e.size() > 9 and e[9] == true,
+			"star": clampi(int(e[10]) if e.size() > 10 else 0, 0, 4)})
+		if nb.size() >= 512: # hostile/hostile host can't stuff memory either
+			break
+	game.net_box = nb
+	game.party.clear() # typed Array[int] — a plain Array won't assign
+	for u in pty:
+		if u is float or u is int:
+			game.party.append(int(u))
+		if game.party.size() >= 8:
+			break
+
+@rpc("any_peer", "call_remote", "reliable")
+func box_req(op: String, uid: int) -> void:
+	if not is_host:
+		return
+	var p: Pal = game.find_pal(int(uid))
+	if p == null:
+		p = game.find_box_uid(int(uid))
+	if p == null:
+		return
+	match str(op):
+		"box_to_party": game.box_to_party(p)
+		"party_to_box": game.party_to_box(p.uid)
+		"deploy_to_base": game.deploy_to_base(p)
+		"base_to_box": game.base_to_box(p)
+		"toggle_fav": game.toggle_fav(p.uid)
+		"make_active": game.make_active(p.uid)
+		"butcher_pal": game.butcher_pal(p.uid)
+		"sell_pal": game.sell_pal_to_merchant(p.uid)
+
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
 	if from_id == multiplayer.get_unique_id():
@@ -328,6 +394,12 @@ func _process(dt: float) -> void:
 			rpc("drop_sync", drop_state_pack())
 			rpc("struct_sync", struct_state_pack())
 			rpc("env_sync", game.tod, game.day, game.weather) # clock + sky are host truth
+			box_resend -= 0.5
+			var sig := box_fingerprint()
+			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
+				box_sig = sig
+				box_resend = 15.0
+				rpc("box_sync", box_state_pack(), game.party.duplicate())
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
 				rpc("decor_delta", dd)

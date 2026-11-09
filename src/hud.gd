@@ -151,6 +151,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = ""
 
 func run_click(cr: Dictionary) -> void:
+	# client palbox ops are host business: the host owns the one real box.
+	# Replica pals carry their wire id in net_id — a replica's own uid is a
+	# local number the host has never heard of.
+	const PALBOX_OPS := {
+		"box_out": "box_to_party", "party_in": "party_to_box",
+		"lead": "make_active", "deploy": "deploy_to_base",
+		"base_in": "base_to_box", "fav": "toggle_fav",
+		"butcher": "butcher_pal", "sell_pal": "sell_pal"}
+	if game.net != null and game.net.is_client() and PALBOX_OPS.has(cr["act"]):
+		var uid := 0
+		if cr["arg"] is Pal:
+			uid = cr["arg"].net_id if cr["arg"].net_id > 0 else cr["arg"].uid
+		else:
+			uid = int(cr["arg"])
+		game.net.rpc("box_req", PALBOX_OPS[cr["act"]], uid)
+		return
 	match cr["act"]:
 		"craft":
 			game.craft(cr["arg"])
@@ -635,34 +651,60 @@ func draw_palbox(r: Vector2) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if wp.ailment != "" else Color("#a8dff0"))
 			y += 17
 	y += 10
-	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % game.box.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
+	var brows := box_rows()
+	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % brows.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
 	y += 18
 	var colw := 288.0
 	var rows: int = int((rr.end.y - y - 8) / 16)
-	for bi in range(game.box.size()):
-		var bp: Pal = game.box[bi]
+	for bi in range(brows.size()):
+		var rd: Dictionary = brows[bi]
 		var cx0: float = rr.position.x + 16 + (bi / rows) * colw
 		var y0: float = y + (bi % rows) * 16
 		if cx0 + colw - 8 > rr.end.x:
 			break
 		var butcher := game.item_count("meat_cleaver") > 0
 		var rect := Rect2(cx0, y0 - 11, colw - (56 if butcher else 34), 16)
-		click_rects.append({"rect": rect, "act": "box_out", "arg": bp})
+		click_rects.append({"rect": rect, "act": "box_out", "arg": rd["arg"]})
 		var frect := Rect2(cx0 + colw - (52 if butcher else 30), y0 - 11, 20, 16)
-		click_rects.append({"rect": frect, "act": "fav", "arg": bp.uid})
-		draw_string(font, Vector2(frect.position.x + 3, y0), "♥" if bp.fav else "♡",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e86a92") if bp.fav else Color(0.55, 0.55, 0.55))
+		click_rects.append({"rect": frect, "act": "fav", "arg": rd["uid"]})
+		draw_string(font, Vector2(frect.position.x + 3, y0), "♥" if rd["fav"] else "♡",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e86a92") if rd["fav"] else Color(0.55, 0.55, 0.55))
 		if butcher:
 			var brect := Rect2(cx0 + colw - 30, y0 - 11, 22, 16)
-			click_rects.append({"rect": brect, "act": "butcher", "arg": bp.uid})
+			click_rects.append({"rect": brect, "act": "butcher", "arg": rd["uid"]})
 			draw_string(font, Vector2(brect.position.x + 3, y0), "[x]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c0392b"))
-		var ko: bool = bp.hp <= 0
-		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s" % [bp.spec["name"], "☆" if bp.lucky else "", bp.sex, star_str(bp), bp.level, bp.talent,
-			int(maxi(0, bp.hp)), int(bp.max_hp), " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else "",
-			" [%s]" % bp.ailment if bp.ailment != "" else ""]
+		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s" % [rd["name"], "☆" if rd["lucky"] else "", rd["sex"], rd["star_s"], rd["lv"], rd["talent"],
+			int(maxi(0, rd["hp"])), int(rd["max_hp"]), rd["ko_t"],
+			" [%s]" % rd["ailment"] if rd["ailment"] != "" else ""]
 		draw_string(font, Vector2(cx0, y0), label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if ko or bp.ailment != "" else Color("#c8d3d5"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if rd["ko"] or rd["ailment"] != "" else Color("#c8d3d5"))
+
+func box_rows() -> Array:
+	# normalized palbox rows: host reads live Pal objects, a client reads the
+	# synced net_box roster. Same dict shape either way so the panel forks once.
+	var out := []
+	if game.net != null and game.net.is_client():
+		for d in game.net_box:
+			var sp: Dictionary = SpeciesData.species_of(str(d["sid"]))
+			var st := ""
+			for i in int(d["star"]):
+				st += "*"
+			if st != "":
+				st = " " + st
+			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]),
+				"name": sp.get("name", str(d["sid"])), "lucky": d["lucky"], "sex": d["sex"],
+				"lv": d["lv"], "talent": d["talent"], "hp": d["hp"], "max_hp": d["max_hp"],
+				"ailment": d["ailment"], "fav": d["fav"], "star_s": st,
+				"ko": d["hp"] <= 0, "ko_t": " [KO]" if d["hp"] <= 0 else ""})
+	else:
+		for bp in game.box:
+			out.append({"arg": bp, "uid": bp.uid, "name": bp.spec["name"], "lucky": bp.lucky,
+				"sex": bp.sex, "lv": bp.level, "talent": bp.talent, "hp": int(bp.hp),
+				"max_hp": int(bp.max_hp), "ailment": bp.ailment, "fav": bp.fav,
+				"star_s": star_str(bp), "ko": bp.hp <= 0,
+				"ko_t": " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if bp.hp <= 0 else ""})
+	return out
 
 func draw_shop(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 60, 600, 480)
