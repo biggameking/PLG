@@ -1234,7 +1234,7 @@ func load_game() -> bool:
 	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
 		log_msg("Save layout predates the current world format - fresh terrain")
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
-	day = int(d["day"]); tod = float(d["tod"]) # typed vars — a foreign string would throw on assignment
+	day = int(d["day"]); tod = clampf(float(d["tod"]), 0.0, 24.0) # typed vars — a foreign string would throw on assignment; tod>24 would fast-forward a day per frame until under 24
 	raid_t = float(d.get("raid_t", raid_t))
 	for dd0 in d.get("drops", []):
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
@@ -1259,6 +1259,8 @@ func load_game() -> bool:
 	var ppos = d["player"].get("pos", [player.pos.x, player.pos.y])
 	if ppos is Array and ppos.size() >= 2 and (ppos[0] is float or ppos[0] is int) and (ppos[1] is float or ppos[1] is int):
 		player.pos = Vector2(float(ppos[0]), float(ppos[1])) # corrupt pos keeps spawn point instead of aborting
+	if not world.in_bounds(int(player.pos.x), int(player.pos.y)) or world.blocked(int(player.pos.x), int(player.pos.y)):
+		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5) # OOB/blocked pos from a foreign save = softlock (every move rejected)
 	player.hp = float(d["player"].get("hp", player.hp)); player.level = int(d["player"].get("level", 1))
 	player.xp = int(d["player"].get("xp", 0)); player.capture_level = int(d["player"].get("cap_lv", 1))
 	player.hunger = float(d["player"].get("hunger", player.hunger))
@@ -1274,6 +1276,11 @@ func load_game() -> bool:
 		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
 		if ppos2 is not Array or ppos2.size() < 2 or not (ppos2[0] is float or ppos2[0] is int) or not (ppos2[1] is float or ppos2[1] is int):
 			continue # no usable position — drop the entry
+		if not world.in_bounds(int(ppos2[0]), int(ppos2[1])):
+			if str(pd.get("mode", "")) == "box":
+				ppos2 = [player.pos.x, player.pos.y] # box pals are never in the world — pos is a placeholder anyway
+			else:
+				ppos2 = [world.spawn.x, world.spawn.y] # OOB pal could never move again — re-anchor at spawn, don't delete it
 		var np := preload("res://src/pal.gd").new()
 		np.setup(self, pd["sp"], int(pd.get("lv", 1)), Vector2(float(ppos2[0]), float(ppos2[1])))
 		np.home = np.pos # loaded pals re-anchor at their saved spot
