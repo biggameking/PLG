@@ -359,8 +359,9 @@ func partner_ai(dt: float) -> void:
 func base_ai(dt: float) -> void:
 	if not game.is_night():
 		bed_seek = 0.0 # a new day resets the bedtime walk
-	# defend the base: raiders beating on workers get fought back
-	var foe: Pal = null; var fbd := 4.0
+	# defend the base: raiders beating on workers get fought back (Palworld's
+	# crew covers the yard, not just arm's reach)
+	var foe: Pal = null; var fbd := 7.0
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
 			continue
