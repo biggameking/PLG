@@ -399,6 +399,26 @@ func run() -> void:
 		check("work-type gating", non not in log_st["workers"], "site=%s" % (non.job_site["id"] if non.job_site else "none"))
 	else:
 		check("work-type gating", false, "no non-lumbering base pal")
+	# Palworld: farm fields crew planting AND watering suitability
+	game.add_item("wood", 8); game.add_item("fiber", 6); game.add_item("berry_seeds", 3)
+	var farm_k: Vector2i = free_xy.call("berry_farm")
+	var wf_st = game.structures.get(farm_k)
+	if wf_st:
+		var wtr: Pal = game.gen_pal("kelpsea", 3, Vector2(farm_k.x + 1, farm_k.y))
+		game.pals.append(wtr); wtr.mode = "base"
+		var old_pos: Vector2 = p.pos
+		p.pos = wtr.pos
+		wf_st["workers"].clear()
+		game.assign_worker()
+		check("farm watering", wtr in wf_st["workers"])
+		p.pos = old_pos
+		if wtr.job_site: wtr.job_site["workers"].erase(wtr)
+		wtr.job_site = null
+		game.pals.erase(wtr)
+		if wtr.get_parent(): wtr.get_parent().remove_child(wtr)
+		wtr.free()
+	else:
+		check("farm watering", false, "berry_farm not placed")
 	# SAN slack: a worker with san<15 produces nothing
 	var slacker: Pal = null
 	for kk3 in game.structures:

@@ -1170,8 +1170,9 @@ func assign_worker() -> void:
 		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power":
 			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
 		var need: String = jb.get("workType", "")
-		if need != "" and best.spec.get("work", {}).get(need, 0) == 0:
-			continue  # this pal can't work this site — keep looking
+		if need != "" and best.spec.get("work", {}).get(need, 0) == 0 \
+				and not (s.get("farmField", false) and best.spec.get("work", {}).get("watering", 0) > 0):
+			continue  # can't work this site — farm fields also take waterers (Palworld)
 		if structures[k]["workers"].size() >= 4:
 			continue # site is fully crewed — piling more pals on one site scales unbounded
 		var d := best.pos.distance_to(Vector2(k.x, k.y))
