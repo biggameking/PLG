@@ -1334,8 +1334,13 @@ func tick_production(dt: float) -> void:
 		if not cons.is_empty() and not consume_ready(cons):
 			continue # starved for inputs — no free production
 		var work_sum := 0.0 # each worker contributes by its Artisan/etc passives; sick pals drag
+		var wtype: String = job.get("workType", "")
 		for w in active:
-			work_sum += w.passive_mult("work") * w.work_mult()
+			# Palworld: suitability LEVEL matters — a lv4 logger outworks a lv1
+			var lv: int = int(w.spec.get("work", {}).get(wtype, 0))
+			if s.get("farmField", false):
+				lv = maxi(lv, int(w.spec.get("work", {}).get("watering", 0)))
+			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult()
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:

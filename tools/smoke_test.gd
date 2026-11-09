@@ -333,6 +333,25 @@ func run() -> void:
 		game.tod = tod0
 		for q in game.pals: # don't leak sleep into later checks
 			q.statuses.erase("sleep")
+		# Palworld: work suitability LEVEL scales output — lv2 logger beats lv1
+		if log_st2:
+			var w_lv2: Pal = game.gen_pal("eikthyrdeer", 5, game.player.pos)
+			var w_lv1: Pal = game.gen_pal("lifmunk", 5, game.player.pos)
+			var saved_workers: Array = log_st2["workers"].duplicate()
+			var saved_timer: float = log_st2["timer"]
+			var timers := []
+			for wp in [w_lv2, w_lv1]:
+				wp.mode = "base"; wp.san = 90.0; wp.ailment = ""; wp.passives = []
+				log_st2["workers"] = [wp]; wp.job_site = log_st2
+				log_st2["timer"] = 0.0
+				game.tick_production(1.0)
+				timers.append(float(log_st2["timer"]))
+				wp.job_site = null
+			log_st2["workers"] = saved_workers; log_st2["timer"] = saved_timer
+			var lv_ratio: float = timers[0] / maxf(0.001, timers[1])
+			check("work lv scales output", absf(lv_ratio - 1.5) < 0.01, "lv2/lv1=%.2f" % lv_ratio)
+			game.pals.erase(w_lv2); game.pals.erase(w_lv1)
+			w_lv2.free(); w_lv1.free()
 
 	# skills + statuses
 	var sp_pal: Pal = game.pals[0]
