@@ -2364,8 +2364,9 @@ func run() -> void:
 	# on either side — those cross blocked() BOTH ways without a glider
 	var cliff_e := -1; var low_c := -1
 	for i2 in range(0, World.WORLD_W * World.WORLD_H):
-		if game.world.elev[i2] < 1 or game.world.ramp[i2] != 0:
-			continue
+		if game.world.elev[i2] < 1 or game.world.ramp[i2] != 0 \
+				or game.world.decor[i2] != World.Decor.NONE or game.world.solid_structure(i2):
+			continue # the ledge top must be standable too — the hook test lands there
 		var cx2: int = i2 % World.WORLD_W; var cy2: int = i2 / World.WORLD_W
 		for nb in [Vector2i(cx2 + 1, cy2), Vector2i(cx2 - 1, cy2), Vector2i(cx2, cy2 + 1), Vector2i(cx2, cy2 - 1)]:
 			if not game.world.in_bounds(nb.x, nb.y):
@@ -2385,8 +2386,14 @@ func run() -> void:
 		check("glider descends", game.player.can_enter(lx + 0.5, ly + 0.5))
 		game.player.pos = Vector2(lx + 0.5, ly + 0.5)
 		check("glider can't climb", not game.player.can_enter(cx2 + 0.5, cy2 + 0.5))
+		# grappling hook: the mirror image — it climbs, it never descends
+		game.add_item("glider", -1) # isolate the hook — a held glider descends for it
+		game.add_item("grappling_hook", 1)
+		check("hook climbs", game.player.can_enter(cx2 + 0.5, cy2 + 0.5))
+		game.player.pos = Vector2(cx2 + 0.5, cy2 + 0.5)
+		check("hook can't descend", not game.player.can_enter(lx + 0.5, ly + 0.5))
+		game.add_item("grappling_hook", -1)
 		game.player.pos = Vector2(game.world.spawn) + Vector2(0.5, 0.5)
-	game.add_item("glider", -1)
 
 	# memory caps: runtime collections refuse runaway growth
 	for _i in game.MAX_DROPS + 50:

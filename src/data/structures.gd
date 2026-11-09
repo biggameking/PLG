@@ -888,6 +888,12 @@ const TECH = [
   "cost": 2
  },
  {
+  "id": "grappling_hook",
+  "name": "Grappling Hook",
+  "tier": 5,
+  "cost": 2
+ },
+ {
   "id": "saddle",
   "name": "Pal Saddle",
   "tier": 3,

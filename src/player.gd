@@ -131,13 +131,18 @@ func can_enter(nx: float, ny: float) -> bool:
 		if world.tiles[i3] == World.Tile.WATER:
 			return world.decor[i3] == World.Decor.NONE and not world.solid_structure(i3)
 	# glider (Palworld): riding the wind down a cliff is safe — uphill is not
+	var fi := world.idx(clampi(int(pos.x), 0, World.WORLD_W - 1), clampi(int(pos.y), 0, World.WORLD_H - 1))
 	if game.item_count("glider") > 0 and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
 		if world.tiles[i] != World.Tile.WATER and world.decor[i] == World.Decor.NONE \
-				and not world.solid_structure(i):
-			var fi := world.idx(clampi(int(pos.x), 0, World.WORLD_W - 1), clampi(int(pos.y), 0, World.WORLD_H - 1))
-			if world.elev[i] < world.elev[fi]:
-				return true
+				and not world.solid_structure(i) and world.elev[i] < world.elev[fi]:
+			return true
+	# grappling hook (Palworld): the hook hauls you UP a ledge — one-way
+	if game.item_count("grappling_hook") > 0 and world.in_bounds(tx, ty):
+		var i := world.idx(tx, ty)
+		if world.tiles[i] != World.Tile.WATER and world.decor[i] == World.Decor.NONE \
+				and not world.solid_structure(i) and world.elev[i] > world.elev[fi]:
+			return true
 	return false
 
 func swimming() -> bool:

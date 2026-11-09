@@ -647,6 +647,17 @@ const ITEMS = {
   "price": 140,
   "desc": "Palworld saddle: required in the pack to ride a swimming mount."
  },
+ "grappling_hook": {
+  "id": "grappling_hook",
+  "name": "Grappling Hook",
+  "glyph": "┌",
+  "color": "#b8b8d4",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "grappling_hook",
+  "price": 180,
+  "desc": "Palworld hookshot: haul yourself UP a cliff face — one-way, no descents."
+ },
  "fishing_rod": {
   "id": "fishing_rod",
   "name": "Fishing Rod",
@@ -1226,6 +1237,14 @@ const RECIPES = [
   "cost": [["cloth", 4], ["fiber", 10], ["leather", 2]],
   "station": "workbench",
   "work": 120
+ },
+ {
+  "id": "grappling_hook",
+  "tech": "grappling_hook",
+  "out": ["grappling_hook", 1],
+  "cost": [["ingot", 4], ["fiber", 10], ["paldium", 3]],
+  "station": "workbench",
+  "work": 140
  },
  {
   "id": "saddle",
