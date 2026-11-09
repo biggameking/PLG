@@ -190,7 +190,7 @@ func sphere_tiers() -> Array:
 func unequip_if_gone(id: String) -> void:
 	if player == null:
 		return
-	for slot in ["weapon", "armor"]:
+	for slot in ["weapon", "armor", "acc1", "acc2"]:
 		if player.equipment.get(slot) == id and item_count(id) <= 0:
 			player.equipment[slot] = ""
 			log_msg("%s left your hands" % ItemData.ITEMS.get(id, {}).get("name", id))
@@ -2272,7 +2272,7 @@ func load_game() -> bool:
 			mission_flags.clear()
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
-		for slot in ["weapon", "armor"]:
+		for slot in ["weapon", "armor", "acc1", "acc2"]:
 			var ev = seq.get(slot, "")
 			player.equipment[slot] = str(ev) if ItemData.ITEMS.has(str(ev)) else "" # unknown ids equip to nothing
 	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
@@ -3293,6 +3293,17 @@ func equip(k: String) -> void:
 		slot = "weapon"
 	elif it.get("kind") == "armor" or it.has("armor"):
 		slot = "armor"
+	elif it.has("acc"):
+		# Palworld's twin trinket slots: re-click frees the slot it sits in,
+		# a fresh trinket fills the first hole or bumps acc2
+		if player.equipment["acc1"] == k:
+			slot = "acc1"
+		elif player.equipment["acc2"] == k:
+			slot = "acc2"
+		elif player.equipment["acc1"] == "":
+			slot = "acc1"
+		else:
+			slot = "acc2"
 	if slot == "" or item_count(k) <= 0:
 		return
 	if player.equipment[slot] == k:

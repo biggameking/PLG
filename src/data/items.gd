@@ -699,6 +699,33 @@ const ITEMS = {
   "desc": "Near-impenetrable plate of shed scales.",
   "stack": 1,
   "price": 400
+ },
+ "attack_pendant": {
+  "id": "attack_pendant",
+  "name": "Attack Pendant",
+  "kind": "accessory",
+  "acc": {"atk": 0.12},
+  "desc": "Palworld trinket: +12% damage dealt. Two accessory slots.",
+  "stack": 1,
+  "price": 150
+ },
+ "defense_pendant": {
+  "id": "defense_pendant",
+  "name": "Defense Pendant",
+  "kind": "accessory",
+  "acc": {"def": 5},
+  "desc": "Palworld trinket: +5 armor. Two accessory slots.",
+  "stack": 1,
+  "price": 150
+ },
+ "swift_charm": {
+  "id": "swift_charm",
+  "name": "Swift Charm",
+  "kind": "accessory",
+  "acc": {"spd": 0.10},
+  "desc": "Palworld trinket: +10% move speed. Two accessory slots.",
+  "stack": 1,
+  "price": 150
  }
 }
 
@@ -1233,4 +1260,25 @@ const RECIPES = [
   "cost": [["horn", 6], ["ingot", 12], ["cloth", 4]],
   "station": "workbench",
   "work": 300
+ },
+ {
+  "id": "attack_pendant",
+  "out": ["attack_pendant", 1],
+  "cost": [["cloth", 3], ["paldium", 4], ["gold_coin", 20]],
+  "station": "workbench",
+  "work": 160
+ },
+ {
+  "id": "defense_pendant",
+  "out": ["defense_pendant", 1],
+  "cost": [["cloth", 3], ["ingot", 4], ["gold_coin", 20]],
+  "station": "workbench",
+  "work": 160
+ },
+ {
+  "id": "swift_charm",
+  "out": ["swift_charm", 1],
+  "cost": [["cloth", 3], ["fiber", 6], ["paldium", 2]],
+  "station": "workbench",
+  "work": 160
  }]

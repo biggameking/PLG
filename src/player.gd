@@ -14,7 +14,7 @@ var capture_level := 1
 var dodge_t := 0.0
 var mount: Pal = null
 var facing := Vector2(1, 0)  # last move direction, for harvest/interact
-var equipment := {"weapon": "", "armor": ""}
+var equipment := {"weapon": "", "armor": "", "acc1": "", "acc2": ""} # Palworld trinkets ride the acc slots
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
@@ -57,7 +57,7 @@ func melee() -> void:
 		shoot_weapon(wd)
 		return
 	atk_cd = wd.get("cd", 0.45)
-	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08)
+	var atk: float = (wd.get("dmg", 15) * 2.0 + level * 4.0) * (1.0 + game.perks["atk"] * 0.08 + acc_total("atk"))
 	var reach: float = wd.get("range", 1.6)
 	var hit_any := false
 	for p in game.pals.duplicate():
@@ -140,7 +140,7 @@ func speed_mult() -> float:
 		m *= 0.5
 	if statuses.get("soak", 0) > game.t:
 		m *= 0.7
-	m *= 1.0 + game.perks["speed"] * 0.06
+	m *= 1.0 + game.perks["speed"] * 0.06 + acc_total("spd")
 	return m
 
 func _physics_process(dt: float) -> void:
@@ -243,4 +243,10 @@ func shoot_weapon(wd: Dictionary) -> void:
 	game.fire_player_shot(tw, wd)
 
 func armor_def() -> int:
-	return int(ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0))
+	return int(ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0)) + int(acc_total("def"))
+
+func acc_total(k: String) -> float: # Palworld trinket math — both slots stack
+	var t := 0.0
+	for s in ["acc1", "acc2"]:
+		t += float(ItemData.ITEMS.get(equipment[s], {}).get("acc", {}).get(k, 0.0))
+	return t

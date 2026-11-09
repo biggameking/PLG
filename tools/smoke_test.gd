@@ -1341,6 +1341,20 @@ func run() -> void:
 	var d9: int = p.armor_def()
 	game.equip("dragon_scale")
 	check("armor tiers", d9 == 9 and p.armor_def() == 14, "%d/%d" % [d9, p.armor_def()])
+	# Palworld trinkets: two accessory slots, effects stack
+	game.add_item("defense_pendant", 1); game.add_item("attack_pendant", 1)
+	game.equip("defense_pendant")
+	check("acc fills slot", p.equipment["acc1"] == "defense_pendant" and p.armor_def() == 19,
+		"acc1=%s def=%d" % [p.equipment["acc1"], p.armor_def()])
+	game.equip("attack_pendant")
+	check("acc second slot", p.equipment["acc2"] == "attack_pendant", "acc2=%s" % p.equipment["acc2"])
+	check("acc stacks", p.acc_total("atk") > 0.11 and p.acc_total("def") > 4.5,
+		"atk=%.2f def=%.1f" % [p.acc_total("atk"), p.acc_total("def")])
+	game.equip("defense_pendant") # re-click frees its slot
+	check("acc unequips", p.equipment["acc1"] == "" and p.armor_def() == 14)
+	game.add_item("defense_pendant", -1); game.add_item("attack_pendant", -1)
+	check("lost acc drops", p.equipment["acc1"] == "" and p.equipment["acc2"] == "",
+		"%s/%s" % [p.equipment["acc1"], p.equipment["acc2"]])
 	# party cap: 6th pal refused and stays in the box
 	while game.party.size() < 5:
 		var fp: Pal = load("res://src/pal.gd").new()

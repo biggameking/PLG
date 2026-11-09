@@ -578,12 +578,14 @@ func draw_inv(r: Vector2) -> void:
 			break
 		var nm: String = ItemData.ITEMS.get(k, {}).get("name", k)
 		var usable: bool = ItemData.ITEMS.get(k, {}).get("usable", false)
-		var equipable: bool = ItemData.ITEMS.get(k, {}).has("weapon") or ItemData.ITEMS.get(k, {}).has("armor")
+		var equipable: bool = ItemData.ITEMS.get(k, {}).has("weapon") or ItemData.ITEMS.get(k, {}).has("armor") \
+			or ItemData.ITEMS.get(k, {}).has("acc")
 		var rect := Rect2(cx0, y0 - 12, colw - 12, 16)
 		if equipable:
 			click_rects.append({"rect": rect, "act": "equip", "arg": k})
-			var slot := "weapon" if ItemData.ITEMS[k].has("weapon") else "armor"
-			nm += "  [eq'd]" if game.player.equipment[slot] == k else "  [eq]"
+			var worn: bool = game.player.equipment["acc1"] == k or game.player.equipment["acc2"] == k \
+				or game.player.equipment["weapon"] == k or game.player.equipment["armor"] == k
+			nm += "  [eq'd]" if worn else "  [eq]"
 		elif usable:
 			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
 			nm += "  [use]"
@@ -856,7 +858,12 @@ const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "
 func _eq_line() -> String:
 	var wn: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "Fists")
 	var an: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "None")
-	return "Wpn: %s   Arm: %s" % [wn, an]
+	var acc := ""
+	for s in ["acc1", "acc2"]:
+		var a: String = ItemData.ITEMS.get(game.player.equipment[s], {}).get("name", "")
+		if a != "":
+			acc += "  " + a
+	return "Wpn: %s   Arm: %s%s" % [wn, an, acc]
 
 func draw_statues(r: Vector2) -> void:
 	var y := r.y + 40.0

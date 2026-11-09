@@ -99,6 +99,11 @@ export const ITEMS: Record<string, ItemDef> = {
   skill_fruit_ground: { id: "skill_fruit_ground", name: "Ground Skill Fruit", glyph: "●", color: "#b8935f", kind: "fruit", usable: true, stack: 10, elem: "ground", price: 60, desc: "Teaches the active pal a ground move." },
   skill_fruit_dark: { id: "skill_fruit_dark", name: "Dark Skill Fruit", glyph: "●", color: "#7a5ac9", kind: "fruit", usable: true, stack: 10, elem: "dark", price: 60, desc: "Teaches the active pal a dark move." },
   skill_fruit_dragon: { id: "skill_fruit_dragon", name: "Dragon Skill Fruit", glyph: "●", color: "#e64533", kind: "fruit", usable: true, stack: 10, elem: "dragon", price: 80, desc: "Teaches the active pal a dragon move." },
+
+  // trinkets — Palworld's two accessory slots
+  attack_pendant: { id: "attack_pendant", name: "Attack Pendant", glyph: "†", color: "#e8963c", kind: "accessory", stack: 1, price: 150, desc: "Palworld trinket: +12% damage dealt." },
+  defense_pendant: { id: "defense_pendant", name: "Defense Pendant", glyph: "⛨", color: "#7fb8e8", kind: "accessory", stack: 1, price: 150, desc: "Palworld trinket: +5 armor." },
+  swift_charm: { id: "swift_charm", name: "Swift Charm", glyph: "≫", color: "#8ef0ff", kind: "accessory", stack: 1, price: 150, desc: "Palworld trinket: +10% move speed." },
 };
 
 export interface Recipe {
@@ -138,4 +143,7 @@ export const RECIPES: Recipe[] = [
   { id: "saddle", out: ["saddle", 1], cost: [["leather", 3], ["fiber", 8], ["wood", 4]], station: "workbench", work: 100 },
   { id: "fishing_rod", out: ["fishing_rod", 1], cost: [["wood", 8], ["fiber", 6], ["paldium", 2]], station: "workbench", work: 80 },
   { id: "meat_cleaver", out: ["meat_cleaver", 1], cost: [["ingot", 4], ["wood", 2]], station: "workbench", work: 90 },
+  { id: "attack_pendant", out: ["attack_pendant", 1], cost: [["cloth", 3], ["paldium", 4], ["gold_coin", 20]], station: "workbench", work: 160 },
+  { id: "defense_pendant", out: ["defense_pendant", 1], cost: [["cloth", 3], ["ingot", 4], ["gold_coin", 20]], station: "workbench", work: 160 },
+  { id: "swift_charm", out: ["swift_charm", 1], cost: [["cloth", 3], ["fiber", 6], ["paldium", 2]], station: "workbench", work: 160 },
 ];
