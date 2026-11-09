@@ -1329,7 +1329,12 @@ func box_to_party(bp: Pal) -> void:
 	unbox_pal(bp) # box pals live under box_holder — move them back to the world
 	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
 
-const MAX_BASE_PALS := 15 # workforce slots — more mouths than this starve the loop anyway
+const MAX_BASE_PALS := 20 # absolute workforce cap — more mouths than this starve the loop anyway
+
+func max_base_pals() -> int:
+	# Palworld palbox growth: workforce slots scale with the player's level
+	# (8+lvl, hard-capped by MAX_BASE_PALS) instead of one static number
+	return mini(8 + player.level, MAX_BASE_PALS)
 
 func deploy_to_base(p: Pal) -> void:
 	# Palworld: drop a pal at the palbox and it joins the base workforce
@@ -1339,8 +1344,8 @@ func deploy_to_base(p: Pal) -> void:
 	if palbox_pos.x < 0:
 		log_msg("Need a palbox to deploy pals")
 		return
-	if base_pals().size() >= MAX_BASE_PALS and p.mode != "base":
-		log_msg("Base is full (%d pals)" % MAX_BASE_PALS)
+	if base_pals().size() >= max_base_pals() and p.mode != "base":
+		log_msg("Base is full (%d pals — level up for more slots)" % max_base_pals())
 		return
 	player.dismount_if(p)
 	party.erase(p.uid)

@@ -181,6 +181,14 @@ func run() -> void:
 		check("party lead swap", game.party[0] == lead2 and mp2.mode == "partner")
 		game.make_active(game.party[1]) # restore original order for later checks
 		game.party_to_box(mp2.uid) # second member goes back to cold storage
+		# palbox growth: workforce slots scale with player level, hard cap 20
+		var lv0: int = game.player.level
+		game.player.level = 1
+		var s1 := game.max_base_pals()
+		game.player.level = 40
+		var s2 := game.max_base_pals()
+		check("palbox slots scale", s1 == 9 and s2 == 20, "lv1=%d lv40=%d" % [s1, s2])
+		game.player.level = lv0
 		# partner skill
 		var prj0 := game.projectiles.size()
 		game.partner_skill()

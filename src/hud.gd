@@ -524,7 +524,7 @@ func draw_palbox(r: Vector2) -> void:
 	var workers := game.base_pals()
 	if not workers.is_empty():
 		y += 8
-		draw_string(font, Vector2(rr.position.x + 16, y), "BASE (%d/%d) — click to recall" % [workers.size(), game.MAX_BASE_PALS],
+		draw_string(font, Vector2(rr.position.x + 16, y), "BASE (%d/%d) — click to recall" % [workers.size(), game.max_base_pals()],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8dff0"))
 		y += 18
 		for wp in workers:
