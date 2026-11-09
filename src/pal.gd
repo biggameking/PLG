@@ -248,6 +248,13 @@ func wild_ai(dt: float) -> void:
 				return
 		# fight player if aggressive; timid flees
 		if hostile() >= 1:
+			# Palworld: beaten-down prey bolts — ordinary hostiles turn tail at
+			# low hp; alphas, bosses, raiders and apex species never break
+			if hostile() == 1 and hp < max_hp * 0.25 and not alpha and not boss and not raid:
+				step_toward(pos + (pos - pl.pos).normalized() * 5.0, dt)
+				if dist > 16:
+					aggro = -1
+				return
 			if not cast_skills(pl, dt):
 				if dist > 1.1:
 					step_toward(pl.pos, dt)

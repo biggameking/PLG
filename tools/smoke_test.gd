@@ -2402,6 +2402,25 @@ func run() -> void:
 	sleeper.hit(5, 1.0, true)
 	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro <= 0,
 		"aggro=%d" % sleeper.aggro) # docile pals may flee (-1) — still a valid wake reaction
+	# Palworld prey flight: a beaten-down ordinary hostile bolts instead of fighting
+	var pa2 := p.pos + Vector2(4, 0)
+	for off in [Vector2(4, 0), Vector2(-4, 0), Vector2(0, 4), Vector2(0, -4)]:
+		var cc2: Vector2 = p.pos + off
+		# flee vector continues past the player line — both cells must be clear
+		if not game.world.blocked(int(cc2.x), int(cc2.y), p.pos.x, p.pos.y) \
+				and not game.world.blocked(int(p.pos.x + off.x * 2), int(p.pos.y + off.y * 2), cc2.x, cc2.y):
+			pa2 = cc2; break
+	var prey2: Pal = game.gen_pal("lamball", 5, pa2)
+	prey2.spec = prey2.spec.duplicate(); prey2.spec["hostile"] = 1
+	prey2.mode = "wild"; prey2.aggro = 0; prey2.hp = prey2.max_hp * 0.2
+	game.pals.append(prey2)
+	var fd0 := prey2.pos.distance_to(p.pos)
+	prey2.wild_ai(0.1)
+	check("wounded hostile flees", prey2.pos.distance_to(p.pos) > fd0,
+		"d=%.1f->%.1f" % [fd0, prey2.pos.distance_to(p.pos)])
+	game.pals.erase(prey2)
+	if prey2.get_parent(): prey2.get_parent().remove_child(prey2)
+	prey2.free()
 	# nocturnal ecology: dark pals own the night spawn table, sit out the day
 	check("night spawns dark", game.pick_wild_species(["depresso", "lamball"]) == "depresso")
 	# Palworld: the night shift also spawns meaner — same seed, +2 levels
