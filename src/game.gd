@@ -966,6 +966,8 @@ func _process(dt: float) -> void:
 		if player.pos.distance_squared_to(d["pos"]) < 0.55:
 			add_item(d["id"], d["n"])
 			floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
+			if "egg" in d["id"]:
+				anger_nesters(d["pos"]) # Palworld: parents guard their nests — egg thieves get swarmed
 			take_drop(d)
 	# respawn trickle
 	var wild_n := 0
@@ -1515,6 +1517,14 @@ func nearest_heat(at: Vector2) -> float:
 
 func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
+
+func anger_nesters(at: Vector2) -> void:
+	# wild pals near a looted nest turn hostile — egg theft has a price
+	for q in pals:
+		if q.mode == "wild" and q.hp > 0 and q.aggro < 0 \
+				and q.pos.distance_to(at) < 9.0:
+			q.aggro = 0
+			q.statuses.erase("sleep")
 
 func make_active(uid: int) -> void:
 	# Palworld "send out": reorder the party so this pal leads — partner

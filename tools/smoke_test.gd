@@ -651,6 +651,14 @@ func run() -> void:
 		game.pals.erase(hq)
 		if is_instance_valid(hq):
 			hq.free()
+	# egg theft has a price: looting a nest angers nearby wild pals
+	var ne1: Pal = game.gen_pal("chikipi", 3, game.player.pos + Vector2(4, 0))
+	var ne2: Pal = game.gen_pal("chikipi", 3, game.player.pos + Vector2(40, 0))
+	game.pals.append(ne1); game.pals.append(ne2)
+	game.anger_nesters(game.player.pos)
+	check("nest guards", ne1.aggro == 0 and ne2.aggro < 0, "near=%d far=%d" % [ne1.aggro, ne2.aggro])
+	for nq in [ne1, ne2]:
+		game.pals.erase(nq); nq.free()
 	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
 	var wpts := 0
 	for ks in game.structures:
