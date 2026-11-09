@@ -236,9 +236,13 @@ func run() -> void:
 			var hp9 := prey.hp
 			for i9 in 60:
 				st_pal.partner_ai(0.1)
+				game.update_projectiles(0.1) # bolts need frames to land
 				if prey.hp < hp9:
 					break
 			check("aggressive hunts on sight", prey.hp < hp9, "hp=%d" % prey.hp)
+			for pr2 in game.projectiles: # spent bolts mustn't leak into the passive check
+				pr2["node"].queue_free()
+			game.projectiles.clear()
 			game.cycle_stance(st_pal.uid) # aggressive -> passive
 			prey.hp = 4000; prey.aggro = 0 # charging the player — still holds
 			var d0 := st_pal.pos.distance_to(prey.pos)
@@ -2287,6 +2291,15 @@ func run() -> void:
 	check("hit wakes sleeper", not sleeper.has_status("sleep") and sleeper.aggro >= 0, "aggro=%d" % sleeper.aggro)
 	# nocturnal ecology: dark pals own the night spawn table, sit out the day
 	check("night spawns dark", game.pick_wild_species(["depresso", "lamball"]) == "depresso")
+	# Palworld: the night shift also spawns meaner — same seed, +2 levels
+	var s_n: int = game.rng.s
+	var tod_n: float = game.tod
+	game.rng.s = s_n; game.tod = 2.0
+	var wln: int = game.wild_lv(2)
+	game.rng.s = s_n; game.tod = 12.0
+	var wld: int = game.wild_lv(2)
+	game.tod = tod_n
+	check("night spawns meaner", wln == wld + 2, "night=%d day=%d" % [wln, wld])
 	game.tod = 12.0
 	check("day spawns diurnal", game.pick_wild_species(["depresso", "lamball"]) == "lamball")
 

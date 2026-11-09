@@ -295,6 +295,10 @@ const ZONE_SPECIES := {
 	3: ["dumud", "penking", "daedream"],
 }
 
+func wild_lv(zone: int) -> int:
+	# Palworld: the night shift spawns meaner — same table, +2 after dusk
+	return rng.int_range(1 + zone * 3, 4 + zone * 5) + (2 if is_night() else 0)
+
 func spawn_wild() -> void:
 	var want := 42
 	var tries := 0
@@ -319,7 +323,7 @@ func spawn_wild() -> void:
 				continue # landlubbers can't pop up in a lake
 		elif world.blocked(x, y):
 			continue
-		var lv := rng.int_range(1 + zone * 3, 4 + zone * 5)
+		var lv := wild_lv(zone)
 		var p := preload("res://src/pal.gd").new()
 		p.alpha = zone >= 2 and rng.chance(0.08)
 		p.lucky = not p.alpha and rng.chance(0.015) # Palworld "Lucky" rare variant
