@@ -228,7 +228,14 @@ func run() -> void:
 		# pal orders (Palworld command): aggressive hunts on sight, passive holds
 		var st_pal := game.party_pal()
 		if st_pal != null:
-			var prey: Pal = game.gen_pal("lamball", 2, st_pal.pos + Vector2(2, 0))
+			var prey_at := st_pal.pos + Vector2(2, 0)
+			for off in [Vector2(2, 0), Vector2(-2, 0), Vector2(0, 2), Vector2(0, -2),
+					Vector2(2, 2), Vector2(-2, -2)]: # prey must land on walkable ground — a blocked cell makes melee unreachable forever
+				var cand: Vector2 = st_pal.pos + off
+				if not game.world.blocked(int(cand.x), int(cand.y)):
+					prey_at = cand
+					break
+			var prey: Pal = game.gen_pal("lamball", 2, prey_at)
 			prey.mode = "wild"; prey.max_hp = 4000; prey.hp = 4000
 			game.pals.append(prey)
 			game.cycle_stance(st_pal.uid) # auto -> aggressive
@@ -452,6 +459,19 @@ func run() -> void:
 			if not game.structures[kk]["workers"].is_empty():
 				has_job = true
 		check("assign_worker", has_job)
+		# Palworld auto-assign: idle crew staff open posts; haulers keep hauling
+		for kk4 in game.structures:
+			game.structures[kk4]["workers"].erase(p2)
+		p2.job_site = null
+		var tpw: Pal = game.gen_pal("wumpo", 5, p.pos)
+		tpw.mode = "base"; game.pals.append(tpw)
+		game.assign_t = 1.9
+		game.tick_assign(0.2)
+		check("idle pal auto-staffs", p2.job_site != null)
+		check("hauler keeps hauling", tpw.job_site == null)
+		game.pals.erase(tpw)
+		if tpw.get_parent(): tpw.get_parent().remove_child(tpw)
+		tpw.free()
 		var w0 := 0
 		for kk in game.structures:
 			if not game.structures[kk]["workers"].is_empty():

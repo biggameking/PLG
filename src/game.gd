@@ -1197,6 +1197,7 @@ func _process(dt: float) -> void:
 	tick_gauntlet()
 	tick_repairs(dt)
 	tick_crafts(dt)
+	tick_assign(dt)
 	tick_missions(dt)
 	tick_dex(dt)
 	tick_weather(dt)
@@ -2149,23 +2150,7 @@ func assign_worker() -> void:
 		best.job_site = null
 		log_msg("%s unassigned" % best.spec["name"])
 		return
-	var site = null
-	var sd := 6.0
-	for k in structures:
-		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
-		var jb: Dictionary = s.get("job", {})
-		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power":
-			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
-		var need: String = jb.get("workType", "")
-		if need != "" and best.spec.get("work", {}).get(need, 0) == 0 \
-				and not (s.get("farmField", false) and best.spec.get("work", {}).get("watering", 0) > 0):
-			continue  # can't work this site — farm fields also take waterers (Palworld)
-		if structures[k]["workers"].size() >= 4:
-			continue # site is fully crewed — piling more pals on one site scales unbounded
-		var d := best.pos.distance_to(Vector2(k.x, k.y))
-		if d < sd:
-			sd = d
-			site = structures[k]
+	var site: Variant = find_work_site(best, 6.0)
 	if site:
 		if best not in site["workers"]:
 			site["workers"].append(best) # idempotent — a stale entry must not duplicate
@@ -2173,6 +2158,51 @@ func assign_worker() -> void:
 		log_msg("%s -> %s" % [best.spec["name"], StructureData.STRUCTURES[site["id"]]["name"]])
 	else:
 		log_msg("No workplace nearby")
+
+func find_work_site(p: Pal, reach: float) -> Variant:
+	# nearest suitable post within reach — shared suitability rules for the
+	# manual assign tap and the idle auto-assign sweep (farm fields take
+	# waterers too, Palworld-style)
+	var site = null
+	var sd := reach
+	for k in structures:
+		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
+		var jb: Dictionary = s.get("job", {})
+		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power":
+			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
+		var need: String = jb.get("workType", "")
+		if need != "" and p.spec.get("work", {}).get(need, 0) == 0 \
+				and not (s.get("farmField", false) and p.spec.get("work", {}).get("watering", 0) > 0):
+			continue  # can't work this site — farm fields also take waterers (Palworld)
+		if structures[k]["workers"].size() >= 4:
+			continue # site is fully crewed — piling more pals on one site scales unbounded
+		var d := p.pos.distance_to(Vector2(k.x, k.y))
+		if d < sd:
+			sd = d
+			site = structures[k]
+	return site
+
+var assign_t := 0.0
+func tick_assign(dt: float) -> void:
+	# Palworld: idle base pals drift into open posts on their own — the palbox
+	# crew staffs itself instead of waiting for a manual tap every time.
+	# Transporters are exempt: hauling IS their job and a pinned site would
+	# freeze the logistics loop.
+	assign_t += dt
+	if assign_t < 2.0:
+		return
+	assign_t = 0.0
+	for q in pals:
+		if q.mode != "base" or q.hp <= 0 or q.job_site != null or q.has_status("sleep"):
+			continue
+		if q.san < 15.0 or q.hunger >= 80.0 or q.carry != null:
+			continue
+		if q.spec.get("work", {}).get("transporting", 0) > 0:
+			continue
+		var site: Variant = find_work_site(q, 12.0)
+		if site != null:
+			site["workers"].append(q)
+			q.job_site = site
 
 # ---------- skills / projectiles / statuses ----------
 const ELEM_ORB_IDX := {"neutral": 0, "fire": 1, "water": 2, "grass": 3, "electric": 4,
