@@ -152,7 +152,22 @@ func run() -> void:
 			bp.pos = p.pos + Vector2(0.5, 0)
 			p.try_mount()
 			check("mount", p.mount == bp)
-			p.try_mount()
+			# mounts differ: a fast species carries faster than a slow one
+			var slow_p := game.gen_pal("dumud", 5, p.pos) # spec speed ~2
+			var fast_p := game.gen_pal("direhowl", 5, p.pos)
+			var sd_slow := float(slow_p.spec.get("speed", 2.6))
+			var sd_fast := float(fast_p.spec.get("speed", 2.6))
+			p.mount = fast_p if sd_fast > sd_slow else slow_p
+			var v_fast := p.speed_mult()
+			p.mount = fast_p if sd_fast <= sd_slow else slow_p
+			var v_slow := p.speed_mult()
+			check("mount speed varies", absf(v_fast - (1.3 + minf(sd_fast, 5.0) * 0.2) * (1.0 + game.perks["speed"] * 0.06)) < 0.01
+				and v_fast >= v_slow, "fast=%.2f slow=%.2f" % [v_fast, v_slow])
+			p.mount = bp
+			p.try_mount() # dismount back to partner
+			for tpal in [slow_p, fast_p]: # gen_pal parents to entity_layer — detach before free
+				if tpal.get_parent(): tpal.get_parent().remove_child(tpal)
+				tpal.free()
 		# Palworld deploy loop: party -> base workforce -> back to cold storage
 		game.deploy_to_base(bp)
 		check("deploy to base", bp.mode == "base" and bp in game.pals and bp.uid not in game.party

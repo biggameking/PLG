@@ -126,7 +126,8 @@ func can_enter(nx: float, ny: float) -> bool:
 func speed_mult() -> float:
 	var m := 1.0
 	if mount != null:
-		m *= 1.8
+		# Palworld: mounts differ — a swift deer outruns a sluggish boar
+		m *= 1.3 + minf(float(mount.spec.get("speed", 2.6)), 5.0) * 0.2
 	if hunger < 25.0:
 		m *= 0.8
 	if statuses.get("freeze", 0) > game.t:
