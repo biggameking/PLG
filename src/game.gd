@@ -3210,10 +3210,12 @@ func spawn_nests() -> void:
 		var tx := rng.int_range(4, World.WORLD_W - 5)
 		var ty := rng.int_range(4, World.WORLD_H - 5)
 		var at := Vector2(tx + 0.5, ty + 0.5)
-		if world.zone_at(tx, ty) < 1 or world.blocked(tx, ty) \
+		var zone := world.zone_at(tx, ty)
+		if zone < 1 or world.blocked(tx, ty) \
 				or at.distance_to(player.pos) < 15.0:
 			continue
-		spawn_drop("pal_egg", 1, at)
+		# deeper nests hide the odd huge egg — Palworld's golden goose chase
+		spawn_drop("huge_pal_egg" if rng.chance(0.05 + zone * 0.05) else "pal_egg", 1, at)
 		placed += 1
 
 var grotto_pos := Vector2i(-1, -1) # sealed dungeon marker (set at worldgen)
@@ -3814,6 +3816,10 @@ func gen_merchant_stock() -> void:
 		if price <= 0:
 			price = 25 # priceless items still trade — at a markup
 		merchant_stock.append({"id": id, "n": rng.int_range(1, 4), "price": price})
+	# black-market rarity: the odd huge egg slips into the briefcase, marked up
+	if rng.chance(0.2):
+		var hp_price: int = ItemData.ITEMS.get("huge_pal_egg", {}).get("price", 200)
+		merchant_stock.append({"id": "huge_pal_egg", "n": 1, "price": int(hp_price * 1.5)})
 	# black-market pals (Palworld): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):
