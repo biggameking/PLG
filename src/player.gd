@@ -119,6 +119,12 @@ func can_enter(nx: float, ny: float) -> bool:
 		var i2 := world.idx(tx, ty)
 		if world.tiles[i2] == World.Tile.WATER and "water" in mount.spec.get("elements", []):
 			return world.decor[i2] == World.Decor.NONE and not world.solid_structure(i2)
+	# swimming on foot (Palworld): deep water is crossable without a mount —
+	# just slow and tiring
+	if mount == null and world.in_bounds(tx, ty):
+		var i3 := world.idx(tx, ty)
+		if world.tiles[i3] == World.Tile.WATER:
+			return world.decor[i3] == World.Decor.NONE and not world.solid_structure(i3)
 	# glider (Palworld): riding the wind down a cliff is safe — uphill is not
 	if game.item_count("glider") > 0 and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
@@ -129,8 +135,14 @@ func can_enter(nx: float, ny: float) -> bool:
 				return true
 	return false
 
+func swimming() -> bool:
+	return mount == null and world.in_bounds(int(pos.x), int(pos.y)) \
+		and world.tiles[world.idx(int(pos.x), int(pos.y))] == World.Tile.WATER
+
 func speed_mult() -> float:
 	var m := 1.0
+	if swimming():
+		m *= 0.5
 	if mount != null:
 		# Palworld: mounts differ — a swift deer outruns a sluggish boar
 		m *= 1.3 + minf(float(mount.spec.get("speed", 2.6)), 5.0) * 0.2
@@ -157,7 +169,7 @@ func _physics_process(dt: float) -> void:
 	var iv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if iv.length_squared() > 0.01:
 		facing = iv.normalized()
-	hunger = maxf(0.0, hunger - dt * 0.075)
+	hunger = maxf(0.0, hunger - dt * 0.075 * (3.0 if swimming() else 1.0)) # a swim works up an appetite
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
 	# Palworld night chill: past dusk and away from firelight, the cold

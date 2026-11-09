@@ -1427,6 +1427,18 @@ func run() -> void:
 	p.mount = landm
 	check("land mount no swim", wcell.x >= 0 and not p.can_enter(wcell.x, wcell.y))
 	p.mount = null
+	# Palworld lets you ford water on foot too — slower, hungrier
+	check("foot swim ok", wcell.x >= 0 and p.can_enter(wcell.x, wcell.y))
+	if wcell.x >= 0:
+		var dry_pos: Vector2 = p.pos
+		p.hunger = 90.0
+		p.pos = wcell
+		var swm: float = p.speed_mult()
+		check("swim slows", swm < 0.6 and p.swimming(), "mult=%.2f" % swm)
+		p._physics_process(1.0)
+		check("swim hungers", absf(90.0 - p.hunger - 0.225) < 0.01,
+			"drain=%.3f" % (90.0 - p.hunger))
+		p.pos = dry_pos
 	for tpal in [surf, landm]:
 		game.pals.erase(tpal)
 		if tpal.get_parent(): tpal.get_parent().remove_child(tpal)
