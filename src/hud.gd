@@ -555,9 +555,9 @@ func draw_palbox(r: Vector2) -> void:
 		if not lead:
 			click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": uid})
 			draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[*]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd76e"))
-		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d %s HP%d/%d" % [
+		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d T%d %s HP%d/%d" % [
 			"★ " if lead else "", p.spec["name"],
-			"☆" if p.lucky else "", p.sex, star_str(p), p.level,
+			"☆" if p.lucky else "", p.sex, star_str(p), p.level, p.talent,
 			(p.ailment + "! ") if p.ailment != "" else passive_str(p).left(14), int(p.hp), int(p.max_hp)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if p.ailment != "" else Color.WHITE)
 		y += 17
@@ -571,8 +571,8 @@ func draw_palbox(r: Vector2) -> void:
 		for wp in workers:
 			var wrect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 			click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
-			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d %s%s" % [wp.spec["name"],
-				"☆" if wp.lucky else "", wp.sex, wp.level,
+			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d T%d %s%s" % [wp.spec["name"],
+				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
 				wp.job_site["id"] if wp.job_site else "idle",
 				" [%s]" % wp.ailment if wp.ailment != "" else ""],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if wp.ailment != "" else Color("#a8dff0"))
@@ -597,7 +597,7 @@ func draw_palbox(r: Vector2) -> void:
 			draw_string(font, Vector2(brect.position.x + 3, y0), "[x]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c0392b"))
 		var ko: bool = bp.hp <= 0
-		var label := "%s%s %s%s Lv%d HP%d/%d%s%s" % [bp.spec["name"], "☆" if bp.lucky else "", bp.sex, star_str(bp), bp.level,
+		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s" % [bp.spec["name"], "☆" if bp.lucky else "", bp.sex, star_str(bp), bp.level, bp.talent,
 			int(maxi(0, bp.hp)), int(bp.max_hp), " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if ko else "",
 			" [%s]" % bp.ailment if bp.ailment != "" else ""]
 		draw_string(font, Vector2(cx0, y0), label,
