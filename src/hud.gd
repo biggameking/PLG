@@ -146,6 +146,10 @@ func run_click(cr: Dictionary) -> void:
 			game.box_to_party(cr["arg"])
 		"party_in":
 			game.party_to_box(cr["arg"])
+		"deploy":
+			game.deploy_to_base(cr["arg"])
+		"base_in":
+			game.base_to_box(cr["arg"])
 		"use_item":
 			use_item(cr["arg"])
 		"buy":
@@ -495,11 +499,29 @@ func draw_palbox(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": uid})
+		click_rects.append({"rect": Rect2(rect.position + Vector2(254, 0), Vector2(52, 17)), "act": "deploy", "arg": p})
+		draw_string(font, Vector2(rect.position + Vector2(254, 13)), "[>base]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#a8e6a1"))
 		draw_string(font, Vector2(rect.position.x, y), "%s%s %s%s Lv%d %s HP%d/%d" % [p.spec["name"],
 			"☆" if p.lucky else "", p.sex, star_str(p), p.level,
 			(p.ailment + "! ") if p.ailment != "" else passive_str(p).left(14), int(p.hp), int(p.max_hp)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if p.ailment != "" else Color.WHITE)
 		y += 17
+	# deployed workforce (Palworld: pals working the base live in the world)
+	var workers := game.base_pals()
+	if not workers.is_empty():
+		y += 8
+		draw_string(font, Vector2(rr.position.x + 16, y), "BASE (%d/%d) — click to recall" % [workers.size(), game.MAX_BASE_PALS],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8dff0"))
+		y += 18
+		for wp in workers:
+			var wrect := Rect2(rr.position.x + 24, y - 11, 250, 17)
+			click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
+			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d %s%s" % [wp.spec["name"],
+				"☆" if wp.lucky else "", wp.sex, wp.level,
+				wp.job_site["id"] if wp.job_site else "idle",
+				" [%s]" % wp.ailment if wp.ailment != "" else ""],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if wp.ailment != "" else Color("#a8dff0"))
+			y += 17
 	y += 10
 	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % game.box.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
 	y += 18

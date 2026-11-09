@@ -153,6 +153,14 @@ func run() -> void:
 			p.try_mount()
 			check("mount", p.mount == bp)
 			p.try_mount()
+		# Palworld deploy loop: party -> base workforce -> back to cold storage
+		game.deploy_to_base(bp)
+		check("deploy to base", bp.mode == "base" and bp in game.pals and bp.uid not in game.party
+			and bp.get_parent() == game.entity_layer, "mode=%s" % bp.mode)
+		game.base_to_box(bp)
+		check("recall to box", bp.mode == "box" and bp in game.box and bp not in game.pals
+			and bp.get_parent() == game.box_holder, "mode=%s" % bp.mode)
+		game.box_to_party(bp) # restore party slot for later checks
 		# partner skill
 		var prj0 := game.projectiles.size()
 		game.partner_skill()

@@ -1154,6 +1154,46 @@ func box_to_party(bp: Pal) -> void:
 	unbox_pal(bp) # box pals live under box_holder — move them back to the world
 	log_msg("%s joined %s" % [bp.spec["name"], bp.mode])
 
+const MAX_BASE_PALS := 15 # workforce slots — more mouths than this starve the loop anyway
+
+func deploy_to_base(p: Pal) -> void:
+	# Palworld: drop a pal at the palbox and it joins the base workforce
+	if p.hp <= 0:
+		log_msg("%s is KO'd - wait for it to recover" % p.spec["name"])
+		return
+	if palbox_pos.x < 0:
+		log_msg("Need a palbox to deploy pals")
+		return
+	if base_pals().size() >= MAX_BASE_PALS and p.mode != "base":
+		log_msg("Base is full (%d pals)" % MAX_BASE_PALS)
+		return
+	player.dismount_if(p)
+	party.erase(p.uid)
+	box.erase(p)
+	if p.mode == "box":
+		unbox_pal(p) # back into the live tree before it starts working
+	if p not in pals:
+		pals.append(p)
+	p.mode = "base"
+	p.job_site = null
+	p.pos = nearest_free(palbox_pos.x + 2.0, palbox_pos.y + 2.5)
+	log_msg("%s deployed at base" % p.spec["name"])
+
+func base_to_box(p: Pal) -> void:
+	# recall a worker into cold storage — job and cargo are dropped first
+	if p.job_site:
+		if p in p.job_site["workers"]:
+			p.job_site["workers"].erase(p)
+		p.job_site = null
+	if p.carry != null:
+		add_item(p.carry["id"], p.carry["n"])
+		p.carry = null
+	pals.erase(p)
+	p.mode = "box"
+	box.append(p)
+	box_pal(p)
+	log_msg("%s -> box" % p.spec["name"])
+
 func party_to_box(uid: int) -> void:
 	var mp := find_pal(uid)
 	if mp:
