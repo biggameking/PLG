@@ -2166,6 +2166,17 @@ func run() -> void:
 		game.hit_structure(game.palbox_pos, 99999)
 		check("palbox unrazable", game.structures.has(game.palbox_pos) and pb_st.get("hp", 0) >= 1)
 
+	# Palworld palbox is a clinic: boxed pals mend, KO'd ones wait their timer
+	var hurt_b: Pal = game.gen_pal("lamball", 5, p.pos)
+	game.box.append(hurt_b)
+	hurt_b.revive_t = 0.0
+	hurt_b.hp = hurt_b.max_hp * 0.5
+	game.tick_box(10.0)
+	check("box mends wounds", hurt_b.hp > hurt_b.max_hp * 0.5 and hurt_b.hp <= hurt_b.max_hp,
+		"hp %.0f/%.0f" % [hurt_b.hp, hurt_b.max_hp])
+	game.box.erase(hurt_b)
+	if hurt_b.get_parent(): hurt_b.get_parent().remove_child(hurt_b)
+	hurt_b.free()
 	# watch tower: turret plinks the nearest raider/aggro'd wild in range
 	game.add_item("wood", 40); game.add_item("stone", 20); game.add_item("ingot", 4)
 	var tw_k: Vector2i = free_xy.call("watch_tower")

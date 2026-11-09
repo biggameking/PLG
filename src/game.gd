@@ -1102,11 +1102,7 @@ func _process(dt: float) -> void:
 	tick_dex(dt)
 	tick_weather(dt)
 	update_projectiles(dt)
-	for bp in box: # knocked-out pals recover on a timer
-		if bp.revive_t > 0 and t > bp.revive_t:
-			bp.revive_t = 0
-			bp.hp = int(bp.max_hp * 0.3)
-			log_msg("%s has recovered" % bp.spec["name"])
+	tick_box(dt)
 	# floaters age
 	for f in floaters:
 		f["age"] += dt
@@ -1574,6 +1570,16 @@ func gain_xp(n: int) -> void:
 		tech_points += 2
 		stat_pts += 1 # Palworld: every level banks a stat point for the statue
 		log_msg("Level up! Lv%d (+2 tech, +1 stat)" % player.level)
+
+func tick_box(dt: float) -> void: # Palworld palbox is a clinic — wounds mend inside
+	for bp in box:
+		if bp.revive_t > 0:
+			if t > bp.revive_t:
+				bp.revive_t = 0
+				bp.hp = int(bp.max_hp * 0.3)
+				log_msg("%s has recovered" % bp.spec["name"])
+		elif bp.hp < bp.max_hp:
+			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt) # ~33s to full
 
 func tick_production(dt: float) -> void:
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
