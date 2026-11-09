@@ -333,8 +333,11 @@ func run() -> void:
 		var cm: Pal = game.gen_pal("cattiva", 5, p.pos)
 		cm.mode = "box"; game.box.append(cm); game.box_pal(cm)
 		game.box_to_party(cm); game.send_out(cm.uid)
-		check("pack mule lifts cap", p.carry_cap() - cap0 > 100.0
-			and p.carry_wt() < p.carry_cap(), "cap=%.0f->%.0f" % [cap0, p.carry_cap()])
+		# absolute check: the deployed mule adds exactly its aura to the
+		# level-scaled base, no matter who was out before
+		var want_cap: float = 300.0 + (p.level - 1) * 10.0 + 120.0
+		check("pack mule lifts cap", absf(p.carry_cap() - want_cap) < 0.01
+			and p.carry_wt() < p.carry_cap(), "cap=%.0f want=%.0f base=%.0f" % [p.carry_cap(), want_cap, cap0])
 		game.retract_out()
 		game.pals.erase(cm); game.party.erase(cm.uid); game.bench.erase(cm)
 		if cm.get_parent(): cm.get_parent().remove_child(cm)
@@ -800,6 +803,13 @@ func run() -> void:
 		dmgs2.append(99999 - int(wrp.hp))
 	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] / float(dmgs2[0]) - 1.15) < 0.05,
 		"dry=%d wet=%d" % [dmgs2[0], dmgs2[1]])
+	var dmgs3 := []
+	for wv in ["clear", "storm"]: # thunderstorm: electric hits crackle ~1.15x
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.skill_hit(wrc, wrp, SkillData.SKILLS["shockwave"])
+		dmgs3.append(99999 - int(wrp.hp))
+	check("storm charges electric", dmgs3[0] > 0 and absf(dmgs3[1] / float(dmgs3[0]) - 1.15) < 0.05,
+		"dry=%d storm=%d" % [dmgs3[0], dmgs3[1]])
 	# STAB (Palworld): a pal in its own element hits ~1.2x — same seed, same power
 	var stabc: Pal = game.gen_pal("foxparks", 10, p.pos)
 	stabc.mode = "wild"

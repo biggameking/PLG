@@ -604,7 +604,7 @@ var mission_t := 0.0
 var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
 var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
-var weather := "clear"  # "clear" | "rain" — rolls every couple of game hours
+var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of game hours
 var weather_t := 0.0
 
 func total_catches() -> int:
@@ -655,10 +655,12 @@ func tick_weather(dt: float) -> void:
 	if weather_t < 120.0:
 		return
 	weather_t = 0.0
-	var next := "rain" if rng.chance(0.35) else "clear"
+	var roll: float = rng.randf()
+	var next := "storm" if roll < 0.15 else ("rain" if roll < 0.45 else "clear")
 	if next != weather:
 		weather = next
-		log_msg("Rain sweeps over the island" if weather == "rain" else "The sky clears")
+		log_msg({"rain": "Rain sweeps over the island", "storm": "A thunderstorm rolls in — electric pals crackle",
+			"clear": "The sky clears"}.get(weather, "The sky clears"))
 
 func tick_missions(dt: float) -> void:
 	if mission_idx >= MISSIONS.size():
@@ -1831,13 +1833,17 @@ func tick_production(dt: float) -> void:
 				lv = maxi(lv, int(w.spec.get("work", {}).get("watering", 0)))
 			# dark pals ARE the night shift — a little faster after dusk
 			var dusk := 1.15 if night and "dark" in w.spec.get("elements", []) else 1.0
-			# rain is a water pal's home turf
-			var dew := 1.15 if weather == "rain" and "water" in w.spec.get("elements", []) else 1.0
+			# wet skies are a water pal's home turf — a storm doubly so
+			var dew := 1.0
+			if "water" in w.spec.get("elements", []):
+				dew = 1.15 if weather == "rain" else (1.25 if weather == "storm" else 1.0)
+			elif "electric" in w.spec.get("elements", []) and weather == "storm":
+				dew = 1.15 # thunder pals work harder in the storm too
 			# talent shows in the palbox — make it earn its keep on the crew too
 			var iv: float = 0.9 + w.talent * 0.004 # T0 → 0.9, T100 → 1.3
 			var cond: float = 1.0 + w.star * 0.1 # Palworld: a condensed pal outworks its kin
 			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond
-		var wet := 1.25 if weather == "rain" and s.get("farmField", false) else 1.0 # rain does the watering
+		var wet := 1.25 if weather != "clear" and s.get("farmField", false) else 1.0 # rain or storm does the watering
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
@@ -2378,10 +2384,12 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 		# STAB (Palworld): a pal fighting in its own element hits harder
 		if elem in caster.spec.get("elements", []):
 			mult *= 1.2
-		if weather == "rain": # rain favors water's artillery and dampens fire's
+		if weather == "rain" or weather == "storm": # wet skies favor water, dampen fire
 			if elem == "fire":
 				mult *= 0.85
 			elif elem == "water":
+				mult *= 1.15
+			elif elem == "electric" and weather == "storm": # thunderstorm supercharges electric
 				mult *= 1.15
 		if tp.has_status("freeze"):
 			# a solid-frozen target shatters — the hit lands heavy and thaws it
@@ -2646,7 +2654,7 @@ func load_game() -> bool:
 			if not SpeciesData.species_of(str(sid)).is_empty():
 				dex_seen[str(sid)] = true # unknown ids from other builds just don't get seen
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
-	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain"] else "clear"
+	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	work_mode = clampi(int(d.get("wmode", 1)), 0, WORK_MODES.size() - 1)
 	base_level = clampi(int(d.get("blev", 1)), 1, BASE_LEVEL_MAX) # foreign save can't over-level the base
