@@ -5,6 +5,7 @@ extends Control
 var game: Game
 var font := ThemeDB.fallback_font
 var show_help := false
+var guide_page := 0
 var dex_scroll := 0
 var build_sel := -1
 var click_rects := []   # [{rect, act, arg}]
@@ -94,6 +95,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("help"):
 		show_help = not show_help
 		return
+	if event.is_action_pressed("guide"):
+		game.panel = "" if game.panel == "guide" else "guide"
+		guide_page = 0
+		return
+	if game.panel == "guide":
+		if event.is_action_pressed("ui_right"):
+			guide_page = mini(guide_page + 1, GuideData.PAGES.size() - 1)
+		elif event.is_action_pressed("ui_left"):
+			guide_page = maxi(guide_page - 1, 0)
 	if event.is_action_pressed("ui_cancel") and game.panel != "":
 		game.panel = ""
 		return
@@ -529,6 +539,8 @@ func _draw() -> void:
 			draw_chat(r)
 		"join":
 			draw_join(r)
+		"guide":
+			draw_guide(r)
 	if show_help:
 		var lines := [
 			"MOVE wasd/arrows  SPRINT shift  DODGE space",
@@ -546,6 +558,7 @@ func _draw() -> void:
 			draw_string(font, Vector2(20, r.y - 116 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#dfe8ea"))
 
 	# minimap (M): baked world image + live player/palbox markers
+
 	if map_show and map_img != null:
 		var vw := get_viewport_rect().size.x
 		var ms := 176.0
@@ -1181,3 +1194,35 @@ func draw_skills(r: Vector2) -> void:
 		"empty loadout = all learned moves fire",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.6, 0.6, 0.65))
 
+
+func draw_guide(r: Vector2) -> void:
+	# the Field Guide — a traveler's handbook in the world's own voice
+	var w := 620.0
+	var h := r.y - 60.0
+	var rr := Rect2(Vector2(r.x - w, 10) / 2.0 + Vector2(0, 20), Vector2(w, h - 30))
+	draw_rect(rr.grow(3), Color(0.08, 0.05, 0.03, 0.94)) # worn leather
+	draw_rect(rr, Color(0.94, 0.88, 0.72, 0.96))          # parchment
+	var lines := []
+	for raw in GuideData.PAGES[guide_page].split("\n"):
+		if raw.length() <= 74:
+			lines.append(raw)
+			continue
+		var rest: String = raw
+		while rest.length() > 74:
+			var cut: int = rest.rfind(" ", 74)
+			if cut < 30:
+				cut = 74
+			lines.append(rest.substr(0, cut))
+			rest = rest.substr(cut + 1)
+		lines.append(rest)
+	var y := rr.position.y + 22
+	for i in range(lines.size()):
+		var ln: String = lines[i]
+		var head: bool = ln.begins_with("—") or (i < 2 and ln == ln.to_upper() and ln.length() > 3)
+		draw_string(font, Vector2(rr.position.x + 22, y), ln,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+			Color("#5a3a1a") if head else Color(0.22, 0.18, 0.12))
+		y += 19
+	draw_string(font, Vector2(rr.position.x + 22, rr.end.y - 14),
+		"n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.PAGES.size()],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#7a6a4a"))
