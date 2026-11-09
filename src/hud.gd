@@ -5,6 +5,7 @@ extends Control
 var game: Game
 var font := ThemeDB.fallback_font
 var show_help := false
+var dex_scroll := 0
 var build_sel := -1
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
@@ -91,6 +92,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("statues"):
 		game.panel = "" if game.panel == "statues" else "statues" # U: lifmunk effigy upgrades
 		return
+	if event.is_action_pressed("dex"):
+		game.panel = "" if game.panel == "dex" else "dex" # P: paldeck
+		dex_scroll = 0
+		return
+	if game.panel == "dex" and event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			dex_scroll = maxi(0, dex_scroll - 1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			dex_scroll += 1
+			get_viewport().set_input_as_handled()
+			return
 	if event.is_action_pressed("party_toggle"):
 		game.assign_worker()
 		return
@@ -372,6 +386,8 @@ func _draw() -> void:
 			draw_palbox(r)
 		"shop":
 			draw_shop(r)
+		"dex":
+			draw_dex(r)
 		"chat":
 			draw_chat(r)
 		"join":
@@ -382,7 +398,7 @@ func _draw() -> void:
 			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
-			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  CHAT enter",
+			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  PALDECK p  CHAT enter",
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
 			"Glider descends cliffs. Sick pals need medicine in feed box/bag.",
 		]
@@ -706,6 +722,50 @@ func draw_join(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), "Join IP (blank=localhost): " + join_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9fd8ff"))
+
+func draw_dex(r: Vector2) -> void:
+	var rr := Rect2(r.x / 2 - 300, 40, 600, 560)
+	draw_rect(rr, Color(0, 0, 0, 0.85))
+	# caught first (most caught on top), then spotted, then the unknown dark
+	var ids := []
+	for sid in SpeciesData.SPECIES:
+		ids.append(sid)
+	for sid in SpeciesGen.SPECIES:
+		if not SpeciesData.SPECIES.has(sid):
+			ids.append(sid)
+	ids.sort_custom(func(a, b):
+		var ca: int = game.catch_counts.get(a, 0); var cb: int = game.catch_counts.get(b, 0)
+		var sa: bool = ca > 0 or game.dex_seen.has(a); var sb: bool = cb > 0 or game.dex_seen.has(b)
+		if ca != cb: return ca > cb
+		if sa != sb: return sa
+		return str(SpeciesData.species_of(a).get("name", a)) < str(SpeciesData.species_of(b).get("name", b)))
+	var caught := game.catch_counts.size()
+	var seen_n: int = game.dex_seen.size()
+	draw_string(font, rr.position + Vector2(16, 24),
+		"PALDECK   %d/%d caught · %d seen" % [caught, ids.size(), seen_n],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#c08cff"))
+	var rows := 32
+	dex_scroll = clampi(dex_scroll, 0, maxi(0, ids.size() - rows))
+	var y := rr.position.y + 48
+	for i in range(dex_scroll, mini(ids.size(), dex_scroll + rows)):
+		var sid: String = ids[i]
+		var sp: Dictionary = SpeciesData.species_of(sid)
+		var cc: int = game.catch_counts.get(sid, 0)
+		if cc > 0:
+			var els: String = "/".join(sp.get("elements", []))
+			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+			draw_string(font, Vector2(rr.position.x + 320, y), "%s  ×%d" % [els.left(14), cc],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#9fd8a0"))
+		elif game.dex_seen.has(sid):
+			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s  ·spotted·" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.65, 0.65, 0.72))
+		else:
+			draw_string(font, Vector2(rr.position.x + 16, y), "?  ?????",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.35, 0.35, 0.4))
+		y += 15
+	draw_string(font, Vector2(rr.position.x + 16, rr.end.y - 16),
+		"wheel scroll · every 10 species caught pays +2 tech", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.6, 0.65))
 
 func draw_chat(r: Vector2) -> void:
 	var rr := Rect2(12, r.y - 40, 480, 28)

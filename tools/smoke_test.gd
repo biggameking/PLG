@@ -397,6 +397,30 @@ func run() -> void:
 		game.save_game(); game.load_game()
 		check("missions persist", game.mission_idx == game.MISSIONS.size())
 
+	# paldeck: proximity spots a species once, 10-species tiers pay once
+	var dxp: Pal = game.gen_pal("lamball", 3, p.pos + Vector2(2, 0))
+	dxp.mode = "wild"; game.pals.append(dxp)
+	game.tick_dex(1.1)
+	check("dex seen", game.dex_seen.has("lamball"))
+	dxp.pos = Vector2(300, 300) # walks far away — the sighting must stick
+	game.tick_dex(1.1)
+	check("dex seen sticky", game.dex_seen.has("lamball"))
+	# milestone math must hold no matter how many species earlier tests caught
+	var cc_save: Dictionary = game.catch_counts
+	var cl0: int = game.dex_claimed
+	game.catch_counts = {}
+	for i in cl0 * 10 + 10:
+		game.catch_counts["dexsp%d" % i] = 1 # exactly one tier above claimed
+	var tp0 := game.tech_points
+	game.tick_dex(1.1)
+	var tp1 := game.tech_points
+	game.tick_dex(1.1) # second sweep must not double-pay the same tier
+	check("dex milestone", tp1 == tp0 + 2 and game.tech_points == tp1 and game.dex_claimed == cl0 + 1,
+		"tp %d->%d claimed %d->%d" % [tp0, tp1, cl0, game.dex_claimed])
+	game.catch_counts = cc_save
+	game.dex_claimed = cl0
+	game.pals.erase(dxp); dxp.free()
+
 	# skills + statuses
 	var sp_pal: Pal = game.pals[0]
 	sp_pal.statuses["burn"] = game.t + 3

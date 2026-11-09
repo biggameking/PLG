@@ -501,6 +501,9 @@ const MISSION_KEYS := ["palbox", "catch3", "deploy", "logger", "sphere",
 var mission_idx := 0
 var mission_flags := {} # event-only goals: crafted sphere, elite kill, ...
 var mission_t := 0.0
+var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
+var dex_claimed := 0    # highest 10-species milestone tier already paid
+var dex_t := 0.0
 
 func total_catches() -> int:
 	var n := 0
@@ -525,6 +528,23 @@ func mission_done(idx: int) -> bool:
 func note_crafted(out_id: String) -> void:
 	if "sphere" in out_id:
 		mission_flags["sphere"] = true
+
+func tick_dex(dt: float) -> void:
+	# paldeck cadence — separate accumulator so the dex keeps spotting
+	# species long after the mission chain has run dry
+	dex_t += dt
+	if dex_t < 1.0:
+		return
+	dex_t = 0.0
+	for p in pals: # bounded by MAX_PALS; wild sightings within earshot
+		if p.mode == "wild" and p.pos.distance_squared_to(player.pos) < 225.0:
+			dex_seen[p.species_id] = true
+	var tier := catch_counts.size() / 10 # unique species caught, floored to 10s
+	if tier > dex_claimed:
+		tech_points += (tier - dex_claimed) * 2
+		log_msg("PALDECK: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
+		floater(player.pos, "PALDECK MILESTONE", "#c08cff")
+		dex_claimed = tier
 
 func tick_missions(dt: float) -> void:
 	if mission_idx >= MISSIONS.size():
@@ -943,6 +963,7 @@ func _process(dt: float) -> void:
 	tick_repairs(dt)
 	tick_crafts(dt)
 	tick_missions(dt)
+	tick_dex(dt)
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1920,6 +1941,7 @@ func save_game() -> void:
 				return r),
 		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
+		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -2010,6 +2032,12 @@ func load_game() -> bool:
 	if d.get("catches") is Dictionary:
 		for ck in d["catches"]:
 			catch_counts[str(ck)] = maxi(int(d["catches"][ck]), 0) # foreign counts can't poison the %10 bonus
+	dex_seen.clear()
+	if d.get("dex_seen") is Array:
+		for sid in d["dex_seen"]:
+			if not SpeciesData.species_of(str(sid)).is_empty():
+				dex_seen[str(sid)] = true # unknown ids from other builds just don't get seen
+	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
 	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
 	mission_flags.clear()
 	var mf = d.get("mflags", {})
@@ -2672,6 +2700,8 @@ func regenerate(s: int) -> void:
 	craft_queue.clear() # queued builds die with the world too
 	mission_idx = 0 # missions belong to the world they were earned in
 	mission_flags.clear()
+	dex_seen.clear()
+	dex_claimed = 0 # a fresh world hasn't proven its ecology yet
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
