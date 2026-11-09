@@ -388,6 +388,16 @@ func run() -> void:
 		game.pals.erase(cb)
 		if cb.get_parent(): cb.get_parent().remove_child(cb)
 		cb.free()
+		# every combo table entry must name real species — parents AND offspring
+		var combo_bad := []
+		for k2 in Game.BREED_COMBOS:
+			var parts: Array = k2.split("+")
+			for sp2 in parts:
+				if SpeciesData.species_of(sp2).is_empty():
+					combo_bad.append(sp2)
+			if SpeciesData.species_of(Game.BREED_COMBOS[k2]).is_empty():
+				combo_bad.append(Game.BREED_COMBOS[k2])
+		check("combo table valid", combo_bad.is_empty(), str(combo_bad))
 		# grazing produce: a wool pal drops wool on its farm timer (Palworld)
 		var grazer: Pal = game.gen_pal("lamball", 3, p.pos + Vector2(4, 4))
 		game.pals.append(grazer); grazer.mode = "base"; grazer.san = 80.0

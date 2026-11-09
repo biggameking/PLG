@@ -98,6 +98,18 @@ const BREED_COMBOS := {
 	"digtoise+fuddler": "reptyro",
 	"hydrostar+vapori": "chillet",
 	"thornite+cragboar": "dreadmaw",
+	"penking+bushi": "anubis",
+	"ragnahawk+tombat": "anubis",
+	"mossanda+grizzbolt": "rayhound",
+	"beakon+helzephyr": "quivern",
+	"tanzee+lifmunk": "gorirat",
+	"nox+daedream": "tombat",
+	"mau+dazzi": "catress",
+	"emberwing+cawgnito": "helzephyr",
+	"broncherry+dinossom": "petallia",
+	"wumpo+caprity": "grintale",
+	"depresso+lunaris": "nox",
+	"bombird+beakon": "cawgnito",
 }
 
 func _exit_tree() -> void:
