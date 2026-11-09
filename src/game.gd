@@ -3170,23 +3170,25 @@ func net_harvest(tx: int, ty: int, pid: int) -> void:
 		return # swinging at a tree across the map is a no
 	harvest_cell(tx, ty)
 
-func net_place(sid: String, tx: int, ty: int, pid: int) -> void:
+func net_place(sid: String, tx: int, ty: int, pid: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
 	if s.is_empty():
-		return
+		return false
 	var gp = net.ghosts.get(pid)
 	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 9.0:
-		return # build where you stand, not across the map
+		return false # build where you stand, not across the map
 	var seen_st := []
 	for k in structures:
 		if structures[k] not in seen_st:
 			seen_st.append(structures[k])
 	if seen_st.size() >= MAX_STRUCTURES:
-		return
+		return false
 	if not can_place(sid, tx, ty): # terrain/footprint/cap rules still hold
-		return
+		return false
 	if place_free(sid, tx, ty): # the client already paid locally
 		log_msg("Player %d built %s" % [pid, s.get("name", sid)])
+		return true
+	return false
 
 func net_demolish(tx: int, ty: int, pid: int) -> void:
 	var st = structures.get(Vector2i(tx, ty))

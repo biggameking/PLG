@@ -278,7 +278,18 @@ func harvest_req(tx: int, ty: int) -> void:
 func build_req(sid: String, tx: int, ty: int) -> void:
 	if not is_host:
 		return
-	game.net_place(str(sid), int(tx), int(ty), multiplayer.get_remote_sender_id())
+	var pid := multiplayer.get_remote_sender_id()
+	if not game.net_place(str(sid), int(tx), int(ty), pid):
+		rpc_id(pid, "build_deny", str(sid)) # the client paid up front — refund the bill
+
+@rpc("authority", "call_remote", "reliable")
+func build_deny(sid: String) -> void:
+	var s: Dictionary = StructureData.STRUCTURES.get(str(sid), {})
+	if s.is_empty():
+		return
+	for c in s.get("cost", []):
+		game.add_item(str(c[0]), int(c[1]))
+	game.log_msg("Host refused %s - materials refunded" % s.get("name", sid))
 
 @rpc("any_peer", "call_remote", "reliable")
 func demolish_req(tx: int, ty: int) -> void:
