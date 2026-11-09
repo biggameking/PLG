@@ -2873,6 +2873,14 @@ func soul_infuse(uid: int) -> void:
 	target.apply_bonuses()
 	log_msg("%s's soul burns brighter (+%d)" % [target.spec["name"], target.soul_boost])
 
+# Palworld signature partner skills: a few species get bespoke actives
+# instead of "cast your best learned skill at the cursor"
+const PARTNER_SKILLS := {
+	"foxparks": {"cd": 6.0, "range": 4.5, "name": "Flamethrower"},
+	"lifmunk": {"cd": 5.0, "range": 7.0, "name": "SMG Burst"},
+	"tanzee":  {"cd": 5.0, "range": 8.0, "name": "Rifle Shot"},
+}
+
 func partner_skill() -> void:
 	if party.is_empty():
 		log_msg("No party pal")
@@ -2886,7 +2894,19 @@ func partner_skill() -> void:
 		log_msg("Party pal is down")
 		return
 	var m := player.get_global_mouse_position()
-	var tw: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
+	var tw0: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
+	var psk = PARTNER_SKILLS.get(p.species_id)
+	if psk != null:
+		if p.skill_cd.get("partner", 0) > t:
+			log_msg("%s is reloading" % p.spec["name"])
+			return
+		if not run_partner_skill(p, tw0, psk):
+			log_msg("%s's %s found no target" % [p.spec["name"], psk["name"]])
+			return
+		p.skill_cd["partner"] = t + float(psk["cd"])
+		log_msg("%s: %s!" % [p.spec["name"], psk["name"]])
+		return
+	var tw: Vector2 = tw0
 	var best: Dictionary = {}
 	for sid in p.learned_skills():
 		if p.skill_cd.get(sid, 0) > t:
@@ -2904,6 +2924,55 @@ func partner_skill() -> void:
 	p.skill_cd[best["id"]] = t + best.get("cooldown", 2)
 	cast_skill(p, tw, best)
 	log_msg("%s casts %s!" % [p.spec["name"], best["name"]])
+
+func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
+	# bespoke actives — returns false when nothing in the cone/aim was worth
+	# spending the cooldown on, so the button can fall back to a log line
+	var reach: float = psk["range"]
+	var p_atk := Combat.stat_at(p.spec["atk"], p.level, p.talent) * p.atk_bonus * p.atk_mult()
+	match p.species_id:
+		"foxparks": # flamethrower: burn everything in the aim cone
+			var hit_any := false
+			for q in pals:
+				if q.mode != "wild" or q.hp <= 0 or q == p:
+					continue
+				if q.pos.distance_to(tw) <= reach * 0.5 + 0.6:
+					q.hit(Combat.damage(p_atk, 45, Combat.stat_at(q.spec["def"],
+						q.level, q.talent) * q.def_bonus * q.def_mult(), 1.0, rng), 1.0, true)
+					if rng.chance(0.3):
+						q.add_status("burn", 3.0)
+					hit_any = true
+			return hit_any
+		"lifmunk": # SMG burst: three quick hits on the nearest wild pal to the aim
+			var tgt := nearest_wild(tw, reach)
+			if tgt == null:
+				return false
+			var tdef := Combat.stat_at(tgt.spec["def"], tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult()
+			for i in 3:
+				if tgt.hp <= 0:
+					break
+				tgt.hit(Combat.damage(p_atk, 15, tdef, 1.0, rng), 1.0, true)
+			return true
+		"tanzee": # rifle shot: one heavy hit
+			var tgt2 := nearest_wild(tw, reach)
+			if tgt2 == null:
+				return false
+			tgt2.hit(Combat.damage(p_atk, 80, Combat.stat_at(tgt2.spec["def"],
+				tgt2.level, tgt2.talent) * tgt2.def_bonus * tgt2.def_mult(), 1.0, rng), 1.0, true)
+			return true
+	return false
+
+func nearest_wild(at: Vector2, reach: float) -> Pal:
+	var best: Pal = null
+	var bd := reach
+	for q in pals:
+		if q.mode != "wild" or q.hp <= 0:
+			continue
+		var d := q.pos.distance_to(at)
+		if d < bd:
+			bd = d
+			best = q
+	return best
 
 func fire_player_shot(tw: Vector2, wd: Dictionary) -> void:
 	if projectiles.size() >= MAX_PROJECTILES:

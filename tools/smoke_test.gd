@@ -208,6 +208,29 @@ func run() -> void:
 		var prj0 := game.projectiles.size()
 		game.partner_skill()
 		check("partner_skill", game.projectiles.size() > prj0 or true, "%d->%d" % [prj0, game.projectiles.size()])
+		# bespoke partner actives (Palworld signatures): foxparks cone / tanzee rifle
+		var fp: Pal = game.gen_pal("foxparks", 10, p.pos)
+		fp.mode = "partner"
+		var wt: Pal = game.gen_pal("chikipi", 3, Vector2(p.pos.x + 2, p.pos.y))
+		wt.mode = "wild"; wt.max_hp = 2000; wt.hp = 2000
+		game.pals.append(wt)
+		var wthp := wt.hp
+		check("foxparks flamethrower", game.run_partner_skill(fp, wt.pos,
+			game.PARTNER_SKILLS["foxparks"]) and wt.hp < wthp)
+		var tz: Pal = game.gen_pal("tanzee", 10, p.pos)
+		tz.mode = "partner"
+		var wthp2 := wt.hp
+		check("tanzee rifle", game.run_partner_skill(tz, wt.pos,
+			game.PARTNER_SKILLS["tanzee"]) and wt.hp < wthp2)
+		# out-of-reach aims whiff — off-map aim finds nothing
+		check("partner skill whiffs", not game.run_partner_skill(tz,
+			Vector2(-100, -100), game.PARTNER_SKILLS["tanzee"]))
+		game.pals.erase(wt)
+		for tmp in [wt, fp, tz]:
+			if is_instance_valid(tmp) and tmp.get_parent():
+				tmp.get_parent().remove_child(tmp)
+			if is_instance_valid(tmp):
+				tmp.free()
 	else:
 		check("box->party", false, "box empty")
 
