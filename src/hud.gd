@@ -296,6 +296,28 @@ func _draw() -> void:
 	if pl.aiming:
 		draw_string(font, Vector2(12, 96), "AIM — click a pal to throw (Q cancel)",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#4dd0e1"))
+		# Palworld throw preview: hovering a wild pal shows the catch odds
+		var tiers2 := game.sphere_tiers()
+		if not tiers2.is_empty():
+			var sid2: String = tiers2[clampi(pl.sphere_sel, 0, tiers2.size() - 1)]
+			var mp2 := get_global_mouse_position()
+			var tw2: Vector2 = Iso.from_screen(mp2.x, mp2.y, pl.elev())
+			var bp2: Pal = null
+			var bd2 := 1.6
+			for q in game.pals:
+				if q.mode != "wild" or q.hp <= 0:
+					continue
+				var dd := q.pos.distance_to(tw2)
+				if dd < bd2:
+					bd2 = dd
+					bp2 = q
+			if bp2:
+				var cap_pow2: float = bp2.spec["capturePower"] * (1.35 if bp2.lucky else 1.0)
+				var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
+					ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
+				var col := Color("#a8e6a1") if ch >= 0.5 else (Color("#e8963c") if ch >= 0.2 else Color("#e8452f"))
+				draw_string(font, Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)],
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
 	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00" % [game.day, int(game.tod)],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#e8f0f2"))
