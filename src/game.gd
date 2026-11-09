@@ -2037,10 +2037,37 @@ func box_to_party(bp: Pal) -> void:
 
 const MAX_BASE_PALS := 20 # absolute workforce cap — more mouths than this starve the loop anyway
 
+# ---------- base level missions ----------
+# Palworld palbox levels: the terminal grades your base and pays slots
+var base_level := 1
+const BASE_LEVEL_MAX := 5
+const BASE_MISSION_TEXT := {
+	1: "deploy 2 pals", 2: "build 8 structures + deploy 4 pals",
+	3: "catch 12 pals + build 14 structures", 4: "deploy 8 pals + reach day 5",
+}
+func base_mission_done(lv: int) -> bool:
+	match lv:
+		1: return base_pals().size() >= 2
+		2: return structures.size() >= 8 and base_pals().size() >= 4
+		3: return total_catches() >= 12 and structures.size() >= 14
+		4: return base_pals().size() >= 8 and day >= 5
+	return false
+
+func upgrade_base() -> void:
+	if base_level >= BASE_LEVEL_MAX:
+		log_msg("Base level maxed")
+		return
+	if not base_mission_done(base_level):
+		log_msg("Base mission: " + BASE_MISSION_TEXT[base_level])
+		return
+	base_level += 1
+	sfx_play("level")
+	log_msg("Base level %d! +2 workforce slots" % base_level)
+
 func max_base_pals() -> int:
 	# Palworld palbox growth: workforce slots scale with the player's level
-	# (8+lvl, hard-capped by MAX_BASE_PALS) instead of one static number
-	return mini(8 + player.level, MAX_BASE_PALS)
+	# (8+lvl, hard-capped by MAX_BASE_PALS) plus base-level mission bonus
+	return mini(8 + player.level + (base_level - 1) * 2, MAX_BASE_PALS)
 
 func deploy_to_base(p: Pal) -> void:
 	# Palworld: drop a pal at the palbox and it joins the base workforce
@@ -2382,7 +2409,7 @@ func save_game() -> void:
 		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
-		"weather": weather, "wthr_t": weather_t, "wmode": work_mode,
+		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger, "stamina": player.stamina,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -2483,6 +2510,7 @@ func load_game() -> bool:
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	work_mode = clampi(int(d.get("wmode", 1)), 0, WORK_MODES.size() - 1)
+	base_level = clampi(int(d.get("blev", 1)), 1, BASE_LEVEL_MAX) # foreign save can't over-level the base
 	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
 	mission_flags.clear()
 	var mf = d.get("mflags", {})

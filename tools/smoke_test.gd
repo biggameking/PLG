@@ -303,6 +303,24 @@ func run() -> void:
 		var s2 := game.max_base_pals()
 		check("palbox slots scale", s1 == 9 and s2 == 20, "lv1=%d lv40=%d" % [s1, s2])
 		game.player.level = lv0
+		# base level missions (Palworld): checklist gates the terminal upgrade
+		game.base_level = 5
+		game.upgrade_base()
+		check("base level capped", game.base_level == 5)
+		game.base_level = 1
+		var mb0 := game.max_base_pals()
+		var made := []
+		while game.base_pals().size() < 2: # mission 1 wants 2 deployed
+			var qb: Pal = game.gen_pal("lamball", 3, p.pos)
+			qb.mode = "base"; game.pals.append(qb); made.append(qb)
+		game.upgrade_base()
+		check("base upgrade lv2", game.base_level == 2 and game.max_base_pals() == mb0 + 2,
+			"lv=%d slots=%d" % [game.base_level, game.max_base_pals()])
+		game.base_level = 1
+		for qb in made:
+			game.pals.erase(qb)
+			if qb.get_parent(): qb.get_parent().remove_child(qb)
+			qb.free()
 		# partner skill
 		var prj0 := game.projectiles.size()
 		game.partner_skill()

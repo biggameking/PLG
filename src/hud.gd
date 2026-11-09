@@ -221,6 +221,8 @@ func run_click(cr: Dictionary) -> void:
 			game.equip(cr["arg"])
 		"perk":
 			game.upgrade_perk(cr["arg"])
+		"base_up":
+			game.upgrade_base()
 		"infuse":
 			game.soul_infuse(cr["arg"])
 		"chest_dep", "chest_wd":
@@ -643,6 +645,21 @@ func draw_palbox(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "PALBOX — click to swap party/base",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#4dd0e1"))
+	# Palworld base level: the terminal grades your base and pays slots
+	var blv_txt := "BASE LV%d" % game.base_level
+	if game.base_level < game.BASE_LEVEL_MAX:
+		var bmet: bool = game.base_mission_done(game.base_level)
+		blv_txt += " · next: " + game.BASE_MISSION_TEXT[game.base_level]
+		draw_string(font, Vector2(rr.position.x + 330, rr.position.y + 24), blv_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#a8e6a1") if bmet else Color(0.6, 0.6, 0.65))
+		if bmet and (game.net == null or not game.net.is_client()):
+			click_rects.append({"rect": Rect2(rr.position.x + 505, rr.position.y + 12, 80, 20),
+				"act": "base_up"})
+			draw_string(font, Vector2(rr.position.x + 505, rr.position.y + 26), "[UPGRADE]",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#ffd76e"))
+	else:
+		draw_string(font, Vector2(rr.position.x + 330, rr.position.y + 24), blv_txt + " MAX",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e"))
 	var y := rr.position.y + 44
 	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c8f0d0"))
 	y += 18
