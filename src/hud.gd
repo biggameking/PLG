@@ -465,6 +465,17 @@ func draw_craft(r: Vector2) -> void:
 		y += 20
 		if y > rr.end.y - 16:
 			break
+	if not game.craft_queue.is_empty(): # Palworld bench queue: builds tick down live
+		y += 8
+		draw_string(font, Vector2(rr.position.x + 16, y), "QUEUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
+		y += 16
+		for cq in game.craft_queue:
+			if y > rr.end.y - 14:
+				break
+			var nm: String = ItemData.ITEMS.get(cq["out"], {}).get("name", cq["out"])
+			draw_string(font, Vector2(rr.position.x + 16, y), "  %s x%d  %.0fs" % [nm, cq["n"], cq["left"]],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#a8e6a1"))
+			y += 15
 
 func draw_inv(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 230, 60, 460, 500)
