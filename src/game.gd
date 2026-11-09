@@ -27,6 +27,7 @@ var drops: Array = []        # ground drops {id,n,pos,node,did}
 var net_drops := {}          # client-side drop replicas: did -> {id,n,pos,node}
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
 var next_drop_id := 1        # host: wire key for drop_sync (never reused)
+var dirty_decor := {}        # decor cell idx -> value; host ships deltas to clients
 var _drop_tex := {}
 var _light_tex: Texture2D = null
 
@@ -745,7 +746,7 @@ func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
 	if not is_instance_valid(target) or target.hp <= 0 or target.mode != "wild":
 		return # dead, freed, or already caught by another sphere in flight
-	if target.net_id > 0 and net != null and not net.is_host:
+	if target.net_id > 0 and net != null and net.is_client():
 		# a replica can't be rolled locally — the host owns the outcome;
 		# the sphere's flight was just theatre, the catch lands by snapshot
 		net.rpc("sphere_catch", target.net_id, sp["sid"],
@@ -832,6 +833,14 @@ func try_harvest(at: Vector2, face: Vector2) -> void:
 		tx += int(signf(face.x))
 	else:
 		ty += int(signf(face.y))
+	if net != null and net.is_client():
+		# our decor is seed-synced, not truth — the host swings, then tells
+		# everyone what changed via decor_delta
+		net.rpc("harvest_req", tx, ty)
+		return
+	harvest_cell(tx, ty)
+
+func harvest_cell(tx: int, ty: int) -> void:
 	var d := world.decor_at(tx, ty)
 	if d == World.Decor.NONE:
 		return
@@ -847,7 +856,19 @@ func try_harvest(at: Vector2, face: Vector2) -> void:
 		spawn_drop(loot, n, Vector2(tx + 0.5, ty + 0.5))
 		world.decor[i] = World.Decor.STUMP if (d == World.Decor.TREE_A or d == World.Decor.TREE_B) else World.Decor.NONE
 		world.hp[i] = 0
+		mark_decor(i)
 		queue_redraw_decor()
+
+func mark_decor(i: int) -> void:
+	if net != null and net.is_host:
+		dirty_decor[i] = world.decor[i]
+
+func dirty_decor_pack() -> Array:
+	var arr := []
+	for i in dirty_decor:
+		arr.append([i, dirty_decor[i]])
+	dirty_decor.clear()
+	return arr
 
 func spawn_drop(id: String, n: int, at: Vector2) -> void:
 	# tiny tinted bag icon; drops persist until picked up (player or hauler pal)
@@ -1103,7 +1124,7 @@ func _process(dt: float) -> void:
 				anger_nesters(d["pos"]) # Palworld: parents guard their nests — egg thieves get swarmed
 			take_drop(d)
 	# client-side drop replicas: we ask, the host decides (and pays via got_loot)
-	if net != null and not net.is_host:
+	if net != null and net.is_client():
 		for did in net_drops.keys():
 			if drops_wanted.has(did):
 				continue
@@ -1123,6 +1144,7 @@ func _process(dt: float) -> void:
 		var ri := rng.int_range(0, world.decor.size() - 1)
 		if world.decor[ri] == World.Decor.STUMP:
 			world.decor[ri] = World.Decor.TREE_A if rng.chance(0.5) else World.Decor.TREE_B
+			mark_decor(ri)
 			world.hp[ri] = 30
 			queue_redraw_decor()
 	# base raid waves
@@ -1143,8 +1165,8 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
 	if s.is_empty():
 		return false
-	if sid == "palbox" and has_structure("palbox"):
-		return false # one base only — ghost must agree with place_structure
+	if sid == "palbox" and palbox_count() >= 1 + MAX_EXTRA_BOXES:
+		return false # ghost must agree with place_structure's outpost cap
 	var w: int = s.get("w", 2)
 	var h: int = s.get("h", 2)
 	if not world.flat_at(tx, ty, w, h):
@@ -1186,6 +1208,20 @@ const MAX_STRUCTURES := 400 # build cap: dicts keyed per-cell; 400 bases is alre
 
 func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES[sid]
+	if net != null and net.is_client():
+		# shared world: pay locally, the host validates + plants it, and it
+		# lands on our screen with the next struct_sync broadcast
+		if not can_place(sid, tx, ty):
+			log_msg("Can't build there")
+			return false
+		for c in s.get("cost", []):
+			if item_count(c[0]) < c[1]:
+				log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
+				return false
+		for c in s.get("cost", []):
+			add_item(c[0], -c[1])
+		net.rpc("build_req", sid, tx, ty)
+		return true
 	if sid == "palbox" and palbox_count() >= 1 + MAX_EXTRA_BOXES:
 		log_msg("Max %d palboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))
 		return false
@@ -1233,13 +1269,15 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		add_glow(spr, s["light"])
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
 		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
-		"walkable": s.get("walkable", false), "spike": s.get("spike", 0)}
+		"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
+		"pos": Vector2i(tx, ty)}
 	for dy in range(h):
 		for dx in range(w):
 			var ci0 := world.idx(tx + dx, ty + dy)
 			if world.decor[ci0] != World.Decor.NONE: # trees/berries under the footprint are cleared
 				world.decor[ci0] = World.Decor.NONE
 				world.hp[ci0] = 0
+				mark_decor(ci0)
 			structures[Vector2i(tx + dx, ty + dy)] = st
 			world.structures[ci0] = st
 	if sid == "palbox":
@@ -1275,11 +1313,17 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 		add_glow(spr, s["light"])
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
 		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
-		"walkable": s.get("walkable", false), "spike": s.get("spike", 0)}
+		"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
+		"pos": Vector2i(tx, ty)}
 	for dy in range(h):
 		for dx in range(w):
+			var ci1 := world.idx(tx + dx, ty + dy)
+			if world.decor[ci1] != World.Decor.NONE: # clear whatever the footprint lands on
+				world.decor[ci1] = World.Decor.NONE
+				world.hp[ci1] = 0
+				mark_decor(ci1)
 			structures[Vector2i(tx + dx, ty + dy)] = st
-			world.structures[world.idx(tx + dx, ty + dy)] = st
+			world.structures[ci1] = st
 	if sid == "palbox":
 		var o := Vector2i(tx, ty)
 		if palbox_pos.x < 0:
@@ -1295,6 +1339,10 @@ func demolish_at(at: Vector2) -> bool:
 	if not st:
 		log_msg("Nothing to demolish")
 		return false
+	if net != null and net.is_client():
+		# host razes it; the refund goes to the shared base store, not our bag
+		net.rpc("demolish_req", int(at.x), int(at.y))
+		return true
 	var sid: String = st["id"]
 	var cells := []
 	for k in structures:
@@ -3023,6 +3071,112 @@ func nearest_wild(at: Vector2, reach: float) -> Pal:
 			bd = d
 			best = q
 	return best
+
+# ---------- shared-world editing (host authority) ----------
+func net_harvest(tx: int, ty: int, pid: int) -> void:
+	if not world.in_bounds(tx, ty):
+		return
+	var gp = net.ghosts.get(pid)
+	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 4.0:
+		return # swinging at a tree across the map is a no
+	harvest_cell(tx, ty)
+
+func net_place(sid: String, tx: int, ty: int, pid: int) -> void:
+	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
+	if s.is_empty():
+		return
+	var gp = net.ghosts.get(pid)
+	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 9.0:
+		return # build where you stand, not across the map
+	var seen_st := []
+	for k in structures:
+		if structures[k] not in seen_st:
+			seen_st.append(structures[k])
+	if seen_st.size() >= MAX_STRUCTURES:
+		return
+	if not can_place(sid, tx, ty): # terrain/footprint/cap rules still hold
+		return
+	if place_free(sid, tx, ty): # the client already paid locally
+		log_msg("Player %d built %s" % [pid, s.get("name", sid)])
+
+func net_demolish(tx: int, ty: int, pid: int) -> void:
+	var st = structures.get(Vector2i(tx, ty))
+	if st == null:
+		return
+	var gp = net.ghosts.get(pid)
+	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
+		return
+	# shared world: chest contents spill as drops (anyone can haul them),
+	# no bag refund — the builder isn't here to catch it
+	for it in st.get("store", {}).keys():
+		spawn_drop(str(it), int(st["store"][it]), Vector2(tx + 0.5, ty + 0.5))
+	st["store"] = {}
+	net_remove_structure(st)
+	log_msg("Player %d razed %s" % [pid, st["id"]])
+
+func net_remove_structure(st: Dictionary) -> void:
+	var cells := []
+	for k in structures:
+		if structures[k] == st:
+			cells.append(k)
+	for w in st["workers"].duplicate():
+		st["workers"].erase(w)
+		if is_instance_valid(w):
+			w.job_site = null
+	for k in cells:
+		structures.erase(k)
+		world.structures.erase(world.idx(k.x, k.y))
+	if is_instance_valid(st["node"]):
+		st["node"].queue_free()
+	if chest_ref == st:
+		chest_ref = null
+	if st["id"] == "palbox" and not cells.is_empty():
+		var origin: Vector2i = cells[0]
+		for cc in cells:
+			if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
+				origin = cc
+		if origin == palbox_pos:
+			palbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
+		else:
+			extra_boxes.erase(origin)
+
+# client: reconcile structure replicas against the host's wire truth
+func struct_sync(arr: Array) -> void:
+	var seen := {}
+	for e in arr:
+		if not (e is Array) or e.size() < 3 or not (e[1] is float or e[1] is int) or not (e[2] is float or e[2] is int):
+			continue
+		var sid := str(e[0])
+		if not StructureData.STRUCTURES.has(sid):
+			continue
+		var k := Vector2i(int(e[1]), int(e[2]))
+		seen[k] = sid
+		var cur = structures.get(k)
+		if cur != null and cur["id"] == sid and cur.get("pos", k) == k:
+			continue # already mirrored at this origin
+		place_free(sid, k.x, k.y)
+	var uniq := []
+	for k in structures.keys():
+		var st: Dictionary = structures[k]
+		if st not in uniq:
+			uniq.append(st)
+		if not st.has("pos"): # legacy rows — first-seen cell is the origin
+			st["pos"] = k
+	for st in uniq:
+		if seen.get(st["pos"]) != st["id"]:
+			net_remove_structure(st) # host demolished or replaced it
+
+# client: apply host decor deltas (harvests, regrowth, footprint clears)
+func decor_sync(arr: Array) -> void:
+	var changed := false
+	for e in arr:
+		if e is Array and e.size() >= 2 and (e[0] is float or e[0] is int):
+			var i := int(e[0])
+			if i >= 0 and i < world.decor.size():
+				world.decor[i] = int(e[1])
+				changed = true
+	if changed:
+		queue_redraw_decor()
 
 func fire_player_shot(tw: Vector2, wd: Dictionary) -> void:
 	if projectiles.size() >= MAX_PROJECTILES:

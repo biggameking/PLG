@@ -36,6 +36,12 @@ func join(ip: String) -> void:
 	multiplayer.multiplayer_peer = peer
 	game.log_msg("Joining %s:%d ..." % [ip, PORT])
 
+func is_client() -> bool:
+	# "not host" alone is also true offline — and a headless/offline run
+	# still carries an OfflineMultiplayerPeer, so null-checks lie. A real
+	# client is exactly: not host AND a live ENet peer.
+	return not is_host and multiplayer.multiplayer_peer is ENetMultiplayerPeer
+
 func _on_peer_connected(id: int) -> void:
 	if is_host:
 		rpc_id(id, "world_sync", game.world.seed)
@@ -236,6 +242,50 @@ func got_loot(id: String, n: int) -> void:
 	game.add_item(str(id), int(n))
 	game.floater(game.player.pos, "+%d %s" % [int(n), it.get("name", id)], "#ffe08a")
 
+# Shared-world editing: clients ask, the host validates + mutates, everyone
+# converges on the next broadcast. Same trust rules as take_drop — the
+# sender's ghost must actually be standing near the thing it touches.
+func struct_state_pack() -> Array:
+	var seen := []
+	var arr := []
+	for k in game.structures:
+		var st = game.structures[k]
+		if st not in seen:
+			seen.append(st)
+			var o: Vector2i = st.get("pos", k) # origin cell — the wire key
+			arr.append([st["id"], o.x, o.y])
+	return arr
+
+@rpc("authority", "call_remote", "unreliable")
+func struct_sync(arr: Array) -> void:
+	if is_host:
+		return
+	game.struct_sync(arr)
+
+@rpc("authority", "call_remote", "unreliable")
+func decor_delta(arr: Array) -> void:
+	if is_host:
+		return
+	game.decor_sync(arr)
+
+@rpc("any_peer", "call_remote", "reliable")
+func harvest_req(tx: int, ty: int) -> void:
+	if not is_host:
+		return
+	game.net_harvest(int(tx), int(ty), multiplayer.get_remote_sender_id())
+
+@rpc("any_peer", "call_remote", "reliable")
+func build_req(sid: String, tx: int, ty: int) -> void:
+	if not is_host:
+		return
+	game.net_place(str(sid), int(tx), int(ty), multiplayer.get_remote_sender_id())
+
+@rpc("any_peer", "call_remote", "reliable")
+func demolish_req(tx: int, ty: int) -> void:
+	if not is_host:
+		return
+	game.net_demolish(int(tx), int(ty), multiplayer.get_remote_sender_id())
+
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
 	if from_id == multiplayer.get_unique_id():
@@ -255,6 +305,10 @@ func _process(dt: float) -> void:
 			pal_sync_t = 0.0
 			rpc("pal_sync", pal_state_pack())
 			rpc("drop_sync", drop_state_pack())
+			rpc("struct_sync", struct_state_pack())
+			var dd := game.dirty_decor_pack()
+			if not dd.is_empty():
+				rpc("decor_delta", dd)
 	send_timer += dt
 	if send_timer < 0.05:
 		return

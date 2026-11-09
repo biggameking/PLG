@@ -741,6 +741,49 @@ func run() -> void:
 	game.spawn_drop("wood", 1, p.pos + Vector2(1, 0))
 	check("drop wire id", game.drops.back()["did"] == did0 and game.next_drop_id == did0 + 1)
 	game.take_drop(game.drops.back())
+	# shared-world editing: host validates the ask, wire truth reconciles
+	var hc := Vector2i(-1, -1)
+	for i2 in range(game.world.decor.size()):
+		if game.world.decor[i2] in [World.Decor.TREE_A, World.Decor.TREE_B]:
+			hc = Vector2i(i2 % World.WORLD_W, i2 / World.WORLD_W)
+			break
+	if hc.x >= 0:
+		var drops0 := game.drops.size()
+		var guard := 0
+		while game.world.decor_at(hc.x, hc.y) in [World.Decor.TREE_A, World.Decor.TREE_B] and guard < 20:
+			game.net_harvest(hc.x, hc.y, 99)
+			guard += 1
+		check("net harvest", game.world.decor_at(hc.x, hc.y) == World.Decor.STUMP
+			and game.drops.size() > drops0)
+	var free_spot := Vector2i(-1, -1)
+	for r2 in range(3, 40):
+		var cx2 := int(p.pos.x) + r2
+		var cy2 := int(p.pos.y)
+		if game.can_place("campfire", cx2, cy2):
+			free_spot = Vector2i(cx2, cy2)
+			break
+	if free_spot.x >= 0:
+		var pk1 := []
+		for k0 in game.structures:
+			var st0: Dictionary = game.structures[k0]
+			if st0.get("pos", k0) == k0:
+				pk1.append([st0["id"], k0.x, k0.y])
+		pk1.append(["campfire", free_spot.x, free_spot.y])
+		game.struct_sync(pk1)
+		check("struct sync adds", game.structures.has(free_spot))
+		game.struct_sync(pk1.slice(0, pk1.size() - 1))
+		check("struct sync despawns", not game.structures.has(free_spot))
+		game.net_place("campfire", free_spot.x, free_spot.y, 99)
+		check("net place", game.structures.has(free_spot))
+		game.net_demolish(free_spot.x, free_spot.y, 99)
+		check("net demolish", not game.structures.has(free_spot))
+	# decor deltas apply by cell index
+	var dci := game.world.idx(clampi(int(p.pos.x), 0, World.WORLD_W - 1),
+		clampi(int(p.pos.y) + 4, 0, World.WORLD_H - 1))
+	var dcv: int = game.world.decor[dci]
+	game.decor_sync([[dci, World.Decor.NONE], "junk"])
+	check("decor delta applies", game.world.decor[dci] == World.Decor.NONE)
+	game.world.decor[dci] = dcv
 	# raid boss
 	game.add_item("boss_sigil", 1)
 	var n1 := game.pals.size()
