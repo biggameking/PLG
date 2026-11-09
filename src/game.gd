@@ -1038,15 +1038,11 @@ func _process(dt: float) -> void:
 			world.hp[ri] = 30
 			queue_redraw_decor()
 	# base raid waves
-	if palbox_pos.x >= 0:
-		raid_t -= dt
-		if raid_t <= 0:
-			raid_t = 240.0 + rng.next() * 180.0
-			start_raid()
-		for q in pals.duplicate(): # stale raiders wander off instead of stacking up
-			if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
-				pals.erase(q)
-				q.queue_free()
+	tick_raid(dt)
+	for q in pals.duplicate(): # stale raiders wander off instead of stacking up
+		if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
+			pals.erase(q)
+			q.queue_free()
 
 # ---------- building / tech / crafting / base ----------
 
@@ -2266,6 +2262,20 @@ func load_game() -> bool:
 			pj[0].job_site = structures[cell]
 	log_msg("Loaded.")
 	return true
+
+var raid_warned := false # 30s heads-up — Palworld flashes the raid horn early
+func tick_raid(dt: float) -> void:
+	if palbox_pos.x < 0:
+		return
+	raid_t -= dt
+	if raid_t < 30.0 and not raid_warned:
+		raid_warned = true
+		log_msg("Raid party spotted — they're coming for the palbox!")
+		floater(player.pos, "RAID INCOMING", "#e8452f")
+	if raid_t <= 0:
+		raid_t = 240.0 + rng.next() * 180.0
+		raid_warned = false # next wave gets its own warning
+		start_raid()
 
 func start_raid() -> void:
 	var c := Vector2(palbox_pos.x + 0.5, palbox_pos.y + 0.5)

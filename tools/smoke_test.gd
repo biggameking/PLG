@@ -829,6 +829,27 @@ func run() -> void:
 	check("nest guards", ne1.aggro == 0 and ne2.aggro < 0, "near=%d far=%d" % [ne1.aggro, ne2.aggro])
 	for nq in [ne1, ne2]:
 		game.pals.erase(nq); nq.free()
+	# raid horn: the 30s warning fires once per wave, then the wave lands
+	if game.palbox_pos.x >= 0:
+		var raiders0 := 0
+		for q in game.pals:
+			if q.raid: raiders0 += 1
+		game.raid_t = 31.0; game.raid_warned = false
+		game.tick_raid(2.0) # 29s left — horn should sound exactly once
+		var horned: bool = game.raid_warned
+		game.tick_raid(1.0)
+		check("raid horn once", horned and game.raid_warned)
+		game.tick_raid(29.0) # countdown lands — wave spawns, flag resets for next time
+		var raiders1 := 0
+		for q in game.pals:
+			if q.raid: raiders1 += 1
+		check("raid wave lands", raiders1 > raiders0 and not game.raid_warned,
+			"raiders %d->%d" % [raiders0, raiders1])
+		for rq in game.pals.duplicate(): # fresh raiders chew walls — sweep before they bite
+			if rq.raid and not rq.boss:
+				game.pals.erase(rq)
+				if rq.get_parent(): rq.get_parent().remove_child(rq)
+				rq.free()
 	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
 	var wpts := 0
 	for ks in game.structures:

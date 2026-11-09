@@ -343,6 +343,10 @@ func _draw() -> void:
 		"  ☂" if game.weather == "rain" else ""],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
 		Color("#7fb8e8") if game.weather == "rain" else Color("#e8f0f2"))
+	if game.raid_t < 30.0 and game.palbox_pos.x >= 0: # Palworld raid horn
+		draw_rect(Rect2(r.x / 2 - 80, 8, 160, 22), Color(0.5, 0.06, 0.06, 0.7))
+		draw_string(font, Vector2(r.x / 2 - 62, 24), "RAID IN %ds" % int(ceilf(game.raid_t)),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ff8d7e"))
 	if game.mission_idx < game.MISSIONS.size(): # Palworld guide rope
 		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
 		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
