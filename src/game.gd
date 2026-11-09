@@ -2495,13 +2495,18 @@ func tick_supply(dt: float) -> void:
 		return
 
 var raid_warned := false # 30s heads-up — Palworld flashes the raid horn early
+var raid_theme := ""     # element pack for the incoming wave; "" = mixed
 func tick_raid(dt: float) -> void:
 	if palbox_pos.x < 0:
 		return
 	raid_t -= dt
 	if raid_t < 30.0 and not raid_warned:
 		raid_warned = true
-		log_msg("Raid party spotted — they're coming for the palbox!")
+		# Palworld raids read as packs — mostly one element, sometimes a mob
+		var themes := ["fire", "water", "electric", "grass", "dark", "ice", "ground", "dragon"]
+		raid_theme = "" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)]
+		var howl: String = ("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob"
+		log_msg("Raid party spotted — a %s is coming for the palbox!" % howl)
 		floater(player.pos, "RAID INCOMING", "#e8452f")
 	if raid_t <= 0:
 		raid_t = 240.0 + rng.next() * 180.0
@@ -2528,7 +2533,9 @@ func start_raid() -> void:
 			var hostile_pool := pool.filter(func(s): return SpeciesData.species_of(s).get("hostile", 0) >= 1)
 			if hostile_pool.is_empty():
 				hostile_pool = pool
-			var sid: String = hostile_pool[rng.int_range(0, hostile_pool.size() - 1)]
+			var themed := hostile_pool.filter(func(s): return raid_theme != "" and raid_theme in SpeciesData.species_of(s).get("elements", []))
+			var pick_pool: Array = themed if not themed.is_empty() else hostile_pool
+			var sid: String = pick_pool[rng.int_range(0, pick_pool.size() - 1)]
 			var rp := preload("res://src/pal.gd").new()
 			entity_layer.add_child(rp)
 			rp.setup(self, sid, rng.int_range(4 + zone * 4 + day_bonus, 8 + zone * 6 + day_bonus), Vector2(tx + 0.5, ty + 0.5))

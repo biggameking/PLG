@@ -1053,6 +1053,26 @@ func run() -> void:
 			if q.raid: raiders1 += 1
 		check("raid wave lands", raiders1 > raiders0 and not game.raid_warned,
 			"raiders %d->%d" % [raiders0, raiders1])
+		# Palworld packs: a raider landing in a zone whose pool has the theme
+		# MUST be themed — the zone pool decides, so check per-spawn zones
+		if game.raid_theme != "":
+			var themed_n := 0
+			var theme_avail := false
+			for q in game.pals:
+				if not q.raid:
+					continue
+				if game.raid_theme in q.spec.get("elements", []):
+					themed_n += 1
+				var zp: Array = game.ZONE_SPECIES[game.world.zone_at(int(q.pos.x), int(q.pos.y))] \
+					+ SpeciesGen.zone_pool(game.world.zone_at(int(q.pos.x), int(q.pos.y)))
+				# mirror start_raid: theme only applies inside the hostile pool
+				# (full pool only when the zone has no hostiles at all)
+				var hpz: Array = zp.filter(func(s): return SpeciesData.species_of(s).get("hostile", 0) >= 1)
+				var poolz: Array = hpz if not hpz.is_empty() else zp
+				if poolz.any(func(s): return game.raid_theme in SpeciesData.species_of(s).get("elements", [])):
+					theme_avail = true
+			check("raid theme packs", themed_n >= 1 or not theme_avail,
+				"theme=%s matched=%d" % [game.raid_theme, themed_n])
 		for rq in game.pals.duplicate(): # fresh raiders chew walls — sweep before they bite
 			if rq.raid and not rq.boss:
 				game.pals.erase(rq)
