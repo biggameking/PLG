@@ -1951,6 +1951,22 @@ func partner_aura(stat: String) -> float:
 		return 0.0
 	return float(PARTNER_AURAS.get(p.species_id, {}).get(stat, 0.0))
 
+# Palworld suit icons, text-style: top work types as two-letter codes
+const WORK_ABBR := {
+	"kindling": "KI", "watering": "WA", "planting": "PL", "handiwork": "HA",
+	"lumbering": "LU", "mining": "MI", "transporting": "TR", "gathering": "GA",
+	"farming": "FA", "cooling": "CO", "medicine": "ME", "electricity": "EL",
+}
+func work_str(spec: Dictionary) -> String:
+	var w: Dictionary = spec.get("work", {})
+	var ks := w.keys()
+	ks.sort_custom(func(a, b): return int(w[a]) > int(w[b]) \
+		or (int(w[a]) == int(w[b]) and str(a) < str(b)))
+	var out := ""
+	for k in ks:
+		out += "%s%d " % [WORK_ABBR.get(k, "?"), int(w[k])]
+	return out.strip_edges()
+
 func cycle_stance(uid: int) -> void:
 	# Palworld pal commands: the field pal obeys a standing order
 	var p: Pal = find_pal(uid)

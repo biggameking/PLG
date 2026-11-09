@@ -700,9 +700,10 @@ func draw_palbox(r: Vector2) -> void:
 			click_rects.append({"rect": brect, "act": "butcher", "arg": rd["uid"]})
 			draw_string(font, Vector2(brect.position.x + 3, y0), "[x]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c0392b"))
-		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s" % [rd["name"], "☆" if rd["lucky"] else "", rd["sex"], rd["star_s"], rd["lv"], rd["talent"],
+		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s %s" % [rd["name"], "☆" if rd["lucky"] else "", rd["sex"], rd["star_s"], rd["lv"], rd["talent"],
 			int(maxi(0, rd["hp"])), int(rd["max_hp"]), rd["ko_t"],
-			" [%s]" % rd["ailment"] if rd["ailment"] != "" else ""]
+			" [%s]" % rd["ailment"] if rd["ailment"] != "" else "",
+			str(rd.get("wk", "")).left(15)]
 		draw_string(font, Vector2(cx0, y0), label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if rd["ko"] or rd["ailment"] != "" else Color("#c8d3d5"))
 
@@ -721,7 +722,8 @@ func party_rows() -> Array:
 			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]), "name": sp.get("name", str(d["sid"])),
 				"lucky": d["lucky"], "sex": d["sex"], "lv": d["lv"], "talent": d["talent"],
 				"hp": d["hp"], "max_hp": d["max_hp"], "ailment": d["ailment"],
-				"star_s": st, "out": d["out"], "sub": "resting", "stance": str(d.get("stance", "auto"))})
+				"star_s": st, "out": d["out"], "sub": "resting", "stance": str(d.get("stance", "auto")),
+				"wk": str(d.get("wk", ""))})
 	else:
 		var cur := game.party_pal()
 		for uid in game.party:
@@ -734,7 +736,7 @@ func party_rows() -> Array:
 				"sex": p.sex, "lv": p.level, "talent": p.talent, "hp": int(p.hp),
 				"max_hp": int(p.max_hp), "ailment": p.ailment,
 				"star_s": star_str(p), "out": p == cur, "sub": passive_str(p).left(14),
-				"stance": p.stance})
+				"stance": p.stance, "wk": game.work_str(p.spec)})
 	return out
 
 func box_rows() -> Array:
@@ -753,14 +755,16 @@ func box_rows() -> Array:
 				"name": sp.get("name", str(d["sid"])), "lucky": d["lucky"], "sex": d["sex"],
 				"lv": d["lv"], "talent": d["talent"], "hp": d["hp"], "max_hp": d["max_hp"],
 				"ailment": d["ailment"], "fav": d["fav"], "star_s": st,
-				"ko": d["hp"] <= 0, "ko_t": " [KO]" if d["hp"] <= 0 else ""})
+				"ko": d["hp"] <= 0, "ko_t": " [KO]" if d["hp"] <= 0 else "",
+				"wk": str(d.get("wk", ""))})
 	else:
 		for bp in game.box:
 			out.append({"arg": bp, "uid": bp.uid, "name": bp.spec["name"], "lucky": bp.lucky,
 				"sex": bp.sex, "lv": bp.level, "talent": bp.talent, "hp": int(bp.hp),
 				"max_hp": int(bp.max_hp), "ailment": bp.ailment, "fav": bp.fav,
 				"star_s": star_str(bp), "ko": bp.hp <= 0,
-				"ko_t": " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if bp.hp <= 0 else ""})
+				"ko_t": " [KO %ds]" % int(maxi(0.0, bp.revive_t - game.t)) if bp.hp <= 0 else "",
+				"wk": game.work_str(bp.spec)})
 	return out
 
 func draw_shop(r: Vector2) -> void:

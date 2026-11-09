@@ -330,7 +330,8 @@ func box_state_pack() -> Array:
 	var arr := []
 	for bp in game.box:
 		arr.append([bp.uid, bp.species_id, bp.level, int(bp.hp), int(bp.max_hp),
-			bp.sex, bp.lucky, bp.talent, str(bp.ailment), bp.fav, int(bp.star)])
+			bp.sex, bp.lucky, bp.talent, str(bp.ailment), bp.fav, int(bp.star),
+			game.work_str(bp.spec)])
 	return arr
 
 func party_state_pack() -> Array:
@@ -346,7 +347,7 @@ func party_state_pack() -> Array:
 			continue
 		arr.append([p.uid, p.species_id, p.level, int(p.hp), int(p.max_hp),
 			p.sex, p.lucky, p.talent, str(p.ailment), p.fav, int(p.star),
-			p == out_pal, p.stance])
+			p == out_pal, p.stance, game.work_str(p.spec)])
 		if arr.size() >= 8:
 			break
 	return arr
@@ -366,7 +367,8 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 			"talent": clampi(int(e[7]) if e.size() > 7 else 50, 0, 100),
 			"ailment": str(e[8]) if e.size() > 8 else "",
 			"fav": e.size() > 9 and e[9] == true,
-			"star": clampi(int(e[10]) if e.size() > 10 else 0, 0, 4)})
+			"star": clampi(int(e[10]) if e.size() > 10 else 0, 0, 4),
+			"wk": str(e[11]) if e.size() > 11 else ""})
 		if nb.size() >= 512: # hostile/hostile host can't stuff memory either
 			break
 	game.net_box = nb
@@ -383,7 +385,8 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 			"fav": e2.size() > 9 and e2[9] == true,
 			"star": clampi(int(e2[10]) if e2.size() > 10 else 0, 0, 4),
 			"out": e2.size() > 11 and e2[11] == true,
-			"stance": str(e2[12]) if e2.size() > 12 else "auto"})
+			"stance": str(e2[12]) if e2.size() > 12 else "auto",
+			"wk": str(e2[13]) if e2.size() > 13 else ""})
 		if np.size() >= 8:
 			break
 	game.net_party = np
