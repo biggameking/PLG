@@ -45,7 +45,9 @@ func add_glow(spr: Sprite2D, radius: int) -> void:
 	L.color = Color(1.0, 0.78, 0.45)
 	spr.add_child(L)
 var structures := {}          # Vector2i -> {id, node, timer, workers:[]}
-var palbox_pos := Vector2i(-1, -1)  # base anchor; -1 = no base yet
+var palbox_pos := Vector2i(-1, -1)  # primary base anchor; -1 = no base yet
+const MAX_EXTRA_BOXES := 2          # Palworld runs up to 3 bases — 1 primary + 2 outposts
+var extra_boxes: Array[Vector2i] = [] # outpost palbox origins, shared box network
 var tech_points := 0
 var unlocked := ["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 var build_sel := -1           # index into buildable list; -1 off
@@ -544,17 +546,20 @@ func respawn_player() -> void:
 	player.hunger = 40.0
 	player.statuses.clear()
 	if palbox_pos.x >= 0:
-		player.pos = nearest_free(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
+		var nb := nearest_palbox(player.pos)
+		player.pos = nearest_free(nb.x + 0.5, nb.y + 2.5)
 	else: # no base yet: back to the landing point, not back into the jaws
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5)
 	log_msg("You wake up battered at base…")
 
 func use_waypoint() -> void:
-	# Palworld fast travel, bounded: a touched waypoint blinks you home
+	# Palworld fast travel, bounded: a touched waypoint blinks you home —
+	# outpost palboxes answer too, so pick whichever is closest
 	if palbox_pos.x < 0:
 		log_msg("The waypoint hums… but there's no palbox to answer")
 		return
-	player.pos = nearest_free(palbox_pos.x + 0.5, palbox_pos.y + 2.5)
+	var nb := nearest_palbox(player.pos)
+	player.pos = nearest_free(nb.x + 0.5, nb.y + 2.5)
 	player.sync_screen()
 	floater(player.pos, "blink!", "#7fc8f8")
 	log_msg("The waypoint pulls you back to base")
@@ -933,10 +938,29 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 				return false # trees/bushes clear themselves; outcrops don't
 	return true
 
+func palbox_count() -> int:
+	var seen := []
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st["id"] == "palbox" and st not in seen:
+			seen.append(st) # footprint cells share one st dict — dedupe
+	return seen.size()
+
+func nearest_palbox(at: Vector2) -> Vector2i:
+	var best := palbox_pos
+	var bd := INF
+	if palbox_pos.x >= 0:
+		bd = at.distance_to(Vector2(palbox_pos))
+	for bx2 in extra_boxes:
+		var dd := at.distance_to(Vector2(bx2))
+		if dd < bd:
+			bd = dd; best = bx2
+	return best
+
 func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES[sid]
-	if sid == "palbox" and has_structure("palbox"):
-		log_msg("You can only run one base")  # palbox_pos is a single anchor
+	if sid == "palbox" and palbox_count() >= 1 + MAX_EXTRA_BOXES:
+		log_msg("Max %d palboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))
 		return false
 	for c in s.get("cost", []):
 		if item_count(c[0]) < c[1]:
@@ -985,8 +1009,12 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 			structures[Vector2i(tx + dx, ty + dy)] = st
 			world.structures[ci0] = st
 	if sid == "palbox":
-		palbox_pos = Vector2i(tx, ty)
-		log_msg("Base established! Assign pals with F.")
+		if palbox_pos.x < 0:
+			palbox_pos = Vector2i(tx, ty)
+			log_msg("Base established! Assign pals with F.")
+		else:
+			extra_boxes.append(Vector2i(tx, ty))
+			log_msg("Outpost palbox online — shared box network")
 	log_msg("Built %s" % s["name"])
 	return true
 
@@ -1019,7 +1047,11 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 			structures[Vector2i(tx + dx, ty + dy)] = st
 			world.structures[world.idx(tx + dx, ty + dy)] = st
 	if sid == "palbox":
-		palbox_pos = Vector2i(tx, ty)
+		var o := Vector2i(tx, ty)
+		if palbox_pos.x < 0:
+			palbox_pos = o
+		elif o != palbox_pos and o not in extra_boxes:
+			extra_boxes.append(o)
 	return true
 
 # X-key demolish: removes the structure under a tile, refunds half cost,
@@ -1049,7 +1081,16 @@ func demolish_at(at: Vector2) -> bool:
 	if chest_ref == st:
 		chest_ref = null # the panel's container just died — stop referencing it
 	if sid == "palbox":
-		palbox_pos = Vector2i(-1, -1)
+		var origin: Vector2i = cells[0]
+		for cc in cells:
+			if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
+				origin = cc
+		if origin == palbox_pos:
+			palbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
+			if palbox_pos.x >= 0:
+				log_msg("Outpost promoted to primary base")
+		else:
+			extra_boxes.erase(origin)
 	log_msg("Demolished %s (50%% refund)" % StructureData.STRUCTURES[sid]["name"])
 	return true
 
@@ -1406,7 +1447,8 @@ func deploy_to_base(p: Pal) -> void:
 		pals.append(p)
 	p.mode = "base"
 	p.job_site = null
-	p.pos = nearest_free(palbox_pos.x + 2.0, palbox_pos.y + 2.5)
+	var db := nearest_palbox(p.pos)
+	p.pos = nearest_free(db.x + 2.0, db.y + 2.5)
 	log_msg("%s deployed at base" % p.spec["name"])
 
 func base_to_box(p: Pal) -> void:
@@ -1679,6 +1721,7 @@ func save_game() -> void:
 				var r: Dictionary = br.duplicate()
 				r["at"] = maxf(0.0, br["at"] - t) # store remaining time — t restarts on load
 				return r),
+		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -1862,6 +1905,12 @@ func load_game() -> bool:
 				party.append(pals[pi].uid)
 	else: # pre-party_idx saves stored raw uids — new pals got fresh uids, so old refs are dead
 		party = party.filter(func(u): return find_pal(u) != null)
+	var pbx_sv := Vector2i(-9999, -9999) # saved primary palbox, if the save is new enough
+	var pv = d.get("pbx", [])
+	if pv is Array and pv.size() >= 2:
+		pbx_sv = Vector2i(int(pv[0]), int(pv[1]))
+	palbox_pos = Vector2i(-1, -1) # rebuilt below — stale state must not skip the first palbox
+	extra_boxes.clear()
 	for ks in d["structures"]:
 		var parts: PackedStringArray = ks.split(",")
 		if parts.size() < 2:
@@ -1906,7 +1955,15 @@ func load_game() -> bool:
 				structures[Vector2i(tx + dx, ty + dy)] = st
 				world.structures[world.idx(tx + dx, ty + dy)] = st
 		if sid == "palbox":
-			palbox_pos = Vector2i(tx, ty)
+			var o := Vector2i(tx, ty)
+			if o == pbx_sv:
+				if palbox_pos.x >= 0 and palbox_pos != o and palbox_pos not in extra_boxes:
+					extra_boxes.append(palbox_pos) # earlier guess demoted
+				palbox_pos = o
+			elif palbox_pos.x < 0:
+				palbox_pos = o
+			elif o != palbox_pos and o not in extra_boxes and extra_boxes.size() < MAX_EXTRA_BOXES:
+				extra_boxes.append(o)
 	for pj in pending_jobs:
 		var parts2: PackedStringArray = pj[1].split(",")
 		if parts2.size() < 2:
@@ -2392,6 +2449,7 @@ func regenerate(s: int) -> void:
 			sp0["node"].queue_free()
 	spheres_flying.clear()
 	palbox_pos = Vector2i(-1, -1)
+	extra_boxes.clear() # outpost network dies with the world
 	grotto_pos = Vector2i(-1, -1)
 	grotto_room2 = Vector2i(-1, -1)
 	boss_respawns.clear() # the old world's dens died with it

@@ -543,6 +543,32 @@ func run() -> void:
 		game.use_waypoint()
 		check("waypoint blinks", p.pos.distance_to(
 			Vector2(game.palbox_pos.x + 0.5, game.palbox_pos.y + 2.5)) < 6.0)
+	# outpost palbox: a second box joins the shared network, nearest answers
+	var ob_ok := false
+	var pbx0 := int(game.palbox_pos.x); var pby0 := int(game.palbox_pos.y)
+	for r3 in range(4, 40) if game.palbox_pos.x >= 0 else []:
+		var cc := Vector2i(pbx0 + r3, pby0)
+		var clear := true
+		for dy3 in range(2):
+			for dx3 in range(2):
+				var k3 := cc + Vector2i(dx3, dy3)
+				if not game.world.in_bounds(k3.x, k3.y) or game.world.blocked(k3.x, k3.y) \
+						or game.structures.has(k3):
+					clear = false
+		if clear and game.place_free("palbox", cc.x, cc.y):
+			ob_ok = true
+			break
+	if ob_ok:
+		check("outpost palbox", game.extra_boxes.size() == 1 and game.palbox_pos.x >= 0,
+			"extra=%d" % game.extra_boxes.size())
+		var ob_pos: Vector2i = game.extra_boxes[0]
+		p.pos = Vector2(ob_pos.x + 0.5, ob_pos.y + 0.5)
+		check("nearest palbox", game.nearest_palbox(p.pos) == ob_pos)
+		# demolishing the primary promotes the outpost rather than orphaning base
+		game.demolish_at(Vector2(game.palbox_pos.x + 0.5, game.palbox_pos.y + 0.5))
+		check("outpost promoted", game.palbox_pos == ob_pos and game.extra_boxes.is_empty())
+	else:
+		check("outpost palbox", true, "skipped: no room / no base this seed")
 	# den refill: a slain boss schedules a respawn at its home ~1.5 days on
 	if legend:
 		var lhome: Vector2 = legend.home
