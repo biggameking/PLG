@@ -257,7 +257,9 @@ func interact() -> void:
 			"incubator":
 				var inc = st.get("egg_inc")
 				if inc is Dictionary:
-					game.log_msg("Incubating: %ds left" % int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t)))
+					var hint: String = game.egg_hint(inc.get("pair"))
+					game.log_msg("Incubating %s: %ds left" % [hint if hint != "" else "egg",
+						int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t))])
 				elif game.item_count("pal_egg") > 0:
 					game.deposit_egg()
 				else:

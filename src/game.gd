@@ -2619,7 +2619,22 @@ func deposit_egg() -> void:
 			warm_hint = true
 			break
 	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0}
-	log_msg("Egg incubating - ready in 90s%s" % ("" if warm_hint else " (a campfire would hurry it)"))
+	var hint := egg_hint(pair)
+	log_msg("Egg incubating - ready in 90s%s%s"
+		% ["" if warm_hint else " (a campfire would hurry it)",
+			" — " + hint if hint != "" else ""])
+
+func egg_hint(pair) -> String:
+	# Palworld tells you what's inside: named pairings show their species,
+	# anything else just says which bloodline it takes after
+	if pair is Array and pair.size() >= 2:
+		var combo: String = BREED_COMBOS.get("%s+%s" % [pair[0], pair[1]],
+			BREED_COMBOS.get("%s+%s" % [pair[1], pair[0]], ""))
+		if combo != "":
+			return str(SpeciesData.species_of(combo).get("name", combo))
+		var pn: String = str(SpeciesData.species_of(str(pair[0])).get("name", str(pair[0])))
+		return "%s line" % pn
+	return ""
 
 func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	var inc = st.get("egg_inc")
