@@ -1040,6 +1040,19 @@ func run() -> void:
 				game.pals.erase(rq)
 				if rq.get_parent(): rq.get_parent().remove_child(rq)
 				rq.free()
+	# supply drop: the crate scatters real loot stacks near the player
+	var d_sup := game.drops.size()
+	var landed := false
+	for att in 3: # a full map can legitimately whiff a landing spot — retry
+		game.supply_t = 0.01
+		game.tick_supply(1.0)
+		if game.drops.size() > d_sup:
+			landed = true
+			break
+	check("supply drop", landed and game.supply_t > 300.0,
+		"drops %d->%d next=%.0f" % [d_sup, game.drops.size(), game.supply_t])
+	for dd2 in game.drops.duplicate(): # sweep the crate — leave the field clean
+		game.take_drop(dd2)
 	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
 	var wpts := 0
 	for ks in game.structures:

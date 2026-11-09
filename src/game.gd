@@ -1153,6 +1153,7 @@ func _process(dt: float) -> void:
 			queue_redraw_decor()
 	# base raid waves
 	tick_raid(dt)
+	tick_supply(dt)
 	for q in pals.duplicate(): # stale raiders wander off instead of stacking up
 		if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
 			pals.erase(q)
@@ -2441,6 +2442,31 @@ func cycle_work_mode() -> void:
 	floater(player.pos, "Work: %s" % wm["name"], "#e8d44d")
 	log_msg("Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)"
 		% [wm["name"], wm["prod"], wm["san"]])
+
+var supply_t := 300.0 # Palworld's wandering care package — lands near the player
+func tick_supply(dt: float) -> void:
+	supply_t -= dt
+	if supply_t > 0.0:
+		return
+	supply_t = 360.0 + rng.next() * 300.0
+	# a crate scatters a few stacks on open ground within sight-ish range
+	for try in 40:
+		var ang := rng.next() * TAU
+		var r := 8.0 + rng.next() * 18.0
+		var tx := int(player.pos.x + cos(ang) * r); var ty := int(player.pos.y + sin(ang) * r)
+		if not world.in_bounds(tx, ty) or world.blocked(tx, ty):
+			continue
+		var loot := [["ancient_part", 2]]
+		loot.append([["mega_sphere", "giga_sphere"][mini(day / 6, 1)], rng.int_range(2, 4)])
+		loot.append([["baked_berries", "jam_bun", "bread"][rng.int_range(0, 2)], rng.int_range(2, 4)])
+		loot.append(["gold_coin", rng.int_range(10, 25)])
+		for i in loot.size():
+			var li: Array = loot[i]
+			spawn_drop(str(li[0]), int(li[1]),
+				Vector2(tx + 0.5 + (i % 2) * 0.8, ty + 0.5 + (i / 2) * 0.8))
+		floater(Vector2(tx + 0.5, ty + 0.5), "SUPPLY DROP!", "#ffd76e")
+		log_msg("A supply crate lands nearby — grab it before the locals do")
+		return
 
 var raid_warned := false # 30s heads-up — Palworld flashes the raid horn early
 func tick_raid(dt: float) -> void:
