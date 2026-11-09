@@ -878,6 +878,34 @@ func summon_raid() -> bool:
 	log_msg("RAID BOSS: %s Lv45 approaches your base!" % bp.spec["name"])
 	return true
 
+var assist_t := 0.0
+
+func tick_daedream() -> void:
+	# Daedream's Dream Chaser (Palworld's weirdest trick): a daedream riding
+	# BENCHED in your party still takes pot-shots at whatever you're fighting.
+	var lead := party_pal()
+	if lead == null or lead.mode != "partner" or lead.hp <= 0:
+		return
+	var d: Pal = null
+	for i in range(1, party.size()):
+		var bp := bench_pal_of(party[i])
+		if bp != null and bp.species_id == "daedream" and bp.hp > 0:
+			d = bp
+			break
+	if d == null:
+		return
+	var tgt: Pal = null
+	if is_instance_valid(focus_target) and focus_target.hp > 0 and t < focus_t:
+		tgt = focus_target # it chases YOUR mark first — it's in the name
+	else:
+		tgt = nearest_wild(lead.pos, 10.0)
+	if tgt == null or tgt.mode != "wild":
+		return
+	var datk := Combat.stat_at(d.spec["atk"], d.level, d.talent)
+	tgt.hit(Combat.damage(datk, 14, Combat.stat_at(tgt.spec["def"],
+		tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult(), 1.0, rng), 1.0, true)
+	floater(tgt.pos, "dream chaser!", "#b06ee8")
+
 func cap_power_of(target: Pal) -> float:
 	# luckies resist; Palworld's real gate is level — a lv50 shrugs off a
 	# ball that would bag a lv5, which is what pushes the sphere ladder
@@ -1254,6 +1282,10 @@ func _process(dt: float) -> void:
 	tick_production(dt)
 	tick_merchant(dt)
 	tick_boss_respawns()
+	assist_t += dt
+	if assist_t >= 3.0:
+		assist_t = 0.0
+		tick_daedream()
 	spoil_t += dt
 	if spoil_t >= 480.0: # perishables rot on their own clock — local bag, client-safe
 		spoil_t = 0.0

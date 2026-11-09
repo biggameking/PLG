@@ -461,7 +461,26 @@ func run() -> void:
 		p.hp = hp_s0; p.shield_t = 0.0; p.shield_n = 0.0
 		check("roly poly shield", blocked and leaked,
 			"blocked=%s leaked=%s" % [blocked, leaked])
-		for tmp2 in [cr, lay, pg, lb]:
+		# Dream Chaser (Palworld's daedream trick): BENCHED party daedream
+		# still snipes at the deployed partner's fight
+		var dd: Pal = game.gen_pal("daedream", 10, p.pos)
+		dd.mode = "bench"
+		game.bench.append(dd)
+		var dlead: Pal = game.gen_pal("cattiva", 10, p.pos)
+		dlead.mode = "partner"
+		game.pals.append(dlead)
+		var party0: Array = game.party.duplicate()
+		game.party.insert(0, dlead.uid); game.party.append(dd.uid)
+		wt.hp = 2000 # the cannon/flamethrower may have dropped it — full bar for a clean shot
+		var wthp4 := wt.hp
+		game.focus_target = wt; game.focus_t = game.t + 4.0 # YOUR mark is its mark
+		game.tick_daedream()
+		check("dream chaser", wt.hp < wthp4, "hp=%.0f" % wt.hp)
+		game.focus_target = null; game.focus_t = 0.0
+		game.party = party0
+		game.bench.erase(dd)
+		game.pals.erase(dlead)
+		for tmp2 in [cr, lay, pg, lb, dd, dlead]:
 			if is_instance_valid(tmp2) and tmp2.get_parent():
 				tmp2.get_parent().remove_child(tmp2)
 			if is_instance_valid(tmp2):
