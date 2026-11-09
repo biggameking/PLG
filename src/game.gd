@@ -613,7 +613,7 @@ func generator_active() -> bool:
 		var sg = structures[kg]
 		if sg.get("id") == "generator":
 			for w in sg["workers"]:
-				if is_instance_valid(w) and w.san >= 15.0: # a slacking pal doesn't keep the lights on
+				if is_instance_valid(w) and w.san >= 15.0 and w.hunger < 80.0: # a slacking pal doesn't keep the lights on
 					return true
 	return false
 
@@ -1384,7 +1384,7 @@ func tick_repairs(dt: float) -> void:
 	# slowly mend damaged structures (assigned pals are busy elsewhere)
 	var fixers := 0.0
 	for q in pals:
-		if q.mode == "base" and q.hp > 0 and q.san >= 15.0 and q.job_site == null \
+		if q.mode == "base" and q.hp > 0 and q.san >= 15.0 and q.hunger < 80.0 and q.job_site == null \
 				and not q.has_status("sleep") \
 				and q.spec.get("work", {}).get("handiwork", 0) > 0:
 			fixers += 1.0
@@ -1613,7 +1613,7 @@ func tick_production(dt: float) -> void:
 							and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
 						p.take_dps(int(st["spike"]))
 		var prod: Array = job.get("produces", [])
-		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0 and not w.has_status("sleep"))
+		var active: Array = st["workers"].filter(func(w): return w.san >= 15.0 and w.hunger < 80.0 and not w.has_status("sleep"))
 		if prod.is_empty() or active.is_empty():
 			continue
 		var cons: Array = job.get("consumes", [])

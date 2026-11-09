@@ -462,6 +462,23 @@ func run() -> void:
 			ivp.job_site = null
 			game.pals.erase(ivp); ivp.free()
 
+			# hungry pals slack off (Palworld): starving crews stop producing
+			var hg: Pal = game.gen_pal("lamball", 5, game.player.pos)
+			hg.mode = "base"; hg.san = 90.0; hg.ailment = ""
+			var wsv4: Array = mine_st["workers"].duplicate()
+			var tsv4: float = mine_st["timer"]
+			mine_st["workers"] = [hg]; hg.job_site = mine_st
+			hg.hunger = 90.0; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var starved := float(mine_st["timer"])
+			hg.hunger = 40.0; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			check("hungry pals slack", starved == 0.0 and float(mine_st["timer"]) > 0.0,
+				"starved=%.1f fed=%.1f" % [starved, mine_st["timer"]])
+			mine_st["workers"] = wsv4; mine_st["timer"] = tsv4
+			hg.job_site = null
+			game.pals.erase(hg); hg.free()
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
