@@ -690,6 +690,24 @@ func run() -> void:
 	game.pals.erase(rep2)
 	if rep2.get_parent(): rep2.get_parent().remove_child(rep2)
 	rep2.free()
+	# host-side catch relay: a client's sphere lands in the shared palbox
+	var ncp: Pal = game.gen_pal("chikipi", 3, p.pos)
+	ncp.mode = "wild"; ncp.hp = 1; game.pals.append(ncp)
+	var nc_box0 := game.box.size()
+	var tries_c := 0
+	while tries_c < 400 and ncp in game.pals: # ~97%/try — effectively deterministic
+		game.net_catch(ncp.uid, "pal_sphere", false, 5, 7)
+		tries_c += 1
+	check("net catch to box", ncp not in game.pals and game.box.size() == nc_box0 + 1
+		and ncp.mode == "box" and tries_c < 400, "tries=%d" % tries_c)
+	# forged item ids never get a roll
+	var ncp2: Pal = game.gen_pal("chikipi", 3, p.pos)
+	ncp2.mode = "wild"; ncp2.hp = 1; game.pals.append(ncp2)
+	game.net_catch(ncp2.uid, "wood", false, 5, 7)
+	check("net catch validates item", ncp2 in game.pals)
+	game.pals.erase(ncp2)
+	if ncp2.get_parent(): ncp2.get_parent().remove_child(ncp2)
+	ncp2.free()
 	# raid boss
 	game.add_item("boss_sigil", 1)
 	var n1 := game.pals.size()

@@ -742,6 +742,12 @@ func resolve_sphere(sp) -> void:
 	var target: Pal = sp["target"]
 	if not is_instance_valid(target) or target.hp <= 0 or target.mode != "wild":
 		return # dead, freed, or already caught by another sphere in flight
+	if target.net_id > 0 and net != null and not net.is_host:
+		# a replica can't be rolled locally — the host owns the outcome;
+		# the sphere's flight was just theatre, the catch lands by snapshot
+		net.rpc("sphere_catch", target.net_id, sp["sid"],
+			sign(player.pos.x - target.pos.x) == -target.dir, player.capture_level)
+		return
 	if target.boss:
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
@@ -780,6 +786,40 @@ func resolve_sphere(sp) -> void:
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
+		target.aggro = 0 if target.hostile() >= 1 else -1
+
+func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> void:
+	# Host-authoritative catch for a client's throw. The wire id is our own
+	# uid (client replicas mirror it). The world is shared, so a caught pal
+	# goes to the shared palbox — same as a full-party catch.
+	var target: Pal = find_pal(nid)
+	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss:
+		return
+	var sp_pow: float = float(ItemData.ITEMS.get(sid, {}).get("spherePower", 0.0))
+	if sp_pow <= 0.0:
+		return # forged item ids don't get free rolls
+	var hp_frac := maxf(0, target.hp) / target.max_hp
+	var cap_pow: float = target.spec["capturePower"] * (1.35 if target.lucky else 1.0)
+	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
+		sp_pow, target.any_status(), behind, cap_lv))
+	if randf() < chance:
+		if box.size() >= MAX_BOX:
+			floater(target.pos, "BOX FULL", "#e8963c")
+			log_msg("Palbox is full (%d) - %s got away" % [MAX_BOX, target.spec["name"]])
+			return
+		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
+		log_msg("Player %d caught %s Lv%d — into the palbox" % [pid, target.spec["name"], target.level])
+		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
+		target.statuses.clear()
+		target.aggro = -1
+		target.net_id = 0 # it's our pal now — replicas stop being tracked
+		target.mode = "box"
+		box.append(target)
+		pals.erase(target)
+		box_pal(target)
+	else:
+		floater(target.pos, "…broke free", "#e8963c")
+		log_msg("%s broke free from player %d's sphere" % [target.spec["name"], pid])
 		target.aggro = 0 if target.hostile() >= 1 else -1
 
 func try_harvest(at: Vector2, face: Vector2) -> void:

@@ -177,13 +177,21 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 @rpc("any_peer", "call_remote", "unreliable")
 func pal_hit(nid: int, dmg: float) -> void:
 	# Client→host combat relay: a client's swing lands on the host's real pal.
-	# Host is the authority — validate the id, clamp the roll, resolve locally.
+	# The wire id IS the host uid (clients mirror it into net_id) — find_pal,
+	# not find_net_pal: host-side pals carry net_id=0.
 	if not is_host:
 		return
-	var p := game.find_net_pal(int(nid))
+	var p := game.find_pal(int(nid))
 	if p == null or p.hp <= 0:
 		return
 	p.hit(clampf(float(dmg), 0.0, 2000.0), 1.0, false)
+
+@rpc("any_peer", "call_remote", "reliable")
+func sphere_catch(nid: int, sid: String, behind: bool, cap_lv: int) -> void:
+	if not is_host:
+		return
+	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 10),
+		multiplayer.get_remote_sender_id())
 
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
