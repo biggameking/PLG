@@ -63,7 +63,9 @@ func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	name = "pal_%s_%d" % [sp_id, uid] # debuggable in orphan/crash dumps
 	roll_passives()
 	if lucky and "lucky" not in passives:
-		passives.append("lucky") # Lucky pals always carry their signature passive
+		passives.push_front("lucky") # signature passive always survives the 4-slot trim
+		while passives.size() > 4:
+			passives.pop_back()
 	apply_bonuses() # folds passives + star/alpha/boss hp multipliers into max_hp
 	hp = max_hp
 	setup_visuals("res://assets/pals/%s_f0.png" % sp_id, "res://assets/pals/%s_f1.png" % sp_id)
@@ -590,7 +592,11 @@ func apply_skill_status(sk: Dictionary, is_behind: bool = false) -> void:
 func roll_passives() -> void:
 	passives.clear()
 	var keys := PassiveData.PASSIVES.keys()
-	var n := 1 + (1 if game.rng.chance(0.35) else 0)
+	# Palworld trait slots: 1 guaranteed, then 45%/30%/15% for slots 2-4
+	var n := 1
+	if game.rng.chance(0.45): n += 1
+	if game.rng.chance(0.30): n += 1
+	if game.rng.chance(0.15): n += 1
 	for i in n:
 		var k: String = keys[game.rng.int_range(0, keys.size() - 1)]
 		if k not in passives:

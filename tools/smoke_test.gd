@@ -774,6 +774,20 @@ func run() -> void:
 	check("net pal spawns", game.pals.size() == np0 + 1)
 	var npal: Pal = game.pals[game.pals.size() - 1]
 	check("net pal lucky", npal.lucky and "lucky" in npal.passives)
+	# Palworld trait slots: 1-4 passives, and the lucky signature always survives
+	var max_ps := 0; var over2_ps := 0
+	for i in 40:
+		var tpp: Pal = game.gen_pal("lamball", 3, p.pos)
+		max_ps = maxi(max_ps, tpp.passives.size())
+		if tpp.passives.size() >= 3: over2_ps += 1
+		if tpp.get_parent(): tpp.get_parent().remove_child(tpp)
+		tpp.free()
+	check("trait slots 1-4", max_ps <= 4 and max_ps >= 1 and over2_ps > 0,
+		"max=%d over2=%d" % [max_ps, over2_ps])
+	var lp2: Pal = game.gen_pal("lamball", 3, p.pos, true)
+	check("lucky signature kept", lp2.lucky and "lucky" in lp2.passives and lp2.passives.size() <= 4)
+	if lp2.get_parent(): lp2.get_parent().remove_child(lp2)
+	lp2.free()
 	game.pals.erase(npal)
 	if npal.get_parent(): npal.get_parent().remove_child(npal)
 	npal.free()

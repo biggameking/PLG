@@ -2792,6 +2792,8 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		var npk: String = keys_p[rng.int_range(0, keys_p.size() - 1)]
 		if npk not in np.passives:
 			np.passives.append(npk)
+	while np.passives.size() > 4: # Palworld's 4-trait cap binds bloodlines too
+		np.passives.pop_back()
 	np.apply_bonuses()
 	np.hp = np.max_hp
 	if pair is Array and pair.size() >= 8: # egg moves: hatch with a parent skill
