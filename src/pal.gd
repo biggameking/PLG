@@ -456,7 +456,10 @@ func tick_needs(dt: float) -> void:
 		hp -= maxi(1, int(max_hp * 0.02)) # prolonged starvation costs real hp
 		if hp <= 0 and mode in ["base", "partner"]:
 			game.kill_pal(self, false)
-	if mode == "base" and san < 30 and game.has_structure("pal_bed"):
+	# recovery ladder: a hot spring outranks a straw mat (Palworld base comfort)
+	if mode == "base" and san < 70 and game.has_structure("hot_spring"):
+		san = minf(100.0, san + 10.0)
+	elif mode == "base" and san < 30 and game.has_structure("pal_bed"):
 		san = minf(100.0, san + 6.0)  # resting requires being AT the base
 
 func learned_skills() -> Array:

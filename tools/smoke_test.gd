@@ -454,6 +454,12 @@ func run() -> void:
 	for i in 3:
 		sleepy.tick_needs(1.5)
 	check("pal bed SAN regen", bed_ok and sleepy.san > 10.0, "san %.0f" % sleepy.san)
+	# hot spring outranks the bed: higher SAN ceiling, faster recovery
+	game.add_item("stone", 20); game.add_item("wood", 10); game.add_item("paldium", 3)
+	var spa_xy: Vector2i = free_xy.call("hot_spring")
+	sleepy.san = 50.0
+	sleepy.tick_needs(1.0)
+	check("hot spring SAN", spa_xy.x >= 0 and sleepy.san >= 59.0, "san %.0f" % sleepy.san)
 	# feed box eats berry when hungry
 	game.add_item("wood", 30); game.add_item("stone", 10)
 	free_xy.call("feed_box")

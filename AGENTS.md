@@ -28,6 +28,11 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
    pass type/shape/range checks before touching typed vars (see `load_game`).
    Bracket-access on foreign dicts is a crash — use `.get()`.
 6. **AI cost scales with `pals.size()`** — `MAX_PALS` is also a CPU guard.
+7. **New PNGs must be imported before headless runs.** After
+   `tools/gen_assets.py` creates a file, run
+   `godot --headless --path . --import` once — `load()` silently returns null
+   on unimported resources, and a null texture mid-`load_game` aborts the
+   rebuild. Every `spr.texture` consumer guards with the chest.png fallback.
    Far wild pals already tick at ~8Hz; keep new per-pal work behind the same
    accumulation pattern.
 7. After changes: smoke test must report 0 failures, and the exit banner must

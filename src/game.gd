@@ -855,6 +855,8 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 				return false
 	var spr := Sprite2D.new()
 	spr.texture = load("res://assets/structures/%s.png" % sid)
+	if spr.texture == null: # missing art must not crash placement (or orphan the node)
+		spr.texture = load("res://assets/structures/chest.png")
 	var p := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 	spr.position = Vector2(p.x, p.y - spr.texture.get_height() * 0.5 + 8)
 	entity_layer.add_child(spr)
@@ -1381,9 +1383,15 @@ func save_game() -> void:
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
 			"revive": maxf(0.0, bp.revive_t - t)})
 	var structs := {}
+	var seen_st := {} # one entry per structure — footprint cells share a st; writing
+	# them as separate records made rebuild order-dependent and ate buildings
 	for k in structures:
-		var inc = structures[k].get("egg_inc")
-		structs["%d,%d" % [k.x, k.y]] = {"id": structures[k]["id"], "store": structures[k].get("store", {}), "egg": structures[k].get("egg_parents"), "timer": structures[k].get("timer", 0.0), "hp": structures[k].get("hp", 200),
+		var st = structures[k]
+		if seen_st.has(st):
+			continue
+		seen_st[st] = true
+		var inc = st.get("egg_inc")
+		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200),
 			"inc": ({"pair": inc.get("pair"), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
@@ -1581,6 +1589,8 @@ func load_game() -> bool:
 			continue  # footprint cell of an already-rebuilt structure
 		var spr := Sprite2D.new()
 		spr.texture = load("res://assets/structures/%s.png" % sid)
+		if spr.texture == null: # a bad texture must not abort the rest of the load
+			spr.texture = load("res://assets/structures/chest.png")
 		var w: int = s.get("w", 2); var h: int = s.get("h", 2)
 		var pp := Iso.to_screen(tx + w * 0.5, ty + h * 0.5, world.elev_at(tx, ty))
 		spr.position = Vector2(pp.x, pp.y - spr.texture.get_height() * 0.5 + 8)

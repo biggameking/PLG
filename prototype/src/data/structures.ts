@@ -32,6 +32,7 @@ export interface StructureDef {
   walkable?: boolean;     // entities may cross (spikes still hurt hostiles)
   spike?: number;         // damage per tick to hostiles standing on it
   incubator?: boolean;    // hatches deposited pal eggs on a timer
+  spring?: number;        // SAN recovery strength (Palworld hot spring)
   playerBed?: boolean;
   desc: string;
 }
@@ -162,6 +163,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     cost: [["wood", 4], ["stone", 2]], walkable: true, spike: 6, hp: 100,
     desc: "Hostiles stepping on it bleed. Walkable, but rude.",
   },
+  hot_spring: {
+    id: "hot_spring", name: "Hot Spring", glyph: "♨", color: "#7ec8e3", w: 2, h: 2,
+    cost: [["stone", 20], ["wood", 10], ["paldium", 3]],
+    spring: 1, hp: 250, light: 1,
+    desc: "Steam does wonders. Base pals recover SAN faster than any bed.",
+  },
 };
 
 export interface TechNode {
@@ -204,4 +211,5 @@ export const TECH: TechNode[] = [
   { id: "spikes", name: "Wooden Spikes", tier: 3, cost: 1 },
   { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2 },
   { id: "glider", name: "Glider", tier: 4, cost: 2 },
+  { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
 ];

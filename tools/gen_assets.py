@@ -763,6 +763,14 @@ def make_structure(sid, color, w, h):
             x = W//2 - 16 + i * 11
             d.polygon([(x - 4, 44), (x + 4, 44), (x, 24)], fill=hxc("#c4a678") + (255,))
             d.line([(x, 30), (x, 24)], fill=hxc("#ede0c8") + (255,))
+    elif sid == "hot_spring":
+        # stone-rimmed pool with steam wisps
+        d.ellipse([W//2 - 22, 30, W//2 + 22, 48], fill=hxc("#6b6f72") + (255,))
+        d.ellipse([W//2 - 18, 32, W//2 + 18, 46], fill=hxc("#7ec8e3") + (255,))
+        d.ellipse([W//2 - 8, 34, W//2 + 8, 44], fill=hxc("#a8dff0") + (255,))
+        for i, x in enumerate((-10, 0, 10)):
+            d.arc([W//2 + x - 5, 10 + i * 2, W//2 + x + 5, 26 + i * 2], 200, 340,
+                  fill=hxc("#d8f4fa") + (255,), width=2)
     elif sid == "workbench":
         for dx in (-20, 16):
             d.rectangle([W//2 + dx, 38, W//2 + dx + 5, 52], fill=hxc("#5e462e") + (255,))
@@ -785,6 +793,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "cooler": ("#a8dff0", 1, 1), "oil_extractor": ("#4d565c", 2, 2),
     "pal_condenser": ("#7a5ac9", 2, 1), "incubator": ("#f2a0b5", 2, 2),
     "wooden_wall": ("#8a6d4d", 1, 1), "spikes": ("#a98a5e", 1, 1),
+    "hot_spring": ("#7ec8e3", 2, 2),
 }
 
 # =========================================================================

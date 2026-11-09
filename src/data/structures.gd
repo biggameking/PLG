@@ -646,6 +646,32 @@ const STRUCTURES = {
   "spike": 6,
   "hp": 100,
   "desc": "Hostiles stepping on it bleed. Walkable, but rude."
+ },
+ "hot_spring": {
+  "id": "hot_spring",
+  "name": "Hot Spring",
+  "glyph": "♨",
+  "color": "#7ec8e3",
+  "w": 2,
+  "h": 2,
+  "cost": [
+   [
+    "stone",
+    20
+   ],
+   [
+    "wood",
+    10
+   ],
+   [
+    "paldium",
+    3
+   ]
+  ],
+  "spring": 1,
+  "hp": 250,
+  "light": 1,
+  "desc": "Steam does wonders. Base pals recover SAN faster than any bed."
  }
 }
 
@@ -787,6 +813,12 @@ const TECH = [
   "name": "Glider",
   "tier": 4,
   "cost": 2
+ },
+ {
+  "id": "hot_spring",
+  "name": "Hot Spring",
+  "tier": 5,
+  "cost": 3
  },
  {
   "id": "mega_sphere",
