@@ -623,7 +623,29 @@ const ITEMS = {
   "stack": 1,
   "tech": "saddle",
   "price": 90,
-  "desc": "Palworld saddle: required in the pack to ride any mount, land or air."
+  "desc": "Palworld saddle: required in the pack to ride a land mount."
+ },
+ "sky_saddle": {
+  "id": "sky_saddle",
+  "name": "Sky Saddle",
+  "glyph": "◠",
+  "color": "#7fb8e8",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "sky_saddle",
+  "price": 160,
+  "desc": "Palworld saddle: required in the pack to ride a flying mount."
+ },
+ "wave_saddle": {
+  "id": "wave_saddle",
+  "name": "Wave Saddle",
+  "glyph": "◠",
+  "color": "#4d8a8a",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "wave_saddle",
+  "price": 140,
+  "desc": "Palworld saddle: required in the pack to ride a swimming mount."
  },
  "fishing_rod": {
   "id": "fishing_rod",
@@ -1212,6 +1234,22 @@ const RECIPES = [
   "cost": [["leather", 3], ["fiber", 8], ["wood", 4]],
   "station": "workbench",
   "work": 100
+ },
+ {
+  "id": "sky_saddle",
+  "tech": "sky_saddle",
+  "out": ["sky_saddle", 1],
+  "cost": [["leather", 4], ["fiber", 10], ["paldium", 2]],
+  "station": "workbench",
+  "work": 140
+ },
+ {
+  "id": "wave_saddle",
+  "tech": "wave_saddle",
+  "out": ["wave_saddle", 1],
+  "cost": [["leather", 4], ["fiber", 8], ["paldium", 2]],
+  "station": "workbench",
+  "work": 120
  },
  {
   "id": "fishing_rod",

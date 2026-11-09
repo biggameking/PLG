@@ -148,7 +148,7 @@ func run() -> void:
 		check("box->party", bp.uid in game.party and bp.mode == "partner")
 		# mount only if mountable — and saddled (Palworld pal gear)
 		if SpeciesData.mountable(bp.species_id):
-			game.add_item("saddle", 1)
+			game.add_item(game.saddle_for(bp), 1)
 			bp.pos = p.pos + Vector2(0.5, 0)
 			p.try_mount()
 			check("mount", p.mount == bp)
@@ -1451,12 +1451,15 @@ func run() -> void:
 	var m_ok: bool = (p.mount == snak) == SpeciesData.mountable("kelpsea")
 	check("mount gate", m_ok)
 	# Palworld: mounts need pal gear — no saddle, no ride
-	game.items.erase("saddle")
+	game.items.erase("saddle"); game.items.erase("sky_saddle"); game.items.erase("wave_saddle")
 	var bird: Pal = game.gen_pal("chikipi", 4, p.pos)
 	game.pals.append(bird); game.party.append(bird.uid); bird.mode = "partner"
 	p.try_mount()
 	check("mount needs saddle", p.mount == null)
-	game.add_item("saddle", 1)
+	game.add_item("saddle", 1) # land tack can't fly a bird
+	p.try_mount()
+	check("bird needs sky saddle", p.mount == null)
+	game.add_item("sky_saddle", 1)
 	p.try_mount()
 	var wcell := Vector2(-1, -1)
 	for i2 in World.WORLD_W * World.WORLD_H:
@@ -1469,11 +1472,20 @@ func run() -> void:
 	game.party.erase(bird.uid); game.pals.erase(bird)
 	if bird.get_parent(): bird.get_parent().remove_child(bird)
 	bird.free()
-	# swimming mount: a water-element mount ferries you across open water
+	# swimming mount: a water-element mount ferries you across open water —
+	# but only once its own wave saddle is in the pack
 	var surf: Pal = game.gen_pal("surfdog", 5, p.pos)
-	surf.mode = "partner"; game.pals.append(surf)
-	p.mount = surf
+	surf.mode = "partner"; game.pals.append(surf); game.party.append(surf.uid)
+	surf.pos = p.pos + Vector2(0.5, 0)
+	p.mount = null
+	game.items.erase("sky_saddle"); game.items.erase("saddle") # wrong tack won't swim
+	p.try_mount()
+	check("water mount needs wave saddle", p.mount == null)
+	game.add_item("wave_saddle", 1)
+	p.try_mount()
+	check("wave saddle mounts", p.mount == surf)
 	check("swim mount", wcell.x >= 0 and p.can_enter(wcell.x, wcell.y))
+	game.party.erase(surf.uid)
 	var landm: Pal = game.gen_pal("eikthyrdeer", 5, p.pos) # neutral — no surf legs
 	landm.mode = "partner"; game.pals.append(landm)
 	p.mount = landm

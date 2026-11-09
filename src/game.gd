@@ -198,6 +198,18 @@ func _ready() -> void:
 	spawn_wild()
 	spawn_lairs()
 
+func saddle_for(p: Pal) -> String:
+	# Palworld gear rule: every mount wants its own tack — flyers, swimmers
+	# and land runners each take a different saddle
+	if SpeciesData.body_of(p.species_id) == "bird":
+		return "sky_saddle"
+	if "water" in p.spec.get("elements", []):
+		return "wave_saddle"
+	return "saddle"
+
+func has_saddle_for(p: Pal) -> bool:
+	return item_count(saddle_for(p)) > 0
+
 func sphere_tiers() -> Array:
 	var out := []
 	for id in ["pal_sphere", "mega_sphere", "giga_sphere", "ultra_sphere", "legendary_sphere"]:

@@ -894,6 +894,18 @@ const TECH = [
   "cost": 1
  },
  {
+  "id": "wave_saddle",
+  "name": "Wave Saddle",
+  "tier": 3,
+  "cost": 1
+ },
+ {
+  "id": "sky_saddle",
+  "name": "Sky Saddle",
+  "tier": 4,
+  "cost": 2
+ },
+ {
   "id": "meat_cleaver",
   "name": "Meat Cleaver",
   "tier": 3,
