@@ -1456,8 +1456,19 @@ func tick_production(dt: float) -> void:
 			continue
 		if st["id"] == "incubator":
 			var inc = st.get("egg_inc")
-			if inc is Dictionary and t >= float(inc.get("ready_t", 0.0)):
-				hatch_incubated(key, st)
+			if inc is Dictionary:
+				# Palworld temperature rule, continuous: a campfire within 6
+				# cells keeps the egg toasty — countdown runs 1.5x while it burns
+				var warm := false
+				for k3 in structures:
+					if structures[k3]["id"] == "campfire" \
+							and Vector2(k3.x - key.x, k3.y - key.y).length() <= 6.0:
+						warm = true
+						break
+				if warm:
+					inc["ready_t"] = float(inc["ready_t"]) - dt * 0.5
+				if t >= float(inc.get("ready_t", 0.0)):
+					hatch_incubated(key, st)
 			continue
 		if st.get("spike", 0) > 0:
 			st["timer"] += dt # damage hostiles standing on the spikes every half second
@@ -2412,13 +2423,14 @@ func deposit_egg() -> void:
 		if q is Array and q.size() > 0:
 			pair = q.pop_front() # oldest egg's parentage
 			break
-	var dur := 90.0
-	for k3 in structures: # a warm incubator runs faster (Palworld temperature rule)
-		if structures[k3]["id"] == "campfire" and Vector2(k3.x, k3.y).distance_squared_to(Vector2(site.x, site.y)) < 36.0:
-			dur = 60.0
+	var warm_hint := false
+	for k3 in structures:
+		if structures[k3]["id"] == "campfire" \
+				and Vector2(k3.x - site.x, k3.y - site.y).length() <= 6.0:
+			warm_hint = true
 			break
-	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + dur}
-	log_msg("Egg incubating - ready in %ds%s" % [int(dur), " (warm)" if dur < 90.0 else ""])
+	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0}
+	log_msg("Egg incubating - ready in 90s%s" % ("" if warm_hint else " (a campfire would hurry it)"))
 
 func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	var inc = st.get("egg_inc")

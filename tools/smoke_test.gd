@@ -558,6 +558,27 @@ func run() -> void:
 			inc_st["egg_inc"]["ready_t"] = game.t - 1.0 # fast-forward
 			game.hatch_incubated(inc_k, inc_st)
 		check("hatch egg", game.pals.size() == n0 + 1 and not (inc_st and inc_st.has("egg_inc")))
+		# continuous warmth: a campfire by the incubator pulls ready_t in 1.5x
+		if inc_st:
+			var fire_k := Vector2i(-1, -1)
+			for off in [Vector2i(3,0), Vector2i(-3,0), Vector2i(0,3), Vector2i(0,-3), Vector2i(2,2)]:
+				var ck: Vector2i = inc_k + off
+				if game.world.in_bounds(ck.x, ck.y) and not game.structures.has(ck):
+					fire_k = ck; break
+			if fire_k.x >= 0:
+				game.structures[fire_k] = {"id": "campfire", "workers": [], "store": {}, "timer": 0.0}
+				inc_st["egg_inc"] = {"pair": null, "ready_t": game.t + 10.0}
+				game.tick_production(1.0)
+				var left_w: float = inc_st["egg_inc"]["ready_t"] - game.t # 10 - 0.5 bonus
+				game.structures.erase(fire_k)
+				var before_c: float = inc_st["egg_inc"]["ready_t"]
+				game.tick_production(1.0)
+				var cold_drop: float = before_c - inc_st["egg_inc"]["ready_t"]
+				check("incubator warmth", absf(left_w - 9.5) < 0.05 and cold_drop < 0.001,
+					"warm_left=%.2f cold_drop=%.3f" % [left_w, cold_drop])
+				inc_st.erase("egg_inc")
+			else:
+				check("incubator warmth", true, "skipped: no free neighbor")
 		# signature pair -> fixed third species (Palworld breeding combos)
 		var combo_st := {"egg_inc": {"pair": ["lamball", "chikipi", 50, 50, [], [], ["shockwave"], []], "ready_t": game.t}}
 		game.hatch_incubated(Vector2i(int(game.player.pos.x) + 2, int(game.player.pos.y)), combo_st)
@@ -942,6 +963,14 @@ func run() -> void:
 	for kk3 in game.structures:
 		if game.structures[kk3].get("id") == "logging_site" and not game.structures[kk3]["workers"].is_empty():
 			slacker = game.structures[kk3]["workers"][0]
+	if slacker == null: # seed-dependent crew — seat one ourselves rather than skip
+		var sl_k: Vector2i = free_xy.call("logging_site")
+		var sl_st = game.structures.get(sl_k)
+		if sl_st != null:
+			slacker = game.gen_pal("eikthyrdeer", 5, p.pos)
+			slacker.mode = "base"; slacker.job_site = sl_st
+			game.pals.append(slacker)
+			sl_st["workers"].append(slacker)
 	if slacker:
 		slacker.san = 5.0
 		var w0b := game.item_count("wood")
