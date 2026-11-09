@@ -1670,6 +1670,29 @@ func start_raid() -> void:
 
 # ---------- breeding ----------
 func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
+	# grazing produce (Palworld): every ranch pal drops its species good on its
+	# own timer — wool, eggs, milk, gold — independent of the breeding pair.
+	var ft: Dictionary = st.get("farm_t", {})
+	st["farm_t"] = ft
+	for w in st["workers"]:
+		if not is_instance_valid(w) or w.mode != "base" or w.san < 15.0:
+			continue
+		var fm: Dictionary = w.spec.get("farm", {})
+		if fm.is_empty():
+			continue
+		var acc: float = ft.get(w.uid, 0.0) + dt
+		if acc >= float(fm.get("per", 60)):
+			acc = 0.0
+			st["store"][fm["item"]] = st["store"].get(fm["item"], 0) + 1
+			floater(Vector2(key.x + 0.5, key.y + 0.5), "+%s" % fm["item"], "#a8e6a1")
+		ft[w.uid] = acc
+	for u2 in ft.keys(): # keep the ledger tight — workers come and go
+		var still := false
+		for w in st["workers"]:
+			if is_instance_valid(w) and w.uid == u2:
+				still = true
+		if not still:
+			ft.erase(u2)
 	var has_m := false
 	var has_f := false
 	for w in st["workers"]:

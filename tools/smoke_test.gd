@@ -325,6 +325,16 @@ func run() -> void:
 		game.pals.erase(cb)
 		if cb.get_parent(): cb.get_parent().remove_child(cb)
 		cb.free()
+		# grazing produce: a wool pal drops wool on its farm timer (Palworld)
+		var grazer: Pal = game.gen_pal("lamball", 3, p.pos + Vector2(4, 4))
+		game.pals.append(grazer); grazer.mode = "base"; grazer.san = 80.0
+		st_r["workers"].append(grazer); grazer.job_site = st_r
+		game.tick_ranch(ranch_k, st_r, 61.0)
+		check("ranch grazing", st_r["store"].get("wool", 0) >= 1, "store=%s" % str(st_r["store"]))
+		st_r["workers"].erase(grazer); grazer.job_site = null
+		game.pals.erase(grazer)
+		if grazer.get_parent(): grazer.get_parent().remove_child(grazer)
+		grazer.free()
 	else:
 		var dbg := ""
 		for q in game.pals:
