@@ -708,6 +708,35 @@ func run() -> void:
 			hg.job_site = null
 			game.pals.erase(hg); hg.free()
 
+	# Sphere Works (Palworld assembly line): a handy pal rolls spheres
+	for c0 in StructureData.STRUCTURES["sphere_factory"]["cost"]:
+		game.add_item(c0[0], int(c0[1]))
+	var sf_k: Vector2i = free_xy.call("sphere_factory")
+	var sf_st = game.structures.get(sf_k) if sf_k.x >= 0 else null
+	var chest5 = null
+	for kk13 in game.structures:
+		if game.structures[kk13].get("id") == "chest" and not game.structures[kk13].get("loot", false):
+			chest5 = game.structures[kk13]
+			break
+	if chest5 == null:
+		var ck5: Vector2i = free_xy.call("chest")
+		chest5 = game.structures.get(ck5)
+	if sf_st and chest5:
+		for ci in [["paldium", 3], ["wood", 3], ["stone", 3]]:
+			chest5["store"][ci[0]] = chest5["store"].get(ci[0], 0) + ci[1]
+		var hw: Pal = game.gen_pal("lamball", 5, game.player.pos)
+		hw.mode = "base"; hw.san = 90.0; hw.ailment = ""; hw.passives = []
+		var saved_hw: Array = sf_st["workers"].duplicate()
+		sf_st["workers"] = [hw]; hw.job_site = sf_st
+		sf_st["timer"] = 199.0
+		game.tick_production(1.0)
+		check("sphere works rolls", sf_st["store"].get("pal_sphere", 0) >= 1,
+			"store=%s" % str(sf_st["store"]))
+		sf_st["workers"] = saved_hw; hw.job_site = null
+		game.pals.erase(hw); hw.free()
+	else:
+		check("sphere works rolls", false, "factory=%s chest=%s" % [sf_st != null, chest5 != null])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

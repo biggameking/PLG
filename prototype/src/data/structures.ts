@@ -183,6 +183,14 @@ export const STRUCTURES: Record<string, StructureDef> = {
     stand: true, hp: 200,
     desc: "Overseer post: +40% work speed base-wide, but SAN drains half again as fast.",
   },
+  sphere_factory: {
+    id: "sphere_factory", name: "Sphere Works", glyph: "◉", color: "#4dd0e1", w: 2, h: 1,
+    cost: [["wood", 20], ["stone", 15], ["paldium", 5], ["ingot", 4]],
+    job: { kind: "assemble", workType: "handiwork", amount: 200,
+      consumes: [["paldium", 1], ["wood", 1], ["stone", 1]],
+      produces: [["pal_sphere", 1]] },
+    desc: "Palworld's assembly line — a handy pal rolls a sphere off the belt.",
+  },
   watch_tower: {
     id: "watch_tower", name: "Watch Tower", glyph: "♜", color: "#c9a86a", w: 1, h: 1,
     cost: [["wood", 20], ["stone", 10], ["ingot", 2]], turret: 14, hp: 300, light: 1,
@@ -243,4 +251,5 @@ export const TECH: TechNode[] = [
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
   { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2, parts: 2 },
   { id: "watch_tower", name: "Watch Tower", tier: 4, cost: 2, parts: 1 },
+  { id: "sphere_factory", name: "Sphere Works", tier: 5, cost: 3, parts: 1 },
 ];

@@ -460,6 +460,36 @@ const STRUCTURES = {
   "job": {"kind": "pump", "workType": "oilExtraction", "amount": 240, "produces": [["polymer", 1]]},
   "desc": "An oil-extracting pal refines polymer here."
  },
+ "sphere_factory": {
+  "id": "sphere_factory",
+  "name": "Sphere Works",
+  "glyph": "◉",
+  "color": "#4dd0e1",
+  "w": 2,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    20
+   ],
+   [
+    "stone",
+    15
+   ],
+   [
+    "paldium",
+    5
+   ],
+   [
+    "ingot",
+    4
+   ]
+  ],
+  "job": {"kind": "assemble", "workType": "handiwork", "amount": 200,
+   "consumes": [["paldium", 1], ["wood", 1], ["stone", 1]],
+   "produces": [["pal_sphere", 1]]},
+  "desc": "Palworld's assembly line — a handy pal rolls a sphere off the belt."
+ },
  "pal_condenser": {
   "id": "pal_condenser",
   "name": "Pal Condenser",
@@ -1054,6 +1084,13 @@ const TECH = [
   "tier": 5,
   "cost": 2,
   "parts": 2
+ },
+ {
+  "id": "sphere_factory",
+  "name": "Sphere Works",
+  "tier": 5,
+  "cost": 3,
+  "parts": 1
  }
 ]
 
