@@ -116,6 +116,10 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 	else:
 		statuses.erase("sleep") # any hit wakes, whatever the mode
 		if mode == "wild":
+			if by_player:
+				# Palworld focus fire: the partner pal piles onto your target
+				game.focus_target = self
+				game.focus_t = game.t + 4.0
 			if hostile() == 0 and game.rng.chance(0.5):
 				aggro = -1
 			else:
@@ -345,6 +349,13 @@ func partner_ai(dt: float) -> void:
 			if d < bd:
 				bd = d
 				best = p
+	# Palworld focus fire: whatever the player just hit outranks the nearest threat
+	var focus: Pal = game.focus_target
+	if stance != "passive" and is_instance_valid(focus) and focus.hp > 0 \
+			and focus.mode == "wild" and game.t < game.focus_t:
+		var fd := pos.distance_to(focus.pos)
+		if fd < 10.0:
+			best = focus; bd = fd
 	if best:
 		if not cast_skills(best, dt):
 			if bd > 1.0:

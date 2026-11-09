@@ -300,6 +300,28 @@ func run() -> void:
 			game.pals.erase(prey)
 			if prey.get_parent(): prey.get_parent().remove_child(prey)
 			prey.free()
+			# Palworld focus fire: the player's mark draws the partner in
+			var fprey: Pal = game.gen_pal("lamball", 2, st_pal.pos + Vector2(5, 0))
+			fprey.mode = "wild"; fprey.max_hp = 4000; fprey.hp = 4000; fprey.aggro = -1
+			fprey.add_status("freeze", 8.0) # pinned in place — no flee lottery
+			game.pals.append(fprey)
+			var fhp := fprey.hp
+			fprey.hit(10, 1.0, true) # the player's mark
+			check("mark set", game.focus_target == fprey and game.focus_t > game.t,
+				"focus=%s" % str(game.focus_target))
+			for i10 in 60:
+				st_pal.partner_ai(0.1)
+				game.update_projectiles(0.1)
+				if fprey.hp < fhp:
+					break
+			check("focus fire engages", fprey.hp < fhp, "hp=%d" % fprey.hp)
+			game.focus_target = null; game.focus_t = 0.0
+			for pr3 in game.projectiles:
+				pr3["node"].queue_free()
+			game.projectiles.clear()
+			game.pals.erase(fprey)
+			if fprey.get_parent(): fprey.get_parent().remove_child(fprey)
+			fprey.free()
 		# partner auras (Palworld): the fielded species buffs its handler
 		var lm: Pal = game.gen_pal("lifmunk", 5, p.pos)
 		lm.mode = "box"; game.box.append(lm); game.box_pal(lm)

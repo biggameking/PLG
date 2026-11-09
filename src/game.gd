@@ -608,6 +608,8 @@ var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of g
 var weather_t := 0.0
 var explored := PackedByteArray() # fog of war — one byte per world cell
 var reveal_t := 0.0               # throttle: sight updates twice a second
+var focus_target: Pal = null      # Palworld focus fire: the pal you last hit
+var focus_t := 0.0                # ...stays the partner's priority for 4s
 
 func total_catches() -> int:
 	var n := 0
