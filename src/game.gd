@@ -3800,12 +3800,14 @@ const PARTNER_SKILLS := {
 	"cremis":   {"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
 	"mozzarina":{"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
 	"chikipi":  {"cd": 25.0, "range": 0.0, "name": "Egg-cellent Lay"},
+	"pengullet":{"cd": 8.0, "range": 9.0, "name": "Penguin Cannon"},
 }
 
 # Palworld pal gear: a bespoke active needs its species item crafted in the
 # pack — the harness/SMG/rifle are what make the skill real, not the pal.
 const PARTNER_GEAR := {
 	"foxparks": "foxparks_harness", "lifmunk": "lifmunk_smg", "tanzee": "tanzee_rifle",
+	"pengullet": "pengullet_launcher",
 }
 func partner_gear_ok(sid: String) -> bool:
 	var gid: String = PARTNER_GEAR.get(sid, "")
@@ -3890,6 +3892,20 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 			tgt2.hit(Combat.damage(p_atk, 80, Combat.stat_at(tgt2.spec["def"],
 				tgt2.level, tgt2.talent) * tgt2.def_bonus * tgt2.def_mult(), 1.0, rng), 1.0, true)
 			return true
+		"pengullet": # Penguin Cannon: the bird IS the payload — icy splash at the aim
+			var boom := false
+			for q in pals:
+				if q.mode != "wild" or q.hp <= 0 or q == p:
+					continue
+				if q.pos.distance_to(tw) <= 2.6:
+					q.hit(Combat.damage(p_atk, 55, Combat.stat_at(q.spec["def"],
+						q.level, q.talent) * q.def_bonus * q.def_mult(), 1.0, rng), 1.0, true)
+					if rng.chance(0.35):
+						q.add_status("freeze", 2.5)
+					boom = true
+			if boom:
+				floater(tw, "PENGUIN CANNON!", "#7ec8e3")
+			return boom
 		"cremis": # a squeeze of cream, straight into the bag
 			add_item("milk", 1)
 			floater(p.pos, "milk!", "#f8f4f0")

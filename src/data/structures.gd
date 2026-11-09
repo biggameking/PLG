@@ -1137,6 +1137,13 @@ const TECH = [
   "cost": 2
  },
  {
+  "id": "pengullet_launcher",
+  "name": "Pengullet Launcher",
+  "tier": 6,
+  "cost": 2,
+  "parts": 1
+ },
+ {
   "id": "sphere_launcher",
   "name": "Sphere Launcher",
   "tier": 5,

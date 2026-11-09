@@ -795,6 +795,17 @@ const ITEMS = {
   "price": 240,
   "desc": "Pal gear: unlocks Lifmunk's SMG Burst partner skill."
  },
+ "pengullet_launcher": {
+  "id": "pengullet_launcher",
+  "name": "Pengullet Launcher",
+  "glyph": "⊙",
+  "color": "#7ec8e3",
+  "kind": "gear",
+  "stack": 1,
+  "tech": "pengullet_launcher",
+  "price": 320,
+  "desc": "Pal gear: loads Pengullet for its signature Penguin Cannon."
+ },
  "tanzee_rifle": {
   "id": "tanzee_rifle",
   "name": "Tanzee Assault Rifle",
@@ -1506,6 +1517,14 @@ const RECIPES = [
   "cost": [["musket", 1], ["ingot", 8], ["polymer", 4], ["nails", 6]],
   "station": "workbench",
   "work": 400
+ },
+ {
+  "id": "pengullet_launcher",
+  "tech": "pengullet_launcher",
+  "out": ["pengullet_launcher", 1],
+  "cost": [["ingot", 6], ["paldium", 4], ["ice_organ", 3], ["fiber", 6]],
+  "station": "workbench",
+  "work": 180
  },
  {
   "id": "saddle",

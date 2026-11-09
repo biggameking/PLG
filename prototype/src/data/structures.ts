@@ -260,6 +260,7 @@ export const TECH: TechNode[] = [
   { id: "foxparks_harness", name: "Foxparks Harness", tier: 4, cost: 2 },
   { id: "lifmunk_smg", name: "Lifmunk SMG", tier: 4, cost: 2 },
   { id: "tanzee_rifle", name: "Tanzee Assault Rifle", tier: 5, cost: 2 },
+  { id: "pengullet_launcher", name: "Pengullet Launcher", tier: 6, cost: 2, parts: 1 },
   { id: "meat_cleaver", name: "Meat Cleaver", tier: 3, cost: 1 },
   { id: "waypoint", name: "Waypoint", tier: 4, cost: 2 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },

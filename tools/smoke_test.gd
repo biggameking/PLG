@@ -440,7 +440,14 @@ func run() -> void:
 		check("ranch pals produce", sup and game.item_count("milk") == milk0 + 1
 			and game.item_count("egg") == egg0 + 1,
 			"milk=%d egg=%d" % [game.item_count("milk") - milk0, game.item_count("egg") - egg0])
-		for tmp2 in [cr, lay]:
+		# Penguin Cannon (Palworld's signature silliness): the bird is the payload
+		var pg: Pal = game.gen_pal("pengullet", 10, p.pos)
+		pg.mode = "partner"
+		var wthp3 := wt.hp
+		var pg_hit: bool = game.run_partner_skill(pg, wt.pos, game.PARTNER_SKILLS["pengullet"])
+		check("penguin cannon", pg_hit and wt.hp < wthp3, "hp=%.0f" % wt.hp)
+		check("cannon needs launcher", not game.partner_gear_ok("pengullet"))
+		for tmp2 in [cr, lay, pg]:
 			if is_instance_valid(tmp2) and tmp2.get_parent():
 				tmp2.get_parent().remove_child(tmp2)
 			if is_instance_valid(tmp2):
