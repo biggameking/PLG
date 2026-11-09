@@ -328,6 +328,22 @@ func partner_ai(dt: float) -> void:
 		elif bd > 5.0:
 			step_toward(best.pos, dt)
 		return
+	# Palworld fetch: an idle partner pads over to nearby drops and bags them
+	var grab = null
+	var gd := 16.0
+	for d in game.drops:
+		var dd := pos.distance_squared_to(d["pos"])
+		if dd < gd:
+			gd = dd; grab = d
+	if grab != null:
+		if pos.distance_squared_to(grab["pos"]) > 0.4:
+			step_toward(grab["pos"], dt)
+		elif grab in game.drops: # a hauler may have beaten us to it
+			game.add_item(grab["id"], grab["n"])
+			game.floater(grab["pos"], "+%d %s" % [grab["n"],
+				ItemData.ITEMS.get(grab["id"], {}).get("name", grab["id"])], "#ffe08a")
+			game.take_drop(grab)
+		return
 	if pos.distance_to(pl.pos) > 1.8:
 		step_toward(pl.pos, dt)
 
