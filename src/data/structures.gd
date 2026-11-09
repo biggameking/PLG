@@ -672,6 +672,31 @@ const STRUCTURES = {
   "hp": 250,
   "light": 1,
   "desc": "Steam does wonders. Base pals recover SAN faster than any bed."
+ },
+ "monitoring_stand": {
+  "id": "monitoring_stand",
+  "name": "Monitoring Stand",
+  "glyph": "⚑",
+  "color": "#d06a6a",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    10
+   ],
+   [
+    "stone",
+    10
+   ],
+   [
+    "ingot",
+    2
+   ]
+  ],
+  "stand": true,
+  "hp": 200,
+  "desc": "Overseer post: +40% work speed base-wide, but SAN drains half again as fast."
  }
 }
 
@@ -819,6 +844,12 @@ const TECH = [
   "name": "Hot Spring",
   "tier": 5,
   "cost": 3
+ },
+ {
+  "id": "monitoring_stand",
+  "name": "Monitoring Stand",
+  "tier": 5,
+  "cost": 2
  },
  {
   "id": "mega_sphere",

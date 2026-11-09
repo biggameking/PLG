@@ -1025,6 +1025,7 @@ func gain_xp(n: int) -> void:
 
 func tick_production(dt: float) -> void:
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
+	var stand := 1.4 if has_structure("monitoring_stand") else 1.0 # overseer speed-up
 	for key in structures:
 		var st = structures[key]
 		if key != cell_of(st):
@@ -1063,7 +1064,7 @@ func tick_production(dt: float) -> void:
 		var work_sum := 0.0 # each worker contributes by its Artisan/etc passives; sick pals drag
 		for w in active:
 			work_sum += w.passive_mult("work") * w.work_mult()
-		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * work_sum
+		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate

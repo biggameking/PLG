@@ -771,6 +771,12 @@ def make_structure(sid, color, w, h):
         for i, x in enumerate((-10, 0, 10)):
             d.arc([W//2 + x - 5, 10 + i * 2, W//2 + x + 5, 26 + i * 2], 200, 340,
                   fill=hxc("#d8f4fa") + (255,), width=2)
+    elif sid == "monitoring_stand":
+        # watchtower post with a stern flag
+        d.rectangle([W//2 - 3, 16, W//2 + 3, 48], fill=hxc("#5e462e") + (255,))
+        d.polygon([(W//2 + 3, 16), (W//2 + 18, 20), (W//2 + 3, 26)], fill=hxc("#d06a6a") + (255,))
+        d.rectangle([W//2 - 10, 44, W//2 + 10, 50], fill=hxc("#8a6d4d") + (255,))
+        d.ellipse([W//2 - 4, 30, W//2 + 4, 38], fill=hxc("#ede0c8") + (255,))
     elif sid == "workbench":
         for dx in (-20, 16):
             d.rectangle([W//2 + dx, 38, W//2 + dx + 5, 52], fill=hxc("#5e462e") + (255,))
@@ -794,6 +800,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "pal_condenser": ("#7a5ac9", 2, 1), "incubator": ("#f2a0b5", 2, 2),
     "wooden_wall": ("#8a6d4d", 1, 1), "spikes": ("#a98a5e", 1, 1),
     "hot_spring": ("#7ec8e3", 2, 2),
+    "monitoring_stand": ("#d06a6a", 1, 1),
 }
 
 # =========================================================================

@@ -477,6 +477,23 @@ func run() -> void:
 	sleepy.san = 50.0
 	sleepy.tick_needs(1.0)
 	check("hot spring SAN", spa_xy.x >= 0 and sleepy.san >= 59.0, "san %.0f" % sleepy.san)
+	# monitoring stand: SAN drains half again while it stands (Palworld trade-off)
+	game.add_item("wood", 10); game.add_item("stone", 10); game.add_item("ingot", 2)
+	var mst_xy: Vector2i = free_xy.call("monitoring_stand")
+	var sj: Pal = null
+	for q in game.base_pals():
+		if q.job_site != null:
+			sj = q
+			break
+	if sj == null:
+		sj = sleepy
+		sj.job_site = game.structures.get(spa_xy) # any real site keeps the flag honest
+	sj.san = 90.0; sj.ailment = "" # high SAN dodges the spring recovery branch
+	var san0: float = sj.san
+	sj.tick_needs(1.0)
+	var want := 0.3 / sj.passive_mult("san") # 0.2 base x 1.5 overseer
+	check("stand drains SAN", mst_xy.x >= 0 and absf((san0 - sj.san) - want) < 0.01,
+		"drain=%.3f want=%.3f" % [san0 - sj.san, want])
 	# feed box eats berry when hungry
 	game.add_item("wood", 30); game.add_item("stone", 10)
 	free_xy.call("feed_box")

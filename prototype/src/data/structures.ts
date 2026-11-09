@@ -33,6 +33,7 @@ export interface StructureDef {
   spike?: number;         // damage per tick to hostiles standing on it
   incubator?: boolean;    // hatches deposited pal eggs on a timer
   spring?: number;        // SAN recovery strength (Palworld hot spring)
+  stand?: boolean;        // monitoring stand: faster work, faster SAN drain
   playerBed?: boolean;
   desc: string;
 }
@@ -169,6 +170,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     spring: 1, hp: 250, light: 1,
     desc: "Steam does wonders. Base pals recover SAN faster than any bed.",
   },
+  monitoring_stand: {
+    id: "monitoring_stand", name: "Monitoring Stand", glyph: "⚑", color: "#d06a6a", w: 1, h: 1,
+    cost: [["wood", 10], ["stone", 10], ["ingot", 2]],
+    stand: true, hp: 200,
+    desc: "Overseer post: +40% work speed base-wide, but SAN drains half again as fast.",
+  },
 };
 
 export interface TechNode {
@@ -212,4 +219,5 @@ export const TECH: TechNode[] = [
   { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2 },
   { id: "glider", name: "Glider", tier: 4, cost: 2 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
+  { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2 },
 ];
