@@ -63,6 +63,21 @@ const MAX_PALS := 220         # wild + owned + raid; AI tick cost scales with th
 const MAX_BOX := 400          # stored pals are out-of-tree nodes — real bytes
 const MAX_EGG_QUEUE := 32     # ranch parentage queue (eggs can also be sold/eaten)
 const MAX_MERCH_STOCK := 64   # merchant inventory refresh
+# Signature breeding pairs (Palworld combos): "a+b" -> offspring species.
+# Checked both directions at hatch time; unlisted pairs inherit a parent.
+const BREED_COMBOS := {
+	"lamball+chikipi": "cattiva",
+	"cattiva+lifmunk": "vixy",
+	"foxparks+rooby": "flambelle",
+	"pengullet+cattiva": "kelpsea",
+	"fuack+pengullet": "surfdog",
+	"mozzarina+lamball": "melpaca",
+	"direhowl+lovander": "loupmoon",
+	"mossanda+rayhound": "grizzbolt",
+	"helzephyr+anubis": "shadowbeak",
+	"relaxaurus+grizzbolt": "stormpuff",
+	"jetragon+grizzbolt": "astegon",
+}
 
 func _exit_tree() -> void:
 	# Orphan sweep: nodes DETACHED from the tree are not freed by the engine —
@@ -1717,7 +1732,11 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	var talent_v: int
 	var inherited := []
 	if pair is Array and pair.size() >= 4:
-		sp_id = pair[rng.int_range(0, 1)]
+		# Palworld breeding: signature pairings produce a fixed third species;
+		# everything else inherits one of the two parents.
+		var combo: String = BREED_COMBOS.get("%s+%s" % [pair[0], pair[1]],
+			BREED_COMBOS.get("%s+%s" % [pair[1], pair[0]], ""))
+		sp_id = combo if combo != "" else pair[rng.int_range(0, 1)]
 		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
 		if pair.size() >= 6 and pair[4] is Array and pair[5] is Array:
 			for pk in pair[4] + pair[5]: # Palworld: passives run in the bloodline

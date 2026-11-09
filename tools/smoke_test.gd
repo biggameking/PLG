@@ -317,6 +317,14 @@ func run() -> void:
 			inc_st["egg_inc"]["ready_t"] = game.t - 1.0 # fast-forward
 			game.hatch_incubated(inc_k, inc_st)
 		check("hatch egg", game.pals.size() == n0 + 1 and not (inc_st and inc_st.has("egg_inc")))
+		# signature pair -> fixed third species (Palworld breeding combos)
+		var combo_st := {"egg_inc": {"pair": ["lamball", "chikipi", 50, 50, [], []], "ready_t": game.t}}
+		game.hatch_incubated(Vector2i(int(game.player.pos.x) + 2, int(game.player.pos.y)), combo_st)
+		var cb := game.pals[game.pals.size() - 1]
+		check("breed combo", cb.species_id == "cattiva")
+		game.pals.erase(cb)
+		if cb.get_parent(): cb.get_parent().remove_child(cb)
+		cb.free()
 	else:
 		var dbg := ""
 		for q in game.pals:
