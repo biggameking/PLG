@@ -851,7 +851,17 @@ func run() -> void:
 		var hp_c2 := p.hp
 		p._physics_process(4.5)
 		chill_near = p.hp >= hp_c2
-	check("night chill", chill_far and chill_near, "far=%s near=%s" % [chill_far, chill_near])
+	# Palworld warmth: a fire pal at your side counts as a heat source too
+	var torch_pal: Pal = game.gen_pal("foxparks", 3, Vector2(201, 200))
+	game.pals.append(torch_pal)
+	p.pos = Vector2(200, 200)
+	p.cold_t = 0.0
+	var hp_c3 := p.hp
+	p._physics_process(4.5)
+	var chill_pal: bool = p.hp >= hp_c3
+	game.pals.erase(torch_pal); torch_pal.free()
+	check("night chill", chill_far and chill_near and chill_pal,
+		"far=%s near=%s pal=%s" % [chill_far, chill_near, chill_pal])
 	p.pos = pos_c; p.cold_t = 0.0
 	game.tod = tod_c
 	# monitoring stand: SAN drains half again while it stands (Palworld trade-off)

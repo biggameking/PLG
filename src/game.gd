@@ -1502,11 +1502,15 @@ func has_structure(sid: String) -> bool:
 
 const HEAT_IDS := ["campfire", "torch", "furnace", "hot_spring"]
 func nearest_heat(at: Vector2) -> float:
-	# distance to the closest warmth source — the night chill threshold
+	# distance to the closest warmth source — the night chill threshold.
+	# Palworld: a fire pal at your side keeps you warm too.
 	var bd := 1e9
 	for k in structures:
 		if structures[k]["id"] in HEAT_IDS:
 			bd = minf(bd, at.distance_to(Vector2(k.x + 0.5, k.y + 0.5)))
+	for q in pals:
+		if q.hp > 0 and "fire" in q.spec.get("elements", []):
+			bd = minf(bd, at.distance_to(q.pos))
 	return bd
 
 func base_pals() -> Array:
