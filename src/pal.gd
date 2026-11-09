@@ -36,6 +36,8 @@ var revive_t := 0.0         # >0 while knocked out in the box
 var ailment := ""           # "" | depressed | sprain | ulcer | weakened (Palworld SAN sickness)
 var low_san_t := 0.0        # sustained seconds under SAN 15 — onset timer
 var lucky := false          # rare "Lucky" variant: big, strong, golden drops
+var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
+var net_target := Vector2.INF # last host-reported world pos (INF = none yet)
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
@@ -141,6 +143,13 @@ func _notification(what: int) -> void:
 
 func _physics_process(dt: float) -> void:
 	if hp <= 0:
+		return
+	if net_id > 0:
+		# host-authoritative replica: render the reported state, never simulate —
+		# local AI would fight the host's corrections and drift the two worlds apart
+		if net_target.x < 1e17:
+			pos = pos.lerp(net_target, minf(1.0, dt * 6.0))
+		sync_screen()
 		return
 	tick_statuses(dt)
 	stun_t -= dt

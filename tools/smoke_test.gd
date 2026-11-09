@@ -365,6 +365,23 @@ func run() -> void:
 	game.spawn_net_pal(["no_such_species", 0, 0, 1, "wild"])
 	game.spawn_net_pal("garbage")
 	check("net pal rejected", game.pals.size() == np0)
+	# live pal sync: replicas key on host uid — spawn, move, despawn
+	game.spawn_net_pal(["cattiva", p.pos.x + 4, p.pos.y + 4, 5, "wild", false, 777])
+	var rep: Pal = game.pals[game.pals.size() - 1]
+	check("net pal net_id", rep.net_id == 777)
+	game.net.pal_sync([[777, "cattiva", p.pos.x + 9.0, p.pos.y + 9.0, 5, "wild", 42.0, false],
+		[778, "lamball", p.pos.x + 5, p.pos.y + 5, 3, "wild", 99.0, false],
+		"garbage"])
+	check("pal_sync moves+spawns", rep.net_target.x == p.pos.x + 9.0 and rep.hp == 42.0
+		and game.find_net_pal(778) != null)
+	game.net.pal_sync([[778, "lamball", 1, 1, 3, "wild", 99.0, false]])
+	check("pal_sync despawns absent", game.find_net_pal(777) == null
+		and game.find_net_pal(778) != null)
+	# cleanup the replica so it can't leak into later checks
+	var rep2 := game.find_net_pal(778)
+	game.pals.erase(rep2)
+	if rep2.get_parent(): rep2.get_parent().remove_child(rep2)
+	rep2.free()
 	# raid boss
 	game.add_item("boss_sigil", 1)
 	var n1 := game.pals.size()

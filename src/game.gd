@@ -283,7 +283,14 @@ func spawn_net_pal(d) -> void:
 	var np := gen_pal(sp_id, clampi(int(d[3]), 1, 60),
 		nearest_free(float(d[1]), float(d[2])), bool(d[5]) if d.size() > 5 else false)
 	np.mode = "base" if str(d[4]) == "base" else "wild"
+	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
 	pals.append(np)
+
+func find_net_pal(nid: int) -> Pal:
+	for p in pals:
+		if p.net_id == nid and nid > 0:
+			return p
+	return null
 
 func find_pal(uid: int) -> Pal:
 	for p in pals:

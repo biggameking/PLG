@@ -82,7 +82,7 @@ func state_snapshot() -> Dictionary:
 	var parr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base"] and p.hp > 0:
-			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky])
+			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid])
 	return {"structures": arr, "tod": game.tod, "day": game.day, "pals": parr}
 
 @rpc("authority", "call_remote", "reliable")
@@ -92,12 +92,52 @@ func state_sync(d: Dictionary) -> void:
 			game.place_free(str(e[0]), int(e[1]), int(e[2])) # net input is untrusted — validate shape
 	game.tod = float(d.get("tod", game.tod))
 	game.day = int(d.get("day", game.day))
+	# drop the population our own regenerate() spawned — the host's wild/base
+	# pals replace it, otherwise clients see every pal twice
+	for p in game.pals.duplicate():
+		if p.mode in ["wild", "base"]:
+			game.pals.erase(p)
+			p.queue_free()
 	var np := 0
 	for e in d.get("pals", []):
 		var n0 := game.pals.size()
 		game.spawn_net_pal(e) # each entry re-validated game-side
 		np += 1 if game.pals.size() > n0 else 0
 	game.log_msg("Synced %d structures, %d pals" % [d.get("structures", []).size(), np])
+
+# Live pal population: host rebroadcasts positions/health at 2Hz so replicas
+# don't just sit where the join snapshot left them. Replicas are keyed by
+# host uid (net_id); unknown ids spawn, missing ids despawn — one packet is
+# the whole truth, packet loss self-heals on the next tick.
+func pal_state_pack() -> Array:
+	var arr := []
+	for p in game.pals:
+		if p.mode in ["wild", "base"] and p.hp > 0:
+			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky])
+	return arr
+
+@rpc("authority", "call_remote", "unreliable")
+func pal_sync(arr: Array) -> void:
+	if is_host:
+		return # the host's own broadcast echoes back — it's the authority already
+	var seen := {}
+	for e in arr:
+		if not (e is Array) or e.size() < 6 or not (e[0] is float or e[0] is int):
+			continue
+		var nid := int(e[0])
+		seen[nid] = true
+		var p := game.find_net_pal(nid)
+		if p == null:
+			# [species, x, y, lv, mode, lucky, net_id] — spawn_net_pal's wire shape
+			game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
+				e[7] if e.size() > 7 else false, nid])
+		else:
+			p.net_target = Vector2(float(e[2]), float(e[3]))
+			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp
+	for p in game.pals.duplicate():
+		if p.net_id > 0 and not seen.has(p.net_id): # host dropped it: caught, KO'd, despawned
+			game.pals.erase(p)
+			p.queue_free()
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
@@ -142,9 +182,16 @@ func chat(t: String, from_id: int = 0) -> void:
 	if multiplayer.is_server():
 		rpc("chat", str(t), int(from_id)) # ENet is a star: relay client chat to the other clients
 
+var pal_sync_t := 0.0
+
 func _process(dt: float) -> void:
 	if multiplayer.multiplayer_peer == null or ghosts.is_empty():
 		return
+	if is_host:
+		pal_sync_t += dt
+		if pal_sync_t >= 0.5: # 2Hz — pals drift slowly; anything faster is noise
+			pal_sync_t = 0.0
+			rpc("pal_sync", pal_state_pack())
 	send_timer += dt
 	if send_timer < 0.05:
 		return
