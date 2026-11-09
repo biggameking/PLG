@@ -2221,6 +2221,7 @@ func spawn_nests() -> void:
 		placed += 1
 
 var grotto_pos := Vector2i(-1, -1) # sealed dungeon marker (set at worldgen)
+var grotto_room2 := Vector2i(-1, -1) # second chamber center, if the terrain fit it
 
 func spawn_grotto() -> void:
 	# Palworld dungeon flavour: a rock-sealed chamber in deep zone 3 — the only
@@ -2264,7 +2265,58 @@ func spawn_grotto() -> void:
 				"pal_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
 				"electric", "ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
 		grotto_pos = Vector2i(tx, ty)
-		log_msg("A sealed grotto echoes in the deep wilds")
+		grotto_room2 = Vector2i(-1, -1)
+		# second chamber (Palworld multi-room dungeon): a 5x5 treasure room in
+		# any cardinal direction, joined by a 1-wide rock doorway. Meaner
+		# warden, richer chest — optional when the terrain won't fit one.
+		var bx := -1
+		var by := ty
+		var door_c: Vector2i
+		for dir2: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var cx: int = tx + dir2.x * 7
+			var cy: int = ty + dir2.y * 7
+			if cx - 3 < 0 or cx + 3 >= World.WORLD_W or cy - 3 < 0 or cy + 3 >= World.WORLD_H:
+				continue
+			var fits2 := true
+			for dy in range(-1, 2): # 3x3 interior must be open; ring cells become rock
+				for dx in range(-1, 2):
+					if world.blocked(cx + dx, cy + dy) or structures.has(Vector2i(cx + dx, cy + dy)):
+						fits2 = false
+			if fits2:
+				bx = cx; by = cy
+				door_c = Vector2i(tx + dir2.x * 4, ty + dir2.y * 4)
+				break
+		if bx < 0:
+			log_msg("A sealed grotto echoes in the deep wilds")
+			return
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				if maxi(absi(dx), absi(dy)) == 2:
+					var j := world.idx(bx + dx, by + dy)
+					world.decor[j] = World.Decor.ROCK
+					world.hp[j] = 60
+		# doorway: rock chokepoints beside the gap leave a single-tile tunnel —
+		# break or squeeze through to reach room 2. E/W doors choke N/S, N/S
+		# doors choke E/W.
+		var horiz := door_c.y == ty
+		for off in [-1, 1]:
+			var dc := door_c + (Vector2i(0, off) if horiz else Vector2i(off, 0))
+			var k2 := world.idx(dc.x, dc.y)
+			world.decor[k2] = World.Decor.ROCK
+			world.hp[k2] = 60
+		var bp2 := preload("res://src/pal.gd").new()
+		bp2.alpha = true
+		bp2.boss = true
+		entity_layer.add_child(bp2)
+		bp2.setup(self, pool[rng.int_range(0, pool.size() - 1)], 45, Vector2(bx + 0.5, by + 0.5))
+		bp2.home = bp2.pos
+		pals.append(bp2)
+		if place_free("chest", bx - 1, by - 1):
+			var st2: Dictionary = structures[Vector2i(bx - 1, by - 1)]
+			st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
+				"lifmunk_effigy": 3, "pal_egg": 2}
+		grotto_room2 = Vector2i(bx, by)
+		log_msg("A sealed grotto echoes in the deep wilds — it sounds deep")
 		return
 
 # World bosses that only appear as den guardians — Palworld's legendary tier.
@@ -2341,6 +2393,7 @@ func regenerate(s: int) -> void:
 	spheres_flying.clear()
 	palbox_pos = Vector2i(-1, -1)
 	grotto_pos = Vector2i(-1, -1)
+	grotto_room2 = Vector2i(-1, -1)
 	boss_respawns.clear() # the old world's dens died with it
 	gauntlet = {} # and so did any trial in progress
 	craft_queue.clear() # queued builds die with the world too

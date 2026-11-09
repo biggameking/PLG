@@ -502,6 +502,28 @@ func run() -> void:
 					and not s2["store"].is_empty():
 				loot = true
 		check("sealed grotto", ring_rock and warden and loot, "rock=%s boss=%s loot=%s" % [ring_rock, warden, loot])
+		# multi-room: grotto_room2 is authoritative — when set, a lv45 warden, a
+		# legendary-sphere chest and a rock-choked doorway must all be there
+		if game.grotto_room2.x >= 0:
+			var g2 := game.grotto_room2
+			var ctr2 := Vector2(g2.x + 0.5, g2.y + 0.5)
+			var room2_boss := false; var room2_loot := false
+			for q in game.pals:
+				if q.boss and q.pos.distance_to(ctr2) < 4.0:
+					room2_boss = q.level >= 45
+			for ks in game.structures:
+				var s3: Dictionary = game.structures[ks]
+				if s3["id"] == "chest" and Vector2(ks.x, ks.y).distance_to(Vector2(g2.x, g2.y)) < 4.0 \
+						and s3["store"].get("legendary_sphere", 0) > 0:
+					room2_loot = true
+			var r2d := Vector2i(int(signf(g2.x - gp.x)), int(signf(g2.y - gp.y)))
+			var dc2 := gp + r2d * 4
+			var off2 := dc2 + (Vector2i(0, 1) if dc2.y == gp.y else Vector2i(1, 0))
+			var door: bool = game.world.decor[game.world.idx(off2.x, off2.y)] == World.Decor.ROCK
+			check("grotto room 2", room2_boss and room2_loot and door,
+				"boss=%s loot=%s door=%s" % [room2_boss, room2_loot, door])
+		else:
+			check("grotto room 2", true, "skipped: terrain didn't fit a second chamber")
 	else:
 		check("sealed grotto", false, "no grotto_pos")
 	# wild egg nests: stealable pal_egg drops placed at worldgen
