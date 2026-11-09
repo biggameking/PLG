@@ -394,12 +394,18 @@ func run() -> void:
 	check("bow fires + ammo", game.projectiles.size() == prj1 + 1 and game.item_count("arrow") == 9)
 
 	# effigy perks
+	game.stat_pts = 0 # keep this check on the effigy path — levels banked points earlier
 	game.add_item("lifmunk_effigy", 10)
 	game.upgrade_perk("capture")
 	check("perk upgrade", game.perks["capture"] == 1 and game.item_count("lifmunk_effigy") == 8)
 	game.upgrade_perk("hp")
 	var want_hp: float = 100 + (p.level - 1) * 10 + game.perks["hp"] * 12
 	check("hp perk", p.max_hp == want_hp, "maxhp %d want %d" % [p.max_hp, want_hp])
+	# Palworld: levels bank stat points the statue spends before effigies
+	game.stat_pts = 1
+	game.upgrade_perk("speed")
+	check("stat point spend", game.perks["speed"] == 1 and game.stat_pts == 0 \
+			and game.item_count("lifmunk_effigy") == 6, "pts=%d eff=%d" % [game.stat_pts, game.item_count("lifmunk_effigy")])
 
 	# breeding
 	game.add_item("wood", 40); game.add_item("stone", 20); game.add_item("fiber", 20)

@@ -732,7 +732,7 @@ func _eq_line() -> String:
 
 func draw_statues(r: Vector2) -> void:
 	var y := r.y + 40.0
-	draw_string(font, Vector2(r.x + 16, y - 16), "Lifmunk Effigies: %d" % game.item_count("lifmunk_effigy"),
+	draw_string(font, Vector2(r.x + 16, y - 16), "Stat points: %d   Lifmunk Effigies: %d" % [game.stat_pts, game.item_count("lifmunk_effigy")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9be8a0"))
 	for k in game.perks:
 		var lvl: int = game.perks[k]

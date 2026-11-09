@@ -1377,7 +1377,8 @@ func gain_xp(n: int) -> void:
 		player.max_hp += 10
 		player.hp = player.max_hp
 		tech_points += 2
-		log_msg("Level up! Lv%d (+2 tech pts)" % player.level)
+		stat_pts += 1 # Palworld: every level banks a stat point for the statue
+		log_msg("Level up! Lv%d (+2 tech, +1 stat)" % player.level)
 
 func tick_production(dt: float) -> void:
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
@@ -1820,7 +1821,7 @@ func save_game() -> void:
 		"raid_t": raid_t,
 		"unlocked": unlocked, "items": items, "party": party,
 		"party_idx": party.map(func(u): return pals.find(find_pal(u))),
-		"perks": perks, "equip": player.equipment,
+		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
 		"pals": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
@@ -1914,6 +1915,7 @@ func load_game() -> bool:
 				"left": maxf(float(rc.get("left", 1.0)), 0.1), "cost": []})
 	tech_points = maxi(int(d["tech_points"]), 0)
 	unlocked = d["unlocked"].filter(func(u): return u is String)
+	stat_pts = maxi(int(d.get("stat_pts", 0)), 0)
 	var saved_perks: Dictionary = d.get("perks", {})
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
 		perks[pk] = int(saved_perks.get(pk, perks[pk]))
@@ -2583,6 +2585,7 @@ func regenerate(s: int) -> void:
 	mission_idx = 0 # missions belong to the world they were earned in
 	mission_flags.clear()
 	mission_t = 0.0
+	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
@@ -2595,16 +2598,20 @@ func regenerate(s: int) -> void:
 
 # ---------- effigy statues ----------
 const PERK_COST := 2
+var stat_pts := 0 # level-up banked points — the statue spends these before effigies
 func upgrade_perk(k: String) -> void:
 	var lvl: int = perks[k]
 	if lvl >= 5:
 		log_msg("Statue maxed")
 		return
 	var cost := PERK_COST + lvl * 2
-	if item_count("lifmunk_effigy") < cost:
-		log_msg("Need %d effigies (have %d)" % [cost, item_count("lifmunk_effigy")])
+	if stat_pts > 0:
+		stat_pts -= 1
+	elif item_count("lifmunk_effigy") >= cost:
+		add_item("lifmunk_effigy", -cost)
+	else:
+		log_msg("Need %d effigies or a stat point (have %d)" % [cost, item_count("lifmunk_effigy")])
 		return
-	add_item("lifmunk_effigy", -cost)
 	perks[k] = lvl + 1
 	if k == "capture":
 		player.capture_level = 1 + perks["capture"] # keep the stat in sync
