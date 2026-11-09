@@ -20,6 +20,9 @@ var day := 1
 var tod := 8.0             # hour of day
 var next_uid_v := 1
 var raid_t := 180.0          # countdown to next base raid wave
+const MAX_CRAFT_QUEUE := 8   # Palworld timed crafting: station recipes queue up
+var queue_crafts := true     # smoke tests flip this off to keep crafts instant
+var craft_queue := []        # {out,n,left,cost} — station builds in progress
 var drops: Array = []        # ground drops {id,n,pos,node}
 var _drop_tex := {}
 var _light_tex: Texture2D = null
@@ -837,6 +840,7 @@ func _process(dt: float) -> void:
 	tick_boss_respawns()
 	tick_gauntlet()
 	tick_repairs(dt)
+	tick_crafts(dt)
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1149,10 +1153,44 @@ func craft(recipe_id: String) -> void:
 		if item_count(c[0]) < c[1]:
 			log_msg("Missing materials")
 			return
+	if queue_crafts and stn != "hand":
+		# Palworld bench rule: station crafts take real time; idle handy base
+		# pals pitch in and hurry the queue along
+		if craft_queue.size() >= MAX_CRAFT_QUEUE:
+			log_msg("Craft queue is full")
+			return
+		for c in r.get("cost", []):
+			add_item(c[0], -c[1])
+		var costs := []
+		for c in r.get("cost", []):
+			costs.append([c[0], c[1]])
+		craft_queue.append({"out": r["out"][0], "n": r["out"][1],
+			"left": float(r.get("work", 20)) / 10.0, "cost": costs})
+		log_msg("Crafting %s… (%ds)" % [ItemData.ITEMS[r["out"][0]]["name"],
+			int(craft_queue.back()["left"])])
+		return
 	for c in r.get("cost", []):
 		add_item(c[0], -c[1])
 	add_item(r["out"][0], r["out"][1])
 	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
+
+func tick_crafts(dt: float) -> void:
+	if craft_queue.is_empty():
+		return
+	# idle handiwork-suitable base pals hurry the bench — 1.5x per helper
+	var helpers := 0.0
+	for q in pals:
+		if q.mode == "base" and q.hp > 0 and q.job_site == null \
+				and q.spec.get("work", {}).get("handiwork", 0) > 0:
+			helpers += 1.0
+	var speed := 1.0 + 0.5 * helpers
+	for i in range(craft_queue.size() - 1, -1, -1):
+		var cq: Dictionary = craft_queue[i]
+		cq["left"] -= dt * speed
+		if cq["left"] <= 0:
+			add_item(cq["out"], cq["n"])
+			log_msg("Crafted %s x%d" % [ItemData.ITEMS[cq["out"]]["name"], cq["n"]])
+			craft_queue.remove_at(i)
 
 func pal_gain_xp(q: Pal, n: int) -> void:
 	if q.hp <= 0 or n <= 0:
@@ -1622,6 +1660,8 @@ func save_game() -> void:
 		"perks": perks, "equip": player.equipment,
 		"pals": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
+		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
+			func(cq): return {"out": cq["out"], "n": cq["n"], "left": cq["left"]}),
 		"respawns": boss_respawns.slice(0, MAX_RESPAWNS).map(
 			func(br):
 				var r: Dictionary = br.duplicate()
@@ -1701,6 +1741,12 @@ func load_game() -> bool:
 			var rr: Dictionary = rb.duplicate()
 			rr["at"] = t + maxf(0.0, float(rb.get("at", DAY_LEN))) # saved as remaining → back to absolute
 			boss_respawns.append(rr)
+	craft_queue.clear()
+	for rc in d.get("crafts", []):
+		if rc is Dictionary and ItemData.ITEMS.has(str(rc.get("out", ""))) \
+				and craft_queue.size() < MAX_CRAFT_QUEUE:
+			craft_queue.append({"out": str(rc["out"]), "n": maxi(int(rc.get("n", 1)), 0),
+				"left": maxf(float(rc.get("left", 1.0)), 0.1), "cost": []})
 	tech_points = maxi(int(d["tech_points"]), 0)
 	unlocked = d["unlocked"].filter(func(u): return u is String)
 	var saved_perks: Dictionary = d.get("perks", {})
@@ -2285,6 +2331,7 @@ func regenerate(s: int) -> void:
 	grotto_pos = Vector2i(-1, -1)
 	boss_respawns.clear() # the old world's dens died with it
 	gauntlet = {} # and so did any trial in progress
+	craft_queue.clear() # queued builds die with the world too
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)

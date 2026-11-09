@@ -204,7 +204,6 @@ func run() -> void:
 	var wood0 := game.item_count("wood")
 	game.craft("club")
 	check("craft club", game.item_count("wooden_club") == 1 and game.item_count("wood") == wood0 - 5)
-
 	var free_xy = func(sid: String):
 		var bx := int(game.palbox_pos.x); var by := int(game.palbox_pos.y)
 		for r0 in range(2, 30):
@@ -219,6 +218,31 @@ func run() -> void:
 				if game.place_structure(sid, c0.x, c0.y):
 					return c0
 		return Vector2i(-1, -1)
+
+	# timed crafting: bench recipes queue and finish on the clock; an idle
+	# handy pal hurries them (queue_crafts=false keeps other checks instant)
+	var wbk: Vector2i = free_xy.call("workbench")
+	var wb_ok: bool = game.structures.has(wbk)
+	if wb_ok:
+		var pos0: Vector2 = p.pos
+		p.pos = Vector2(wbk.x + 1.5, wbk.y + 0.5)
+		game.add_item("ingot", 1)
+		game.queue_crafts = true
+		game.craft("nails")
+		wb_ok = game.craft_queue.size() == 1 and game.item_count("nails") == 0
+		if wb_ok:
+			game.tick_crafts(2.0)
+			var half_left: float = game.craft_queue[0]["left"]
+			game.tick_crafts(3.0)
+			check("timed crafting", half_left > 0 and game.item_count("nails") == 4,
+				"left=%.1f nails=%d" % [half_left, game.item_count("nails")])
+		else:
+			check("timed crafting", false, "queue=%d" % game.craft_queue.size())
+		game.queue_crafts = false
+		game.craft_queue.clear()
+		p.pos = pos0
+	else:
+		check("timed crafting", false, "no workbench")
 
 	# worker + production
 	# caught pal leaves game.pals; make two explicit base pals (M+F) for worker/ranch tests
