@@ -688,6 +688,20 @@ func run() -> void:
 		dmgs2.append(99999 - int(wrp.hp))
 	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] / float(dmgs2[0]) - 1.15) < 0.05,
 		"dry=%d wet=%d" % [dmgs2[0], dmgs2[1]])
+	# STAB (Palworld): a pal in its own element hits ~1.2x — same seed, same power
+	var stabc: Pal = game.gen_pal("foxparks", 10, p.pos)
+	stabc.mode = "wild"
+	game.weather = "clear"
+	var stab_d := []
+	for el in ["neutral", "fire"]:
+		game.rng.s = s_held; wrp.hp = 99999
+		game.skill_hit(stabc, wrp, {"power": 50, "element": el})
+		stab_d.append(99999 - int(wrp.hp))
+	check("own element hits harder", stab_d[0] > 0 and absf(stab_d[1] / float(stab_d[0]) - 1.2) < 0.05,
+		"neutral=%d stab=%d" % [stab_d[0], stab_d[1]])
+	game.pals.erase(stabc)
+	if stabc.get_parent(): stabc.get_parent().remove_child(stabc)
+	stabc.free()
 	game.weather = wt_held; game.rng.s = s_held + 7
 	game.pals.erase(wrp)
 	for tmp3 in [wrp, wrc]:

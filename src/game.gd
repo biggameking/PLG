@@ -2198,6 +2198,9 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	else:
 		var tp: Pal = target_ent
 		var mult := Combat.effectiveness(elem, tp.elem())
+		# STAB (Palworld): a pal fighting in its own element hits harder
+		if elem in caster.spec.get("elements", []):
+			mult *= 1.2
 		if weather == "rain": # rain favors water's artillery and dampens fire's
 			if elem == "fire":
 				mult *= 0.85
