@@ -1773,6 +1773,22 @@ func run() -> void:
 	p.weapon_wear = 1.0; p.atk_cd = 0.0; p.melee()
 	check("weapon breaks", p.equipment["weapon"] == "" and game.item_count("wooden_club") == 0,
 		"slot=%s n=%d" % [p.equipment["weapon"], game.item_count("wooden_club")])
+	# Palworld repair: a worn weapon mends at the bench for half its recipe
+	game.add_item("wooden_club", 1)
+	game.equip("wooden_club")
+	p.weapon_wear = 5.0
+	var cs0: String = game.craft_station
+	game.craft_station = "workbench" # pretend the bench panel is open
+	var rquote := game.repair_quote()
+	check("repair quote", not rquote.is_empty() and rquote["cost"][0][1] == 3,
+		"quote=%s" % str(rquote))
+	var wood_before := game.item_count("wood")
+	game.repair_weapon()
+	check("weapon repaired", p.weapon_wear == 40.0 and game.item_count("wood") == wood_before - 3,
+		"wear=%.0f wood=%d" % [p.weapon_wear, game.item_count("wood")])
+	check("full weapon no quote", game.repair_quote().is_empty(), "still quoted")
+	game.craft_station = cs0
+	p.equipment["weapon"] = ""; p.weapon_wear = -1.0 # hand the test weapon back to the void
 	# party cap: 6th pal refused and stays in the box
 	while game.party.size() < 5:
 		var fp: Pal = load("res://src/pal.gd").new()

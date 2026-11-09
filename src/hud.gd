@@ -191,6 +191,8 @@ func run_click(cr: Dictionary) -> void:
 	match cr["act"]:
 		"craft":
 			game.craft(cr["arg"])
+		"repair":
+			game.repair_weapon()
 		"tech":
 			game.unlock(cr["arg"])
 		"box_out":
@@ -611,6 +613,19 @@ func draw_craft(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8963c"))
 	var y := rr.position.y + 48
+	# Palworld repair: a worn weapon mends at the bench for half its recipe
+	var rep := game.repair_quote()
+	if not rep.is_empty():
+		var rrect := Rect2(rr.position.x + 16, y - 12, 440, 18)
+		click_rects.append({"rect": rrect, "act": "repair"})
+		var rcost := ""
+		for c in rep["cost"]:
+			rcost += "%d %s, " % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])]
+		var wnm: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "?")
+		draw_string(font, Vector2(rrect.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [wnm,
+			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(46)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff") if rep["afford"] else Color("#5a6068"))
+		y += 24
 	for rec in ItemData.RECIPES:
 		if rec.get("station") not in [game.craft_station, "hand"]:
 			continue

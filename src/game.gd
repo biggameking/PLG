@@ -1648,6 +1648,46 @@ func craft(recipe_id: String) -> void:
 	note_crafted(r["out"][0])
 	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
 
+func repair_quote() -> Dictionary:
+	# Palworld repair: a worn weapon mends at its crafting station for half
+	# its recipe (rounded up, min 1 each). {} = nothing to repair here.
+	var wid: String = player.equipment["weapon"]
+	if wid == "" or player.weapon_wear < 0.0:
+		return {}
+	var maxdur := int(ItemData.ITEMS.get(wid, {}).get("weapon", {}).get("dur", -1))
+	if maxdur <= 0 or int(player.weapon_wear) >= maxdur:
+		return {}
+	var rec := {}
+	for r0 in ItemData.RECIPES:
+		if r0["out"][0] == wid:
+			rec = r0
+			break
+	# hand-recipe weapons mend at any bench (their recipes show in every
+	# panel anyway); station recipes only at their own station
+	var stn0: String = rec.get("station", "hand")
+	if rec.is_empty() or craft_station == "" or (stn0 != "hand" and stn0 != craft_station):
+		return {}
+	var cost := []
+	for c in rec.get("cost", []):
+		cost.append([c[0], maxi(1, int(ceil(float(c[1]) * 0.5)))])
+	var afford := true
+	for c in cost:
+		if item_count(c[0]) < c[1]:
+			afford = false
+	return {"cost": cost, "max": maxdur, "afford": afford}
+
+func repair_weapon() -> void:
+	var rep := repair_quote()
+	if rep.is_empty():
+		return
+	if not rep["afford"]:
+		log_msg("Missing materials")
+		return
+	for c in rep["cost"]:
+		add_item(c[0], -c[1])
+	player.weapon_wear = float(rep["max"])
+	log_msg("Repaired %s" % ItemData.ITEMS[player.equipment["weapon"]]["name"])
+
 func tick_crafts(dt: float) -> void:
 	if craft_queue.is_empty():
 		return
