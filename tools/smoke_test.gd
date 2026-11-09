@@ -1330,6 +1330,23 @@ func run() -> void:
 		"far=%s near=%s pal=%s" % [chill_far, chill_near, chill_pal])
 	p.pos = pos_c; p.cold_t = 0.0
 	game.tod = tod_c
+	# bed rest: a real bed restores SAN 3x faster than a floor nap
+	var napper: Pal = game.gen_pal("lamball", 3, p.pos + Vector2(6, 6))
+	napper.mode = "base"; napper.san = 40.0
+	napper.sleep_rested = false
+	napper.statuses["sleep"] = game.t + 60.0
+	game.pals.append(napper)
+	var san_n0: float = napper.san
+	napper._physics_process(1.0)
+	var rough_gain: float = napper.san - san_n0
+	napper.san = 40.0
+	napper.sleep_rested = true
+	san_n0 = napper.san
+	napper._physics_process(1.0)
+	var bed_gain: float = napper.san - san_n0
+	check("bed rest beats floor naps", rough_gain > 0.5 and bed_gain >= rough_gain * 2.5,
+		"rough=%.2f bed=%.2f" % [rough_gain, bed_gain])
+	game.pals.erase(napper); napper.free()
 	# monitoring stand: SAN drains half again while it stands (Palworld trade-off)
 	game.add_item("wood", 10); game.add_item("stone", 10); game.add_item("ingot", 2)
 	var mst_xy: Vector2i = free_xy.call("monitoring_stand")

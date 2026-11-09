@@ -18,6 +18,7 @@ var statuses := {}           # kind -> until_t
 var aggro := -1              # -1 none, 0 player, >0 pal uid
 var wander_t := 0.0
 var bed_seek := 0.0           # seconds spent shuffling toward a bed at night
+var sleep_rested := false    # reached a real bed — a floor nap recovers less
 var carry = null             # {id,n} while hauling
 var home := Vector2.ZERO     # spawn anchor; alphas tether to their lair
 var target := Vector2.ZERO
@@ -173,6 +174,8 @@ func _physics_process(dt: float) -> void:
 	tick_statuses(dt)
 	stun_t -= dt
 	if has_status("sleep") or stun_t > 0:
+		if mode == "base" and has_status("sleep"):
+			san = minf(100.0, san + (3.0 if sleep_rested else 1.0) * dt)
 		sync_screen()
 		return
 	speed = base_move_speed() * speed_bonus * status_speed_mult() * rage_mult() # passive speed must survive the per-frame recompute
@@ -386,12 +389,15 @@ func base_ai(dt: float) -> void:
 	# Tired pals pad over to the nearest pal bed first when one is built.
 	if game.is_night() and "dark" not in spec.get("elements", []):
 		var bc := game.nearest_bed_cell(pos)
+		var rested := false
 		if bc.x >= 0:
 			var bp := Vector2(bc.x + 0.5, bc.y + 0.5)
 			if pos.distance_to(bp) > 1.2 and bed_seek < 6.0:
 				bed_seek += dt # shuffling to bed beats dozing at the workbench
 				step_toward(bp, dt)
 				return
+			rested = pos.distance_to(bp) <= 1.8
+		sleep_rested = rested # Palworld: a real bed restores SAN far better
 		statuses["sleep"] = game.t + 2.0
 		bed_seek = 0.0
 		return
