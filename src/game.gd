@@ -1287,13 +1287,15 @@ func load_game() -> bool:
 		if pd.get("alpha"):
 			np.alpha = true
 			np.sprite.scale = Vector2(1.6, 1.6)
-		np.boss = pd.get("boss") == true # typed bool — a foreign string would throw on assignment
+		if pd.get("boss") is bool:
+			np.boss = pd["boss"] # only a real bool assigns — GDScript has no bool() ctor and String==true throws
 		np.san = float(pd.get("san", np.san))
 		np.hunger = float(pd.get("hunger", 0.0))
 		np.carry = pd.get("carry") if pd.get("carry") is Dictionary else null # haul_ai reads carry["id"] — a wrong-typed value would crash there
 		np.star = int(pd.get("star", 0))
 		np.xp = int(pd.get("xp", 0))
-		np.raid = pd.get("raid") == true
+		if pd.get("raid") is bool:
+			np.raid = pd["raid"]
 		if np.raid:
 			np.set_meta("raid_t0", t - float(pd.get("rt0", 0.0))) # preserve despawn countdown
 		var rvs = pd.get("revive", 0.0)

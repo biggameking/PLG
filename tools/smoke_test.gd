@@ -1011,6 +1011,22 @@ func run() -> void:
 		if q.species_id == "lamball" and q.hp == 30.0:
 			loaded_ok = true
 	check("truncated save loads cleanly", tload == true and loaded_ok, "pals=%d" % game.pals.size())
+	# foreign-typed fields: strings/ints where numbers/bools/arrays live must coerce, not abort
+	var ff := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	ff.store_var({"seed": game.world.seed, "day": "many", "tod": "late", "tech_points": "3",
+		"unlocked": ["palbox", 42], "items": {"wood": "12", "stone": "x"}, "party": [],
+		"player": {"pos": ["no", "no"], "hp": "full", "level": "2"},
+		"pals": [{"sp": "lamball", "pos": [game.player.pos.x + 1, game.player.pos.y],
+				"mode": 7, "hp": "lots", "sex": 9, "boss": "yes", "san": "hi",
+				"passives": "nope", "star": "s", "raid": "y"}],
+		"structures": {}})
+	ff.close()
+	var fload: bool = game.load_game()
+	var fok := false
+	for q in game.pals:
+		if q.species_id == "lamball" and q.mode == "wild" and q.hp is float and q.sex == "M" and q.boss == false:
+			fok = true # mode 7 -> "wild" fallback, sex 9 -> "M", boss "yes" -> skipped (not a real bool)
+	check("foreign-typed save coerces", fload == true and fok and game.player.hp is float and game.item_count("wood") == 12, "pals=%d" % game.pals.size())
 	game.save_game() # restore a sane save file for the rest of the run
 
 	# net host (no client join in same proc)
