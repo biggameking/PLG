@@ -471,7 +471,7 @@ func tick_needs(dt: float) -> void:
 			ate = game.eat_from_bag() # party pals share the player's pack
 		if ate > 0:
 			hunger = maxf(0, hunger - float(ate) * 2.5)
-			san = minf(100, san + 8)
+			san = minf(100, san + 4.0 + ate * 0.5) # Palworld: a real meal lifts spirits — berries barely help
 		elif mode in ["base", "partner"]:
 			san = maxf(0.0, san - 0.6)  # starving with no food to find: SAN bleeds
 	if hunger >= 100.0:

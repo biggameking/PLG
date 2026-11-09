@@ -819,6 +819,19 @@ func run() -> void:
 	sleepy.san = 50.0
 	sleepy.tick_needs(1.0)
 	check("hot spring SAN", spa_xy.x >= 0 and sleepy.san >= 59.0, "san %.0f" % sleepy.san)
+	# Palworld meals: cooked food restores far more SAN than raw crops.
+	# eat_from_bag takes the cheapest food first — pin the bag to one item.
+	var bag_save: Dictionary = game.items.duplicate()
+	var eater: Pal = game.gen_pal("lamball", 3, game.player.pos)
+	eater.mode = "partner"; eater.hunger = 90.0
+	game.items.clear(); game.items["wheat"] = 1
+	eater.san = 50.0; eater.tick_needs(1.0)
+	var san_raw: float = eater.san
+	game.items.clear(); game.items["jam_bun"] = 1
+	eater.san = 50.0; eater.hunger = 90.0; eater.tick_needs(1.0)
+	check("meal lifts SAN", eater.san > san_raw + 15.0, "raw=%.1f meal=%.1f" % [san_raw, eater.san])
+	game.items = bag_save
+	game.pals.erase(eater); eater.free()
 	# monitoring stand: SAN drains half again while it stands (Palworld trade-off)
 	game.add_item("wood", 10); game.add_item("stone", 10); game.add_item("ingot", 2)
 	var mst_xy: Vector2i = free_xy.call("monitoring_stand")
