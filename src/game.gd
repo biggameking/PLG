@@ -2284,7 +2284,8 @@ func load_game() -> bool:
 			var ev = seq.get(slot, "")
 			player.equipment[slot] = str(ev) if ItemData.ITEMS.has(str(ev)) else "" # unknown ids equip to nothing
 		var wdur: float = float(ItemData.ITEMS.get(player.equipment["weapon"], {}).get("weapon", {}).get("dur", -1))
-		player.weapon_wear = clampf(float(d.get("wear", wdur)), -1.0, maxf(wdur, 1.0)) if wdur > 0 else -1.0
+		var wv = d.get("wear", wdur) # a foreign save can hand us a string — then trust the item, not the field
+		player.weapon_wear = (clampf(float(wv), -1.0, maxf(wdur, 1.0)) if (wv is float or wv is int) else wdur) if wdur > 0 else -1.0
 	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
 	for ik in d["items"]:
 		items[ik] = maxi(int(d["items"][ik]), 0) # negative inventory is corrupt state
