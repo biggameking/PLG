@@ -414,6 +414,27 @@ func run() -> void:
 		check("sealed grotto", ring_rock and warden and loot, "rock=%s boss=%s loot=%s" % [ring_rock, warden, loot])
 	else:
 		check("sealed grotto", false, "no grotto_pos")
+	# wild egg nests: stealable pal_egg drops placed at worldgen
+	var nest_eggs := 0
+	for dd in game.drops:
+		if dd["id"] == "pal_egg":
+			nest_eggs += 1
+	check("wild egg nests", nest_eggs >= 1, "n=%d" % nest_eggs)
+	# den refill: a slain boss schedules a respawn at its home ~1.5 days on
+	if legend:
+		var lhome: Vector2 = legend.home
+		var lsp: String = legend.species_id
+		var rb0: int = game.boss_respawns.size()
+		game.kill_pal(legend, true)
+		var sched: bool = game.boss_respawns.size() == rb0 + 1
+		var back := false
+		if sched:
+			game.boss_respawns[game.boss_respawns.size() - 1]["at"] = game.t
+			game.tick_boss_respawns()
+			for q in game.pals:
+				if q.boss and q.species_id == lsp and q.pos.distance_to(lhome) < 1.0:
+					back = true
+		check("boss respawn", sched and back, "sched=%s back=%s" % [sched, back])
 	# boss sphere-immune
 	for q in game.pals:
 		if q.boss:

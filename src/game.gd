@@ -343,7 +343,35 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		box_pal(p)
 		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
 	else:
+		if (p.alpha or p.boss) and boss_respawns.size() < MAX_RESPAWNS:
+			# Palworld dens refill: a slain boss returns to its anchor ~1.5 days on
+			boss_respawns.append({"sid": p.species_id, "lv": p.level,
+				"pos": [p.home.x, p.home.y], "alpha": p.alpha, "boss": p.boss,
+				"at": t + DAY_LEN * 1.5})
 		p.queue_free()
+
+const MAX_RESPAWNS := 64 # scheduled den refills — bounded like every runtime set
+var boss_respawns := []  # {sid,lv,pos:[x,y],alpha,boss,at}
+
+func tick_boss_respawns() -> void:
+	for i in range(boss_respawns.size() - 1, -1, -1):
+		var br: Dictionary = boss_respawns[i]
+		if t < br.get("at", INF):
+			continue
+		boss_respawns.remove_at(i)
+		var sid := str(br.get("sid", ""))
+		if pals.size() >= MAX_PALS or SpeciesData.species_of(sid).is_empty():
+			continue # cap reached or corrupted entry — the den stays empty
+		var pp: Array = br.get("pos", [0, 0])
+		var at := Vector2(float(pp[0]), float(pp[1])) if pp.size() >= 2 else Vector2.ZERO
+		var np := preload("res://src/pal.gd").new()
+		np.alpha = bool(br.get("alpha", false))
+		np.boss = bool(br.get("boss", false))
+		entity_layer.add_child(np)
+		np.setup(self, sid, clampi(int(br.get("lv", 30)), 1, 60), at)
+		np.home = at
+		pals.append(np)
+		log_msg("A boss stirs again at its den")
 
 func hurt_player(atk: float, from: Pal) -> void:
 	if player.dodge_t > 0:
@@ -729,6 +757,7 @@ func _process(dt: float) -> void:
 			spheres_flying.erase(sp)
 	tick_production(dt)
 	tick_merchant(dt)
+	tick_boss_respawns()
 	update_projectiles(dt)
 	for bp in box: # knocked-out pals recover on a timer
 		if bp.revive_t > 0 and t > bp.revive_t:
@@ -1467,6 +1496,11 @@ func save_game() -> void:
 		"perks": perks, "equip": player.equipment,
 		"pals": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
+		"respawns": boss_respawns.slice(0, MAX_RESPAWNS).map(
+			func(br):
+				var r: Dictionary = br.duplicate()
+				r["at"] = maxf(0.0, br["at"] - t) # store remaining time — t restarts on load
+				return r),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level},
@@ -1534,6 +1568,12 @@ func load_game() -> bool:
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
 				and (dd0["x"] is float or dd0["x"] is int) and (dd0["y"] is float or dd0["y"] is int):
 			spawn_drop(str(dd0["id"]), maxi(int(dd0.get("n", 1)), 0), Vector2(float(dd0["x"]), float(dd0["y"]))) # negative n would corrupt the item ledger
+	boss_respawns.clear()
+	for rb in d.get("respawns", []):
+		if rb is Dictionary and rb.get("pos") is Array and boss_respawns.size() < MAX_RESPAWNS:
+			var rr: Dictionary = rb.duplicate()
+			rr["at"] = t + maxf(0.0, float(rb.get("at", DAY_LEN))) # saved as remaining → back to absolute
+			boss_respawns.append(rr)
 	tech_points = maxi(int(d["tech_points"]), 0)
 	unlocked = d["unlocked"].filter(func(u): return u is String)
 	var saved_perks: Dictionary = d.get("perks", {})
@@ -1950,7 +1990,23 @@ func spawn_lairs() -> void:
 		placed += 1
 	spawn_legendary_den()
 	spawn_grotto()
+	spawn_nests()
 	log_msg("%d boss lairs marked deep in the world" % placed)
+
+func spawn_nests() -> void:
+	# Wild egg nests (Palworld): stealable pal_egg drops scattered past zone 1
+	var placed := 0
+	var tries := 0
+	while placed < 7 and tries < 4000:
+		tries += 1
+		var tx := rng.int_range(4, World.WORLD_W - 5)
+		var ty := rng.int_range(4, World.WORLD_H - 5)
+		var at := Vector2(tx + 0.5, ty + 0.5)
+		if world.zone_at(tx, ty) < 1 or world.blocked(tx, ty) \
+				or at.distance_to(player.pos) < 15.0:
+			continue
+		spawn_drop("pal_egg", 1, at)
+		placed += 1
 
 var grotto_pos := Vector2i(-1, -1) # sealed dungeon marker (set at worldgen)
 
@@ -2072,6 +2128,8 @@ func regenerate(s: int) -> void:
 			sp0["node"].queue_free()
 	spheres_flying.clear()
 	palbox_pos = Vector2i(-1, -1)
+	grotto_pos = Vector2i(-1, -1)
+	boss_respawns.clear() # the old world's dens died with it
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
