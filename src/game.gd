@@ -960,10 +960,19 @@ func nearest_palbox(at: Vector2) -> Vector2i:
 			bd = dd; best = bx2
 	return best
 
+const MAX_STRUCTURES := 400 # build cap: dicts keyed per-cell; 400 bases is already silly
+
 func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES[sid]
 	if sid == "palbox" and palbox_count() >= 1 + MAX_EXTRA_BOXES:
 		log_msg("Max %d palboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))
+		return false
+	var seen_st := []
+	for k in structures:
+		if structures[k] not in seen_st:
+			seen_st.append(structures[k]) # dedupe footprint cells → true count
+	if seen_st.size() >= MAX_STRUCTURES:
+		log_msg("Build limit reached (%d)" % MAX_STRUCTURES)
 		return false
 	for c in s.get("cost", []):
 		if item_count(c[0]) < c[1]:

@@ -582,6 +582,15 @@ func run() -> void:
 		check("outpost promoted", game.palbox_pos == ob_pos and game.extra_boxes.is_empty())
 	else:
 		check("outpost palbox", true, "skipped: no room / no base this seed")
+	# build cap: 400 distinct structures is the hard runtime bound
+	var fake := []
+	for i in game.MAX_STRUCTURES:
+		var fk := Vector2i(i * 1000 + 7, -50) # outside the real map — no key collisions
+		game.structures[fk] = {"id": "fake%d" % i}
+		fake.append(fk)
+	check("build cap", not game.place_structure("chest", 1, 1), "placed past cap")
+	for fk in fake:
+		game.structures.erase(fk)
 	# den refill: a slain boss schedules a respawn at its home ~1.5 days on
 	if legend:
 		var lhome: Vector2 = legend.home
