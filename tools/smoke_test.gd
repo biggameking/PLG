@@ -428,6 +428,23 @@ func run() -> void:
 		game.add_item("foxparks_harness", 1)
 		check("harness unlocks skill", game.partner_gear_ok("foxparks"))
 		game.items.erase("foxparks_harness")
+		# support partner skills (Palworld ranch-in-the-field): milk/eggs on tap
+		var cr: Pal = game.gen_pal("cremis", 5, p.pos)
+		cr.mode = "partner"
+		var milk0: int = game.item_count("milk")
+		var lay: Pal = game.gen_pal("chikipi", 5, p.pos)
+		lay.mode = "partner"
+		var egg0: int = game.item_count("egg")
+		var sup: bool = game.run_partner_skill(cr, p.pos, game.PARTNER_SKILLS["cremis"]) \
+			and game.run_partner_skill(lay, p.pos, game.PARTNER_SKILLS["chikipi"])
+		check("ranch pals produce", sup and game.item_count("milk") == milk0 + 1
+			and game.item_count("egg") == egg0 + 1,
+			"milk=%d egg=%d" % [game.item_count("milk") - milk0, game.item_count("egg") - egg0])
+		for tmp2 in [cr, lay]:
+			if is_instance_valid(tmp2) and tmp2.get_parent():
+				tmp2.get_parent().remove_child(tmp2)
+			if is_instance_valid(tmp2):
+				tmp2.free()
 		game.pals.erase(wt)
 		for tmp in [wt, fp, tz]:
 			if is_instance_valid(tmp) and tmp.get_parent():

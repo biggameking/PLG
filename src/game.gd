@@ -3796,6 +3796,10 @@ const PARTNER_SKILLS := {
 	"foxparks": {"cd": 6.0, "range": 4.5, "name": "Flamethrower"},
 	"lifmunk": {"cd": 5.0, "range": 7.0, "name": "SMG Burst"},
 	"tanzee":  {"cd": 5.0, "range": 8.0, "name": "Rifle Shot"},
+	# Palworld ranch-in-the-field supports — no gear, just produce on tap
+	"cremis":   {"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
+	"mozzarina":{"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
+	"chikipi":  {"cd": 25.0, "range": 0.0, "name": "Egg-cellent Lay"},
 }
 
 # Palworld pal gear: a bespoke active needs its species item crafted in the
@@ -3885,6 +3889,18 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 				return false
 			tgt2.hit(Combat.damage(p_atk, 80, Combat.stat_at(tgt2.spec["def"],
 				tgt2.level, tgt2.talent) * tgt2.def_bonus * tgt2.def_mult(), 1.0, rng), 1.0, true)
+			return true
+		"cremis": # a squeeze of cream, straight into the bag
+			add_item("milk", 1)
+			floater(p.pos, "milk!", "#f8f4f0")
+			return true
+		"mozzarina": # the big jersey — two bottles per squeeze
+			add_item("milk", 2)
+			floater(p.pos, "milk x2!", "#f8f4f0")
+			return true
+		"chikipi": # it lays, you pocket
+			add_item("egg", 1)
+			floater(p.pos, "an egg!", "#f0e0a8")
 			return true
 	return false
 
