@@ -433,7 +433,7 @@ func run() -> void:
 		# partner skill
 		var prj0 := game.projectiles.size()
 		game.partner_skill()
-		check("partner_skill", game.projectiles.size() > prj0 or true, "%d->%d" % [prj0, game.projectiles.size()])
+		check("partner_skill", game.projectiles.size() >= prj0, "%d->%d" % [prj0, game.projectiles.size()])
 		# bespoke partner actives (the island signatures): cindlump cone / briargoo rifle
 		var fp: Kin = game.gen_pal("cindlump", 10, p.pos)
 		fp.mode = "partner"
@@ -2130,10 +2130,12 @@ func run() -> void:
 		if not game.net.ghosts.has(99):
 			game.net.spawn_ghost(99) # no tree above → the ghost was never planted
 		game.net.ghosts[99].net_pos = Vector3(free_spot.x, free_spot.y, 0)
+		game.net.peer_tags[99] = "tk_99" # demolish demands a hello'd identity
 		game.net_place("campfire", free_spot.x, free_spot.y, 99)
 		check("net place", game.structures.has(free_spot))
 		game.net_demolish(free_spot.x, free_spot.y, 99)
 		check("net demolish", not game.structures.has(free_spot))
+		game.net.peer_tags.erase(99)
 		# fail-closed: a pid with no registered ghost gets nothing, no matter
 		# how politely it asks — proximity proofs are mandatory, not optional
 		game.net_place("campfire", free_spot.x, free_spot.y, 77)
@@ -3443,7 +3445,7 @@ func run() -> void:
 				and not game.structures.has(c9) and game.place_free("campfire", c9.x, c9.y):
 			pb_cell = c9; break
 	if pb_cell.x >= 0:
-		game.structures[pb_cell]["placed_by"] = 7
+		game.structures[pb_cell]["placed_tag"] = "tk_seven"
 	# unique structure instances before save (dedupe footprint cells)
 	var st_before := []
 	for kk11 in game.structures:
@@ -3491,7 +3493,7 @@ func run() -> void:
 	check("party survives reload", party_sz_before == 0 or (game.party.size() == party_sz_before and resolvable == game.party.size()), "party=%d/%d res=%d lost=%s" % [game.party.size(), party_sz_before, resolvable, str(lost_uids)])
 	check("structures rebuild 1:1", st_after.size() == st_before.size(), "%d->%d" % [st_before.size(), st_after.size()])
 	if pb_cell.x >= 0:
-		check("placed_by survives reload", int(game.structures.get(pb_cell, {}).get("placed_by", -1)) == 7)
+		check("placed_by survives reload", str(game.structures.get(pb_cell, {}).get("placed_tag", "")) == "tk_seven")
 	var re_worker_pals := []
 	var re_detail := ""
 	var re_site_names := {}
@@ -4404,8 +4406,13 @@ func run() -> void:
 	# arp_step must be snapped onto the loop boundary, not chopped mid-tail
 	var ddat: PackedByteArray = game.music_day.stream.data
 	var e0 := int(ddat[0]); var e1 := int(ddat[ddat.size() - 1])
-	check("pad wrap has no seam", abs(e0 - 128) <= 12 and abs(e1 - 128) <= 12
-		and abs(e1 - e0) <= 12, "head=%d tail=%d" % [e0, e1])
+	# not just the two edge bytes — the wrap neighborhood must read as a
+	# quiet crossing, not an attack transient or a chopped tail
+	var edge_ok: bool = abs(e0 - 128) <= 12 and abs(e1 - 128) <= 12 and abs(e1 - e0) <= 12
+	for ei in range(1, 8):
+		edge_ok = edge_ok and abs(int(ddat[ei]) - 128) <= 40 \
+			and abs(int(ddat[ddat.size() - 1 - ei]) - 128) <= 40
+	check("pad wrap has no seam", edge_ok, "head=%d tail=%d" % [e0, e1])
 	var seam_pad: AudioStreamWAV = game.SFX_LIB.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6]], 6.0, 0.13, 0.7, 0.05)
 	var sdat: PackedByteArray = seam_pad.data
 	check("arp slots divide the loop", abs(int(sdat[0]) - 128) <= 12
@@ -4547,6 +4554,62 @@ func run() -> void:
 	hudn.touch_down(lay_t["joy"], 6)
 	check("panel owns taps", hudn.joy_idx < 0)
 	game.panel = ""
+	# real event routing — not just the helpers: _unhandled_input is the gate
+	game.player.aiming = false
+	var t_ev := InputEventScreenTouch.new()
+	t_ev.pressed = true; t_ev.index = 9; t_ev.position = lay_t["btns"]["aim"]
+	hudn._unhandled_input(t_ev)
+	check("screen-touch event routes", game.player.aiming)
+	game.player.aiming = false
+	game.touch_ui = false
+	hudn._unhandled_input(t_ev)
+	check("touch_ui off blocks routing", not game.player.aiming)
+	game.touch_ui = true
+	game.state = "paused"
+	hudn._unhandled_input(t_ev)
+	check("paused blocks touch verbs", not game.player.aiming)
+	game.state = "play"
+	# a menu swap mid-drift must park the stick — _process owns the transition
+	hudn.touch_down(lay_t["joy"], 0)
+	hudn.touch_move(lay_t["joy"] + Vector2(hudn.JOY_R * 0.5, 0), 0)
+	game.panel = "inv"
+	hudn._process(0.016)
+	check("panel swap parks stick", game.player.touch_vec == Vector2.ZERO and hudn.joy_idx < 0,
+		"vec=%s idx=%d" % [game.player.touch_vec, hudn.joy_idx])
+	game.panel = ""
+	# rim sprint must be real SPEED, not just a stamina bill
+	p.statuses.erase("sleep"); p.dodge_t = 0.0; p.mount = null; p.stamina = 100.0
+	var sprint_cell := Vector2i(-1, -1)
+	for r6 in range(1, 40):
+		for d6 in [Vector2i(r6, 0), Vector2i(-r6, 0), Vector2i(0, r6), Vector2i(0, -r6)]:
+			var c6: Vector2i = Vector2i(int(p.pos.x), int(p.pos.y)) + d6
+			if p.can_enter(c6.x + 1.5, c6.y + 0.5) and p.can_enter(c6.x + 0.5, c6.y + 0.5):
+				sprint_cell = c6; break
+		if sprint_cell.x >= 0: break
+	if sprint_cell.x >= 0:
+		p.pos = Vector2(sprint_cell.x + 0.5, sprint_cell.y + 0.5)
+		p.touch_vec = Vector2(1, 0); p.touch_sprint = false
+		var sx0: float = p.pos.x
+		p._physics_process(0.016)
+		var d_walk := p.pos.x - sx0
+		sx0 = p.pos.x
+		p.touch_sprint = true; p.stamina = 100.0
+		p._physics_process(0.016)
+		var d_run := p.pos.x - sx0
+		check("touch sprint is real speed", d_walk > 0.0 and d_run > d_walk * 1.4,
+			"walk=%.4f run=%.4f" % [d_walk, d_run])
+		p.touch_vec = Vector2.ZERO; p.touch_sprint = false
+	# emulated taps on virtual controls are eaten; a real mouse still strikes
+	game.hud = hudn
+	p.aiming = false; p.atk_cd = 0.0
+	var m_ev := InputEventMouseButton.new()
+	m_ev.button_index = MOUSE_BUTTON_LEFT; m_ev.pressed = true
+	m_ev.position = lay_t["btns"]["atk"]
+	p._unhandled_input(m_ev)
+	check("tap on ATK is eaten", p.atk_cd == 0.0, "cd=%s" % p.atk_cd)
+	m_ev.position = Vector2(vpr.x * 0.5, vpr.y * 0.4) # open sky — no control there
+	p._unhandled_input(m_ev)
+	check("real mouse still strikes", p.atk_cd > 0.0, "cd=%s" % p.atk_cd)
 	var tm0 := str(game.settings["touch"])
 	hudn.shell_act("touch_tgl")
 	check("touch setting cycles", str(game.settings["touch"]) != tm0
@@ -4563,7 +4626,7 @@ func run() -> void:
 		if row[1] == "m_join": join_rows += 1
 	check("pause shell offers join", join_rows == 1, "rows=%s" % join_rows)
 	game.net.multiplayer.multiplayer_peer = peer_bak
-	hudn.shell_act("m_join")
+	hudn.run_click({"act": "m_join", "arg": null}) # the REAL click path, not the helper
 	hudn._process(0.016)
 	check("join panel opens + vkbd tracks", game.panel == "join" and hudn._vkbd_open,
 		"panel=%s vkbd=%s" % [game.panel, hudn._vkbd_open])
@@ -4781,7 +4844,7 @@ func run() -> void:
 	vt.max_hp = 99999.0; vt.hp = vt.max_hp # deep pool so the bound is what caps
 	# the cap derives from real gear data — a top-end build (85-wpn lv60,
 	# maxed statue + trinkets + aura + meal) lands ~775 pre-formula atk
-	check("guest atk cap derived", game.net.guest_atk_cap() > 700.0 and game.net.guest_atk_cap() < 900.0,
+	check("guest atk cap derived", game.net.guest_atk_cap() >= 740.0 and game.net.guest_atk_cap() <= 800.0,
 		"cap=%.0f" % game.net.guest_atk_cap())
 	var hp_v: float = vt.hp
 	game.net.pal_hit(vt.uid, 99999.0)
@@ -4856,20 +4919,22 @@ func run() -> void:
 		game.net.spawn_ghost(0)
 		game.net.ghosts[0].net_pos = Vector3(cd.x + 0.5, cd.y + 0.5, 0)
 		var stc: Dictionary = game.structures[cd]
-		stc["placed_by"] = 7 # a guest's build
+		stc["placed_tag"] = "tk_other" # a guest's build
 		game.net.ghosts[0].set_meta("dem_bkt", 1.0) # dem_bkt feeds one refusal per beat
-		game.net.demolish_req(cd.x, cd.y) # headless sender pid=0 ≠ 7
+		game.net.demolish_req(cd.x, cd.y) # headless sender pid=0, tag mismatch
 		check("foreign build refuses raze", game.structures.get(cd) != null)
-		stc["placed_by"] = 0 # host-built — razing needs a witnessed ghost in reach
+		stc["placed_tag"] = "tk_zero"; game.net.peer_tags[0] = "tk_zero"
 		game.net.ghosts[0].set_meta("dem_bkt", 1.0)
 		game.net.demolish_req(cd.x, cd.y)
 		check("own build razes", game.structures.get(cd) == null)
+		game.net.peer_tags.erase(0)
 	# net_place stamps who built it — the tag drives the demolish gate
 	if "campfire" not in game.unlocked:
 		game.unlocked.append("campfire") # save tests may have pruned the tech list
 	var cd2 := Vector2i(-1, -1)
 	var cp_n := 0
 	game.net.spawn_ghost(5) # the sender's ghost vouches for proximity
+	game.net.peer_tags[5] = "tk_five" # hello'd identity — net_place stamps it
 	for r5 in range(2, 40):
 		if cd2.x >= 0:
 			break
@@ -4889,8 +4954,10 @@ func run() -> void:
 		if game.structures[k2x] not in seen2:
 			seen2.append(game.structures[k2x]); st_ct += 1
 	check("guest build tagged", cd2.x >= 0
-		and int(game.structures.get(cd2, {}).get("placed_by", -1)) == 5,
-		"cd2=%s canplace=%d structs=%d/%d" % [cd2, cp_n, st_ct, game.MAX_STRUCTURES])
+		and str(game.structures.get(cd2, {}).get("placed_tag", "")) == "tk_five",
+		"cd2=%s canplace=%d structs=%d/%d tag=%s" % [cd2, cp_n, st_ct, game.MAX_STRUCTURES,
+			game.structures.get(cd2, {}).get("placed_tag", "?")])
+	game.net.peer_tags.erase(5)
 	if cd2.x >= 0:
 		game.net_remove_structure(game.structures[cd2]) # leave no trace
 	game.net.ghosts[5].queue_free(); game.net.ghosts.erase(5)

@@ -70,7 +70,9 @@ the interaction-verb layer was not. Closed in this pass:
   elevation is finite+clamped. S21 authority: every client→host request
   is per-sender throttled (catch ~1.4s, build/demolish ~1s, harvest/
   loot/roster 8/s+10); `demolish` refuses anchors and anything not
-  stamped `placed_by = sender`; disconnect orphans the guest's roster
+  stamped `placed_tag = peer_tags[sender]` (the keeper tag — pids die
+  with the session, tags survive rejoin; save `by` round-trips the tag);
+  disconnect orphans the guest's roster
   under its tag (rejoin reclaims via hello), purges field kin into the
   box, and drops all host replicas; a guest's pal provokes the guest
   (`owner_id` rides hit/skill_hit); foreign partners can't graze the

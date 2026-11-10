@@ -74,6 +74,7 @@ func _process(dt: float) -> void:
 		click_rects.clear()
 		menu_sel = 0
 		nav_hold = 0.0
+		_release_stick() # state/panel swap mid-drift parks the joystick here too
 	# arrows and dpad share the ui_* actions; after a 0.42s first step the
 	# cursor keeps marching on a 0.09s cadence — a long list stops being a
 	# button-mash. Edge presses still come from _input's action_pressed.
@@ -99,6 +100,12 @@ func _process(dt: float) -> void:
 var _menu_key := "" # last drawn "state|panel" — rects belong to exactly one menu
 var _vkbd_open := false
 
+func _release_stick() -> void: # one path for every "the stick must go home"
+	joy_idx = -1
+	if game != null and game.player:
+		game.player.touch_vec = Vector2.ZERO
+		game.player.touch_sprint = false
+
 func _input(event: InputEvent) -> void:
 	# last-seen device drives hint phrasing — sticks drift, so gate on intent
 	if event is InputEventJoypadButton:
@@ -115,11 +122,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_menu_key = mk
 		click_rects.clear()
 		menu_sel = 0
-		if joy_idx >= 0: # a panel/state swap mid-drift releases the stick
-			joy_idx = -1
-			if game.player:
-				game.player.touch_vec = Vector2.ZERO
-				game.player.touch_sprint = false
+		_release_stick()
 	if game.touch_ui and game.state == "play":
 		if event is InputEventScreenTouch:
 			if event.pressed:
@@ -409,7 +412,7 @@ func run_click(cr: Dictionary) -> void:
 			elif cr["act"] == "chest_dep" or cr["act"] == "chest_wd":
 				chest_bulk(cr["act"])
 
-const SHELL_ACTS := ["new_game", "continue", "m_settings", "set_back", "resume",
+const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
 	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
 
@@ -832,8 +835,14 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#8ef0ff"))
 
 # ---------- on-screen touch controls ----------
-func touch_layout(r: Vector2) -> Dictionary:
-	return {"joy": Vector2(92, r.y - 108), "btns": {
+var _lay_key := Vector2(-1, -1)
+var _lay_cache := {}
+
+func touch_layout(r: Vector2) -> Dictionary: # cached — draw_touch asks every frame
+	if r == _lay_key and not _lay_cache.is_empty():
+		return _lay_cache
+	_lay_key = r
+	_lay_cache = {"joy": Vector2(92, r.y - 108), "btns": {
 		"atk": Vector2(r.x - 72, r.y - 92),
 		"aim": Vector2(r.x - 152, r.y - 52),
 		"roll": Vector2(r.x - 66, r.y - 164),
@@ -841,7 +850,18 @@ func touch_layout(r: Vector2) -> Dictionary:
 		"orb": Vector2(r.x - 226, r.y - 92),
 		"inv": Vector2(r.x - 226, r.y - 170),
 		"bld": Vector2(r.x - 296, r.y - 116),
-		"menu": Vector2(r.x - 38, 44)}}
+		"menu": Vector2(r.x - 38, 224)}} # under the minimap, not inside it
+	return _lay_cache
+
+func touch_zone_hit(p: Vector2) -> bool: # does this point land on a virtual control?
+	var lay := touch_layout(get_viewport_rect().size)
+	if p.distance_to(lay["joy"]) <= JOY_R + 8.0:
+		return true
+	for b in lay["btns"]:
+		var c: Vector2 = lay["btns"][b]
+		if p.distance_to(c) <= (36.0 if b == "atk" else BTN_R) + 8.0:
+			return true
+	return false
 
 func touch_down(p: Vector2, idx: int) -> void:
 	if game.panel != "": # panels own taps — they arrive as emulated LMB too
@@ -889,7 +909,7 @@ func touch_verb(b: String) -> void:
 			game.panel = "build"
 			build_sel = -1
 		"roll":
-			if pl.statuses.get("sleep", 0) <= game.t and pl.dodge_t <= 0 and pl.stamina >= 15.0:
+			if pl.can_dodge():
 				pl.dodge_t = 0.35; pl.stamina -= 15.0; pl.stam_wait = 0.8
 		"atk":
 			if pl.statuses.get("sleep", 0) > game.t:

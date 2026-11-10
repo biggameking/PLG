@@ -197,7 +197,8 @@ build-tools/apksigner).
   sleep claims route through `apply_sleep_claim`'s chain-sleep immunity
   (host tranq uses the same gate). sphere_catch cap_lv clamps to 1..6 —
   the real range (1 + statue≤5), not a plausible-looking 20. demolish refuses anchors outright and any
-  structure not stamped `placed_by = sender` (net_place stamps it).
+  structure not stamped `placed_tag = peer_tags[sender]` (net_place stamps
+  it — the tag, not the pid, since pids die with the session).
   Disconnect: `_on_peer_disconnected` retracts the field pal then
   `orphan_guest_kin` boxes every owned kin under its tag for rejoin
   (`rebind_owner` reclaims on hello); `_on_server_disconnected` purges
@@ -244,3 +245,22 @@ build-tools/apksigner).
   into `store/`. Found + fixed a real bug: ImageDraw writes 4-tuples
   raw onto RGBA (no blend), so the vignette rect blacked the frame —
   now a whole-frame blend. Pixel-verified, not blind-generated.
+- S24 audit-fix batch — DONE: third context-free pass (S22–S23 scope)
+  found 2H/7M/8L, all landed. `m_join` was in `shell_act` but missing
+  from `SHELL_ACTS` — the JOIN row was dead and touch had no join door
+  (now also reachable via run_click, smoke exercises the real path).
+  Touch sprint billed 12 SP/s while the speed term ignored it — now
+  real ×1.7, asserted by displacement. `_process` ran the menu-swap
+  sync without the stick release (mid-drift pause latched a phantom
+  run) — shared `_release_stick` at both transition sites; load_game
+  clears touch state too. Real mice regained LMB: taps are eaten only
+  inside virtual-control zones (`touch_zone_hit`), not globally.
+  `placed_by` (session pid) became `placed_tag` (keeper tag) — save
+  round-trips the tag, demolish requires a hello'd tag match. Minor:
+  pause rows extracted to `pause_rows()` (no headless draw in tests),
+  `can_dodge()` shared across key/pad/touch, `touch_layout` cached,
+  menu button moved out from under the minimap, gen_store shadows
+  composite via overlay + kin clamped on-canvas, seam check samples
+  the wrap neighborhood, atk-cap band tightened 740..800, `or true`
+  tautology removed. Smoke +12 (routing gates, stick park, sprint
+  speed, mouse-vs-tap, join row + run_click path).

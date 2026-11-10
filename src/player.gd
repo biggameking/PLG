@@ -63,11 +63,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		sphere_sel = (sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
 	if statuses.get("sleep", 0) > game.t:
 		return # asleep: no dodge / attack / throw
-	if event.is_action_pressed("dodge") and dodge_t <= 0 and stamina >= 15.0:
+	if event.is_action_pressed("dodge") and can_dodge():
 		dodge_t = 0.35
 		stamina -= 15.0; stam_wait = 0.8 # a roll costs a chunk of stamina
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
-			and not game.touch_ui: # on touch rigs the tap emulates LMB — the ATK button owns strikes
+			and not (game.touch_ui and game.hud != null and game.hud.touch_zone_hit(event.position)):
+		# touch taps emulate LMB — but ONLY taps that land on a virtual control
+		# are eaten; a real mouse still strikes anywhere else on the screen
 		if game.panel != "":
 			return
 		if aiming:
@@ -81,6 +83,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			throw_sphere(true)
 		else:
 			melee()
+
+func can_dodge() -> bool: # one rule for key, pad, and touch — the roll cost lives here
+	return statuses.get("sleep", 0) <= game.t and dodge_t <= 0 and stamina >= 15.0
 
 func melee() -> void:
 	if atk_cd > 0:
@@ -350,8 +355,8 @@ func _physics_process(dt: float) -> void:
 	if mount != null:
 		mount.pos = pos # ridden pal travels with the player
 	if iv.length() > 0 and dodge_t <= 0:
-		var sp := speed * spd_mult * (1.7 if Input.is_action_pressed("sprint") \
-				and (stamina > 0.0 or mount != null) else 1.0)
+		var sp := speed * spd_mult * (1.7 if (Input.is_action_pressed("sprint") \
+				or touch_sprint) and (stamina > 0.0 or mount != null) else 1.0)
 		var step := iv.normalized() * sp * dt
 		var nx: float = pos.x + step.x
 		var ny: float = pos.y + step.y

@@ -72,7 +72,6 @@ def draw_scene(W, H):
 
 
 def stamp_kin(img, sea_y, W, H):
-    d = ImageDraw.Draw(img, "RGBA")
     n = len(LINEUP)
     scale = max(2, int(H / 64 * 0.55))  # kin are 80x64 — scale to scene height
     for i, sid in enumerate(LINEUP):
@@ -86,8 +85,14 @@ def stamp_kin(img, sea_y, W, H):
         # stand them on the ridge line, spread across the middle-left half
         x = int(W * (0.10 + i * (0.5 / max(1, n - 1))))
         y = int(sea_y - H * 0.09 - h * 0.75)
-        # dark ground shadow keeps them planted
-        d.ellipse([x + w * 0.1, y + h * 0.93, x + w * 0.9, y + h], fill=(0, 0, 0, 110))
+        x = min(max(0, x), W - w)   # alpha_composite refuses off-canvas sources
+        y = min(max(0, y), H - h)
+        # ground shadow — draw on an overlay so the alpha actually blends
+        # (ImageDraw on an RGBA base writes raw tuples, no compositing)
+        sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(sh).ellipse([x + w * 0.1, y + h * 0.93, x + w * 0.9, y + h],
+                                   fill=(0, 0, 0, 110))
+        img.alpha_composite(sh)
         img.alpha_composite(spr, (x, y))
 
 

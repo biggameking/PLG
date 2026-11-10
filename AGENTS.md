@@ -236,3 +236,24 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     (`capture_level = 1 + statue≤5`). When a bound is meant to match
     honest play, compute it from the data (perk caps, item tables,
     level max) — a plausible-looking constant IS the exploit.
+48. **Session-surviving identity is the tag, not the pid.** Structures
+    stamped `placed_by = pid` kept raze rights only until the peer
+    rejoined with a new id — the persistence was hollow. Anything that
+    must outlive the connection (roster, build ownership) keys on
+    `peer_tags[pid]`; pids are for live-session checks only.
+49. **Test the routing layer, not the callee.** `m_join` lived in
+    `shell_act` but was never registered in `SHELL_ACTS` — the click
+    path was dead while `hudn.shell_act("m_join")` stayed green. Verb
+    tests must drive `run_click` / `_unhandled_input`, and any new
+    shell act needs its registry entry in the same edit.
+50. **A new input verb is three contracts: flag, resource, effect.**
+    Touch sprint set `touch_sprint` and billed 12 SP/s while the speed
+    term never read it — pure stamina tax at 1.0×. When a verb drains
+    a resource, assert the payoff it buys, not just the flag and the
+    cost.
+51. **Transition handlers must live in every transition site.**
+    `_unhandled_input` released the joystick on menu swaps, but
+    `_process` performs the same `_menu_key` sync one frame earlier —
+    the release never ran and mid-drift pauses latched a phantom run.
+    Any state/panel transition cleanup belongs in a shared helper
+    (`_release_stick`) called from BOTH sites.

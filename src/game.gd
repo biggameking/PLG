@@ -7,6 +7,7 @@ var world := World.new()
 var rng: Rng
 var player: Player
 var net = null
+var hud = null # UILayer/HUD — main.gd wires it; touch routing needs the zone map
 var perks := {"capture": 0, "speed": 0, "atk": 0, "hp": 0, "work": 0, "xp": 0}
 var pals: Array[Kin] = []
 var items := {}            # item_id -> count
@@ -3651,7 +3652,7 @@ func save_game() -> void:
 			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
 			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null,
 			"cap": st.get("captive") if st["id"] == "kin_cage" else null,
-			"by": int(st.get("placed_by", 0)) if int(st.get("placed_by", 0)) != 0 else null,
+			"by": str(st.get("placed_tag", "")) if str(st.get("placed_tag", "")) != "" else null,
 			"mimic": st.get("mimic") if st["id"] == "chest" else null}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
@@ -4047,8 +4048,8 @@ func load_game() -> bool:
 				var inc_d: Dictionary = sv["inc"]
 				st["egg_inc"] = {"pair": inc_d.get("pair"), "huge": inc_d.get("huge") == true,
 					"ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0)}
-			if sv.get("by") is float or sv.get("by") is int:
-				st["placed_by"] = maxi(int(sv["by"]), 0) # guest builds keep their owner's raze rights
+			if sv.get("by") is String and str(sv["by"]) != "":
+				st["placed_tag"] = str(sv["by"]).left(24) # keeper tag — pids are session-scoped
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
@@ -4096,6 +4097,8 @@ func load_game() -> bool:
 	if player != null:
 		player.aiming = false
 		player.dodge_t = 0.0
+		player.touch_vec = Vector2.ZERO # a load mid-drift must not inherit the stick
+		player.touch_sprint = false
 	log_msg(tr("Loaded."))
 	return true
 
@@ -5452,7 +5455,9 @@ func net_place(sid: String, tx: int, ty: int, pid: int) -> bool:
 	if place_free(sid, tx, ty): # the client already paid locally
 		var st2 = structures.get(Vector2i(tx, ty))
 		if st2 != null:
-			st2["placed_by"] = pid # guest-built means guest-demolishable — host work isn't
+			# the keeper tag, not the pid — pids die with the session, the tag
+			# survives a rejoin (same identity model as remote_parties)
+			st2["placed_tag"] = str(net.peer_tags.get(pid, ""))
 		log_msg("Player %d built %s" % [pid, s.get("name", sid)])
 		return true
 	return false
@@ -5518,8 +5523,9 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 		return
 	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false):
 		return # the kinbox holds every stored pal — nobody razes the anchor
-	if int(st.get("placed_by", 0)) != pid:
-		return # guests raze only what they built — the host's walls aren't theirs
+	var t := str(net.peer_tags.get(pid, ""))
+	if t == "" or str(st.get("placed_tag", "")) != t:
+		return # guests raze only what THEY built — tags outlive pids
 	var gp = net.ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
 		return # fail closed: razing needs a witnessed ghost in range
