@@ -257,3 +257,18 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     the release never ran and mid-drift pauses latched a phantom run.
     Any state/panel transition cleanup belongs in a shared helper
     (`_release_stick`) called from BOTH sites.
+52. **Sibling mutation paths must share the recall tail.** Three structure
+    removers existed — `demolish_at`, `raze_structure`, `net_remove_structure`
+    — and only the local one forgot `exp_pal` recall, stranding expedition
+    pals invisible forever. When a new removal/mutation path is added, grep
+    the sibling list and mirror the FULL tail (workers, exp_pal, store,
+    chest_ref, anchors) — or extract it.
+53. **Zone gates and their consumers share ONE radius table.** `touch_zone_hit`
+    used JOY_R+8/BTN+8 while `touch_down` claimed at JOY_R*1.7/raw-BTN — taps
+    in the gap either double-fired or went dead both directions. Any paired
+    hit-test (gate + handler, bounds check + consumer) derives from one
+    helper (`joy_grab_r`/`btn_r`), never two literals.
+54. **Strings that cross a boundary get tr() at the call site.** `log_msg`
+    stores raw text — two zh.csv rows sat dead because callers passed
+    literals. Every log/note/message string that reaches a user goes through
+    tr() where it's emitted, with a zh row in the same commit.

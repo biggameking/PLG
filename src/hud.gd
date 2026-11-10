@@ -420,7 +420,7 @@ func shell_act(act: String) -> void:
 	match act:
 		"new_game":
 			game.state = "play"
-			game.log_msg("Day 1 on the Wildmere — catch a kin, feed it, put it to work.")
+			game.log_msg(tr("Day 1 on the Wildmere — catch a kin, feed it, put it to work."))
 		"continue":
 			if game.load_game():
 				game.state = "play"
@@ -853,13 +853,16 @@ func touch_layout(r: Vector2) -> Dictionary: # cached — draw_touch asks every 
 		"menu": Vector2(r.x - 38, 224)}} # under the minimap, not inside it
 	return _lay_cache
 
+func joy_grab_r() -> float: return JOY_R * 1.7 # one radius table — touch_down AND zone gate share it
+
+func btn_r(b: String) -> float: return (36.0 if b == "atk" else BTN_R) + 8.0
+
 func touch_zone_hit(p: Vector2) -> bool: # does this point land on a virtual control?
 	var lay := touch_layout(get_viewport_rect().size)
-	if p.distance_to(lay["joy"]) <= JOY_R + 8.0:
+	if p.distance_to(lay["joy"]) <= joy_grab_r():
 		return true
 	for b in lay["btns"]:
-		var c: Vector2 = lay["btns"][b]
-		if p.distance_to(c) <= (36.0 if b == "atk" else BTN_R) + 8.0:
+		if p.distance_to(lay["btns"][b]) <= btn_r(b):
 			return true
 	return false
 
@@ -867,12 +870,12 @@ func touch_down(p: Vector2, idx: int) -> void:
 	if game.panel != "": # panels own taps — they arrive as emulated LMB too
 		return
 	var lay := touch_layout(get_viewport_rect().size)
-	if joy_idx < 0 and p.distance_to(lay["joy"]) <= JOY_R * 1.7:
+	if joy_idx < 0 and p.distance_to(lay["joy"]) <= joy_grab_r():
 		joy_idx = idx
 		touch_steer(p)
 		return
 	for b in lay["btns"]:
-		if p.distance_to(lay["btns"][b]) <= (36.0 if b == "atk" else BTN_R):
+		if p.distance_to(lay["btns"][b]) <= btn_r(b):
 			touch_verb(b)
 			return
 

@@ -5,19 +5,23 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 GODOT="${GODOT:-/Volumes/17333023680/Godot/Godot.app/Contents/MacOS/Godot}"
-VER="$(rg -o 'version/name="[^"]+"' export_presets.cfg | head -1 | cut -d'"' -f2)"
+VER="$(rg -o 'version/name="[^"]+"' export_presets.cfg | head -1 | cut -d'"' -f2 || true)"
 VER="${VER:-0.0.0}"
 WHAT="${1:-all}"
 mkdir -p dist
 
 pack_windows() {
+	rm -rf export/windows && mkdir -p export/windows
 	"$GODOT" --headless --path . --export-release "Windows Desktop (Steam)" export/windows/kinbound.exe
-	(cd export/windows && zip -q "$ROOT/dist/kinbound-$VER-windows.zip" kinbound.exe)
+	# everything the preset emits — if embed_pck ever flips off, the .pck rides along
+	(cd export/windows && zip -qr "$ROOT/dist/kinbound-$VER-windows.zip" . -x '.*')
 	echo "dist/kinbound-$VER-windows.zip"
 }
 pack_web() {
+	rm -rf export/web && mkdir -p export/web
 	"$GODOT" --headless --path . --export-release "Web" export/web/index.html
-	(cd export/web && zip -qr "$ROOT/dist/kinbound-$VER-web.zip" .)
+	# the bundle is exactly index.* — dotfiles (eg .DS_Store) never ship
+	(cd export/web && zip -qr "$ROOT/dist/kinbound-$VER-web.zip" 'index.*')
 	echo "dist/kinbound-$VER-web.zip"
 }
 case "$WHAT" in

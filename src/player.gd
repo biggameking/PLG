@@ -70,8 +70,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			and not (game.touch_ui and game.hud != null and game.hud.touch_zone_hit(event.position)):
 		# touch taps emulate LMB — but ONLY taps that land on a virtual control
 		# are eaten; a real mouse still strikes anywhere else on the screen
-		if game.panel != "":
-			return
 		if aiming:
 			throw_sphere()
 		else:
@@ -371,7 +369,10 @@ func _physics_process(dt: float) -> void:
 			dir = -1
 	elif dodge_t > 0:
 		# dodge roll: burst along the real facing (dir is x-only)
-		var v := facing * 0.4 + Input.get_vector("move_left", "move_right", "move_up", "move_down") * 0.6
+		var steer := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+		if touch_vec.length_squared() > 0.01: # a live stick steers the roll too
+			steer = touch_vec
+		var v := facing * 0.4 + steer * 0.6
 		var nx: float = pos.x + v.normalized().x * 9.0 * dt
 		var ny: float = pos.y + v.normalized().y * 9.0 * dt
 		if can_enter(nx, pos.y):

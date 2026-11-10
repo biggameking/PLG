@@ -259,7 +259,7 @@ func _ready() -> void:
 	# starter kit
 	for id in ["kin_orb", "kin_orb", "kin_orb", "torch"]:
 		add_item(id, 1)
-	log_msg("Welcome to Kinbound. Press H for help.")
+	log_msg(tr("Welcome to Kinbound. Press H for help."))
 	spawn_wild()
 	spawn_lairs()
 	spawn_camps()
@@ -2327,6 +2327,11 @@ func demolish_at(at: Vector2) -> bool:
 	for w in st["workers"].duplicate():
 		st["workers"].erase(w)
 		w.job_site = null
+	var xp1: Kin = st.get("exp_pal") # a demolished post recalls its expedition pal
+	if is_instance_valid(xp1) and xp1.mode == "expedition":
+		xp1.mode = "base"; xp1.visible = true
+		xp1.job_site = null
+		xp1.pos = Vector2(cells[0].x + 0.5, cells[0].y + 0.5)
 	for it in st.get("store", {}).keys():
 		add_item(it, st["store"][it])
 	st["store"] = {} # refunded — an open chest panel must not re-withdraw these
@@ -4099,6 +4104,7 @@ func load_game() -> bool:
 		player.dodge_t = 0.0
 		player.touch_vec = Vector2.ZERO # a load mid-drift must not inherit the stick
 		player.touch_sprint = false
+		if hud != null: hud.joy_idx = -1 # ...nor its owner finger
 	log_msg(tr("Loaded."))
 	return true
 
@@ -5482,7 +5488,9 @@ func orphan_guest_kin(pid: int) -> void:
 			if p.job_site != null:
 				p.job_site["workers"].erase(p)
 				p.job_site = null
-			if p.carry != null: # cargo rides home with the tag, not into stasis
+			if p.carry != null:
+				# the peer is already gone — give_remote falls back to the host
+				# bag, so the cargo survives instead of stasis-vanishing
 				give_remote(pid, str(p.carry["id"]), int(p.carry["n"]))
 				p.carry = null
 			p.visible = true # an expedition pal enters cold-storage daylight
@@ -5522,9 +5530,11 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 	if st == null:
 		return
 	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false):
+		note_remote(pid, tr("The kinbox anchors the base — nobody razes it"))
 		return # the kinbox holds every stored pal — nobody razes the anchor
 	var t := str(net.peer_tags.get(pid, ""))
 	if t == "" or str(st.get("placed_tag", "")) != t:
+		note_remote(pid, tr("That's not your build — guests raze only what they placed"))
 		return # guests raze only what THEY built — tags outlive pids
 	var gp = net.ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:

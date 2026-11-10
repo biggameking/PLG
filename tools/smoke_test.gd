@@ -4923,9 +4923,13 @@ func run() -> void:
 		var stc: Dictionary = game.structures[cd]
 		stc["placed_tag"] = "tk_other" # a guest's build
 		game.net.ghosts[0].set_meta("dem_bkt", 1.0) # dem_bkt feeds one refusal per beat
-		game.net.demolish_req(cd.x, cd.y) # headless sender pid=0, tag mismatch
+		game.net.demolish_req(cd.x, cd.y) # sender 0 has NO hello tag — refuse outright
+		check("tagless demolish refused", game.structures.get(cd) != null)
+		game.net.peer_tags[0] = "tk_zero" # hello'd, but NOT this build's owner
+		game.net.ghosts[0].set_meta("dem_bkt", 1.0)
+		game.net.demolish_req(cd.x, cd.y)
 		check("foreign build refuses raze", game.structures.get(cd) != null)
-		stc["placed_tag"] = "tk_zero"; game.net.peer_tags[0] = "tk_zero"
+		stc["placed_tag"] = "tk_zero" # now it IS sender 0's build
 		game.net.ghosts[0].set_meta("dem_bkt", 1.0)
 		game.net.demolish_req(cd.x, cd.y)
 		check("own build razes", game.structures.get(cd) == null)

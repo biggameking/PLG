@@ -269,3 +269,16 @@ build-tools/apksigner).
   21-file web bundle). `store/page.md` holds the itch page copy (every
   claim maps to shipped+tested behavior; Android unsigned is disclosed).
   export/ + dist/ gitignored as build output.
+- S26 fourth-pass audit fixes — DONE: fresh-context pass found 1H/3M/9L.
+  HIGH: `demolish_at` (host X-key) never recalled `exp_pal` — three removal
+  paths had diverged and only the local one stranded expedition pals
+  invisible forever; recall tail now mirrored. MED: `touch_zone_hit` and
+  `touch_down` used different radius tables — taps in the ring gap either
+  double-fired or went dead; shared `joy_grab_r`/`btn_r` helpers now.
+  Two `log_msg` literals bypassed tr() so zh rows were dead. package.sh
+  zipped `export/.` including dotfiles — now cleans first and zips
+  `index.*`/`*` exactly. LOW: joy_idx cleared on load_game, dodge roll
+  steers with touch_vec, demolish refuses now net_note the guest (via the
+  peer-guarded `note_remote`, zh-localized), foreign-build test covers
+  all three gate branches (tagless/mismatch/owner), dead LMB panel-guard
+  removed, orphan-cargo comment made honest, VER fallback reachable.
