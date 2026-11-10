@@ -39,6 +39,41 @@ static func noise(dur: float, vol := 0.5, decay := 8.0) -> AudioStreamWAV:
 	s.data = data
 	return s
 
+# looping ambient pad — chords crossfade inside each bar, frequencies are
+# quantized to whole cycles per bar so the loop wraps seamlessly
+static func pad(chords: Array, bar := 6.0, vol := 0.13) -> AudioStreamWAV:
+	var n := int(RATE * bar * chords.size())
+	var data := PackedByteArray()
+	data.resize(n)
+	var q := [] # cycle-quantized chords
+	for ch in chords:
+		var qc := []
+		for f in ch:
+			qc.append(round(float(f) * bar) / bar)
+		q.append(qc)
+	for i in n:
+		var t := float(i) / RATE
+		var ci := int(t / bar)
+		var lt := t - ci * bar
+		var x := lt / bar
+		var out_env := 1.0 - smoothstep(0.7, 1.0, x)
+		var in_env := smoothstep(0.7, 1.0, x)
+		var s := 0.0
+		for f in q[ci]:
+			s += sin(TAU * f * lt) * out_env
+		for f in q[(ci + 1) % q.size()]:
+			s += sin(TAU * f * lt) * in_env
+		# gentle attack at t=0 keeps the sample edge quiet
+		data[i] = int(128 + 127 * vol * s / 3.0 * minf(1.0, t * 2.0))
+	var st := AudioStreamWAV.new()
+	st.format = AudioStreamWAV.FORMAT_8_BITS
+	st.mix_rate = RATE
+	st.data = data
+	st.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	st.loop_begin = 0
+	st.loop_end = n
+	return st
+
 # two-tone arpeggio — chimes (catch, level up)
 static func arp(freqs: Array, step := 0.09, vol := 0.4) -> AudioStreamWAV:
 	var n := int(RATE * step * freqs.size()) + int(RATE * 0.15)

@@ -295,6 +295,19 @@ func run_click(cr: Dictionary) -> void:
 		"infuse":
 			game.soul_infuse(cr["arg"])
 		# ---- shell menu acts (title / pause / settings) ----
+		_:
+			if cr["act"] in SHELL_ACTS:
+				game.sfx_play("click")
+				shell_act(cr["act"])
+			elif cr["act"] == "chest_dep" or cr["act"] == "chest_wd":
+				chest_bulk(cr["act"])
+
+const SHELL_ACTS := ["new_game", "continue", "m_settings", "set_back", "resume",
+	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
+	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl"]
+
+func shell_act(act: String) -> void:
+	match act:
 		"new_game":
 			game.state = "play"
 			game.log_msg("Day 1 on the Wildmere — catch a kin, feed it, put it to work.")
@@ -317,8 +330,8 @@ func run_click(cr: Dictionary) -> void:
 			else:
 				game.quit_game()
 		"vol_master_m", "vol_master_p", "vol_music_m", "vol_music_p", "vol_sfx_m", "vol_sfx_p":
-			var b: String = cr["act"].split("_")[1]
-			game.settings[b] = clampf(game.settings[b] + (0.1 if cr["act"].ends_with("_p") else -0.1), 0.0, 1.0)
+			var b: String = act.split("_")[1]
+			game.settings[b] = clampf(game.settings[b] + (0.1 if act.ends_with("_p") else -0.1), 0.0, 1.0)
 			game.apply_settings(); game.save_settings()
 		"fullscreen":
 			game.settings["fullscreen"] = not game.settings["fullscreen"]
@@ -326,17 +339,18 @@ func run_click(cr: Dictionary) -> void:
 		"raids_tgl":
 			game.settings["raids"] = not game.settings["raids"]
 			game.apply_settings(); game.save_settings()
-		"chest_dep", "chest_wd":
-			var st = game.chest_ref
-			var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
-			if cc.x < 0 or game.player.pos.distance_to(Vector2(cc.x + 0.5, cc.y + 0.5)) > 5.0:
-				game.chest_ref = null
-				game.panel = "" # walked too far — the container is out of reach
-				return
-			if cr["act"] == "chest_dep":
-				game.log_msg("Stored %d items" % game.chest_deposit_all(st))
-			else:
-				game.log_msg("Took %d items" % game.chest_withdraw_all(st))
+
+func chest_bulk(act: String) -> void:
+	var st = game.chest_ref
+	var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
+	if cc.x < 0 or game.player.pos.distance_to(Vector2(cc.x + 0.5, cc.y + 0.5)) > 5.0:
+		game.chest_ref = null
+		game.panel = "" # walked too far — the container is out of reach
+		return
+	if act == "chest_dep":
+		game.log_msg("Stored %d items" % game.chest_deposit_all(st))
+	else:
+		game.log_msg("Took %d items" % game.chest_withdraw_all(st))
 
 func interact() -> void:
 	if game.merchant != null and game.player.pos.distance_to(game.merchant.pos) < 2.4:

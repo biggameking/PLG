@@ -193,6 +193,7 @@ func _ready() -> void:
 		"ko": SfxLib.tone(160, 0.5, 0.45, 0.6),
 		"hit": SfxLib.noise(0.07, 0.3, 14.0),
 		"lucky": SfxLib.arp([880, 1174, 1568, 2093], 0.07, 0.35),
+		"click": SfxLib.tone(880, 0.05, 0.28),
 	}
 	# audio buses: Master owns Music + SFX; settings.cfg holds the mix
 	if AudioServer.get_bus_index("Music") == -1:
@@ -203,6 +204,20 @@ func _ready() -> void:
 		AudioServer.set_bus_send(AudioServer.get_bus_index("SFX"), "Master")
 	for ap0 in sfx_pool:
 		ap0.bus = "SFX"
+	# ambient score: day and night pad loops crossfaded on the Music bus —
+	# no assets, synthesized at boot like the SFX bank
+	music_day = AudioStreamPlayer.new()
+	music_day.stream = SfxLib.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7], [164.8, 220.0, 261.6]])
+	music_day.bus = "Music"
+	music_day.volume_db = -10.0
+	add_child(music_day)
+	music_day.play()
+	music_night = AudioStreamPlayer.new()
+	music_night.stream = SfxLib.pad([[146.8, 174.6, 220.0], [130.8, 155.6, 196.0], [110.0, 146.8, 174.6], [123.5, 164.8, 196.0]])
+	music_night.bus = "Music"
+	music_night.volume_db = -80.0
+	add_child(music_night)
+	music_night.play()
 	load_settings()
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
@@ -531,6 +546,8 @@ func item_wt(sid: String) -> float:
 
 var SFX := {}
 var sfx_pool := []
+var music_day: AudioStreamPlayer
+var music_night: AudioStreamPlayer
 var sfx_idx := 0
 func sfx_play(k: String) -> void:
 	var s = SFX.get(k)
@@ -1696,7 +1713,16 @@ func tick_hints(dt: float) -> void:
 	for h in active_hints():
 		hint_seen[h["id"]] = float(hint_seen.get(h["id"], 0.0)) + dt
 
+# day/night pad crossfade — runs in every state so the title breathes too
+func tick_music(dt: float) -> void:
+	if music_day == null:
+		return
+	var night := is_night()
+	music_day.volume_db = move_toward(music_day.volume_db, -80.0 if night else -10.0, dt * 6.0)
+	music_night.volume_db = move_toward(music_night.volume_db, -10.0 if night else -80.0, dt * 6.0)
+
 func _process(dt: float) -> void:
+	tick_music(dt)
 	if state != "play" and not net_live():
 		return # title/pause freeze the island's clock (net sessions never pause)
 	t += dt

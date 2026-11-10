@@ -4194,6 +4194,13 @@ func run() -> void:
 	check("hint retires", not game.active_hints().any(func(h): return h["id"] == "eat"))
 	game.player.hunger = 100.0
 
+	# ---- S5: ambient score ----
+	check("music loops", game.music_day.stream != null and game.music_day.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and game.music_day.playing)
+	game.tod = 22.0; game.tick_music(1.0)
+	check("night fade", game.music_day.volume_db < -10.0 and game.music_night.volume_db > -80.0)
+	game.tod = 12.0; game.tick_music(1.0)
+	check("day fade", game.music_day.volume_db > -80.0)
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)
