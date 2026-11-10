@@ -488,6 +488,11 @@ func run() -> void:
 		p.hp = hp_s0; p.shield_t = 0.0; p.shield_n = 0.0
 		check("roly poly shield", blocked and leaked,
 			"blocked=%s leaked=%s" % [blocked, leaked])
+		check("hit kicks camera", game.shake > 0.0, "shake=%.2f" % game.shake)
+		var shake0: float = game.shake
+		game._process(0.2)
+		check("camera shake decays", game.shake < shake0, "shake=%.2f" % game.shake)
+		game.shake = 0.0
 		# Dream Chaser (shadelump trick): BENCHED party shadelump
 		# still snipes at the deployed partner's fight
 		var dd: Kin = game.gen_pal("shadelump", 10, p.pos)

@@ -782,6 +782,8 @@ func _draw() -> void:
 			var tp := mr.position + Vector2(game.treasure["pos"].x / game.world.WORLD_W * ms, game.treasure["pos"].y / game.world.WORLD_H * ms)
 			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Color(1.0, 0.84, 0.28))
 
+	draw_weather_fx(r)
+
 	# shell overlays come last — they sit over the whole HUD
 	if game.state == "title" and game.panel == "":
 		draw_title(r)
@@ -807,6 +809,34 @@ func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Co
 	draw_string(font, Vector2(cx - font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), tl,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col)
 	return y + 40
+
+func draw_weather_fx(r: Vector2) -> void:
+	# screen-space weather reads better than a status glyph alone; all the
+	# drops are deterministic lanes driven by game.t, not random allocation
+	var t := game.t
+	if game.weather == "rain" or game.weather == "storm":
+		var drops := 56 if game.weather == "storm" else 40
+		var speed := 180.0 if game.weather == "storm" else 120.0
+		var rain_col := Color(0.55, 0.75, 1.0, 0.28 if game.weather == "storm" else 0.20)
+		for d in drops:
+			var dx := fposmod(d * 97.0 + t * speed, r.x + 40.0) - 20.0
+			var dy := fposmod(d * 53.0 + t * speed * 1.35, r.y + 40.0) - 20.0
+			draw_line(Vector2(dx, dy), Vector2(dx - 4.0, dy + 12.0), rain_col, 1.0)
+	elif game.weather == "drought":
+		for d in 24:
+			var ddx := fposmod(d * 131.0 + t * 12.0, r.x)
+			var ddy := r.y * 0.1 + fposmod(d * 67.0 + t * 4.0, r.y * 0.75)
+			draw_circle(Vector2(ddx, ddy), 1.1, Color(0.95, 0.65, 0.25, 0.18))
+	if game.state == "play" and game.danger_active():
+		# a breathing red edge tells the keeper the island is under attack even
+		# when the combat happens off-center
+		var pulse := 0.10 + 0.07 * (sin(t * 6.0) + 1.0)
+		var edge := 5.0
+		var danger_col := Color(0.9, 0.08, 0.05, pulse)
+		draw_rect(Rect2(0, 0, r.x, edge), danger_col)
+		draw_rect(Rect2(0, r.y - edge, r.x, edge), danger_col)
+		draw_rect(Rect2(0, 0, edge, r.y), danger_col)
+		draw_rect(Rect2(r.x - edge, 0, edge, r.y), danger_col)
 
 func draw_title_sky(r: Vector2) -> void:
 	# procedural dawn over the Wildmere — the title should read as a place,

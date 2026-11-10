@@ -1106,6 +1106,10 @@ func tick_missions(dt: float) -> void:
 		log_msg("MISSION: %s — done! +%dg +%d tech" % [m["text"], int(m["gold"]), int(m["tp"])])
 		floater(player.pos, "MISSION DONE", "#8ef0ff")
 
+var shake := 0.0 # camera kick — decays to nothing, main.gd turns it into a pixel offset
+func screen_shake(amt: float) -> void:
+	shake = minf(1.0, shake + amt)
+
 func hurt_player(atk: float, from: Kin) -> void:
 	# pause is armour only in solo — in a net session the island keeps
 	# swinging whether the host's menu is up or not
@@ -1118,6 +1122,7 @@ func hurt_player(atk: float, from: Kin) -> void:
 		return # the bubble ate it whole — no wear, no flash
 	player.hp -= final
 	player.hit_flash = 0.4
+	screen_shake(0.35)
 	rumble(0.0, 0.45, 0.15) # getting bit should thump, not just flash
 	floater(player.pos, "-" + str(final), "#e64533")
 	player.wear_armor() # the island: the plate takes the wear, not the skin
@@ -1960,6 +1965,7 @@ func tick_music(dt: float) -> void:
 	music_night.volume_db = move_toward(music_night.volume_db, -10.0 if (night and not danger) else -80.0, dt * ambient_rate)
 
 func _process(dt: float) -> void:
+	shake = maxf(0.0, shake - dt * 3.5)
 	tick_music(dt)
 	if state != "play" and not net_live():
 		return # title/pause freeze the island's clock (net sessions never pause)

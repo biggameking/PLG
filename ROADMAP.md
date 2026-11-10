@@ -144,3 +144,8 @@ build-tools/apksigner).
 - S20b brand type — DONE: bundled Press Start 2P (OFL, license in
   fonts/OFL.txt) as the HUD face; CJK/icons fall through to the system font
   via FontFile.fallbacks. Title verified by live render, not just headless.
+- S20c gameplay juice — DONE: camera shake on hits and boss phase-2
+  (decaying pixel offset via Camera2D.offset); screen-space weather FX
+  (rain/storm streaks, drought motes) and a pulsing red danger vignette
+  while `danger_active` holds. Smoke covers shake kick + decay; FX are
+  deterministic game.t lanes, zero allocation.

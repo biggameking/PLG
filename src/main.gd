@@ -49,6 +49,7 @@ func _process(_dt: float) -> void:
 		col = Color.WHITE.lerp(Color(0.9, 0.6, 0.5), (h - 17) / 3).lerp(Color(0.42, 0.48, 0.72), maxf(0, h - 18.5) / 1.5)
 	$CanvasModulate.color = col
 	cam.global_position = cam.global_position.lerp(pl.global_position, 0.12)
+	cam.offset = Vector2(randf() - 0.5, randf() - 0.5) * game.shake * 14.0 if game.shake > 0.001 else Vector2.ZERO
 	var vis := visible_tiles()
 	if decor_need or vis != last_vis: # decor pool only on camera move / decor change
 		refresh_decor()

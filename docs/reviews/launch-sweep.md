@@ -48,9 +48,11 @@ the interaction-verb layer was not. Closed in this pass:
 - **Android preset unverified**: local SDK lacks `build-tools`/`apksigner`; also zero touch input implemented — treat mobile as not-a-target for this release.
 - **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence), rumble on
   catch/hit, and panel row navigation (dpad steps, A confirms) all ship.
-- **UI art**: default font, but the shell got a real pass — animated
-  procedural dawn (sky/sea/island silhouette/motes), wordmark with gold rule
-  + orb sigils, header accents, row separators, cursor ticks. Hero-species
+- **UI art**: default font, but the shell got a real pass — pixel brand type
+  (OFL Press Start 2P), animated procedural dawn (sky/sea/island silhouette/
+  motes), wordmark with gold rule + orb sigils, header accents, row
+  separators, cursor ticks. In-game juice: screen shake on hits/phase-2,
+  screen-space rain/storm/drought FX, pulsing danger vignette. Hero-species
   polish remains the procedural accessory layer.
 - **MP — guest combat parity is approximate**: host wildlife engages the
   nearest warm body (player OR ghost), melee bites AND wild projectiles reach

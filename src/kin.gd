@@ -151,6 +151,7 @@ var spire_tag := "" # non-empty on Pact-spire guardians; game.record_spire reads
 
 func enter_phase_two() -> void:
 	phase = 2
+	game.screen_shake(0.6)
 	game.floater(pos, "IT CALLS THE PACK", "#ff9966")
 	game.sfx_play("horn")
 	game.cry_for(species_id) # the boss roars in its own voice
