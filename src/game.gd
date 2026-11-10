@@ -202,6 +202,7 @@ func _ready() -> void:
 	spawn_wild()
 	spawn_lairs()
 	spawn_camps()
+	spawn_fossils()
 
 func saddle_for(p: Pal) -> String:
 	# Palworld gear rule: every mount wants its own tack — flyers, swimmers
@@ -3756,6 +3757,34 @@ func free_captive(st: Dictionary) -> void:
 	log_msg("Freed %s Lv%d — it scurries into your palbox" % [bp.spec["name"], bp.level])
 	net_remove_structure(st)
 
+func spawn_fossils() -> void:
+	# old bones heaped in the deep wilds — a one-shot dig, then gone
+	var placed := 0
+	var tries := 0
+	while placed < 4 and tries < 3000:
+		tries += 1
+		var tx := rng.int_range(6, World.WORLD_W - 8)
+		var ty := rng.int_range(6, World.WORLD_H - 8)
+		if world.zone_at(tx, ty) < 2 or world.blocked(tx, ty) \
+				or structures.has(Vector2i(tx, ty)):
+			continue
+		if place_free("fossil_bed", tx, ty):
+			placed += 1 # haulers key on chest ids — a bone-heap needs no flag
+
+func dig_fossil(st: Dictionary) -> void:
+	var cell: Vector2i = cell_of(st)
+	var pos := Vector2(cell.x + 0.5, cell.y + 0.5)
+	net_remove_structure(st) # one dig and the bed is spent
+	var n := rng.int_range(2, 4)
+	add_item("ancient_part", n)
+	add_item("stone", 4)
+	var shard := rng.chance(0.25)
+	if shard:
+		add_item("paldium", 1)
+	floater(pos, "+%d ancient parts" % n, "#ffd76e")
+	log_msg("Fossil dug: %d ancient parts%s" % [n, " and a paldium shard" if shard else ""])
+	sfx_play("catch")
+
 func open_mimic(st: Dictionary) -> void:
 	# some dungeon chests are only chest-shaped — open it and it opens back
 	var sp: String = str(st.get("mimic", ""))
@@ -4140,6 +4169,7 @@ func regenerate(s: int) -> void:
 	player.sync_screen()
 	spawn_lairs() # joining clients need their own lair bosses (pals are locally authoritative)
 	spawn_camps() # syndicate poacher camps — guards spawn locally like lair bosses
+	spawn_fossils() # old bones re-spawned with the world
 	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
 
 # ---------- effigy statues ----------

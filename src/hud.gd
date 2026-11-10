@@ -351,6 +351,9 @@ func interact() -> void:
 			"pal_gacha":
 				game.gacha_pull()
 				return
+			"fossil_bed":
+				game.dig_fossil(st)
+				return
 			"pal_cage":
 				game.free_captive(st)
 				return

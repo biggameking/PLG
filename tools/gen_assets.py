@@ -858,6 +858,14 @@ def make_structure(sid, color, w, h):
         for sx in (-8, -1, 6):
             d.rectangle([W//2 + sx - 2, 19 + (sx % 3), W//2 + sx + 2, 26 + (sx % 3)], fill=hxc("#e8dcc0") + (255,))
         d.rectangle([W//2 - 13, 28, W//2 + 13, 30], fill=hxc("#5e462e") + (255,))
+    elif sid == "fossil_bed":
+        # old bones heaped in the dirt — a skull and scattered ribs
+        d.ellipse([W//2 - 13, 30, W//2 + 13, 44], fill=hxc("#7a6a4e") + (255,))
+        d.ellipse([W//2 - 7, 16, W//2 + 7, 30], fill=hxc("#d8ccb0") + (255,))
+        d.rectangle([W//2 - 3, 20, W//2 - 1, 23], fill=hxc("#4a3c28") + (255,))
+        d.rectangle([W//2 + 1, 20, W//2 + 3, 23], fill=hxc("#4a3c28") + (255,))
+        for rx2 in (-9, -3, 4, 9):
+            d.line([(W//2 + rx2, 34), (W//2 + rx2 + 3, 30)], fill=hxc("#d8ccb0") + (255,), width=2)
     elif sid == "pal_gacha":
         # brass capsule machine — glass dome of eggs over a coin slot
         d.rectangle([W//2 - 10, 28, W//2 + 10, 44], fill=hxc("#a87830") + (255,))
@@ -991,6 +999,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "notice_board": ("#c9a15a", 1, 1),
     "snare_trap": ("#8a7a5a", 1, 1),
     "pal_gacha": ("#e8b830", 1, 1),
+    "fossil_bed": ("#c8b890", 1, 1),
     "war_banner": ("#b84a3a", 1, 1),
     "spyglass": ("#7a9ab8", 1, 1),
     "well": ("#6a8ab0", 1, 1),

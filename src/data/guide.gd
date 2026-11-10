@@ -179,7 +179,11 @@ can take the escort.
 Chests hide in grottos and lairs; the third chamber guards
 something old. But mind the boxes that sit too still — some
 are only chest-shaped. Open one and it opens back, grinning,
-and the deeper the room the hungrier the joke.
+and the deeper the room the hungrier the joke. Out past the
+second ridge the ground keeps older things: bone-heaps of
+pals that died before names were given. Dig a fossil bed and
+the deep past pays out in ancient parts — one dig, then the
+ground is quiet again.
 
 And keep a notice board by the gate: each dawn a fresh
 request goes up — fill it before dark for coin and credit

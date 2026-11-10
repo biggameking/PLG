@@ -571,6 +571,17 @@ const STRUCTURES = {
   ],
   "desc": "A brass capsule machine — feed it 20 gold and it rattles out an egg. Mostly ordinary; once in a while it coughs up something huge."
  },
+"fossil_bed": {
+  "id": "fossil_bed",
+  "name": "Fossil Bed",
+  "glyph": "☠",
+  "color": "#c8b890",
+  "w": 1,
+  "h": 1,
+  "hp": 60,
+  "cost": [],
+  "desc": "Old bones heaped in the dirt — dig here and the deep past pays out in parts."
+ },
 "snare_trap": {
   "id": "snare_trap",
   "name": "Snare Trap",

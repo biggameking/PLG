@@ -1448,6 +1448,19 @@ func run() -> void:
 			and game.box[-1].species_id == free_sp
 	check("camp captive joins the box", camp_ok, "cage=%s" % (cage_st != null))
 
+	# fossil bed: old bones in the deep wilds — one dig, then the ground is quiet
+	var fb_k := Vector2i(-1, -1)
+	for k9 in game.structures:
+		if game.structures[k9]["id"] == "fossil_bed":
+			fb_k = k9
+			break
+	var fb_ok := false
+	if fb_k.x >= 0:
+		var fb_ap0: int = game.item_count("ancient_part")
+		game.dig_fossil(game.structures[fb_k])
+		fb_ok = game.item_count("ancient_part") > fb_ap0 and not game.structures.has(fb_k)
+	check("fossil bed pays then goes quiet", fb_ok, "fb=%s" % (fb_k.x >= 0))
+
 	# mimic chest: some dungeon boxes are only chest-shaped — open and it grins
 	var mm_k: Vector2i = free_xy.call("chest")
 	var mm_ok := false

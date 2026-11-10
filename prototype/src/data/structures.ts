@@ -245,6 +245,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     cost: [["wood", 8], ["fiber", 3]],
     desc: "A pitch-pine board — each dawn a fresh request goes up: fill it for coin and credit.",
   },
+  fossil_bed: {
+    id: "fossil_bed", name: "Fossil Bed", glyph: "☠", color: "#c8b890", w: 1, h: 1,
+    hp: 60,
+    cost: [],
+    desc: "Old bones heaped in the dirt — dig here and the deep past pays out in parts.",
+  },
   pal_gacha: {
     id: "pal_gacha", name: "Pal Gacha", glyph: "◉", color: "#e8b830", w: 1, h: 1,
     hp: 120,
