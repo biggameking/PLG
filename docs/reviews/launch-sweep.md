@@ -90,7 +90,7 @@ the interaction-verb layer was not. Closed in this pass:
 - **MP — orb claims aren't inventory-verified**: `sphere_catch`'s `sid` is client-claimed; the host validates it's a real sphere type but can't check the guest actually owns one (private rosters are client-side). Design limit.
 - **MP — no lobby/NAT traversal** (co-op is direct-connect IP).
 - **Cosmetic phantom damage**: `tick_shadelump`/`update_projectiles` can flash damage on replicas; `pal_sync` reverts within a sync beat. Visual only.
-- **Store assets**: procedural capsules ship in `store/` (Steam 460x215 + 616x353, itch 630x500, hero 1920x622 — `tools/gen_store.py` regenerates from the same dawn-scene contract as the title). Procedural, not commissioned key art.
+- **Store assets**: procedural capsules ship in `store/` (Steam 460x215 + 616x353, itch 630x500, hero 1920x622 — `tools/gen_store.py` regenerates from the same dawn-scene contract as the title). Procedural, not commissioned key art. `tools/package.sh` builds versioned zips for itch (verified artifacts); `store/page.md` is the page copy; presets exclude `store/*` from shipped builds.
 
 ## Release-shape recommendation
 
