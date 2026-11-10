@@ -1750,6 +1750,7 @@ func _process(dt: float) -> void:
 	# base raid waves
 	tick_raid(dt)
 	tick_supply(dt)
+	tick_migration(dt)
 	for q in pals.duplicate(): # stale raiders wander off instead of stacking up
 		if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
 			pals.erase(q)
@@ -3644,6 +3645,63 @@ func tick_supply(dt: float) -> void:
 				Vector2(tx + 0.5 + (i % 2) * 0.8, ty + 0.5 + (i / 2) * 0.8))
 		floater(Vector2(tx + 0.5, ty + 0.5), "SUPPLY DROP!", "#ffd76e")
 		log_msg("A supply crate lands nearby — grab it before the locals do")
+		return
+
+var mig_t := 300.0 # Palworld's passing herds — a deeper zone's species crosses the map
+func tick_migration(dt: float) -> void:
+	mig_t -= dt
+	if mig_t > 0.0:
+		return
+	mig_t = 420.0 + rng.next() * 420.0 # a herd drifts through every 7-14 minutes
+	# migrants come from a deeper band — a taste of what lives one zone over,
+	# catchable without walking there. Wild pals are locally authoritative
+	# (same contract as spawn_wild), so this ticks on every client too.
+	var zone := rng.int_range(1, 3)
+	var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+	if pool.is_empty():
+		return
+	var sid := pick_wild_species(pool)
+	var sp: Dictionary = SpeciesData.species_of(sid)
+	var aquatic: bool = "water" in sp.get("elements", [])
+	for _try in 60:
+		var x := rng.int_range(4, World.WORLD_W - 5)
+		var y := rng.int_range(4, World.WORLD_H - 5)
+		if player.pos.distance_squared_to(Vector2(x, y)) < 256.0:
+			continue # a herd on your boots is an ambush, not a migration
+		var in_water: bool = world.tiles[world.idx(x, y)] == World.Tile.WATER
+		if in_water:
+			if not aquatic or world.blocked_swim(x, y, x, y):
+				continue
+		elif world.blocked(x, y):
+			continue
+		var lv := wild_lv(zone)
+		var made: Array = []
+		for _i in rng.int_range(4, 6):
+			if pals.size() >= MAX_PALS:
+				break
+			var mx: int = clampi(x + rng.int_range(-3, 3), 1, World.WORLD_W - 2)
+			var my: int = clampi(y + rng.int_range(-3, 3), 1, World.WORLD_H - 2)
+			var m_in_water: bool = world.tiles[world.idx(mx, my)] == World.Tile.WATER
+			if m_in_water != in_water or (not m_in_water and world.blocked(mx, my)):
+				continue
+			var mp := preload("res://src/pal.gd").new()
+			mp.alpha = zone >= 2 and rng.chance(0.08)
+			mp.lucky = not mp.alpha and rng.chance(0.015)
+			entity_layer.add_child(mp)
+			mp.setup(self, sid,
+				lv + (6 if mp.alpha else 0) + (3 if mp.lucky else 0),
+				Vector2(mx + 0.5, my + 0.5))
+			mp.home = Vector2(x + 0.5, y + 0.5) # the herd shares one anchor
+			pals.append(mp)
+			made.append(mp)
+		if made.size() < 3: # a scattered pair isn't a herd — take the strays back
+			for mp2 in made:
+				pals.erase(mp2)
+				mp2.queue_free()
+			continue
+		floater(Vector2(x + 0.5, y + 0.5), "MIGRATION!", "#ffd76e")
+		log_msg("A herd of %s is migrating %s! (%d head)"
+			% [sp.get("name", sid), "ashore" if in_water else "inland", made.size()])
 		return
 
 var raid_warned := false # 30s heads-up — Palworld flashes the raid horn early

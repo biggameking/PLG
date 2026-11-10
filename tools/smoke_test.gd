@@ -2406,6 +2406,25 @@ func run() -> void:
 		"drops %d->%d next=%.0f" % [d_sup, game.drops.size(), game.supply_t])
 	for dd2 in game.drops.duplicate(): # sweep the crate — leave the field clean
 		game.take_drop(dd2)
+	# migration: a deeper-zone herd lands as one species on one shared anchor
+	var mig_n := 0
+	var mig_sid := ""
+	var herd_ok := false
+	for att in 5: # landlocked maps can whiff a landing — same retry contract as supply
+		var n_before := game.pals.size()
+		game.mig_t = 0.01
+		game.tick_migration(1.0)
+		var newcomers := game.pals.slice(n_before)
+		if newcomers.size() >= 3:
+			mig_n = newcomers.size()
+			mig_sid = newcomers[0].species_id
+			herd_ok = true
+			for q in newcomers:
+				if q.mode != "wild" or q.species_id != mig_sid or q.home != newcomers[0].home:
+					herd_ok = false
+			break
+	check("migration herd lands", herd_ok and game.mig_t > 400.0,
+		"n=%d sid=%s next=%.0f" % [mig_n, mig_sid, game.mig_t])
 	# fast-travel waypoints: seeded at worldgen, touch blinks back to palbox
 	var wpts := 0
 	for ks in game.structures:
@@ -3539,6 +3558,22 @@ func run() -> void:
 		var ch := Combat.catch_chance(1.0, gsp["capturePower"], 26.0, false, false, 1)
 		check("gen %s capture scale" % gid, ch < 0.9, "capturePower=%s ch=%.2f" % [str(gsp["capturePower"]), ch])
 		break
+
+	# content pass: four species fill the zone/element gaps the audit found —
+	# zone0 fire+ground, zone2 water, zone3 electric (a dark storm-wraith)
+	var gap_specs := {
+		"pyropup": [0, ["fire"]], "dustmite": [0, ["ground"]],
+		"brackent": [2, ["water"]], "thundergeist": [3, ["electric", "dark"]]}
+	for nsid in gap_specs:
+		var nsd: Dictionary = SpeciesData.species_of(nsid)
+		var expect: Array = gap_specs[nsid]
+		check("species %s" % nsid,
+			not nsd.is_empty() and nsd.get("elements", []) == expect[1]
+			and nsd.get("work", {}).size() > 0 and nsd.get("drops", []).size() > 0
+			and nsid in SpeciesGen.zone_pool(expect[0])
+			and SpeciesGen.habitat(nsid) == expect[0]
+			and load("res://assets/pals/%s_f0.png" % nsid) != null,
+			str({"elem": nsd.get("elements"), "hab": SpeciesGen.habitat(nsid)}))
 
 	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
 	var apex: Pal = null

@@ -1,8 +1,8 @@
-# Generates src/data/species_gen.gd: 85 extra species + passive traits.
+# Generates src/data/species_gen.gd: extra species + passive traits.
 # Patches gen_assets.py SPRITES dict so art renders for every new id.
-import io, json
+import io, json, os, re
 
-R = 'C:/Users/Administrator/repos/PLG/'
+R = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/'
 
 # id: (name, body, [c0,c1,c2], fluff, [elements], tier, work{}, drops[[item,min,max]], desc, hostile)
 NEW = [
@@ -97,6 +97,10 @@ NEW = [
  ("cragboar","Cragboar","boar",["#8a7a6a","#6d5f52","#d8c9a0"],.15,["ground"],1,{"mining":2,"gathering":1},[["stone",2,4],["leather",1,2]],"Cliff-breaking boar.",1),
  ("vapori","Vapori","ghost",["#a8e8d8","#85c9b8","#f5eee0"],.35,["water"],0,{"watering":1,"cooling":1},[["pal_fluid",1,2]],"Steam-sprite kettle pal.",0),
  ("bombird","Bombird","bird",["#9a6a4a","#7d523a","#e8734a"],.15,["fire","neutral"],1,{"kindling":1,"gathering":1},[["gunpowder",1,3],["bone",1,1]],"Fuse-headed war bird.",1),
+ ("pyropup","Pyropup","quadruped",["#e8734a","#c9552f","#f5eee0"],.3,["fire"],0,{"kindling":1,"transporting":1},[["flame_organ",1,2]],"Ember-tailed camp pup.",0),
+ ("dustmite","Dustmite","hedgehog",["#a89468","#8a7452","#d8c9a0"],.35,["ground"],0,{"mining":1,"gathering":1},[["stone",1,3],["bone",1,1]],"Pill-bug dirt burrower.",0),
+ ("brackent","Brackent","serpent",["#3a7a9a","#2d6080","#9be8d8"],.15,["water"],2,{"watering":2,"transporting":2},[["pal_fluid",2,4],["raw_fish",1,2]],"Tide-hunting brine serpent.",1),
+ ("thundergeist","Thundergeist","ghost",["#5a5ae8","#3a3aa8","#e8d44d"],.1,["electric","dark"],3,{"electricity":3,"gathering":2},[["electric_organ",3,5],["venom_gland",1,2]],"Storm-wraith of the deep wilds.",2),
 ]
 
 TIER_STATS = {0: (70,70,70,40,35,2,70), 1: (82,82,76,52,45,3,75), 2: (96,96,86,70,60,4,80), 3: (115,115,98,88,80,5,90)}
@@ -132,6 +136,15 @@ def gen():
 
 static func zone_pool(z: int) -> Array:
 	return ZONE.get(str(z), [])
+
+static var _zone_of := {}
+static func habitat(sid: String) -> int:
+	# Paldeck habitat: which wild band this species calls home (-1 = none)
+	if _zone_of.is_empty():
+		for z in ZONE:
+			for s2 in ZONE[z]:
+				_zone_of[s2] = int(z)
+	return int(_zone_of.get(sid, -1))
 '''
     io.open(R+'src/data/species_gen.gd','w',encoding='utf-8').write(out)
 
@@ -144,8 +157,10 @@ static func zone_pool(z: int) -> Array:
     pout = 'class_name PassiveData\n\nconst PASSIVES = ' + json.dumps(pas,indent=1) + '\n'
     io.open(R+'src/data/passives.gd','w',encoding='utf-8').write(pout)
 
-    # register sprites in gen_assets
+    # register sprites in gen_assets — replace any block we wrote last time
+    # so re-runs stay clean instead of stacking duplicate update tables
     ga = io.open(R+'tools/gen_assets.py',encoding='utf-8').read()
+    ga = re.sub(r'\nSPRITES\.update\(\{[\s\S]*?\n\}\)\n', '\n', ga)
     block = '\nSPRITES.update({\n' + ''.join(f'    "{sid}": ("{b}", {json.dumps(c)}, {fl}),\n' for sid,(b,c,fl) in sprites.items()) + '})\n\n'
     ga = ga.replace('if __name__ == "__main__":', block + 'if __name__ == "__main__":')
     io.open(R+'tools/gen_assets.py','w',encoding='utf-8').write(ga)

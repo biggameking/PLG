@@ -216,6 +216,12 @@ and brings back a haul keyed to its element. The statues
 upgrade your perks; the memory-wipe draught refunds them.
 Day-counting raids grow meaner; nights level the wilds.
 
+The island's herds move too. Every so often a pack from a
+deeper band crosses the map — watch for the MIGRATION call
+and you'll catch species you haven't earned the right to
+walk to yet. The pack settles where it lands; get there
+before the locals do.
+
 Fill the paldeck — each entry shows habitat, drops, and
 work suitability. The islands remember everything you
 catalog. Good hunting.""",

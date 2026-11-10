@@ -4170,10 +4170,198 @@ const SPECIES = {
   "desc": "Fuse-headed war bird.",
   "hostile": 1,
   "body": "bird"
+ },
+ "pyropup": {
+  "id": "pyropup",
+  "name": "Pyropup",
+  "glyph": "p",
+  "color": "#e8734a",
+  "elements": [
+   "fire"
+  ],
+  "hp": 70,
+  "atk": 70,
+  "def": 70,
+  "speed": 40,
+  "capturePower": 35,
+  "food": 2,
+  "san": 70,
+  "work": {
+   "kindling": 1,
+   "transporting": 1
+  },
+  "skills": [
+   [
+    1,
+    "flameBurst"
+   ],
+   [
+    7,
+    "ignitionBreath"
+   ]
+  ],
+  "drops": [
+   [
+    "flame_organ",
+    1,
+    2
+   ]
+  ],
+  "desc": "Ember-tailed camp pup.",
+  "hostile": 0,
+  "body": "quadruped"
+ },
+ "dustmite": {
+  "id": "dustmite",
+  "name": "Dustmite",
+  "glyph": "d",
+  "color": "#a89468",
+  "elements": [
+   "ground"
+  ],
+  "hp": 70,
+  "atk": 70,
+  "def": 70,
+  "speed": 40,
+  "capturePower": 35,
+  "food": 2,
+  "san": 70,
+  "work": {
+   "mining": 1,
+   "gathering": 1
+  },
+  "skills": [
+   [
+    1,
+    "sandBlast"
+   ],
+   [
+    7,
+    "stoneShot"
+   ]
+  ],
+  "drops": [
+   [
+    "stone",
+    1,
+    3
+   ],
+   [
+    "bone",
+    1,
+    1
+   ]
+  ],
+  "desc": "Pill-bug dirt burrower.",
+  "hostile": 0,
+  "body": "hedgehog"
+ },
+ "brackent": {
+  "id": "brackent",
+  "name": "Brackent",
+  "glyph": "b",
+  "color": "#3a7a9a",
+  "elements": [
+   "water"
+  ],
+  "hp": 96,
+  "atk": 96,
+  "def": 86,
+  "speed": 70,
+  "capturePower": 60,
+  "food": 4,
+  "san": 80,
+  "work": {
+   "watering": 2,
+   "transporting": 2
+  },
+  "skills": [
+   [
+    1,
+    "hydroJet"
+   ],
+   [
+    7,
+    "aquaBurst"
+   ],
+   [
+    15,
+    "aquaBurst"
+   ]
+  ],
+  "drops": [
+   [
+    "pal_fluid",
+    2,
+    4
+   ],
+   [
+    "raw_fish",
+    1,
+    2
+   ]
+  ],
+  "desc": "Tide-hunting brine serpent.",
+  "hostile": 1,
+  "body": "serpent"
+ },
+ "thundergeist": {
+  "id": "thundergeist",
+  "name": "Thundergeist",
+  "glyph": "t",
+  "color": "#5a5ae8",
+  "elements": [
+   "electric",
+   "dark"
+  ],
+  "hp": 115,
+  "atk": 115,
+  "def": 98,
+  "speed": 88,
+  "capturePower": 80,
+  "food": 5,
+  "san": 90,
+  "work": {
+   "electricity": 3,
+   "gathering": 2
+  },
+  "skills": [
+   [
+    1,
+    "shockwave"
+   ],
+   [
+    7,
+    "lightningStrike"
+   ],
+   [
+    12,
+    "darkBall"
+   ],
+   [
+    15,
+    "nightmare"
+   ]
+  ],
+  "drops": [
+   [
+    "electric_organ",
+    3,
+    5
+   ],
+   [
+    "venom_gland",
+    1,
+    2
+   ]
+  ],
+  "desc": "Storm-wraith of the deep wilds.",
+  "hostile": 2,
+  "body": "ghost"
  }
 }
 
-const ZONE = {"0": ["flambelle", "kelpsea", "teafant", "ribbuny", "flopie", "sweety", "lullu", "dazzi", "tocotoco", "swee", "mau_cryst", "hangyu", "fuddler", "woolipop", "melpaca", "vixy", "killamari", "nox", "tombat", "hydrostar", "stormpuff", "frostbun", "vapori"], "1": ["rooby", "arsox", "chillet", "celaray", "gobfin", "surfdog", "beegarde", "bristla", "caprity", "dinossom", "verdash", "grintale", "vaelet", "cinnamoth", "petallia", "univolt", "sweepa", "reindrix", "digtoise", "direhowl", "galeclaw", "cawgnito", "robinquill", "gorirat", "lovander", "loupmoon", "hoocrates", "lunaris", "maraith", "catress", "wixen", "blazequil", "emberwing", "mirelurk", "thornite", "glimmora", "cragboar", "bombird"], "2": ["incineram", "blazehowl", "bushi", "ragnahawk", "relaxaurus", "azurobe", "broncherry", "mossanda", "elizabee", "beakon", "rayhound", "wumpo", "sibelyx", "anubis", "reptyro", "helzephyr", "quivern", "elphidran"], "3": ["suzaku", "blazamut", "jormuntide", "grizzbolt", "frostallion", "menasting", "shadowbeak", "necromus", "jetragon", "paladius", "astegon", "dreadmaw"]}
+const ZONE = {"0": ["flambelle", "kelpsea", "teafant", "ribbuny", "flopie", "sweety", "lullu", "dazzi", "tocotoco", "swee", "mau_cryst", "hangyu", "fuddler", "woolipop", "melpaca", "vixy", "killamari", "nox", "tombat", "hydrostar", "stormpuff", "frostbun", "vapori", "pyropup", "dustmite"], "1": ["rooby", "arsox", "chillet", "celaray", "gobfin", "surfdog", "beegarde", "bristla", "caprity", "dinossom", "verdash", "grintale", "vaelet", "cinnamoth", "petallia", "univolt", "sweepa", "reindrix", "digtoise", "direhowl", "galeclaw", "cawgnito", "robinquill", "gorirat", "lovander", "loupmoon", "hoocrates", "lunaris", "maraith", "catress", "wixen", "blazequil", "emberwing", "mirelurk", "thornite", "glimmora", "cragboar", "bombird"], "2": ["incineram", "blazehowl", "bushi", "ragnahawk", "relaxaurus", "azurobe", "broncherry", "mossanda", "elizabee", "beakon", "rayhound", "wumpo", "sibelyx", "anubis", "reptyro", "helzephyr", "quivern", "elphidran", "brackent"], "3": ["suzaku", "blazamut", "jormuntide", "grizzbolt", "frostallion", "menasting", "shadowbeak", "necromus", "jetragon", "paladius", "astegon", "dreadmaw", "thundergeist"]}
 
 static func species_of(id: String) -> Dictionary:
 	return SPECIES.get(id, {})
