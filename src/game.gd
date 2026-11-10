@@ -2008,6 +2008,14 @@ func tick_spoilage() -> void:
 
 var spoil_t := 0.0
 
+func near_banner(at: Vector2) -> bool:
+	# a war banner rallies pals working within sight of its colors
+	for k in structures:
+		var st = structures[k]
+		if st["id"] == "war_banner" and Vector2(k).distance_to(at) <= 8.0:
+			return true
+	return false
+
 func tick_production(dt: float) -> void:
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
 	var has_stand := has_structure("monitoring_stand")
@@ -2120,7 +2128,8 @@ func tick_production(dt: float) -> void:
 			# talent shows in the palbox — make it earn its keep on the crew too
 			var iv: float = 0.9 + w.talent * 0.004 # T0 → 0.9, T100 → 1.3
 			var cond: float = 1.0 + w.star * 0.1 # Palworld: a condensed pal outworks its kin
-			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond
+			var rally := 1.15 if near_banner(w.pos) else 1.0 # a war banner lifts the crew's pace
+			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond * rally
 		var wet := 1.25 if weather != "clear" and s.get("farmField", false) else 1.0 # rain or storm does the watering
 		var fert := 1.5 if s.get("farmField", false) and float(st.get("fert", 0.0)) > t else 1.0
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet * fert

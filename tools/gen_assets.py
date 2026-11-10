@@ -865,6 +865,13 @@ def make_structure(sid, color, w, h):
         d.polygon([(W//2 + 10, 36), (W//2 + 3, 30), (W//2 + 1, 36)], fill=hxc("#8a7a5a") + (255,))
         for tx6 in range(-8, 9, 4):
             d.polygon([(W//2 + tx6, 40), (W//2 + tx6 + 2, 44), (W//2 + tx6 + 4, 40)], fill=hxc("#c9cdd2") + (255,))
+    elif sid == "war_banner":
+        # a tall pole with a dyed war banner and a spear-tip crown
+        d.line([(W//2, 6), (W//2, 44)], fill=hxc("#5e462e") + (255,), width=3)
+        d.polygon([(W//2, 2), (W//2 + 4, 8), (W//2, 12), (W//2 - 4, 8)], fill=hxc("#c9cdd2") + (255,))
+        d.polygon([(W//2 + 2, 10), (W//2 + 20, 13), (W//2 + 20, 24), (W//2 + 2, 21)], fill=hxc("#b84a3a") + (255,))
+        d.line([(W//2 + 6, 12), (W//2 + 6, 21)], fill=hxc("#d8b84a") + (255,), width=2)
+        d.rectangle([W//2 - 5, 44, W//2 + 5, 47], fill=hxc("#6b6f72") + (255,))
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -944,6 +951,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "sparring_ring": ("#a87848", 2, 2),
     "notice_board": ("#c9a15a", 1, 1),
     "snare_trap": ("#8a7a5a", 1, 1),
+    "war_banner": ("#b84a3a", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

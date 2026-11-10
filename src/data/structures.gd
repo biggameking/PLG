@@ -569,6 +569,26 @@ const STRUCTURES = {
   ],
   "desc": "A leaf-litter snare — the first wild pal to step on it is held fast a few seconds. One bite and it's spent."
  },
+"war_banner": {
+  "id": "war_banner",
+  "name": "War Banner",
+  "glyph": "⚑",
+  "color": "#b84a3a",
+  "w": 1,
+  "h": 1,
+  "hp": 100,
+  "cost": [
+   [
+    "wood",
+    10
+   ],
+   [
+    "cloth",
+    6
+   ]
+  ],
+  "desc": "A dyed banner on a tall pole — pals working within sight of its colors put on a little more pace."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1431,6 +1451,12 @@ const TECH = [
   "id": "snare_trap",
   "name": "Snare Trap",
   "tier": 2,
+  "cost": 1
+ },
+ {
+  "id": "war_banner",
+  "name": "War Banner",
+  "tier": 4,
   "cost": 1
  }
 ]

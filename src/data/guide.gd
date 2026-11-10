@@ -90,7 +90,9 @@ serve twice: post one to the drill hall and, each time the bell
 tolls, it will pass one of its own moves to a youngster standing
 nearby — up to three lessons per pupil. And a roped pit settles
 the rest: pair two pals in the sparring ring and every bell ends
-in a bout — the winner banks the most, both spend a little spirit.""",
+in a bout — the winner banks the most, both spend a little spirit.
+And a war banner does for the yard what a drum does for a march —
+pals working within sight of its colors put on a little more pace.""",
 """— VOL. V —
 BREEDING, EGGS AND LUCK
 

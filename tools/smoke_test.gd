@@ -1218,6 +1218,15 @@ func run() -> void:
 		sn_ok = sn_ok and not game.structures.has(sn_k)
 	check("snare holds a foot", sn_ok, "sn=%s" % (sn_st != null))
 
+	# war banner: pals under its colors out-pace pals out of sight
+	game.add_item("wood", 10); game.add_item("cloth", 6)
+	var wb_k: Vector2i = free_xy.call("war_banner")
+	var bn_ok := false
+	if wb_k.x >= 0:
+		var wpos := Vector2(wb_k.x + 0.5, wb_k.y + 0.5)
+		bn_ok = game.near_banner(wpos + Vector2(4, 0)) and not game.near_banner(wpos + Vector2(20, 0))
+	check("banner rallies the yard", bn_ok, "wb=%s" % (wb_k.x >= 0))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
