@@ -3671,9 +3671,10 @@ func tick_raid(dt: float) -> void:
 
 func start_raid() -> void:
 	var c := Vector2(palbox_pos.x + 0.5, palbox_pos.y + 0.5)
-	# Palworld escalation: raids grow with the campaign — bigger packs and
-	# meaner levels as days pass, both capped so day-40 stays survivable
-	var day_bonus := mini(day, 20)
+	# Palworld escalation: raids grow with the campaign — the curve squares
+	# with day so a day-one wave is survivable on a wooden club and a lamb,
+	# while deep-campaign raids still out-level a complacent base
+	var day_bonus := mini(day * day / 20, 25)
 	var n := 3 + rng.int_range(0, 2) + mini(day / 4, 4)
 	var spawned := 0
 	for i in n:
@@ -3698,7 +3699,7 @@ func start_raid() -> void:
 			var sid: String = pick_pool[rng.int_range(0, pick_pool.size() - 1)]
 			var rp := preload("res://src/pal.gd").new()
 			entity_layer.add_child(rp)
-			rp.setup(self, sid, rng.int_range(4 + zone * 4 + day_bonus, 8 + zone * 6 + day_bonus), Vector2(tx + 0.5, ty + 0.5))
+			rp.setup(self, sid, rng.int_range(3 + zone * 3 + day_bonus, 6 + zone * 5 + day_bonus), Vector2(tx + 0.5, ty + 0.5))
 			if sid.begins_with("syndicate") and rng.chance(0.3):
 				rp.bounty = rng.int_range(8, 18) # wanted criminals pay cash on the spot
 			# raider picks nearest non-wild pal; falls back to the player
@@ -4945,11 +4946,12 @@ func notice_board_action() -> void:
 	board_quest["id"] = "" # filled — the board stays quiet until tomorrow
 
 func gacha_pull() -> void:
-	# feed the brass mouth 20 gold — it rattles out an egg, mostly ordinary
-	if item_count("gold_coin") < 20:
-		log_msg("Pal gacha: it wants 20 gold in the slot")
+	# feed the brass mouth 30 gold — the brass takes its cut: eggs resold
+	# don't cover the pull, so the machine stays a sink not a mint
+	if item_count("gold_coin") < 30:
+		log_msg("Pal gacha: it wants 30 gold in the slot")
 		return
-	add_item("gold_coin", -20)
+	add_item("gold_coin", -30)
 	var eid: String = "huge_pal_egg" if rng.chance(0.1) else "pal_egg"
 	add_item(eid, 1)
 	floater(player.pos, "★ %s!" % ItemData.ITEMS[eid]["name"],
