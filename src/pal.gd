@@ -39,6 +39,7 @@ var skill_cd := {}
 var stun_t := 0.0
 var revive_t := 0.0         # >0 while knocked out in the box
 var ailment := ""           # "" | depressed | sprain | ulcer | weakened (Palworld SAN sickness)
+var berserk_t := 0.0        # a depressed base pal at zero SAN chews the yard until it burns out
 var stance := "auto"        # pal command: auto defends / aggressive hunts / passive holds
 var petted_t := -60.0       # last pet timestamp — affection runs on a per-pal cooldown
 var bounty := 0             # >0: wanted mark — the kill pays gold on the spot
@@ -421,6 +422,27 @@ func find_foe() -> Pal:
 	return foe
 
 func base_ai(dt: float) -> void:
+	# Palworld despair: a depressed pal left at zero SAN snaps — it rampages
+	# through the yard chewing whatever it can reach until it burns out
+	if berserk_t > 0.0:
+		berserk_t -= dt
+		if not chew_adjacent_structure():
+			var bk := Vector2i(-1, -1); var bd2 := 1e9
+			for k in game.structures:
+				var st2: Dictionary = game.structures[k]
+				if st2.get("walkable", false):
+					continue
+				var dd2 := pos.distance_squared_to(Vector2(k.x + 0.5, k.y + 0.5))
+				if dd2 < bd2:
+					bd2 = dd2; bk = k
+			if bk.x >= 0:
+				step_toward(Vector2(bk.x + 0.5, bk.y + 0.5), dt)
+		if berserk_t <= 0.0:
+			ailment = "weakened" # the fit passes — but it leaves the pal wrung out
+			game.log_msg("%s burned out — now weakened" % spec["name"])
+			game.floater(pos, "burned out", "#a8a8a8")
+		sync_screen()
+		return
 	# bed_seek re-arms on every sleep instead — a fixed daytime reset would
 	# never let a nocturnal pal's 6s walk budget run out before dusk
 	# defend the base: raiders beating on workers get fought back (Palworld's
@@ -600,6 +622,12 @@ func tick_needs(dt: float) -> void:
 			san = minf(100.0, san + 30.0)
 			game.log_msg("%s took medicine - recovered" % spec["name"])
 			game.floater(pos, "cured!", "#a8e6a1")
+		elif ailment == "depressed" and san <= 0.5 and mode == "base" and berserk_t <= 0.0:
+			# no medicine in reach and nothing left in the tank — it snaps
+			berserk_t = 15.0
+			job_site = null # storm off the shift
+			game.log_msg("%s is going BERSERK — keep medicine stocked!" % spec["name"])
+			game.floater(pos, "BERSERK!", "#e8452f")
 	if hunger > 70:
 		var ate := 0
 		if mode == "base" and game.has_structure("feed_box"):

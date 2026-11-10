@@ -1320,6 +1320,32 @@ func run() -> void:
 		game.weather = w0
 	check("lightning rod banks the storm", lr_ok, "lr=%s" % (lr_st != null))
 
+	# despair snap: a depressed base pal at zero SAN goes berserk, then burns out
+	var bk_p = game.gen_pal("rushoar", 8, p.pos)
+	bk_p.mode = "base"
+	bk_p.ailment = "depressed"
+	bk_p.san = 0.0
+	bk_p.hunger = 0.0
+	game.pals.append(bk_p)
+	for mid in game.items.keys(): # strip the medicine cabinet so nothing saves it
+		if ItemData.ITEMS.get(mid, {}).get("kind") == "medicine":
+			game.items[mid] = 0
+	for k6 in game.structures:
+		var st6: Dictionary = game.structures[k6]
+		for mid2 in st6.get("store", {}).keys():
+			if ItemData.ITEMS.get(mid2, {}).get("kind") == "medicine":
+				st6["store"].erase(mid2)
+	bk_p.tick_needs(1.0)
+	var snapped: bool = bk_p.berserk_t > 0.0 and bk_p.job_site == null
+	for i15 in range(20):
+		bk_p.berserk_t = 0.05
+		bk_p.base_ai(0.1)
+	var burned: bool = bk_p.ailment == "weakened"
+	check("despair snaps then burns out", snapped and burned,
+		"snap=%s burn=%s ail=%s" % [snapped, burned, bk_p.ailment])
+	bk_p.queue_free()
+	game.pals.erase(bk_p)
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

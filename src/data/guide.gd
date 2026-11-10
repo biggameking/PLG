@@ -85,7 +85,10 @@ own; f assigns one by hand.
 Pals are not machines. Hunger drains them — keep the feed box
 stocked. SAN frays under grind — hot springs, beds, and the
 monitoring stand's gentler shifts keep minds whole. Sick pals
-need medicine; the box heals the KO'd on a timer.
+need medicine; the box heals the KO'd on a timer. And mind the
+depressed ones at the bottom of the tank — left at empty SAN
+with no medicine in reach, they snap and chew the very walls
+they built. It passes, but the bill is yours.
 
 Sleep heals: a real bed knits wounds thrice as fast as the
 floor. Dark pals keep night hours and nap by day. And a pal
