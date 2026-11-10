@@ -86,10 +86,12 @@ export const ITEMS: Record<string, ItemDef> = {
   stone_spear: { id: "stone_spear", name: "Stone Spear", glyph: "↑", color: "#7f8c8d", kind: "weapon", stack: 1, weapon: { dmg: 25, range: 2.4, cd: 0.6 }, desc: "Poke from afar." },
   bow: { id: "bow", name: "Bow", glyph: ")", color: "#8a6d4d", kind: "weapon", stack: 1, weapon: { dmg: 20, range: 10, cd: 0.7, ammo: "arrow" }, desc: "Shoots arrows." },
   musket: { id: "musket", name: "Musket", glyph: "┐", color: "#5d4934", kind: "weapon", stack: 1, weapon: { dmg: 60, range: 12, cd: 2.2, ammo: "musket_ball" }, desc: "Slow but heavy shot." },
+  tranq_gun: { id: "tranq_gun", name: "Tranquilizer Gun", glyph: "¬", color: "#7ab87a", kind: "weapon", stack: 1, weapon: { dmg: 6, range: 10, cd: 1.0, ammo: "tranq_dart" }, desc: "A puff of sedative, not a slug — darts put a wild pal down for the count." },
   metal_axe: { id: "metal_axe", name: "Metal Axe", glyph: "┤", color: "#7f8c8d", kind: "weapon", stack: 1, weapon: { dmg: 18, range: 1.8, cd: 0.55 }, desc: "Chops trees faster; decent weapon." },
   metal_pickaxe: { id: "metal_pickaxe", name: "Metal Pickaxe", glyph: "┬", color: "#7f8c8d", kind: "weapon", stack: 1, weapon: { dmg: 18, range: 1.8, cd: 0.55 }, desc: "Mines rocks faster; decent weapon." },
   arrow: { id: "arrow", name: "Arrow", glyph: "→", color: "#b8a468", kind: "ammo", stack: 999, desc: "Bow ammo." },
   musket_ball: { id: "musket_ball", name: "Musket Ball", glyph: "•", color: "#4d565c", kind: "ammo", stack: 999, desc: "Musket ammo." },
+  tranq_dart: { id: "tranq_dart", name: "Tranq Dart", glyph: "⌁", color: "#7ab87a", kind: "ammo", stack: 999, desc: "Venom-coated dart — Tranquilizer Gun ammo." },
 
   // medicine
   low_medical: { id: "low_medical", name: "Low Grade Medical Supplies", glyph: "✚", color: "#4caf50", kind: "medicine", stack: 50, heal: 50, desc: "Heals pals/player." },
@@ -141,6 +143,8 @@ export const RECIPES: Recipe[] = [
   { id: "arrow", out: ["arrow", 6], cost: [["wood", 2], ["stone", 1]], station: "workbench", work: 40 },
   { id: "musket", out: ["musket", 1], cost: [["ingot", 10], ["wood", 10], ["gunpowder", 5]], station: "workbench", work: 400 },
   { id: "musket_ball", out: ["musket_ball", 5], cost: [["ingot", 1], ["gunpowder", 1]], station: "workbench", work: 60 },
+  { id: "tranq_gun", out: ["tranq_gun", 1], cost: [["ingot", 8], ["wood", 6], ["poison_gland", 4]], station: "workbench", work: 250 },
+  { id: "tranq_dart", out: ["tranq_dart", 8], cost: [["fiber", 2], ["venom_gland", 1]], station: "workbench", work: 40 },
   { id: "axe", out: ["metal_axe", 1], cost: [["ingot", 5], ["wood", 5]], station: "workbench", work: 200 },
   { id: "pick", out: ["metal_pickaxe", 1], cost: [["ingot", 5], ["wood", 5]], station: "workbench", work: 200 },
   { id: "nails", out: ["nails", 4], cost: [["ingot", 1]], station: "workbench", work: 40 },

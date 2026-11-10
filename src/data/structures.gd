@@ -1356,6 +1356,13 @@ const TECH = [
   "parts": 3
  },
  {
+  "id": "tranq_gun",
+  "name": "Tranquilizer Gun",
+  "tier": 5,
+  "cost": 2,
+  "parts": 1
+ },
+ {
   "id": "cooler",
   "name": "Ice Box",
   "tier": 6,

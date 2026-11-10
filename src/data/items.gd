@@ -600,6 +600,24 @@ const ITEMS = {
   },
   "desc": "Slow but heavy shot."
  },
+ "tranq_gun": {
+  "id": "tranq_gun",
+  "tech": "tranq_gun",
+  "name": "Tranquilizer Gun",
+  "glyph": "¬",
+  "color": "#7ab87a",
+  "kind": "weapon",
+  "stack": 1,
+  "weapon": {
+   "dmg": 6,
+   "range": 10,
+   "cd": 1.0,
+   "ammo": "tranq_dart",
+   "sleep": 8.0,
+   "dur": 50
+  },
+  "desc": "A puff of sedative, not a slug — darts put a wild pal down for the count."
+ },
  "schematic_bow": {
   "id": "schematic_bow",
   "name": "Bow Schematic",
@@ -716,6 +734,16 @@ const ITEMS = {
   "kind": "ammo",
   "stack": 999,
   "desc": "Musket ammo."
+ },
+ "tranq_dart": {
+  "id": "tranq_dart",
+  "tech": "tranq_gun",
+  "name": "Tranq Dart",
+  "glyph": "⌁",
+  "color": "#7ab87a",
+  "kind": "ammo",
+  "stack": 999,
+  "desc": "Venom-coated dart — Tranquilizer Gun ammo."
  },
  "low_medical": {
   "id": "low_medical",
@@ -1140,6 +1168,48 @@ const RECIPES = [
   ],
   "station": "workbench",
   "work": 400
+ },
+ {
+  "id": "tranq_gun",
+  "out": [
+   "tranq_gun",
+   1
+  ],
+  "cost": [
+   [
+    "ingot",
+    8
+   ],
+   [
+    "wood",
+    6
+   ],
+   [
+    "poison_gland",
+    4
+   ]
+  ],
+  "station": "workbench",
+  "work": 250
+ },
+ {
+  "id": "tranq_dart",
+  "out": [
+   "tranq_dart",
+   8
+  ],
+  "cost": [
+   [
+    "fiber",
+    2
+   ],
+   [
+    "venom_gland",
+    1
+   ]
+  ],
+  "station": "workbench",
+  "work": 40
  },
  {
   "id": "musket_ball",

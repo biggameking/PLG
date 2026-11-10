@@ -57,7 +57,9 @@ ahead of you: hunger beats caution, and the first snout to
 the pile holds still while it chews. Pair the bait with a
 leaf-litter snare and the meal walks to you — whatever steps
 in is held fast for a few heartbeats, one bite and the spring
-is spent.""",
+is spent. Or take the quiet road entirely: a tranquilizer gun
+puffs a venom-coated dart that drops a wild pal mid-stride —
+sleeping prey catches like it dreams of being caught.""",
 """— VOL. III —
 PARTY, BOX AND BENCH
 

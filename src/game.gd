@@ -2801,6 +2801,9 @@ func update_projectiles(dt: float) -> void:
 						var mult := Combat.effectiveness("neutral", p.elem())
 						var d := Combat.damage(pr["dmg"] * 2.0 * (1.0 + partner_aura("atk") + player.meal_bonus("atk")), 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
 						p.hit(player.mercy_dmg(d, p), mult, true)
+						if float(pr.get("sleep", 0.0)) > 0.0 and p.hp > 0: # a tranq dart lands AFTER the sting — the hit would wake it otherwise
+							p.statuses["sleep"] = t + float(pr["sleep"])
+							floater(p.pos, "zzz", "#9ad8ff")
 						dead = true
 						break
 			if dead:
@@ -4363,6 +4366,7 @@ func fire_player_shot(tw: Vector2, wd: Dictionary) -> void:
 	var spd: float = 14.0
 	projectiles.append({"pos": player.pos, "dir": (tw - player.pos).normalized(),
 		"speed": spd, "ttl": wd.get("range", 10) / spd, "dmg": wd.get("dmg", 20),
+		"sleep": wd.get("sleep", 0.0),
 		"elev": world.elev_at(int(player.pos.x), int(player.pos.y)),
 		"from": "player", "node": spr})
 

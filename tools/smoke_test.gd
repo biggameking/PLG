@@ -1362,6 +1362,20 @@ func run() -> void:
 	bd_p.queue_free()
 	game.pals.erase(bd_p)
 
+	# tranq gun: a dart drops a wild pal asleep mid-stride — the sting still lands first
+	var tg_wd: Dictionary = ItemData.ITEMS["tranq_gun"]["weapon"]
+	var tg_p = game.gen_pal("lamball", 5, Vector2(p.pos.x + 1, p.pos.y))
+	game.pals.append(tg_p)
+	tg_p.mode = "wild"
+	game.fire_player_shot(Vector2(p.pos.x + 1, p.pos.y), tg_wd)
+	for i16 in range(12):
+		game.update_projectiles(0.1)
+	var tg_slept: bool = tg_p.statuses.get("sleep", 0.0) > game.t
+	check("tranq dart drops prey asleep", tg_slept and tg_p.hp > 0,
+		"slept=%s hp=%s" % [tg_slept, tg_p.hp])
+	tg_p.queue_free()
+	game.pals.erase(tg_p)
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
