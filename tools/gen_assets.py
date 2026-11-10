@@ -850,6 +850,14 @@ def make_structure(sid, color, w, h):
             d.line([(W//2 - 24, ry), (W//2 + 24, ry)], fill=hxc("#a87848") + (255,), width=2)
         d.line([(W//2 - 6, 34), (W//2 + 6, 38)], fill=hxc("#8a6d4d") + (255,), width=2)
         d.line([(W//2 + 6, 34), (W//2 - 6, 38)], fill=hxc("#8a6d4d") + (255,), width=2)
+    elif sid == "notice_board":
+        # a pitch board on a post — pinned slips at odd angles
+        d.line([(W//2, 30), (W//2, 44)], fill=hxc("#5e462e") + (255,), width=3)
+        d.rectangle([W//2 - 13, 14, W//2 + 13, 30], fill=hxc("#8a6d4d") + (255,))
+        d.rectangle([W//2 - 13, 14, W//2 + 13, 16], fill=hxc("#5e462e") + (255,))
+        for sx in (-8, -1, 6):
+            d.rectangle([W//2 + sx - 2, 19 + (sx % 3), W//2 + sx + 2, 26 + (sx % 3)], fill=hxc("#e8dcc0") + (255,))
+        d.rectangle([W//2 - 13, 28, W//2 + 13, 30], fill=hxc("#5e462e") + (255,))
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -927,6 +935,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "guard_post": ("#b06a50", 1, 1),
     "training_hall": ("#8a6a4a", 2, 2),
     "sparring_ring": ("#a87848", 2, 2),
+    "notice_board": ("#c9a15a", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

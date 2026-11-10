@@ -342,6 +342,9 @@ func interact() -> void:
 			"weather_shrine":
 				game.pray_weather()
 				return
+			"notice_board":
+				game.notice_board_action()
+				return
 			"pal_condenser":
 				game.condense_active()
 				return

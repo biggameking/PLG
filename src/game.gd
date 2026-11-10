@@ -2860,6 +2860,7 @@ func save_game() -> void:
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
+		"board_quest": board_quest,
 		"explored": explored,
 		"treasure": ([treasure["pos"].x, treasure["pos"].y] if treasure else null),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
@@ -2963,6 +2964,9 @@ func load_game() -> bool:
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	pray_cd = t + clampf(float(d.get("pray_left", 0.0)), 0.0, 600.0)
+	var bq = d.get("board_quest", {})
+	board_quest = {"id": str(bq.get("id", "")), "n": clampi(int(bq.get("n", 0)), 0, 999),
+		"day": int(bq.get("day", -1))} if bq is Dictionary else {} # foreign saves can't mint an open contract
 	var ex = d.get("explored", null) # fog of war rides the save — or starts dark
 	if ex is PackedByteArray and ex.size() == world.WORLD_W * world.WORLD_H:
 		explored = ex
@@ -3953,7 +3957,7 @@ func regenerate(s: int) -> void:
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
-	lure = {}; treasure = {} # tossed bait and marked charts belong to the old world
+	lure = {}; treasure = {}; board_quest = {} # tossed bait, marked charts and old postings belong to the old world
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
 	drawer.setup(world)
@@ -4388,6 +4392,31 @@ var merchant_wander_t := 0.0
 var last_merchant_day := -1
 var _tod_prev := 0.0
 var catch_counts := {} # species_id -> caught count (10th-of-kind pays a bonus)
+
+const BOARD_POOL := [["wood", 10], ["stone", 8], ["fiber", 8], ["red_berries", 8],
+	["mushroom", 5], ["wool", 3], ["raw_fish", 3], ["honey", 2], ["milk", 3]]
+var board_quest := {} # {id,n,day} — one standing request per dawn, rolled lazily
+
+func notice_board_action() -> void:
+	if int(board_quest.get("day", -1)) != day:
+		var pick: Array = BOARD_POOL[rng.int_range(0, BOARD_POOL.size() - 1)]
+		board_quest = {"id": pick[0], "n": pick[1], "day": day}
+	var qid: String = board_quest.get("id", "")
+	if qid == "":
+		log_msg("Notice board: today's request is filled — come back at dawn")
+		return
+	var qn: int = board_quest["n"]
+	var iname: String = ItemData.ITEMS.get(qid, {}).get("name", qid)
+	if item_count(qid) < qn:
+		log_msg("Notice board: bring %d %s (have %d)" % [qn, iname, item_count(qid)])
+		return
+	add_item(qid, -qn)
+	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
+	add_item("gold_coin", gold)
+	gain_xp(qn * 3)
+	floater(player.pos, "+%d gold" % gold, "#ffd76e")
+	log_msg("Board request filled: %d %s → +%d gold" % [qn, iname, gold])
+	board_quest["id"] = "" # filled — the board stays quiet until tomorrow
 
 const MERCH_POOL := ["pal_sphere", "mega_sphere", "low_medical", "medical_supplies",
 	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",

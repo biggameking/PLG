@@ -527,6 +527,26 @@ const STRUCTURES = {
   "job": {"kind": "spar", "workType": "", "amount": 60},
   "desc": "A roped pit — pair two pals here and they spar on the bell: the winner learns more, both spend spirit."
  },
+"notice_board": {
+  "id": "notice_board",
+  "name": "Notice Board",
+  "glyph": "▤",
+  "color": "#c9a15a",
+  "w": 1,
+  "h": 1,
+  "hp": 80,
+  "cost": [
+   [
+    "wood",
+    8
+   ],
+   [
+    "fiber",
+    3
+   ]
+  ],
+  "desc": "A pitch-pine board — each dawn a fresh request goes up: fill it for coin and credit."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1377,6 +1397,12 @@ const TECH = [
   "id": "sparring_ring",
   "name": "Sparring Ring",
   "tier": 4,
+  "cost": 1
+ },
+ {
+  "id": "notice_board",
+  "name": "Notice Board",
+  "tier": 2,
   "cost": 1
  }
 ]

@@ -1188,6 +1188,20 @@ func run() -> void:
 		game.pals.erase(spa); spa.free(); game.pals.erase(spb); spb.free()
 	check("ring pairs a bout", sr_ok, "sr=%s" % (sr_st != null))
 
+	# notice board: a dawn posting pays coin and credit for the ask
+	game.add_item("wood", 8); game.add_item("fiber", 3)
+	var nb_k: Vector2i = free_xy.call("notice_board")
+	var nb_ok := false
+	if nb_k.x >= 0:
+		game.board_quest = {"id": "honey", "n": 2, "day": game.day}
+		game.add_item("honey", 3)
+		var gold0: int = game.item_count("gold_coin")
+		game.notice_board_action()
+		nb_ok = game.item_count("honey") == 1 and game.item_count("gold_coin") > gold0 \
+			and game.board_quest.get("id", "") == ""
+		game.board_quest = {}
+	check("board pays the ask", nb_ok, "nb=%s" % (nb_k.x >= 0))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

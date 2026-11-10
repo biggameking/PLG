@@ -134,7 +134,9 @@ and the spoils are real: legendary spheres, ancient parts,
 schematics.
 
 Chests hide in grottos and lairs; the third chamber guards
-something old.""",
+something old. And keep a notice board by the gate: each dawn
+a fresh request goes up — fill it before dark for coin and
+credit worth more than the goods.""",
 """— VOL. VIII —
 MAPS, WILDS AND THE LONG GAME
 
