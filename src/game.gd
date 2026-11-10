@@ -463,6 +463,9 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 				var sch: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
 				add_item(sch, 1)
 				log_msg("Found a %s!" % ItemData.ITEMS[sch]["name"])
+			if rng.chance(0.15): # alphas carry the odd boss sigil — a dare in your pocket
+				add_item("boss_sigil", 1)
+				log_msg("Found a Boss Sigil!")
 		if p.boss and rng.chance(0.3): # bosses teach the good blueprints
 			var sch2: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
 			add_item(sch2, 1)
@@ -3899,6 +3902,7 @@ func spawn_grotto() -> void:
 				st3["loot"] = true
 				st3["store"] = {"gold_coin": rng.int_range(60, 120), "legendary_sphere": 3,
 					"ancient_part": 2, "huge_pal_egg": 1, "lifmunk_effigy": 4,
+					"boss_sigil": 1,
 					"skill_fruit_" + ["neutral", "fire", "water", "grass", "electric",
 					"ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
 			log_msg("A sealed grotto echoes in the deep wilds — something huge breathes within")
@@ -4485,6 +4489,9 @@ func gen_merchant_stock() -> void:
 	if rng.chance(0.2):
 		var hp_price: int = ItemData.ITEMS.get("huge_pal_egg", {}).get("price", 200)
 		merchant_stock.append({"id": "huge_pal_egg", "n": 1, "price": int(hp_price * 1.5)})
+	# and sometimes a dare: a boss sigil under the counter, priced to hesitate
+	if rng.chance(0.15):
+		merchant_stock.append({"id": "boss_sigil", "n": 1, "price": 150})
 	# black-market pals (Palworld): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):

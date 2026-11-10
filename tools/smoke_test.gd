@@ -1290,6 +1290,17 @@ func run() -> void:
 		wl_ok = game.near_well(Vector2(wl_k.x + 4, wl_k.y)) and not game.near_well(Vector2(wl_k.x + 20, wl_k.y))
 	check("well waters its shadow", wl_ok, "wl=%s" % (wl_k.x >= 0))
 
+	# boss sigil: the dare is actually for sale — merchant rolls stock it
+	var bs_found := false
+	for i14 in range(40):
+		game.gen_merchant_stock()
+		for bs_e in game.merchant_stock:
+			if bs_e.get("id") == "boss_sigil" and int(bs_e.get("price", 0)) == 150:
+				bs_found = true
+		if bs_found:
+			break
+	check("boss sigil reaches the market", bs_found, "40 rolls")
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
