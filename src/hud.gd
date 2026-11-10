@@ -59,6 +59,32 @@ func _process(_dt: float) -> void:
 	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	# shell states own the whole input stack — menus don't leak to gameplay
+	if game.state == "title":
+		if event.is_action_pressed("ui_cancel") and game.panel != "":
+			game.panel = "" # Esc backs out of settings on the title
+			return
+		if event is InputEventKey and event.pressed and game.panel == "" and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
+			run_click({"act": "continue" if FileAccess.file_exists("user://savegame.plg") else "new_game", "arg": null})
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			for cr in click_rects:
+				if cr["rect"].has_point(event.position):
+					run_click(cr)
+					return
+		return
+	if game.state == "paused":
+		if event.is_action_pressed("ui_cancel"):
+			if game.panel != "":
+				game.panel = "" # Esc leaves settings first, pause second
+			else:
+				game.state = "play"
+			return
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			for cr in click_rects:
+				if cr["rect"].has_point(event.position):
+					run_click(cr)
+					return
+		return
 	# chat input mode (net only)
 	if game.panel == "chat" and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
@@ -106,6 +132,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			guide_page = maxi(guide_page - 1, 0)
 	if event.is_action_pressed("ui_cancel") and game.panel != "":
 		game.panel = ""
+		return
+	if event.is_action_pressed("ui_cancel") and game.panel == "":
+		game.state = "paused" # Esc with nothing open pulls the shell over the sim
 		return
 	if event.is_action_pressed("build"):
 		game.panel = "" if game.panel == "build" else "build"
@@ -265,6 +294,35 @@ func run_click(cr: Dictionary) -> void:
 			game.upgrade_base()
 		"infuse":
 			game.soul_infuse(cr["arg"])
+		# ---- shell menu acts (title / pause / settings) ----
+		"new_game":
+			game.state = "play"
+			game.log_msg("Day 1 on the Wildmere — catch a kin, feed it, put it to work.")
+		"continue":
+			if game.load_game():
+				game.state = "play"
+		"m_settings":
+			game.panel = "settings"
+		"set_back":
+			game.panel = ""
+		"resume":
+			game.state = "play"
+		"m_save":
+			game.save_game()
+		"to_title":
+			game.to_title()
+		"quit":
+			if game.state == "title":
+				get_tree().quit() # no game in progress — nothing to save
+			else:
+				game.quit_game()
+		"vol_master_m", "vol_master_p", "vol_music_m", "vol_music_p", "vol_sfx_m", "vol_sfx_p":
+			var b: String = cr["act"].split("_")[1]
+			game.settings[b] = clampf(game.settings[b] + (0.1 if cr["act"].ends_with("_p") else -0.1), 0.0, 1.0)
+			game.apply_settings(); game.save_settings()
+		"fullscreen":
+			game.settings["fullscreen"] = not game.settings["fullscreen"]
+			game.apply_settings(); game.save_settings()
 		"chest_dep", "chest_wd":
 			var st = game.chest_ref
 			var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
@@ -562,6 +620,8 @@ func _draw() -> void:
 			draw_join(r)
 		"guide":
 			draw_guide(r)
+		"settings":
+			draw_settings(r)
 	if show_help:
 		var lines := [
 			"MOVE wasd/arrows  SPRINT shift  DODGE space",
@@ -605,6 +665,78 @@ func _draw() -> void:
 		if game.treasure: # the surveyor's X — follow it and dig
 			var tp := mr.position + Vector2(game.treasure["pos"].x / game.world.WORLD_W * ms, game.treasure["pos"].y / game.world.WORLD_H * ms)
 			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Color(1.0, 0.84, 0.28))
+
+	# shell overlays come last — they sit over the whole HUD
+	if game.state == "title" and game.panel == "":
+		draw_title(r)
+	elif game.state == "paused" and game.panel == "":
+		draw_pause(r)
+
+func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Color = Color.WHITE) -> float:
+	var rr := Rect2(cx - w / 2, y, w, 30)
+	draw_rect(rr, Color(0.05, 0.05, 0.07, 0.9))
+	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
+	click_rects.append({"rect": rr, "act": act, "arg": null})
+	draw_string(font, Vector2(cx - font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), label,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col)
+	return y + 40
+
+func draw_title(r: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.55))
+	var cx := r.x / 2
+	var ty := r.y * 0.22
+	draw_string(font, Vector2(cx - font.get_string_size("KINBOUND", HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x / 2, ty), "KINBOUND",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color("#e8d44d"))
+	draw_string(font, Vector2(cx - font.get_string_size("the Wildmere keeps what you catch", HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), "the Wildmere keeps what you catch",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.8, 0.85))
+	var y := r.y * 0.42
+	if FileAccess.file_exists("user://savegame.plg"):
+		y = menu_row(cx, y, 220, "CONTINUE", "continue")
+	y = menu_row(cx, y, 220, "NEW GAME", "new_game")
+	y = menu_row(cx, y, 220, "SETTINGS", "m_settings")
+	y = menu_row(cx, y, 220, "QUIT", "quit", Color(0.85, 0.6, 0.6))
+	draw_string(font, Vector2(14, r.y - 12), "enter = continue · click a row", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 0.55, 0.6))
+
+func draw_pause(r: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.6))
+	var cx := r.x / 2
+	draw_string(font, Vector2(cx - font.get_string_size("PAUSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x / 2, r.y * 0.3), "PAUSED",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
+	var y := r.y * 0.42
+	y = menu_row(cx, y, 220, "RESUME", "resume")
+	y = menu_row(cx, y, 220, "SAVE GAME", "m_save")
+	y = menu_row(cx, y, 220, "SETTINGS", "m_settings")
+	y = menu_row(cx, y, 220, "SAVE & QUIT TO TITLE", "to_title")
+	y = menu_row(cx, y, 220, "SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6))
+
+func draw_settings(r: Vector2) -> void:
+	var rr := Rect2(r.x / 2 - 190, r.y * 0.25, 380, 300)
+	draw_rect(rr, Color(0.04, 0.05, 0.07, 0.95))
+	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
+	draw_string(font, Vector2(rr.position + Vector2(16, 26)), "SETTINGS", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#e8d44d"))
+	var y := rr.position.y + 54
+	for b in [["master", "MASTER"], ["music", "MUSIC"], ["sfx", "SFX"]]:
+		var v: float = game.settings[b[0]]
+		draw_string(font, Vector2(rr.position.x + 24, y + 14), "%s  %d%%" % [b[1], int(v * 100)],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
+		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Color(0.12, 0.14, 0.16))
+		draw_rect(Rect2(rr.position.x + 140, y + 4, 150.0 * v, 14), Color("#4dd0e1"))
+		var mr1 := Rect2(rr.position.x + 296, y, 28, 22)
+		var mr2 := Rect2(rr.position.x + 330, y, 28, 22)
+		click_rects.append({"rect": mr1, "act": "vol_%s_m" % b[0], "arg": null})
+		click_rects.append({"rect": mr2, "act": "vol_%s_p" % b[0], "arg": null})
+		draw_string(font, mr1.position + Vector2(9, 16), "-", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		draw_string(font, mr2.position + Vector2(8, 16), "+", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		y += 38
+	y += 8
+	var fs := Rect2(rr.position.x + 24, y, 200, 26)
+	click_rects.append({"rect": fs, "act": "fullscreen", "arg": null})
+	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), "FULLSCREEN  [%s]" % ("ON" if game.settings["fullscreen"] else "off"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["fullscreen"] else Color.WHITE)
+	y += 44
+	var bk := Rect2(rr.position.x + 24, y, 120, 28)
+	click_rects.append({"rect": bk, "act": "set_back", "arg": null})
+	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), "[ BACK ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()

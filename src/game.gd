@@ -61,11 +61,14 @@ var tech_points := 0
 var unlocked := ["kinbox", "kin_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
+var state := "title" # title | play | paused — sim and player input gate on this
 var panel := ""
+var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false}
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
 const DAY_LEN := 240.0     # seconds per game day
+const SAVE_VER := 2        # 1 = pre-rename ids (Migrate handles); 2 = kinbound ids
 
 # ---- hard caps: nothing per-frame/per-event may grow without bound ----
 # Any unbounded collection is a memory leak in waiting; every list that
@@ -191,6 +194,16 @@ func _ready() -> void:
 		"hit": SfxLib.noise(0.07, 0.3, 14.0),
 		"lucky": SfxLib.arp([880, 1174, 1568, 2093], 0.07, 0.35),
 	}
+	# audio buses: Master owns Music + SFX; settings.cfg holds the mix
+	if AudioServer.get_bus_index("Music") == -1:
+		AudioServer.add_bus(); AudioServer.set_bus_name(AudioServer.bus_count - 1, "Music")
+		AudioServer.set_bus_send(AudioServer.get_bus_index("Music"), "Master")
+	if AudioServer.get_bus_index("SFX") == -1:
+		AudioServer.add_bus(); AudioServer.set_bus_name(AudioServer.bus_count - 1, "SFX")
+		AudioServer.set_bus_send(AudioServer.get_bus_index("SFX"), "Master")
+	for ap0 in sfx_pool:
+		ap0.bus = "SFX"
+	load_settings()
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
 	# player
@@ -200,7 +213,7 @@ func _ready() -> void:
 	# starter kit
 	for id in ["kin_orb", "kin_orb", "kin_orb", "torch"]:
 		add_item(id, 1)
-	log_msg("Welcome to PLG. Press H for help.")
+	log_msg("Welcome to Kinbound. Press H for help.")
 	spawn_wild()
 	spawn_lairs()
 	spawn_camps()
@@ -1640,7 +1653,12 @@ signal decor_dirty
 func queue_redraw_decor() -> void:
 	decor_dirty.emit()
 
+func net_live() -> bool:
+	return net != null and net.multiplayer.multiplayer_peer != null
+
 func _process(dt: float) -> void:
+	if state != "play" and not net_live():
+		return # title/pause freeze the island's clock (net sessions never pause)
 	t += dt
 	if net == null or not net.is_client(): # clients take tod from env_sync — the host's clock owns the sky
 		tod += dt / DAY_LEN * 24.0
@@ -3137,6 +3155,38 @@ func player_status(kind: String, dur: float) -> void:
 	floater(player.pos, kind.to_upper(), "#e8963c")
 
 # ---------- save / load ----------
+func load_settings() -> void:
+	var cf := ConfigFile.new()
+	if cf.load("user://settings.cfg") == OK:
+		for k in settings:
+			settings[k] = cf.get_value("main", k, settings[k])
+	apply_settings()
+
+func save_settings() -> void:
+	var cf := ConfigFile.new()
+	for k in settings:
+		cf.set_value("main", k, settings[k])
+	cf.save("user://settings.cfg")
+
+func apply_settings() -> void:
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(settings["master"], 0.001)))
+	for b in ["Music", "SFX"]:
+		var bi := AudioServer.get_bus_index(b)
+		if bi >= 0:
+			AudioServer.set_bus_volume_db(bi, linear_to_db(maxf(settings[b.to_lower()], 0.001)))
+	var w := get_window()
+	if w != null and DisplayServer.get_name() != "headless" \
+			and (w.mode == Window.MODE_FULLSCREEN) != settings["fullscreen"]:
+		w.mode = Window.MODE_FULLSCREEN if settings["fullscreen"] else Window.MODE_WINDOWED
+
+func quit_game() -> void:
+	save_game()
+	get_tree().quit()
+
+func to_title() -> void:
+	save_game()
+	get_tree().reload_current_scene() # fresh boot lands back on the title screen
+
 func save_game() -> void:
 	var pals_data := []
 	for p in pals:
@@ -3227,7 +3277,7 @@ func save_game() -> void:
 			return pals.size() + box.size() + bench.find(pp)),
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
 		"wear": player.weapon_wear, "awear": player.armor_wear,
-		"kin": pals_data, "structures": structs, "catches": catch_counts,
+		"v": SAVE_VER, "kin": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
 			func(cq): return {"out": cq["out"], "n": cq["n"], "left": cq["left"]}),

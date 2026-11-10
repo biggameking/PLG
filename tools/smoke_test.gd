@@ -52,6 +52,7 @@ func check(name: String, ok: bool, detail: String = "") -> void:
 func run() -> void:
 	results.append("main=%s" % main)
 	game = main.get_node("Game")
+	game.state = "play" # boot lands on the title screen; tests drive the sim itself
 	results.append("game=%s kin=%d" % [game, game.pals.size()])
 	var p: Player = game.player
 	check("world generated", game.world.tiles.size() > 0)
@@ -3582,7 +3583,7 @@ func run() -> void:
 			apex = q; break
 	if apex:
 		game.tod = 12.0
-		apex.aggro = -1; apex.statuses.erase("sleep")
+		apex.aggro = -1; apex.statuses.erase("sleep"); apex.raid = false # leftover raiders retarget the base, not the player — isolate the check
 		apex.pos = game.player.pos + Vector2(4.5, 0)
 		apex.wild_ai(0.05)
 		check("apex aggros on sight", apex.aggro == 0, "aggro=%d" % apex.aggro)
@@ -4119,6 +4120,20 @@ func run() -> void:
 		if is_instance_valid(pj.get("node")):
 			pj["node"].queue_free()
 	game.projectiles.clear()
+
+	# ---- product shell: the sim gates on game.state; settings persist ----
+	game.net.multiplayer.multiplayer_peer = null # a live session owns the pause rule
+	game.state = "paused"
+	var tc0 := game.t
+	game._process(0.5)
+	check("pause freezes the clock", game.t == tc0, "t=%s" % game.t)
+	game.state = "play"
+	game.settings["sfx"] = 0.4
+	game.save_settings()
+	game.settings["sfx"] = 1.0
+	game.load_settings()
+	check("settings round-trip", absf(game.settings["sfx"] - 0.4) < 0.001, "sfx=%s" % game.settings["sfx"])
+	check("audio buses routed", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("SFX") >= 0)
 
 	# net host (no client join in same proc)
 	game.net.host()

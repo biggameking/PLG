@@ -239,6 +239,8 @@ func speed_mult() -> float:
 	return m
 
 func _physics_process(dt: float) -> void:
+	if game.state != "play" and not game.net_live():
+		return # title/pause take the body out of the sim too
 	atk_cd -= dt
 	dodge_t -= dt
 	for k in statuses.keys():

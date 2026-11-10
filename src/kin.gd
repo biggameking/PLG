@@ -179,6 +179,8 @@ func _notification(what: int) -> void:
 func _physics_process(dt: float) -> void:
 	if hp <= 0:
 		return
+	if game != null and game.state == "paused" and not game.net_live():
+		return # pause freezes wildlife; the title lets it wander for ambience
 	if net_id > 0:
 		# host-authoritative replica: render the reported state, never simulate —
 		# local AI would fight the host's corrections and drift the two worlds apart
