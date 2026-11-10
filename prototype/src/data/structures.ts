@@ -263,6 +263,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     cost: [["wood", 12], ["cloth", 4], ["ingot", 2]],
     desc: "A lookout platform with a brass spyglass — every half minute it charts a little more of the wilds around it.",
   },
+  well: {
+    id: "well", name: "Well", glyph: "◍", color: "#6a8ab0", w: 1, h: 1,
+    hp: 120,
+    cost: [["stone", 15]],
+    desc: "A ring of stone over a driven shaft — fields within its shadow stay watered even in fair skies.",
+  },
   weather_shrine: {
     id: "weather_shrine", name: "Weather Shrine", glyph: "☂", color: "#7fb8d8", w: 1, h: 1,
     cost: [["stone", 20], ["paldium", 10]],
@@ -357,4 +363,5 @@ export const TECH: TechNode[] = [
   { id: "snare_trap", name: "Snare Trap", tier: 2, cost: 1 },
   { id: "war_banner", name: "War Banner", tier: 4, cost: 1 },
   { id: "spyglass", name: "Spyglass Tower", tier: 5, cost: 2 },
+  { id: "well", name: "Well", tier: 3, cost: 1 },
 ];

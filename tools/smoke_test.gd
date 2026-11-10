@@ -1282,6 +1282,14 @@ func run() -> void:
 	pm_own.queue_free(); game.pals.erase(pm_own)
 	pm_wild.queue_free(); game.pals.erase(pm_wild)
 
+	# well: fields in its shadow count as watered even under clear skies
+	game.add_item("stone", 15)
+	var wl_k: Vector2i = free_xy.call("well")
+	var wl_ok := false
+	if wl_k.x >= 0:
+		wl_ok = game.near_well(Vector2(wl_k.x + 4, wl_k.y)) and not game.near_well(Vector2(wl_k.x + 20, wl_k.y))
+	check("well waters its shadow", wl_ok, "wl=%s" % (wl_k.x >= 0))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
