@@ -5,6 +5,8 @@ export.cfg
 *.translation
 mono/
 data_*/
+export/
+dist/
 
 # OS / tools
 .DS_Store
