@@ -1545,7 +1545,7 @@ func use_item(k: String) -> void:
 func draw_join(r: Vector2) -> void:
 	var rr := Rect2(10, r.y - 58, 520, 44)
 	draw_rect(rr, Color(0, 0, 0, 0.8))
-	draw_string(font, rr.position + Vector2(10, 19), "Join IP (blank=localhost): " + join_buf + "_",
+	draw_string(font, rr.position + Vector2(10, 19), tr("Join IP (blank=localhost): ") + join_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9fd8ff"))
 
 func draw_travel(r: Vector2) -> void:
@@ -1629,7 +1629,7 @@ func draw_dex(r: Vector2) -> void:
 func draw_chat(r: Vector2) -> void:
 	var rr := Rect2(12, r.y - 40, 480, 28)
 	draw_rect(rr, Color(0, 0, 0, 0.8))
-	draw_string(font, rr.position + Vector2(10, 19), "Say: " + chat_buf + "_",
+	draw_string(font, rr.position + Vector2(10, 19), tr("Say: ") + chat_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
 
 func star_str(p: Kin) -> String:

@@ -36,3 +36,9 @@ Kinbound,Kinbound,Kinbound
 the Wildmere keeps what you catch,the Wildmere keeps what you catch,荒野会留下你所捕获的一切
 enter = continue · click a row,enter = continue · click a row,回车=继续 · 点击菜单项
 SAVE FAILED,SAVE FAILED,保存失败
+JOIN SESSION,JOIN SESSION,加入会话
+TOUCH CONTROLS,TOUCH CONTROLS,触屏控制
+AUTO,AUTO,自动
+OFF,OFF,关
+"Join IP (blank=localhost): ","Join IP (blank=localhost): ","主机 IP（留空=本机）："
+"Say: ","Say: ","说："

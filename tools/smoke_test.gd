@@ -4688,6 +4688,8 @@ func run() -> void:
 	check("zh translation loaded", "zh" in TranslationServer.get_loaded_locales())
 	game.settings["lang"] = "zh"; game.apply_settings()
 	check("tr zh", tr("SETTINGS") == "设置")
+	check("tr zh covers new rows", tr("JOIN SESSION") == "加入会话" and tr("TOUCH CONTROLS") == "触屏控制"
+		and tr("Say: ") == "说：")
 	check("tr fallback", tr("NO_SUCH_KEY_XYZ") == "NO_SUCH_KEY_XYZ")
 	game.settings["lang"] = "bogus"; game.apply_settings()
 	check("bad lang falls back", TranslationServer.get_locale().begins_with("en") or tr("SETTINGS") == "SETTINGS")
