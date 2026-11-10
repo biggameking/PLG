@@ -481,6 +481,31 @@ const STRUCTURES = {
   "job": {"kind": "guard", "workType": "", "amount": 0},
   "desc": "A watch platform — post a pal here and it patrols a wider beat."
  },
+"training_hall": {
+  "id": "training_hall",
+  "name": "Training Hall",
+  "glyph": "⚔",
+  "color": "#8a6a4a",
+  "w": 2,
+  "h": 2,
+  "hp": 220,
+  "cost": [
+   [
+    "wood",
+    20
+   ],
+   [
+    "stone",
+    15
+   ],
+   [
+    "paldium",
+    4
+   ]
+  ],
+  "job": {"kind": "mentor", "workType": "", "amount": 90},
+  "desc": "A drill hall — post a veteran and it passes its moves to the yard's youngsters."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1320,6 +1345,12 @@ const TECH = [
   "name": "Guard Post",
   "tier": 4,
   "cost": 1
+ },
+ {
+  "id": "training_hall",
+  "name": "Training Hall",
+  "tier": 5,
+  "cost": 2
  }
 ]
 

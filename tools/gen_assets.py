@@ -829,6 +829,17 @@ def make_structure(sid, color, w, h):
         d.rectangle([W//2 - 14, 30, W//2 + 14, 32], fill=hxc("#5e462e") + (255,))
         d.line([(W//2 + 12, 8), (W//2 + 12, 26)], fill=hxc("#5e462e") + (255,), width=2)
         d.polygon([(W//2 + 12, 8), (W//2 + 22, 11), (W//2 + 12, 15)], fill=hxc("#b06a50") + (255,))
+    elif sid == "training_hall":
+        # a sparring dojo — wooden deck, corner posts, crossed practice blades
+        d.rectangle([W//2 - 26, 34, W//2 + 26, 46], fill=hxc("#8a6a4a") + (255,))
+        for px3 in range(-26, 30, 8):
+            d.line([(W//2 + px3, 34), (W//2 + px3, 46)], fill=hxc("#6b4f36") + (255,), width=1)
+        for px4 in (-24, 24):
+            d.line([(W//2 + px4, 16), (W//2 + px4, 34)], fill=hxc("#5e462e") + (255,), width=3)
+        d.line([(W//2 - 24, 16), (W//2 + 24, 16)], fill=hxc("#5e462e") + (255,), width=3)
+        d.line([(W//2 - 8, 20), (W//2 + 8, 32)], fill=hxc("#c9cdd2") + (255,), width=2)
+        d.line([(W//2 + 8, 20), (W//2 - 8, 32)], fill=hxc("#c9cdd2") + (255,), width=2)
+        d.ellipse([W//2 - 3, 24, W//2 + 3, 30], outline=hxc("#d8b84a") + (255,), width=2)
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -904,6 +915,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "apiary": ("#d8b830", 1, 1),
     "weather_shrine": ("#7fb8d8", 1, 1),
     "guard_post": ("#b06a50", 1, 1),
+    "training_hall": ("#8a6a4a", 2, 2),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

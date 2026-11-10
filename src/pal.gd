@@ -405,14 +405,11 @@ func partner_ai(dt: float) -> void:
 	if pos.distance_to(pl.pos) > 1.8:
 		step_toward(pl.pos, dt)
 
-func base_ai(dt: float) -> void:
-	# bed_seek re-arms on every sleep instead — a fixed daytime reset would
-	# never let a nocturnal pal's 6s walk budget run out before dusk
-	# defend the base: raiders beating on workers get fought back (Palworld's
-	# crew covers the yard, not just arm's reach)
-	# a posted guard watches a wider beat than a yard hand — Palworld's
-	# sentries pull raids off the workers, not just off their own toes
-	var foe: Pal = null; var fbd := 12.0 if (job_site is Dictionary and job_site.get("id") == "guard_post") else 7.0
+func find_foe() -> Pal:
+	# nearest flagged hostile on the beat — 12 tiles for a posted sentry,
+	# the usual 7 for yard hands; mode/aggro gates live here so tests and AI agree
+	var foe: Pal = null
+	var fbd := 12.0 if (job_site is Dictionary and job_site.get("id") == "guard_post") else 7.0
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
 			continue
@@ -421,9 +418,19 @@ func base_ai(dt: float) -> void:
 		var dd := pos.distance_to(p.pos)
 		if dd < fbd:
 			fbd = dd; foe = p
+	return foe
+
+func base_ai(dt: float) -> void:
+	# bed_seek re-arms on every sleep instead — a fixed daytime reset would
+	# never let a nocturnal pal's 6s walk budget run out before dusk
+	# defend the base: raiders beating on workers get fought back (Palworld's
+	# crew covers the yard, not just arm's reach)
+	# a posted guard watches a wider beat than a yard hand — Palworld's
+	# sentries pull raids off the workers, not just off their own toes
+	var foe: Pal = find_foe()
 	if foe != null:
 		if not cast_skills(foe, dt):
-			if fbd > 1.1:
+			if pos.distance_to(foe.pos) > 1.1:
 				step_toward(foe.pos, dt)
 			elif atk_cd <= 0:
 				atk_cd = 1.0

@@ -2028,6 +2028,9 @@ func tick_production(dt: float) -> void:
 		if st["id"] == "ranch":
 			tick_ranch(key, st, dt)
 			continue
+		if job.get("kind", "") == "mentor":
+			tick_dojo(key, st, job, dt)
+			continue
 		if st["id"] == "incubator":
 			var inc = st.get("egg_inc")
 			if inc is Dictionary:
@@ -2566,7 +2569,7 @@ func find_work_site(p: Pal, reach: float) -> Variant:
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
 		var jb: Dictionary = s.get("job", {})
-		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition" and jb.get("kind") != "guard":
+		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition" and jb.get("kind") != "guard" and jb.get("kind") != "mentor":
 			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
 		var need: String = jb.get("workType", "")
 		if need != "" and p.spec.get("work", {}).get(need, 0) == 0 \
@@ -3385,6 +3388,49 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	st["store"]["pal_egg"] = st["store"].get("pal_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
+
+func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> void:
+	# Palworld's palbox lesson: a posted veteran drills one pupil per bell —
+	# youngsters pick up a move the teacher already carries, fruits stay the
+	# only way past three taught tricks
+	var teacher: Pal = null
+	for w in st["workers"]:
+		if is_instance_valid(w) and w.job_site == st and w.mode == "base" \
+				and w.san >= 15.0 and w.hunger < 80.0 and not w.has_status("sleep"):
+			teacher = w
+			break
+	if teacher == null:
+		st["timer"] = 0.0
+		return
+	st["timer"] += dt
+	var rate: float = job.get("amount", 90)
+	if st["timer"] < rate:
+		return
+	st["timer"] -= rate
+	var known: Array = teacher.active_skills()
+	if known.is_empty():
+		return
+	var center := Vector2(key.x + 0.5, key.y + 0.5)
+	var pupils := []
+	for p in pals:
+		if p == teacher or p.mode != "base" or p.hp <= 0 or p.has_status("sleep"):
+			continue
+		if p.pos.distance_to(center) > 10.0 or p.extra_skills.size() >= 3:
+			continue
+		var pool: Array = known.filter(func(sid): return sid not in p.learned_skills())
+		if not pool.is_empty():
+			pupils.append(p)
+	if pupils.is_empty():
+		return
+	var pupil: Pal = pupils[rng.int_range(0, pupils.size() - 1)]
+	var pool2: Array = known.filter(func(sid): return sid not in pupil.learned_skills())
+	var sid: String = pool2[rng.int_range(0, pool2.size() - 1)]
+	pupil.extra_skills.append(sid)
+	pal_gain_xp(teacher, 4) # drilling others keeps the veteran's own claws sharp
+	var sname: String = SkillData.SKILLS.get(sid, {}).get("name", sid)
+	floater(center, "%s learns %s!" % [pupil.spec.get("name", pupil.species_id), sname], "#ffd97a")
+	log_msg("%s taught %s %s" % [teacher.spec.get("name", teacher.species_id),
+		pupil.spec.get("name", pupil.species_id), sname])
 
 func pull_from_storage(id: String, need: int) -> int:
 	# shared consumer: production inputs and cake come out of chests/feed boxes

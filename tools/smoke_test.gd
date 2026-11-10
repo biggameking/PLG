@@ -1110,35 +1110,60 @@ func run() -> void:
 		game.weather = w0 # hand the sky back — later checks assume a neutral one
 	check("shrine calls weather", ws_ok, "w=%s cd=%.0f" % [game.weather, game.pray_cd - game.t])
 
-	# guard post: a posted pal pulls threats off a wider beat — 12 vs the
-	# yard's 7 — and holds the platform between fights
-	var gp_k: Vector2i = free_xy.call("guard_post")
-	var gp_st = game.structures.get(gp_k) if gp_k.x >= 0 else null
+	# guard post: a posted pal watches 12 tiles where a yard hand sees 7 —
+	# the scan is distance-only, so the assertion ignores footpaths entirely
 	var gp_ok := false
 	var tod_gp: float = game.tod
 	game.tod = 12.0 # sentries doze at night like everyone else — pin the sun
 	for wp10 in game.pals: # quiet the yard so the only flag on the beat is ours
 		if wp10.mode == "wild":
 			wp10.aggro = -1; wp10.raid = false
+	game.add_item("wood", 12); game.add_item("stone", 6)
+	var gp_k: Vector2i = free_xy.call("guard_post")
+	var gp_st = game.structures.get(gp_k) if gp_k.x >= 0 else null
 	if gp_st != null:
 		var sentry: Pal = game.gen_pal("rushoar", 5, Vector2(gp_k.x + 0.5, gp_k.y + 0.5))
 		sentry.mode = "base"; sentry.san = 90.0; sentry.hunger = 10.0; sentry.ailment = ""
 		sentry.passives = []; sentry.statuses.clear(); sentry.job_site = gp_st
 		gp_st["workers"] = [sentry]
-		var raider: Pal = game.gen_pal("loupmoon", 5, sentry.pos + Vector2(9, 0))
-		raider.mode = "wild"; raider.raid = true # the wider beat sees raid flags
-		game.pals.append(raider); game.pals.append(sentry) # gen_pal is a factory — the yard's eyes only see the roster
-		var d0: float = sentry.pos.distance_to(raider.pos)
-		for i11 in range(20):
-			sentry.base_ai(0.1)
-		# the wider beat engaged — either it stepped off the post or a skill
-		# already reached the threat at range
-		gp_ok = sentry.pos.distance_to(raider.pos) < d0 - 0.5 or raider.hp < raider.max_hp
+		var hand: Pal = game.gen_pal("rushoar", 5, sentry.pos + Vector2(1, 0))
+		hand.mode = "base"; hand.statuses.clear() # same spot, no post — the control
+		var raider: Pal = game.gen_pal("loupmoon", 5, sentry.pos + Vector2(8.5, 0))
+		raider.mode = "wild"; raider.raid = true
+		game.pals.append(raider); game.pals.append(sentry); game.pals.append(hand)
+		gp_ok = sentry.find_foe() == raider and hand.find_foe() != raider
 		game.pals.erase(raider); raider.free()
+		game.pals.erase(hand); hand.free()
 		gp_st["workers"] = []; sentry.job_site = null
 		game.pals.erase(sentry); sentry.free()
 	game.tod = tod_gp
 	check("guard widens beat", gp_ok, "gp=%s" % (gp_st != null))
+
+	# training hall — a posted veteran drills a pupil's missing move each bell
+	game.add_item("wood", 20); game.add_item("stone", 15); game.add_item("paldium", 4)
+	var th_k: Vector2i = free_xy.call("training_hall")
+	var th_st = game.structures.get(th_k) if th_k.x >= 0 else null
+	var th_ok := false
+	if th_st != null:
+		var thc := Vector2(th_k.x + 1.0, th_k.y + 1.0) # hall is 2x2 — centre of the deck
+		var teach: Pal = game.gen_pal("rushoar", 30, thc)
+		teach.mode = "base"; teach.san = 90.0; teach.hunger = 10.0
+		teach.statuses.clear(); teach.job_site = th_st
+		th_st["workers"] = [teach]
+		var pupil: Pal = game.gen_pal("lamball", 3, thc + Vector2(3, 0))
+		pupil.mode = "base"; pupil.statuses.clear()
+		var n_before: int = pupil.extra_skills.size()
+		for bp2 in game.pals: # clear other ears — the bell picks ONE pupil at random
+			if bp2 != teach and bp2 != pupil and bp2.mode == "base" and bp2.pos.distance_to(thc) <= 10.0:
+				bp2.pos += Vector2(30, 0)
+		game.pals.append(teach); game.pals.append(pupil)
+		th_st["timer"] = 89.9
+		game.tick_production(0.2)
+		th_ok = pupil.extra_skills.size() > n_before
+		game.pals.erase(pupil); pupil.free()
+		th_st["workers"] = []; teach.job_site = null
+		game.pals.erase(teach); teach.free()
+	check("dojo teaches a move", th_ok, "th=%s" % (th_st != null))
 
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
@@ -1387,6 +1412,7 @@ func run() -> void:
 		# parentage now carries passives for inheritance
 		check("egg records passives", st_r["egg_parents"].size() > 0 and st_r["egg_parents"][0].size() >= 6)
 		game.add_item("pal_egg", 1) # egg reaches the bag via haulers/player pickup
+		game.add_item("huge_pal_egg", -game.item_count("huge_pal_egg")) # a stray huge egg from earlier digs would take the incubator slot first by design
 		# Palworld: eggs hatch in an incubator over time, not in the hand
 		game.add_item("paldium", 4); game.add_item("stone", 12); game.add_item("cloth", 2)
 		var inc_k: Vector2i = free_xy.call("incubator")

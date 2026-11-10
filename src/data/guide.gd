@@ -80,7 +80,10 @@ floor. Dark pals keep night hours and nap by day. And a pal
 with no trade should not idle — set a training dummy in the
 yard and watch it spar itself stronger between raids. And when
 the horns sound, a posted guard earns its keep — pals on a
-guard platform patrol a wider beat than the yard crew.""",
+guard platform patrol a wider beat than the yard crew. Veterans
+serve twice: post one to the drill hall and, each time the bell
+tolls, it will pass one of its own moves to a youngster standing
+nearby — up to three lessons per pupil.""",
 """— VOL. V —
 BREEDING, EGGS AND LUCK
 
