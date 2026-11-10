@@ -4427,6 +4427,36 @@ func run() -> void:
 		and game.CRIES["fenjelly"].data.size() > 0
 		and game.CRIES.size() <= SpeciesData.SPECIES.size() + SpeciesGen.SPECIES.size()) # bounded by the species set
 
+	# ---------- launch sweep: the shell chain a player actually runs ----------
+	# title → new game → pause → settings toggle → resume → save → continue →
+	# load — one unbroken path, each hop asserted (to_title's scene reload is
+	# the only hop the harness can't exercise; continue reuses its load path)
+	var hudl: Node = main.get_node("UILayer/HUD")
+	game.state = "title"
+	hudl.shell_act("new_game")
+	check("sweep: new game enters play", game.state == "play", "state=%s" % game.state)
+	game.state = "paused"
+	hudl.shell_act("m_settings")
+	check("sweep: pause opens settings", game.panel == "settings", "panel=%s" % game.panel)
+	var raids0: bool = game.settings["raids"]
+	hudl.shell_act("raids_tgl")
+	check("sweep: settings toggle applies", game.settings["raids"] != raids0)
+	hudl.shell_act("raids_tgl") # leave the world as we found it
+	hudl.shell_act("set_back")
+	hudl.shell_act("resume")
+	check("sweep: resume returns to play", game.state == "play" and game.panel == "",
+		"state=%s panel=%s" % [game.state, game.panel])
+	var pals_n: int = game.pals.size()
+	var day_n: int = game.day
+	hudl.shell_act("m_save")
+	game.state = "title" # the title a rebooted player lands on
+	hudl.shell_act("continue")
+	check("sweep: continue lands in play", game.state == "play", "state=%s" % game.state)
+	check("sweep: roster survives the reboot", game.pals.size() == pals_n,
+		"pals=%d want=%d" % [game.pals.size(), pals_n])
+	check("sweep: clock survives the reboot", game.day == day_n,
+		"day=%d want=%d" % [game.day, day_n])
+
 	# net host (no client join in same proc) — close the socket too: a bound
 	# :7777 outlives the suite and breaks the next run on a busy machine
 	game.net.host()
