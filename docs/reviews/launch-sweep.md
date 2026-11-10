@@ -82,13 +82,17 @@ the interaction-verb layer was not. Closed in this pass:
   plant itself but never free materials). Co-op friend scope.
 - **BGM**: three procedural pads — day, night, and a minor danger drone that
   swallows the mix during raids/gauntlets/phase-2 bosses — each with a
-  plucked arp layer so the drones carry a line. Reactive, still not produced.
+  plucked arp layer so the drones carry a line. The loop seam is fixed:
+  arp slots quantize onto the loop boundary and the wrap edge meets at
+  zero crossing (smoke-verified). Reactive, still not produced.
 - **MP — orb claims aren't inventory-verified**: `sphere_catch`'s `sid` is client-claimed; the host validates it's a real sphere type but can't check the guest actually owns one (private rosters are client-side). Design limit.
-- **MP — no lobby/NAT traversal; client drop-reconciliation unimplemented** (drops only exist as host-synced replicas).
+- **MP — no lobby/NAT traversal** (co-op is direct-connect IP).
 - **Cosmetic phantom damage**: `tick_shadelump`/`update_projectiles` can flash damage on replicas; `pal_sync` reverts within a sync beat. Visual only.
-- **Day/night pad loop**: ~0.5s crossfade seam is audible on loop wrap.
+- **Store assets**: procedural capsules ship in `store/` (Steam 460x215 + 616x353, itch 630x500, hero 1920x622 — `tools/gen_store.py` regenerates from the same dawn-scene contract as the title). Procedural, not commissioned key art.
 
 ## Release-shape recommendation
 
-itch.io / free EA candidate on Windows+Web today. Steam paid still wants real
-art pass on ~12 hero species + one produced music track + store assets.
+itch.io / free EA candidate on Windows+Web today. Steam paid still wants a
+real art pass on ~12 hero species + one produced music track; store
+capsules now exist procedurally (good enough for itch, thin for Steam
+key art).
