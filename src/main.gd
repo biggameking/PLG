@@ -1,5 +1,5 @@
 extends Node2D
-# Main scene: camera follow + zoom, decor sprite pool (y-sorted), sphere/floater draw.
+# Main scene: camera follow + zoom, decor sprite pool (y-sorted), orb/floater draw.
 
 var cam: Camera2D
 var game: Game

@@ -147,7 +147,7 @@ export const STRUCTURES: Record<string, StructureDef> = {
     id: "waypoint", name: "Waypoint", glyph: "◇", color: "#7fc8f8", w: 1, h: 1,
     cost: [["stone", 20], ["lumenite", 5]],
     light: 5, hp: 400,
-    desc: "the island fast-travel stone: touch it to blink back to your kinbox.",
+    desc: "a fast-travel stone: touch it to blink back to your kinbox.",
   },
   straw_bed: {
     id: "straw_bed", name: "Straw Bed", glyph: "▭", color: "#b8a468", w: 2, h: 1,
@@ -184,12 +184,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     desc: "Overseer post: +40% work speed base-wide, but SAN drains half again as fast.",
   },
   sphere_factory: {
-    id: "sphere_factory", name: "Sphere Works", glyph: "◉", color: "#4dd0e1", w: 2, h: 1,
+    id: "sphere_factory", name: "Orb Works", glyph: "◉", color: "#4dd0e1", w: 2, h: 1,
     cost: [["wood", 20], ["stone", 15], ["lumenite", 5], ["ingot", 4]],
     job: { kind: "assemble", workType: "handiwork", amount: 200,
       consumes: [["lumenite", 1], ["wood", 1], ["stone", 1]],
       produces: [["kin_orb", 1]] },
-    desc: "assembly line — a handy kin rolls a sphere off the belt.",
+    desc: "assembly line — a handy kin rolls a orb off the belt.",
   },
   expedition_post: {
     id: "expedition_post", name: "Expedition Post", glyph: "⚑", color: "#c9a15a", w: 2, h: 1,
@@ -203,7 +203,7 @@ export const STRUCTURES: Record<string, StructureDef> = {
     job: { kind: "assemble", workType: "handiwork", amount: 300,
       consumes: [["lumenite", 3], ["ingot", 2], ["electric_organ", 1]],
       produces: [["giga_orb", 1]] },
-    desc: "the island assembly line II — the organ-fed belt rolls giga spheres.",
+    desc: "an assembly line II — the organ-fed belt rolls giga orbs.",
   },
   compost_bin: {
     id: "compost_bin", name: "Compost Bin", glyph: "♻", color: "#7a9a4a", w: 1, h: 1,
@@ -373,7 +373,7 @@ export const TECH: TechNode[] = [
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
   { id: "monitoring_stand", name: "Monitoring Stand", tier: 5, cost: 2, parts: 2 },
   { id: "watch_tower", name: "Watch Tower", tier: 4, cost: 2, parts: 1 },
-  { id: "sphere_factory", name: "Sphere Works", tier: 5, cost: 3, parts: 1 },
+  { id: "sphere_factory", name: "Orb Works", tier: 5, cost: 3, parts: 1 },
   { id: "expedition_post", name: "Expedition Post", tier: 7, cost: 3, parts: 1 },
   { id: "sphere_factory_2", name: "Giga Works", tier: 8, cost: 4, parts: 2 },
   { id: "compost_bin", name: "Compost Bin", tier: 2, cost: 1 },

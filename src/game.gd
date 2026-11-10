@@ -8,11 +8,11 @@ var rng: Rng
 var player: Player
 var net = null
 var perks := {"capture": 0, "speed": 0, "atk": 0, "hp": 0, "work": 0, "xp": 0}
-var pals: Array[Pal] = []
+var pals: Array[Kin] = []
 var items := {}            # item_id -> count
 var party: Array[int] = [] # pal uids
-var box: Array = []        # Pal data dicts (in kinbox)
-var bench: Array = []      # party pals in their spheres — the island fields ONE out at a time
+var box: Array = []        # Kin data dicts (in kinbox)
+var bench: Array = []      # party pals in their orbs — the island fields ONE out at a time
 var spheres_flying := []   # {sid, target, t}
 var floaters := []         # {pos, text, color, t}
 var messages := []
@@ -147,7 +147,7 @@ func _exit_tree() -> void:
 # reclaims them at exit and no code path can orphan one.
 var box_holder: Node2D
 
-func box_pal(p: Pal) -> void:
+func box_pal(p: Kin) -> void:
 	# send a live kin to the box: keep it parented (to box_holder) so it can
 	# never leak; process is disabled there so stored kin cost nothing.
 	if p.get_parent() == box_holder:
@@ -157,7 +157,7 @@ func box_pal(p: Pal) -> void:
 	else:
 		p.reparent(box_holder)
 
-func unbox_pal(p: Pal) -> void:
+func unbox_pal(p: Kin) -> void:
 	if p.get_parent() == entity_layer:
 		return
 	if p.get_parent() == null:
@@ -219,7 +219,7 @@ func _ready() -> void:
 	spawn_camps()
 	spawn_fossils()
 
-func saddle_for(p: Pal) -> String:
+func saddle_for(p: Kin) -> String:
 	# the island gear rule: every mount wants its own tack — flyers, swimmers
 	# and land runners each take a different saddle
 	if SpeciesData.body_of(p.species_id) == "bird":
@@ -228,7 +228,7 @@ func saddle_for(p: Pal) -> String:
 		return "wave_saddle"
 	return "saddle"
 
-func has_saddle_for(p: Pal) -> bool:
+func has_saddle_for(p: Kin) -> bool:
 	return item_count(saddle_for(p)) > 0
 
 func sphere_tiers() -> Array:
@@ -290,7 +290,7 @@ func peer_pos_of(pid: int) -> Vector2:
 			return Vector2(g.net_pos.x, g.net_pos.y)
 	return player.pos
 
-func owns_pid(p: Pal, pid: int) -> bool:
+func owns_pid(p: Kin, pid: int) -> bool:
 	return p != null and p.owner_id == pid
 
 func rparty_by_tag(tag: String) -> Array:
@@ -350,7 +350,7 @@ func rebind_owner(pid: int, tag: String) -> void:
 func box_op_remote(op: String, uid: int, pid: int) -> void:
 	# a client's kinbox click, host-validated: only the kin's owner may move
 	# it — box, party strip and work posts are all private
-	var p: Pal = find_pal(uid)
+	var p: Kin = find_pal(uid)
 	if p == null:
 		p = find_box_uid(uid)
 	if p == null or not owns_pid(p, pid):
@@ -378,7 +378,7 @@ func box_op_remote(op: String, uid: int, pid: int) -> void:
 		"butcher_pal": r_butcher(p, pid)
 		"sell_pal": r_sell_pal(p, pid)
 
-func r_out_pal(pid: int) -> Pal:
+func r_out_pal(pid: int) -> Kin:
 	for p in pals:
 		if p.mode == "partner" and p.owner_id == pid:
 			return p
@@ -419,7 +419,7 @@ func r_make_active(uid: int, pid: int) -> void:
 		return
 	r_send_out(uid, pid)
 
-func r_box_to_party(bp: Pal, pid: int) -> void:
+func r_box_to_party(bp: Kin, pid: int) -> void:
 	if bp.hp <= 0 or bp.mode != "box":
 		return
 	var rp := rparty_for(pid)
@@ -434,7 +434,7 @@ func r_box_to_party(bp: Pal, pid: int) -> void:
 	if r_out_pal(pid) == null:
 		r_send_out(bp.uid, pid)
 
-func r_party_to_box(p: Pal, pid: int) -> void:
+func r_party_to_box(p: Kin, pid: int) -> void:
 	var rp := rparty_for(pid)
 	rp.erase(p.uid)
 	pals.erase(p)
@@ -452,7 +452,7 @@ func r_party_to_box(p: Pal, pid: int) -> void:
 	box_pal(p)
 	note_remote(pid, "%s -> box" % p.spec["name"])
 
-func r_base_to_box(p: Pal, pid: int) -> void:
+func r_base_to_box(p: Kin, pid: int) -> void:
 	# a guest recalls their own worker — job dropped, cargo goes to their bag
 	if p.job_site:
 		if p in p.job_site["workers"]:
@@ -468,7 +468,7 @@ func r_base_to_box(p: Pal, pid: int) -> void:
 	box_pal(p)
 	note_remote(pid, "%s -> box" % p.spec["name"])
 
-func r_butcher(p: Pal, pid: int) -> void:
+func r_butcher(p: Kin, pid: int) -> void:
 	# the cleaver is host-side property, but a guest's own kin is theirs to
 	# spend — the goods spill at their feet, not ours
 	if p.mode != "box" or p.fav:
@@ -480,7 +480,7 @@ func r_butcher(p: Pal, pid: int) -> void:
 	p.free() # box-holder path — same teardown as condense/sell
 	note_remote(pid, "You butchered %s… it dropped its goods" % p.spec["name"])
 
-func r_sell_pal(p: Pal, pid: int) -> void:
+func r_sell_pal(p: Kin, pid: int) -> void:
 	if p.mode != "box" or p.fav or merchant == null:
 		return
 	var gain := pal_sell_price(p)
@@ -492,7 +492,7 @@ func r_sell_pal(p: Pal, pid: int) -> void:
 func assign_remote(pid: int, at: Vector2) -> void:
 	# a guest's F: nearest of THEIR base kin toggles its post — the shared
 	# yard takes any hand, but nobody touches another keeper's kin
-	var best: Pal = null
+	var best: Kin = null
 	var bd := 3.0
 	for p in base_pals():
 		if not owns_pid(p, pid):
@@ -517,7 +517,7 @@ func assign_remote(pid: int, at: Vector2) -> void:
 # a few heavy standouts get their own numbers.
 const KIND_WT := {
 	"material": 2.0, "food": 0.6, "fruit": 0.4, "medicine": 0.5,
-	"seed": 0.2, "sphere": 1.5, "ammo": 0.5, "weapon": 8.0,
+	"seed": 0.2, "orb": 1.5, "ammo": 0.5, "weapon": 8.0,
 	"armor": 15.0, "accessory": 2.0, "gear": 10.0,
 }
 const ITEM_WT := {
@@ -633,7 +633,7 @@ func pick_wild_species(pool: Array) -> String:
 			return diurnal[rng.int_range(0, diurnal.size() - 1)]
 	return pool[rng.int_range(0, pool.size() - 1)]
 
-func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Pal:
+func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Kin:
 	# test/dev factory: a live kin in the entity layer; caller picks its mode
 	var p := preload("res://src/kin.gd").new()
 	p.lucky = lucky # must be set before setup — passives/scale roll there
@@ -657,35 +657,35 @@ func spawn_net_pal(d) -> void:
 	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
 	pals.append(np)
 
-func find_net_pal(nid: int) -> Pal:
+func find_net_pal(nid: int) -> Kin:
 	for p in pals:
 		if p.net_id == nid and nid > 0:
 			return p
 	return null
 
-func find_box_uid(uid: int) -> Pal:
+func find_box_uid(uid: int) -> Kin:
 	for bp in box:
 		if is_instance_valid(bp) and bp.uid == uid:
 			return bp
-	for bb in bench: # spheres answer to the same uid space
+	for bb in bench: # orbs answer to the same uid space
 		if is_instance_valid(bb) and bb.uid == uid:
 			return bb
 	return null
 
-func find_pal(uid: int) -> Pal:
+func find_pal(uid: int) -> Kin:
 	for p in pals:
 		if p.uid == uid or (p.net_id > 0 and p.net_id == uid):
 			return p
 	return null
 
-func party_pal() -> Pal:
+func party_pal() -> Kin:
 	for uid in party:
 		var p := find_pal(uid)
 		if p and p.mode == "partner": # only the field pal counts — not bench/base
 			return p
 	return null
 
-func lead_pal() -> Pal:
+func lead_pal() -> Kin:
 	# party[0] is the chosen lead — in the field or resting in its ball
 	if party.is_empty():
 		return null
@@ -694,7 +694,7 @@ func lead_pal() -> Pal:
 		p = bench_pal_of(party[0])
 	return p
 
-func kill_pal(p: Pal, by_player: bool) -> void:
+func kill_pal(p: Kin, by_player: bool) -> void:
 	player.dismount_if(p)
 	var owned := p.mode in ["partner", "base", "bench"]
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
@@ -706,7 +706,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			add_item("legendary_orb", 1)
 			add_item("sprigmelt_effigy", 3)
 			add_item("gold_coin", 10)
-			log_msg("RAID CLEARED! Legendary sphere + loot!")
+			log_msg("RAID CLEARED! Legendary orb + loot!")
 		if p.alpha or p.boss:
 			mission_flags["elite"] = true
 		if p.bounty > 0:
@@ -717,7 +717,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 		if p.alpha:
 			add_item("kin_orb", 1)
-			log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
+			log_msg("Alpha %s down! Bonus orb." % p.spec["name"])
 			add_item("sprigmelt_effigy", 2)
 			add_item("ancient_part", rng.int_range(1, 2)) # ancient tech currency
 			if rng.chance(0.15):
@@ -852,7 +852,7 @@ func tick_gauntlet() -> void:
 	add_item("sprigmelt_effigy", 5)
 	add_item("gold_coin", 150)
 	add_item("gauntlet_sigil", 1) # it pays for the next run — if you survive
-	log_msg("GAUNTLET CLEARED! Legendary spheres + effigies + gold")
+	log_msg("GAUNTLET CLEARED! Legendary orbs + effigies + gold")
 	floater(player.pos, "GAUNTLET CLEARED!", "#ffd76e")
 	mission_flags["gauntlet"] = true
 
@@ -865,17 +865,17 @@ const MISSIONS := [
 	{"text": "Catch 3 kin", "gold": 40, "tp": 1},
 	{"text": "Deploy a kin to base (kinbox)", "gold": 40, "tp": 1},
 	{"text": "Build a Logging Site", "gold": 50, "tp": 1},
-	{"text": "Craft a kin sphere", "gold": 50, "tp": 1},
+	{"text": "Craft a kin orb", "gold": 50, "tp": 1},
 	{"text": "Build a Ranch", "gold": 60, "tp": 1},
 	{"text": "Build a Kin Bed", "gold": 60, "tp": 1},
 	{"text": "Defeat an alpha or boss", "gold": 100, "tp": 2},
 	{"text": "Hatch a bred egg", "gold": 100, "tp": 2},
 	{"text": "Clear the gauntlet sigil", "gold": 200, "tp": 3},
 ]
-const MISSION_KEYS := ["kinbox", "catch3", "deploy", "logger", "sphere",
+const MISSION_KEYS := ["kinbox", "catch3", "deploy", "logger", "orb",
 	"ranch", "bed", "elite", "egg", "gauntlet"]
 var mission_idx := 0
-var mission_flags := {} # event-only goals: crafted sphere, elite kill, ...
+var mission_flags := {} # event-only goals: crafted orb, elite kill, ...
 var mission_t := 0.0
 var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
 var dex_claimed := 0    # highest 10-species milestone tier already paid
@@ -887,7 +887,7 @@ var explored := PackedByteArray() # fog of war — one byte per world cell
 var lure := {}                   # thrown bait {pos, till} — one pile at a time
 var treasure := {}               # treasure-map dig spot {pos} — one chart at a time
 var reveal_t := 0.0               # throttle: sight updates twice a second
-var focus_target: Pal = null      # the island focus fire: the pal you last hit
+var focus_target: Kin = null      # the island focus fire: the pal you last hit
 var focus_t := 0.0                # ...stays the partner's priority for 4s
 
 func total_catches() -> int:
@@ -902,7 +902,7 @@ func mission_done(idx: int) -> bool:
 		"catch3": return total_catches() >= 3
 		"deploy": return base_pals().size() >= 1
 		"logger": return has_structure("logging_site")
-		"sphere": return mission_flags.has("sphere")
+		"orb": return mission_flags.has("orb")
 		"ranch": return has_structure("ranch")
 		"bed": return has_structure("kin_bed")
 		"elite": return mission_flags.has("elite")
@@ -911,8 +911,8 @@ func mission_done(idx: int) -> bool:
 	return false
 
 func note_crafted(out_id: String) -> void:
-	if "sphere" in out_id:
-		mission_flags["sphere"] = true
+	if "orb" in out_id:
+		mission_flags["orb"] = true
 
 func tick_dex(dt: float) -> void:
 	# kindex cadence — separate accumulator so the dex keeps spotting
@@ -970,7 +970,7 @@ func tick_missions(dt: float) -> void:
 		log_msg("MISSION: %s — done! +%dg +%d tech" % [m["text"], int(m["gold"]), int(m["tp"])])
 		floater(player.pos, "MISSION DONE", "#8ef0ff")
 
-func hurt_player(atk: float, from: Pal) -> void:
+func hurt_player(atk: float, from: Kin) -> void:
 	if player.dodge_t > 0:
 		return
 	var def := 20.0 + player.level * 3.0
@@ -985,7 +985,7 @@ func hurt_player(atk: float, from: Pal) -> void:
 	if player.hp <= 0:
 		respawn_player()
 
-func sphere_fly(sid: String, target: Pal) -> void:
+func sphere_fly(sid: String, target: Kin) -> void:
 	var spr := Sprite2D.new()
 	var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
 	var c := Color(ItemData.ITEMS.get(sid, {}).get("col", "#e05050"))
@@ -1123,7 +1123,7 @@ func sleep_to_morning() -> void:
 			q.hp = q.max_hp
 			q.san = 100.0
 			q.hunger = 0.0
-	for qb in bench: # spheres rest too — the island party pals wake fresh
+	for qb in bench: # orbs rest too — the island party pals wake fresh
 		qb.hp = qb.max_hp
 		qb.san = 100.0
 		qb.hunger = 0.0
@@ -1157,7 +1157,7 @@ func tick_shadelump() -> void:
 	var lead := party_pal()
 	if lead == null or lead.mode != "partner" or lead.hp <= 0:
 		return
-	var d: Pal = null
+	var d: Kin = null
 	for i in range(1, party.size()):
 		var bp := bench_pal_of(party[i])
 		if bp != null and bp.species_id == "shadelump" and bp.hp > 0:
@@ -1165,7 +1165,7 @@ func tick_shadelump() -> void:
 			break
 	if d == null:
 		return
-	var tgt: Pal = null
+	var tgt: Kin = null
 	if is_instance_valid(focus_target) and focus_target.hp > 0 and t < focus_t:
 		tgt = focus_target # it chases YOUR mark first — it's in the name
 	else:
@@ -1243,16 +1243,16 @@ func pray_weather() -> void:
 	sfx_play("level")
 
 func throw_bait() -> void:
-	if not items.get("pal_bait", 0):
+	if not items.get("kin_bait", 0):
 		return
-	items["pal_bait"] -= 1
-	if items["pal_bait"] <= 0:
-		items.erase("pal_bait")
+	items["kin_bait"] -= 1
+	if items["kin_bait"] <= 0:
+		items.erase("kin_bait")
 	lure = {"pos": player.pos + player.facing * 3.0, "till": t + 25.0}
 	log_msg("Bait tossed — something hungry will smell it")
 	sfx_play("drop")
 
-func lure_take(p: Pal) -> void: # first snout to the pile eats it
+func lure_take(p: Kin) -> void: # first snout to the pile eats it
 	lure = {}
 	p.hp = mini(p.max_hp, p.hp + int(p.max_hp * 0.1))
 	floater(p.pos, "yum!", "#d8b84a")
@@ -1278,19 +1278,19 @@ func fertilize() -> void:
 	floater(Vector2(best.x + 0.5, best.y + 0.5), "fertilized!", "#a8c84a")
 	log_msg("%s surges for five minutes" % StructureData.STRUCTURES[structures[best]["id"]]["name"])
 
-func cap_power_of(target: Pal) -> float:
+func cap_power_of(target: Kin) -> float:
 	# luckies resist; real gate is level — a lv50 shrugs off a
-	# ball that would bag a lv5, which is what pushes the sphere ladder
+	# ball that would bag a lv5, which is what pushes the orb ladder
 	return float(target.spec["capturePower"]) * (1.35 if target.lucky else 1.0) \
 		* (1.0 + 0.05 * maxf(0.0, target.level - 1.0))
 
 func resolve_sphere(sp) -> void:
-	var target: Pal = sp["target"]
+	var target: Kin = sp["target"]
 	if not is_instance_valid(target) or target.hp <= 0 or target.mode != "wild":
-		return # dead, freed, or already caught by another sphere in flight
+		return # dead, freed, or already caught by another orb in flight
 	if target.net_id > 0 and net != null and net.is_client():
 		# a replica can't be rolled locally — the host owns the outcome;
-		# the sphere's flight was just theatre, the catch lands by snapshot
+		# the orb's flight was just theatre, the catch lands by snapshot
 		net.rpc("sphere_catch", target.net_id, sp["sid"],
 			sign(player.pos.x - target.pos.x) == -target.dir, player.capture_level)
 		return
@@ -1334,7 +1334,7 @@ func resolve_sphere(sp) -> void:
 			party.append(target.uid)
 			bench.append(target)
 			pals.erase(target)
-			box_pal(target) # spheres ride in the same cold store as the box
+			box_pal(target) # orbs ride in the same cold store as the box
 			log_msg("%s joins your party (%d/5)" % [target.spec["name"], party.size()])
 			if party_pal() == null:
 				send_out(target.uid) # an empty slot means the new catch takes the field
@@ -1364,7 +1364,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	# Host-authoritative catch for a client's throw. The wire id is our own
 	# uid (client replicas mirror it). The world is shared, the roster is
 	# not: the catch answers to the keeper who threw the ball.
-	var target: Pal = find_pal(nid)
+	var target: Kin = find_pal(nid)
 	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss:
 		return
 	var sp_pow: float = float(ItemData.ITEMS.get(sid, {}).get("spherePower", 0.0))
@@ -1411,7 +1411,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 			box_pal(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
-		log_msg("%s broke free from player %d's sphere" % [target.spec["name"], pid])
+		log_msg("%s broke free from player %d's orb" % [target.spec["name"], pid])
 		target.aggro = 0 if target.hostile() >= 1 else -1
 
 func try_harvest(at: Vector2, face: Vector2) -> void:
@@ -1525,7 +1525,7 @@ func condense_active() -> void:
 	if party.is_empty():
 		log_msg("No active kin to condense")
 		return
-	var ap0: Pal = lead_pal()
+	var ap0: Kin = lead_pal()
 	if ap0 != null and ap0.star < CONDENSE_COST.size():
 		var need0: int = CONDENSE_COST[ap0.star]
 		var have0 := 0
@@ -1538,7 +1538,7 @@ func condense_active() -> void:
 				log_msg("Press E again to consume %d %s -> star %d" % [need0, ap0.spec["name"], ap0.star + 1])
 				return
 			condense_arm = 0.0
-	var ap: Pal = lead_pal()
+	var ap: Kin = lead_pal()
 	if ap == null:
 		return
 	if ap.star >= CONDENSE_COST.size():
@@ -1555,7 +1555,7 @@ func condense_active() -> void:
 		log_msg("Need %d same-species kin for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
 		return
 	for i in need:
-		var fp: Pal = fodder[i]
+		var fp: Kin = fodder[i]
 		box.erase(fp)
 		fp.free() # box pals aren't in the scene tree — free() not queue_free()
 	ap.condense()
@@ -1666,10 +1666,10 @@ func _process(dt: float) -> void:
 			tod -= 24.0
 			day += 1
 
-	# spheres
+	# orbs
 	for sp in spheres_flying.duplicate():
 		sp["t"] += dt
-		var tg: Pal = sp["target"]
+		var tg: Kin = sp["target"]
 		if is_instance_valid(tg):
 			var f: float = minf(1.0, sp["t"] / 0.45)
 			var tp: Vector2 = tg.pos
@@ -1777,7 +1777,7 @@ func _process(dt: float) -> void:
 # ---------- building / tech / crafting / base ----------
 
 func buildable_list() -> Array:
-	# only tech nodes that are actual structures — spear/sphere/axe techs
+	# only tech nodes that are actual structures — spear/orb/axe techs
 	# unlock recipes, not buildings (selecting them crashed place_structure)
 	return unlocked.filter(func(id): return StructureData.STRUCTURES.has(id))
 
@@ -2058,7 +2058,7 @@ func raze_structure(st) -> void:
 	for w in st["workers"].duplicate():
 		st["workers"].erase(w)
 		w.job_site = null
-	var xp2: Pal = st.get("exp_pal") # a razed post calls its expedition pal home early
+	var xp2: Kin = st.get("exp_pal") # a razed post calls its expedition pal home early
 	if is_instance_valid(xp2) and xp2.mode == "expedition":
 		xp2.mode = "base"; xp2.visible = true
 		xp2.job_site = null
@@ -2240,7 +2240,7 @@ func tick_crafts(dt: float) -> void:
 			log_msg("Crafted %s x%d" % [ItemData.ITEMS[cq["out"]]["name"], cq["n"]])
 			craft_queue.remove_at(i)
 
-func pal_gain_xp(q: Pal, n: int) -> void:
+func pal_gain_xp(q: Kin, n: int) -> void:
 	if q.hp <= 0 or n <= 0:
 		return
 	q.xp += n
@@ -2284,7 +2284,7 @@ func tick_box(dt: float) -> void: # the island kinbox is a clinic — wounds men
 				log_msg("%s has recovered" % bp.spec["name"])
 		elif bp.hp < bp.max_hp:
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt)
-	for bp in bench: # spheres rest in the same clinic light
+	for bp in bench: # orbs rest in the same clinic light
 		if bp.hp < bp.max_hp:
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt) # ~33s to full
 
@@ -2384,7 +2384,7 @@ func tick_production(dt: float) -> void:
 			if end > 0.0 and t >= end:
 				st["exp_end"] = 0.0
 				st["exp_cd"] = t + 120.0 # a breather at post before the next march
-				var xp: Pal = st.get("exp_pal")
+				var xp: Kin = st.get("exp_pal")
 				st["exp_pal"] = null
 				if is_instance_valid(xp) and xp.mode == "expedition":
 					return_expedition(xp, st, key)
@@ -2398,7 +2398,7 @@ func tick_production(dt: float) -> void:
 							and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
 						p.take_dps(int(st["spike"]))
 		if st.get("snare", false):
-			var snared: Pal = null
+			var snared: Kin = null
 			for p in pals:
 				if p.mode == "wild" and p.hp > 0 and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
 					snared = p; break # curious feet count too — the snare doesn't check flags
@@ -2429,7 +2429,7 @@ func tick_production(dt: float) -> void:
 			st["turret_cd"] = float(st.get("turret_cd", 0.0)) - dt
 			if float(st["turret_cd"]) <= 0.0:
 				st["turret_cd"] = 2.5
-				var tgt: Pal = null
+				var tgt: Kin = null
 				var tr := 12.0 # the island defense towers plink raiders on approach
 				for p in pals:
 					if p.mode != "wild" or p.hp <= 0 or not (p.raid or p.aggro >= 0):
@@ -2496,7 +2496,7 @@ func tick_production(dt: float) -> void:
 				t += "+%d %s  " % [pr[1], pr[0]]
 			floater(Vector2(key.x + 0.5, key.y + 0.5), t.strip_edges(), "#a8e6a1")
 
-func return_expedition(p: Pal, st: Dictionary, key: Vector2i) -> void:
+func return_expedition(p: Kin, st: Dictionary, key: Vector2i) -> void:
 	p.mode = "base"
 	p.visible = true
 	p.pos = Vector2(key.x + 0.5, key.y + 1.4) # lands just south of the post
@@ -2644,7 +2644,7 @@ func cast_line() -> bool:
 		floater(fp.pos, "SPLASH!", "#4d9de0")
 	elif roll < 0.7:
 		var n := rng.int_range(1, 2)
-		add_item("pal_fluid", n)
+		add_item("kin_fluid", n)
 		log_msg("Caught kin fluids x%d" % n)
 	elif roll < 0.9:
 		add_item("gold_coin", rng.int_range(4, 12))
@@ -2713,7 +2713,7 @@ func work_str(spec: Dictionary) -> String:
 
 func cycle_stance(uid: int) -> void:
 	# the island kin commands: the field kin obeys a standing order
-	var p: Pal = find_pal(uid)
+	var p: Kin = find_pal(uid)
 	if p == null:
 		p = bench_pal_of(uid)
 	if p == null:
@@ -2721,14 +2721,14 @@ func cycle_stance(uid: int) -> void:
 	p.stance = STANCES[(STANCES.find(p.stance) + 1) % STANCES.size()]
 	log_msg("%s: %s" % [p.spec["name"], p.stance])
 
-func bench_pal_of(uid: int) -> Pal:
+func bench_pal_of(uid: int) -> Kin:
 	for bp in bench:
 		if is_instance_valid(bp) and bp.uid == uid:
 			return bp
 	return null
 
 func retract_out() -> void:
-	# the island: your field kin returns to its sphere — one ball out at a time
+	# the island: your field kin returns to its orb — one ball out at a time
 	var cur := party_pal()
 	if cur == null:
 		return
@@ -2759,7 +2759,7 @@ func send_out(uid: int) -> void:
 	unbox_pal(bp)
 	log_msg("%s sent out!" % bp.spec["name"])
 
-func box_to_party(bp: Pal) -> void:
+func box_to_party(bp: Kin) -> void:
 	if bp.hp <= 0:
 		log_msg("%s is KO'd - wait for it to recover" % bp.spec["name"])
 		return
@@ -2809,7 +2809,7 @@ func max_base_pals() -> int:
 	# (8+lvl, hard-capped by MAX_BASE_PALS) plus base-level mission bonus
 	return mini(8 + player.level + (base_level - 1) * 2, MAX_BASE_PALS)
 
-func deploy_to_base(p: Pal) -> void:
+func deploy_to_base(p: Kin) -> void:
 	# the island: drop a kin at the kinbox and it joins the base workforce
 	if p.hp <= 0:
 		log_msg("%s is KO'd - wait for it to recover" % p.spec["name"])
@@ -2836,7 +2836,7 @@ func deploy_to_base(p: Pal) -> void:
 	p.pos = nearest_free(db.x + 2.0, db.y + 2.5)
 	log_msg("%s deployed at base" % p.spec["name"])
 
-func base_to_box(p: Pal) -> void:
+func base_to_box(p: Kin) -> void:
 	# recall a worker into cold storage — job and cargo are dropped first
 	if p.job_site:
 		if p in p.job_site["workers"]:
@@ -2854,7 +2854,7 @@ func base_to_box(p: Pal) -> void:
 func party_to_box(uid: int) -> void:
 	var p := find_pal(uid)
 	if p == null:
-		p = bench_pal_of(uid) # benched spheres drop straight into cold storage
+		p = bench_pal_of(uid) # benched orbs drop straight into cold storage
 	if p == null:
 		return
 	player.dismount_if(p)
@@ -2876,7 +2876,7 @@ func party_to_box(uid: int) -> void:
 
 func assign_worker() -> void:
 	# toggle nearest base kin between wander and assigned to nearest workplace
-	var best: Pal = null
+	var best: Kin = null
 	var bd := 3.0
 	for p in base_pals():
 		if p.owner_id != 0:
@@ -2902,8 +2902,8 @@ func assign_worker() -> void:
 	else:
 		log_msg("No workplace nearby")
 
-var skill_target: Pal = null # kinbox move-loadout panel's subject
-func toggle_skill(p: Pal, sid: String) -> void:
+var skill_target: Kin = null # kinbox move-loadout panel's subject
+func toggle_skill(p: Kin, sid: String) -> void:
 	# move loadout: slot up to 3 of the kin's learned moves
 	if p == null or sid not in p.learned_skills():
 		return
@@ -2922,7 +2922,7 @@ func tick_death_marks() -> void:
 		if player.pos.distance_to(death_marks[i]) < 2.0:
 			death_marks.remove_at(i)
 
-func pet_pal(p: Pal) -> bool:
+func pet_pal(p: Kin) -> bool:
 	# pet: a little affection tops up SAN on a per-kin cooldown
 	if p == null or p.hp <= 0 or p.mode not in ["partner", "base"]:
 		return false
@@ -2934,7 +2934,7 @@ func pet_pal(p: Pal) -> bool:
 	log_msg("You pet %s" % p.spec["name"])
 	return true
 
-func find_work_site(p: Pal, reach: float) -> Variant:
+func find_work_site(p: Kin, reach: float) -> Variant:
 	# nearest suitable post within reach — shared suitability rules for the
 	# manual assign tap and the idle auto-assign sweep (farm fields take
 	# waterers too, the island-style)
@@ -2985,7 +2985,7 @@ const ELEM_ORB_IDX := {"neutral": 0, "fire": 1, "water": 2, "grass": 3, "electri
 var projectiles := []
 var orb_tex: Texture2D = preload("res://assets/ui/element_orbs.png")
 
-func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
+func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 	var kind: String = sk.get("kind", "projectile")
 	var elem: String = sk.get("element", "neutral")
 	var tpos: Vector2 = target_ent if target_ent is Vector2 else target_ent.pos
@@ -3033,7 +3033,7 @@ func cast_skill(caster: Pal, target_ent, sk: Dictionary) -> void:
 				"skill": sk, "from": caster, "node": spr,
 			})
 
-func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
+func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 	var elem: String = sk.get("element", "neutral")
 	if target_ent is Player:
 		if player.dodge_t > 0:
@@ -3051,7 +3051,7 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 		if player.hp <= 0:
 			respawn_player()
 	else:
-		var tp: Pal = target_ent
+		var tp: Kin = target_ent
 		var mult := Combat.effectiveness(elem, tp.elem())
 		# STAB (the island): a kin fighting in its own element hits harder
 		if elem in caster.spec.get("elements", []):
@@ -3126,7 +3126,7 @@ func update_projectiles(dt: float) -> void:
 				n.queue_free()
 				projectiles.erase(pr)
 			continue
-		var caster: Pal = pr["from"]
+		var caster: Kin = pr["from"]
 		if not is_instance_valid(caster): # caster died while the shot was in flight
 			dead = true
 		if not dead:
@@ -3215,7 +3215,7 @@ func save_game() -> void:
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills, "eq": bp.equipped,
 			"own": bp.owner_tag,
 			"revive": maxf(0.0, bp.revive_t - t)})
-	for bp in bench: # spheres ride in the save too — party state survives a reload
+	for bp in bench: # orbs ride in the save too — party state survives a reload
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
 			"mode": "bench", "hp": bp.hp, "talent": bp.talent, "sex": bp.sex,
 			"fav": bp.fav,
@@ -3227,7 +3227,7 @@ func save_game() -> void:
 	for tag in remote_parties:
 		var idxs := []
 		for u in remote_parties[tag]:
-			var pp2: Pal = find_pal(int(u))
+			var pp2: Kin = find_pal(int(u))
 			if pp2 == null:
 				pp2 = bench_pal_of(int(u))
 			if pp2 == null:
@@ -3263,7 +3263,7 @@ func save_game() -> void:
 		"raid_t": raid_t,
 		"unlocked": unlocked, "items": items, "party": party, "rparties": rparties_sv,
 		"party_idx": party.map(func(u):
-			var pp: Pal = find_pal(u)
+			var pp: Kin = find_pal(u)
 			if pp == null:
 				pp = bench_pal_of(u)
 			if pp == null:
@@ -3336,7 +3336,7 @@ func load_game() -> bool:
 	for pr in projectiles:
 		pr["node"].queue_free()
 	projectiles.clear()
-	for sp0 in spheres_flying: # sphere sprites + stale targets must not cross a load
+	for sp0 in spheres_flying: # orb sprites + stale targets must not cross a load
 		if is_instance_valid(sp0["node"]):
 			sp0["node"].queue_free()
 	spheres_flying.clear()
@@ -3497,7 +3497,7 @@ func load_game() -> bool:
 		if pd.get("raid") is bool:
 			np.raid = pd["raid"]
 		var al := str(pd.get("ail", ""))
-		if al in Pal.AILMENTS:
+		if al in Kin.AILMENTS:
 			np.ailment = al # unknown/blank ailments fall to healthy
 		var stn := str(pd.get("stance", "auto"))
 		if stn in STANCES:
@@ -3530,7 +3530,7 @@ func load_game() -> bool:
 			box_pal(np) # box pals live under the hidden holder — never parentless
 		elif np.mode == "bench":
 			bench.append(np)
-			box_pal(np) # spheres rest in the same cold store
+			box_pal(np) # orbs rest in the same cold store
 		else:
 			entity_layer.add_child(np)
 			pals.append(np)
@@ -3817,7 +3817,7 @@ func start_raid() -> void:
 			rp.aggro = 0
 			rp.raid = true
 			rp.set_meta("raid_t0", t)
-			var bp: Pal = null; var bd := 30.0
+			var bp: Kin = null; var bd := 30.0
 			for q in pals:
 				if q.mode == "wild" or q.hp <= 0:
 					continue
@@ -3884,7 +3884,7 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if st["timer"] < rate:
 		return
 	st["timer"] -= rate
-	var a: Pal = null; var b: Pal = null
+	var a: Kin = null; var b: Kin = null
 	for w in st["workers"]:
 		if not is_instance_valid(w):
 			continue
@@ -3912,7 +3912,7 @@ func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 	# kinbox lesson: a posted veteran drills one pupil per bell —
 	# youngsters pick up a move the teacher already carries, fruits stay the
 	# only way past three taught tricks
-	var teacher: Pal = null
+	var teacher: Kin = null
 	for w in st["workers"]:
 		if is_instance_valid(w) and w.job_site == st and w.mode == "base" \
 				and w.san >= 15.0 and w.hunger < 80.0 and not w.has_status("sleep"):
@@ -3941,7 +3941,7 @@ func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 			pupils.append(p)
 	if pupils.is_empty():
 		return
-	var pupil: Pal = pupils[rng.int_range(0, pupils.size() - 1)]
+	var pupil: Kin = pupils[rng.int_range(0, pupils.size() - 1)]
 	var pool2: Array = known.filter(func(sid): return sid not in pupil.learned_skills())
 	var sid: String = pool2[rng.int_range(0, pool2.size() - 1)]
 	pupil.extra_skills.append(sid)
@@ -3967,11 +3967,11 @@ func tick_spar(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 	if st["timer"] < rate:
 		return
 	st["timer"] -= rate
-	var a: Pal = pair[0]; var b: Pal = pair[1]
+	var a: Kin = pair[0]; var b: Kin = pair[1]
 	# level weighs the bout — a veteran usually wins, but upsets happen
 	var a_wins := rng.next() * (a.level + b.level) < a.level
-	var champ: Pal = a if a_wins else b
-	var loser: Pal = b if a_wins else a
+	var champ: Kin = a if a_wins else b
+	var loser: Kin = b if a_wins else a
 	pal_gain_xp(champ, 8)
 	pal_gain_xp(loser, 4)
 	for w in [a, b]:
@@ -4221,7 +4221,7 @@ func open_mimic(st: Dictionary) -> void:
 		return
 	var cell: Vector2i = cell_of(st)
 	net_remove_structure(st) # the box was a mouth; deferred so nothing iterates a ghost
-	var m: Pal = gen_pal(sp, wild_lv(world.zone_at(cell.x, cell.y)) + 4,
+	var m: Kin = gen_pal(sp, wild_lv(world.zone_at(cell.x, cell.y)) + 4,
 		Vector2(cell.x + 0.5, cell.y + 0.5))
 	m.mode = "wild"
 	m.aggro = 0 # the mimic picks its fight before you pick yours
@@ -4291,7 +4291,7 @@ func spawn_lairs() -> void:
 	log_msg("%d boss lairs marked deep in the world" % placed)
 
 func spawn_waypoints() -> void:
-	# the island fast-travel stones: a few fixed waypoints out in the world,
+	# a fast-travel stones: a few fixed waypoints out in the world,
 	# each a one-way blink back to your kinbox once you've walked out
 	var placed := 0
 	var tries := 0
@@ -4357,7 +4357,7 @@ func spawn_grotto() -> void:
 					var i2 := world.idx(tx + dx, ty + dy)
 					world.decor[i2] = World.Decor.ROCK
 					world.hp[i2] = 60
-		# the warden: a zone-3 alpha boss, sphere-immune like all dungeon bosses
+		# the warden: a zone-3 alpha boss, orb-immune like all dungeon bosses
 		var pool := SpeciesGen.zone_pool(3)
 		if pool.is_empty():
 			return
@@ -4522,7 +4522,7 @@ func spawn_legendary_den() -> void:
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 		var bp := preload("res://src/kin.gd").new()
 		bp.alpha = true
-		bp.boss = true # IMMUNE to spheres — legendaries are earned, not caught
+		bp.boss = true # IMMUNE to orbs — legendaries are earned, not caught
 		entity_layer.add_child(bp)
 		bp.setup(self, sid, 50, Vector2(tx + 0.5, ty + 0.5))
 		bp.sprite.scale = Vector2(2.5, 2.5)
@@ -4547,7 +4547,7 @@ func regenerate(s: int) -> void:
 	party.clear()
 	for bp0 in box: # box pals were remove_child'd — clear() alone leaks their nodes
 		bp0.free()
-	for bb0 in bench: # spheres live under box_holder — queue_free from the parent
+	for bb0 in bench: # orbs live under box_holder — queue_free from the parent
 		bb0.queue_free()
 	bench.clear()
 	box.clear()
@@ -4565,7 +4565,7 @@ func regenerate(s: int) -> void:
 		if is_instance_valid(pr["node"]):
 			pr["node"].queue_free()
 	projectiles.clear()
-	for sp0 in spheres_flying: # in-flight spheres: sprite + stale target would linger
+	for sp0 in spheres_flying: # in-flight orbs: sprite + stale target would linger
 		if is_instance_valid(sp0["node"]):
 			sp0["node"].queue_free()
 	spheres_flying.clear()
@@ -4645,7 +4645,7 @@ func respec() -> bool:
 
 func soul_infuse(uid: int) -> void:
 	# the island statue-of-power for kin: feed effigies into one kin's soul
-	var target: Pal = null
+	var target: Kin = null
 	for q in pals:
 		if q.uid == uid and q.mode in ["partner", "base"]:
 			target = q
@@ -4734,7 +4734,7 @@ func partner_skill() -> void:
 	cast_skill(p, tw, best)
 	log_msg("%s casts %s!" % [p.spec["name"], best["name"]])
 
-func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
+func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 	# bespoke actives — returns false when nothing in the cone/aim was worth
 	# spending the cooldown on, so the button can fall back to a log line
 	var reach: float = psk["range"]
@@ -4802,8 +4802,8 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 			return true
 	return false
 
-func nearest_wild(at: Vector2, reach: float) -> Pal:
-	var best: Pal = null
+func nearest_wild(at: Vector2, reach: float) -> Kin:
+	var best: Kin = null
 	var bd := reach
 	for q in pals:
 		if q.mode != "wild" or q.hp <= 0:
@@ -5022,7 +5022,7 @@ func teach_skill_fruit(item_id: String) -> void:
 var merchant: Entity = null
 var merchant_stock := []
 var merchant_home := Vector2.ZERO
-var merchant_tgt := Vector2.ZERO # Pal already owns `target` — Entity must not
+var merchant_tgt := Vector2.ZERO # Kin already owns `target` — Entity must not
 var merchant_wander_t := 0.0
 var last_merchant_day := -1
 var _tod_prev := 0.0
@@ -5168,7 +5168,7 @@ func despawn_merchant() -> void:
 	log_msg("The merchant moved on")
 
 var merchant_wanted := false # one hit squad per visit — wanted loop
-var merchant_hp := 60          # Entity has no hp field — Pal/Player shadow it
+var merchant_hp := 60          # Entity has no hp field — Kin/Player shadow it
 
 func hit_merchant(dmg: float) -> void:
 	if merchant == null or not is_instance_valid(merchant):
@@ -5248,7 +5248,7 @@ func buy_from_merchant(idx: int) -> void:
 	it["n"] -= 1
 	log_msg("Bought %s (%dg)" % [ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]), it["price"]])
 
-func pal_sell_price(bp: Pal) -> int:
+func pal_sell_price(bp: Kin) -> int:
 	# black-market buyback: worth less than the sticker price, more if rare
 	return 40 + bp.level * 8 + (60 if bp.lucky else 0) + (80 if bp.alpha else 0) \
 		+ bp.star * 50

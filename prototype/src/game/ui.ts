@@ -76,7 +76,7 @@ export function drawHUD(r: Renderer, s: GameState, input: Input, camX: number, c
     r.bar(x + 1, baseY + 2, 5, pal.san / sp.san, "magenta" as never);
   }
 
-  // weapon + sphere hotbar (bottom-center)
+  // weapon + orb hotbar (bottom-center)
   const w = p.weapon ? ITEMS[p.weapon] : null;
   r.text(1, r.rows - 1, `[${w ? w.glyph : "-"}] ${w ? w.name : "Fists"}`, C.fg);
   const tiers = ownedSpheres(s);
@@ -97,7 +97,7 @@ export function drawHUD(r: Renderer, s: GameState, input: Input, camX: number, c
   r.text(1, r.rows - 2, "E interact · I inv · B build · T tech · H help", "#8b9a9e");
 }
 
-// ---------- sphere aim overlay ----------
+// ---------- orb aim overlay ----------
 export function drawAim(r: Renderer, s: GameState, input: Input, camX: number, camY: number): void {
   const mwx = (input.mouse.x + camX) / CELL_W;
   const mwy = (input.mouse.y + camY) / CELL_H;
@@ -143,7 +143,7 @@ export function drawInventory(r: Renderer, s: GameState, input: Input): void {
         takeItem(s, id, 1);
         s.player.hp = Math.min(s.player.maxHp, s.player.hp + (it.heal ?? 30));
         log(s, `Used ${it.name}.`);
-      } else if (it.kind === "sphere") {
+      } else if (it.kind === "orb") {
         s.aimSphere = true;
         s.mode = "play";
         log(s, "Aim and click a kin to throw.");
@@ -298,8 +298,8 @@ export function drawHelp(r: Renderer, s: GameState, input: Input): void {
   const lines = [
     "WASD/arrows  move        SHIFT sprint      SPACE dodge roll",
     "LMB          attack / harvest tree·rock·ore",
-    "Q            toggle sphere-aim   → click a kin to throw",
-    "R            cycle sphere type (when aiming)",
+    "Q            toggle orb-aim   → click a kin to throw",
+    "R            cycle orb type (when aiming)",
     "1-5          swap active party kin",
     "E            interact / pick up / hold to work a station",
     "I            inventory     B build     T tech     P kinbox",

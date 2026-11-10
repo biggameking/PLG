@@ -1,6 +1,6 @@
 # PLG → Kinbound — staged production plan
 
-Audit baseline (2026-11-10): feature-rich the island demake, 391-check smoke suite
+Audit baseline (2026-11-10): feature-rich a Palworld-inspired demake, 391-check smoke suite
 green, but commercially blocked by IP reuse, placeholder art/audio, no product
 shell, no localization/input options, unverified tuning.
 
@@ -41,4 +41,8 @@ net servers.
 
 ## Process lessons ledger
 
-_(appended per stage by the external review)_
+**S1 (external review, `docs/reviews/s1-ip-derisk.md`):** mass-rename needs a
+single idempotent script; migrations are written against the serialized save
+schema, not runtime dicts; every sweep needs an id-consistency gate + fixture
+test + orphan pass. All HIGH/MED findings fixed in the same commit cycle; rules
+now live in AGENTS.md → "Rename & sweep rules".

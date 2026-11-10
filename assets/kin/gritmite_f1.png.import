@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://vsdor87ucr0t"
-path="res://.godot/imported/loamquill2_f1.png-8d50521eb3afad5200c3bd3cb59d374a.ctex"
+path="res://.godot/imported/gritmite_f1.png-7a9babfa33edb7a7af92af929a897207.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/kin/gritmite_f1.png"
-dest_files=["res://.godot/imported/loamquill2_f1.png-8d50521eb3afad5200c3bd3cb59d374a.ctex"]
+dest_files=["res://.godot/imported/gritmite_f1.png-7a9babfa33edb7a7af92af929a897207.ctex"]
 
 [params]
 

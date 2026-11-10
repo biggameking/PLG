@@ -19,7 +19,7 @@ export function newGame(seed: number): GameState {
     t: DAY_LEN * 0.3, day: 1, timeOfDay: 0.3, mode: "play",
     worldSeed: seed, player: p,
     pals: [], party: [], palparty: [], activePal: -1, box: [],
-    structures: [], jobs: [], projectiles: [], spheres: [], drops: [], floaters: [],
+    structures: [], jobs: [], projectiles: [], orbs: [], drops: [], floaters: [],
     log: [], baseCenter: null, nextUid: 1,
     aimSphere: false, craftStation: -1, buildSel: null, buildX: 0, buildY: 0,
     camShake: 0,

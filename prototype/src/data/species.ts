@@ -70,7 +70,7 @@ export const SPECIES: Record<string, Species> = {
     capturePower: 50, food: 2, san: 70,
     work: { handiwork: 1, transporting: 1, watering: 1, cooling: 1 },
     skills: [[1, "tackle"], [4, "hydroJet"], [10, "iceMissile"]],
-    drops: [["pal_fluid", 1, 1], ["ice_organ", 1, 1]],
+    drops: [["kin_fluid", 1, 1], ["ice_organ", 1, 1]],
     desc: "Penguin kin; waters crops and cools stores.", hostile: 1,
   },
   dozantler: {
@@ -124,7 +124,7 @@ export const SPECIES: Record<string, Species> = {
     capturePower: 55, food: 3, san: 80,
     work: { watering: 1, mining: 1, transporting: 1, oilExtraction: 1 },
     skills: [[1, "tackle"], [5, "sandBlast"], [12, "stoneShot"]],
-    drops: [["pal_fluid", 1, 1]],
+    drops: [["kin_fluid", 1, 1]],
     desc: "Mud fish; digs and hauls.", hostile: 1,
   },
   shademite: {
@@ -190,7 +190,7 @@ export const SPECIES: Record<string, Species> = {
     capturePower: 90, food: 4, san: 90,
     work: { handiwork: 2, transporting: 2, watering: 2, cooling: 2, mining: 2 },
     skills: [[1, "tackle"], [3, "hydroJet"], [8, "iceMissile"], [16, "blizzard"]],
-    drops: [["pal_fluid", 2, 4], ["ice_organ", 2, 3]],
+    drops: [["kin_fluid", 2, 4], ["ice_organ", 2, 3]],
     desc: "Regal penguin; master of base work.", hostile: 2,
   },
   quackbill: {
@@ -199,7 +199,7 @@ export const SPECIES: Record<string, Species> = {
     capturePower: 50, food: 2, san: 70,
     work: { handiwork: 1, transporting: 1, watering: 1 },
     skills: [[1, "tackle"], [4, "hydroJet"]],
-    drops: [["pal_fluid", 1, 1], ["leather", 1, 1]],
+    drops: [["kin_fluid", 1, 1], ["leather", 1, 1]],
     desc: "Duck kin; decent water worker.", hostile: 1,
   },
 };

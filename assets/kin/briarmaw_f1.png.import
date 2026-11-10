@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bucfv1pyu4kq4"
-path="res://.godot/imported/leaftrot2_f1.png-2f7e1144cef98d86d392c6fe82051d65.ctex"
+path="res://.godot/imported/briarmaw_f1.png-009922243b08b95eac56fc822fee012f.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/kin/briarmaw_f1.png"
-dest_files=["res://.godot/imported/leaftrot2_f1.png-2f7e1144cef98d86d392c6fe82051d65.ctex"]
+dest_files=["res://.godot/imported/briarmaw_f1.png-009922243b08b95eac56fc822fee012f.ctex"]
 
 [params]
 

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bkucvxxad47aa"
-path="res://.godot/imported/shadelump2_f1.png-43009def5557d8afe7ae291d10009070.ctex"
+path="res://.godot/imported/duskwing_f1.png-6d53b3b0cbf519c7545675af1d37f2bc.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/kin/duskwing_f1.png"
-dest_files=["res://.godot/imported/shadelump2_f1.png-43009def5557d8afe7ae291d10009070.ctex"]
+dest_files=["res://.godot/imported/duskwing_f1.png-6d53b3b0cbf519c7545675af1d37f2bc.ctex"]
 
 [params]
 

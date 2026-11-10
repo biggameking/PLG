@@ -1,5 +1,5 @@
 extends Entity
-class_name Pal
+class_name Kin
 # A kin in the world: wild (wander/flee/aggro), partner (follows player,
 # auto-attacks), or base worker (job site later).
 
@@ -246,7 +246,7 @@ func wild_ai(dt: float) -> void:
 	if aggro == 0:
 		# raiders storm the BASE: target the nearest defender, not just the player
 		if raid:
-			var bt: Pal = null; var bd := dist
+			var bt: Kin = null; var bd := dist
 			for bp in game.pals:
 				if bp.mode != "base" or bp.hp <= 0:
 					continue
@@ -286,7 +286,7 @@ func wild_ai(dt: float) -> void:
 				aggro = -1
 		return
 	elif aggro > 0:
-		var tp: Pal = game.find_pal(aggro)
+		var tp: Kin = game.find_pal(aggro)
 		if tp == null or tp.hp <= 0:
 			aggro = -1
 		else:
@@ -312,7 +312,7 @@ func wild_ai(dt: float) -> void:
 			return
 	# a de-aggro'd raider re-targets the base instead of wandering home
 	if raid:
-		var bt2: Pal = null; var bd2 := 30.0
+		var bt2: Kin = null; var bd2 := 30.0
 		for bp in game.pals:
 			if bp.mode != "base" or bp.hp <= 0:
 				continue
@@ -366,7 +366,7 @@ func partner_ai(dt: float) -> void:
 		return
 	# attack nearest wild kin threatening player — stance tunes who counts
 	# (the island kin commands: auto defends, aggressive hunts on sight)
-	var best: Pal = null
+	var best: Kin = null
 	var bd := 6.0 if stance != "aggressive" else 9.0
 	if stance != "passive":
 		for p in game.pals:
@@ -381,7 +381,7 @@ func partner_ai(dt: float) -> void:
 				bd = d
 				best = p
 	# the island focus fire: whatever the player just hit outranks the nearest threat
-	var focus: Pal = game.focus_target
+	var focus: Kin = game.focus_target
 	if stance != "passive" and is_instance_valid(focus) and focus.hp > 0 \
 			and focus.mode == "wild" and game.t < game.focus_t:
 		var fd := pos.distance_to(focus.pos)
@@ -420,10 +420,10 @@ func partner_ai(dt: float) -> void:
 	if pos.distance_to(anchor) > 1.8:
 		step_toward(anchor, dt)
 
-func find_foe() -> Pal:
+func find_foe() -> Kin:
 	# nearest flagged hostile on the beat — 12 tiles for a posted sentry,
 	# the usual 7 for yard hands; mode/aggro gates live here so tests and AI agree
-	var foe: Pal = null
+	var foe: Kin = null
 	var fbd := 12.0 if (job_site is Dictionary and job_site.get("id") == "guard_post") else 7.0
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
@@ -463,7 +463,7 @@ func base_ai(dt: float) -> void:
 	# crew covers the yard, not just arm's reach)
 	# a posted guard watches a wider beat than a yard hand — the island's
 	# sentries pull raids off the workers, not just off their own toes
-	var foe: Pal = find_foe()
+	var foe: Kin = find_foe()
 	if foe != null:
 		if not cast_skills(foe, dt):
 			if pos.distance_to(foe.pos) > 1.1:

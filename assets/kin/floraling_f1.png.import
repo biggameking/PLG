@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cgcfdavnd1ci"
-path="res://.godot/imported/sprigveil2_f1.png-17a77316929f71f9d64d654584ce6579.ctex"
+path="res://.godot/imported/floraling_f1.png-a57579f6cc0ce428c1b22700f01757c1.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/kin/floraling_f1.png"
-dest_files=["res://.godot/imported/sprigveil2_f1.png-17a77316929f71f9d64d654584ce6579.ctex"]
+dest_files=["res://.godot/imported/floraling_f1.png-a57579f6cc0ce428c1b22700f01757c1.ctex"]
 
 [params]
 

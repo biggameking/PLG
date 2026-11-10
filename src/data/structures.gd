@@ -777,7 +777,7 @@ const STRUCTURES = {
  },
  "sphere_factory": {
   "id": "sphere_factory",
-  "name": "Sphere Works",
+  "name": "Orb Works",
   "glyph": "◉",
   "color": "#4dd0e1",
   "w": 2,
@@ -803,7 +803,7 @@ const STRUCTURES = {
   "job": {"kind": "assemble", "workType": "handiwork", "amount": 200,
    "consumes": [["lumenite", 1], ["wood", 1], ["stone", 1]],
    "produces": [["kin_orb", 1]]},
-  "desc": "assembly line — a handy kin rolls a sphere off the belt."
+  "desc": "assembly line — a handy kin rolls a orb off the belt."
  },
  "expedition_post": {
   "id": "expedition_post",
@@ -861,7 +861,7 @@ const STRUCTURES = {
   "job": {"kind": "assemble", "workType": "handiwork", "amount": 300,
    "consumes": [["lumenite", 3], ["ingot", 2], ["electric_organ", 1]],
    "produces": [["giga_orb", 1]]},
-  "desc": "the island assembly line II — the organ-fed belt rolls giga spheres."
+  "desc": "an assembly line II — the organ-fed belt rolls giga orbs."
  },
  "compost_bin": {
   "id": "compost_bin",
@@ -998,7 +998,7 @@ const STRUCTURES = {
   ],
   "light": 5,
   "hp": 400,
-  "desc": "the island fast-travel stone: touch it to blink back to your kinbox."
+  "desc": "a fast-travel stone: touch it to blink back to your kinbox."
  },
  "straw_bed": {
   "id": "straw_bed",
@@ -1487,7 +1487,7 @@ const TECH = [
  },
  {
   "id": "sphere_factory",
-  "name": "Sphere Works",
+  "name": "Orb Works",
   "tier": 5,
   "cost": 3,
   "parts": 1

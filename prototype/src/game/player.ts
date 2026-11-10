@@ -58,14 +58,14 @@ export function updatePlayer(s: GameState, world: World, input: Input, dt: numbe
   const mwx = (input.mouse.x + camX) / 16;
   const mwy = (input.mouse.y + camY) / 18;
 
-  // sphere aim mode toggle (Q or right-click equivalent: key '4')
+  // orb aim mode toggle (Q or right-click equivalent: key '4')
   if (input.hit("q")) s.aimSphere = !s.aimSphere && ownedSpheres(s).length > 0;
   if (input.hit("r")) {
     const tiers = ownedSpheres(s);
     if (tiers.length) p.sphereSel = (p.sphereSel + 1) % tiers.length;
   }
 
-  // throw sphere on click while aiming
+  // throw orb on click while aiming
   if (s.aimSphere && input.mouse.clicked) {
     const tiers = ownedSpheres(s);
     const sid = tiers[Math.min(p.sphereSel, tiers.length - 1)];

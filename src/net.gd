@@ -379,12 +379,12 @@ func box_state_pack(pid: int) -> Array:
 
 func party_state_pack(pid: int) -> Array:
 	# the client's party strip: every party member in order — the out kin and
-	# the benched spheres alike (bench kin have no world replica to read)
+	# the benched orbs alike (bench kin have no world replica to read)
 	var arr := []
-	var out_pal: Pal = game.party_pal() if pid == 0 else game.r_out_pal(pid)
+	var out_pal: Kin = game.party_pal() if pid == 0 else game.r_out_pal(pid)
 	var uids: Array = game.party if pid == 0 else game.rparty_for(pid)
 	for u in uids:
-		var p: Pal = game.find_pal(u)
+		var p: Kin = game.find_pal(u)
 		if p == null:
 			p = game.bench_pal_of(u)
 		if p == null:

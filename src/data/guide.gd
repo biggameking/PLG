@@ -50,17 +50,17 @@ ailment catches far easier; a strike from behind tilts the
 odds further. Watch the ball — three shakes, then the verdict.
 
 A kin's LEVEL is the real gate. A lv5 fenjelly folds to a
-plain sphere; a lv30 alpha shrugs it off. The sphere ladder
+plain orb; a lv30 alpha shrugs it off. The orb ladder
 exists for a reason: kin < mega < giga < ultra < legendary.
 Squeamish about over-swinging? The Ring of Mercy keeps your
 blows honest — a wild kin under that charm can be whittled
 to its last breath, never past it. And the tenth of any
 species is a rite: once the kindex counts ten of a kind,
 every one you keep fights a tenth sharper forever.
-Sphere Works and Giga Works lines feed the habit — the second
+Orb Works and Giga Works lines feed the habit — the second
 line stretches electric organs three times further.
 
-Spheres must hit home — nothing is spent on a miss. The
+Orbs must hit home — nothing is spent on a miss. The
 launcher flings the selected ball downrange. Sleeping kin
 catch asleep; they wake swinging. Shy prey? Toss a bait mash
 ahead of you: hunger beats caution, and the first snout to
@@ -174,9 +174,9 @@ posted bounties — kill them for coin.
 
 The Iron Pact raids too. Towers, walls and spikes hold the
 line; a horn warns you before the wave. Clear the raid boss
-and the spoils are real: legendary spheres, ancient parts,
+and the spoils are real: legendary orbs, ancient parts,
 schematics. Raise a lightning rod and pray for a loud sky —
-each strike banks an electric organ for the sphere lines.
+each strike banks an electric organ for the orb lines.
 Feeling brave? Alphas sometimes carry a Boss
 Sigil — the merchant sells them under the counter, and the
 deep grottos hoard them. Use one at your own kinbox to call

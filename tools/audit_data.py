@@ -96,7 +96,7 @@ for sid in species:
 # every sphere usable item has spherePower — the launcher flings spheres,
 # it isn't one, so it gets a pass by name
 for iid, it in items.items():
-    if ('sphere' in iid and iid != 'orb_launcher') or it.get('spherePower'):
+    if ('orb' in iid and iid != 'orb_launcher') or it.get('spherePower'):
         chk('spherePower' in it, 'item %s sphere-like but no spherePower' % iid)
 
 print('AUDIT DONE: %d species, %d items, %d recipes, %d structures, %d tech' %

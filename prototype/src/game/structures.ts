@@ -87,7 +87,7 @@ export function depositAll(s: GameState, st: Structure): void {
   let moved = 0;
   for (const [id, n] of [...s.player.inv]) {
     const it = ITEMS[id];
-    if (!it || it.kind === "weapon" || it.kind === "sphere") continue;
+    if (!it || it.kind === "weapon" || it.kind === "orb") continue;
     takeItem(s, id, n);
     storageAdd(st, id, n);
     moved += n;

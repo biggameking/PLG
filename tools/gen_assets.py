@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # PLG asset generator — all art is procedural. Run: python tools/gen_assets.py
-# Writes into assets/: tiles.png + tiles.json (atlas), pals/<id>_f{0,1}.png,
+# Writes into assets/: tiles.png + tiles.json (atlas), kin/<id>_f{0,1}.png,
 # decor/*.png, structures/<id>.png, shadow.png, ui/element_orbs.png
 import json, math, os, sys
 from PIL import Image, ImageDraw

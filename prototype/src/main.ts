@@ -213,8 +213,8 @@ function render(): void {
     r.tileAt(pr.x - 0.5, pr.y - 0.5, g, "#ffffff");
   }
 
-  // spheres in flight
-  for (const sp of s.spheres) {
+  // orbs in flight
+  for (const sp of s.orbs) {
     r.tileAt(sp.x - 0.5, sp.y - 0.5, "◐", ITEMS[sp.itemId]?.color ?? "#4d9de0");
   }
 

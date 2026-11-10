@@ -101,7 +101,7 @@ func run() -> void:
 	check("player moves", p.pos != before, "-> %s" % p.pos)
 
 	# melee: put a wild kin next to player and hit it
-	var tp: Pal = game.pals[0]
+	var tp: Kin = game.pals[0]
 	tp.pos = p.pos + Vector2(0.8, 0)
 	var hp0 := tp.hp
 	p.atk_cd = 0
@@ -109,7 +109,7 @@ func run() -> void:
 	check("melee damages kin", tp.hp < hp0, "%.0f->%.0f" % [hp0, tp.hp])
 
 	# catch: weaken + legendary sphere -> near-certain catch
-	var tgt: Pal = null
+	var tgt: Kin = null
 	for q in game.pals:
 		if q.mode == "wild" and q.hp > 0 and not q.boss:
 			tgt = q
@@ -128,8 +128,8 @@ func run() -> void:
 
 	# capture level gate (sphere-ladder driver): a lv30 shrugs off
 	# what would bag a lv3 — same species, same hp
-	var lo_p: Pal = game.gen_pal("fenjelly", 3, p.pos)
-	var hi_p: Pal = game.gen_pal("fenjelly", 30, p.pos)
+	var lo_p: Kin = game.gen_pal("fenjelly", 3, p.pos)
+	var hi_p: Kin = game.gen_pal("fenjelly", 30, p.pos)
 	check("level gates capture", game.cap_power_of(hi_p) > game.cap_power_of(lo_p) * 2.0,
 		"lo=%.0f hi=%.0f" % [game.cap_power_of(lo_p), game.cap_power_of(hi_p)])
 	game.pals.erase(lo_p); lo_p.free()
@@ -140,7 +140,7 @@ func run() -> void:
 	game.add_item("kin_orb", 2)
 	var lw0: String = p.equipment["weapon"]
 	game.equip("orb_launcher")
-	var lp: Pal = game.gen_pal("fenjelly", 2, p.pos + p.facing.normalized() * 4.0)
+	var lp: Kin = game.gen_pal("fenjelly", 2, p.pos + p.facing.normalized() * 4.0)
 	lp.mode = "wild"; lp.aggro = -1
 	game.pals.append(lp)
 	p.atk_cd = 0.0
@@ -191,7 +191,7 @@ func run() -> void:
 	if game.box.is_empty() and not game.party.is_empty():
 		game.party_to_box(game.party[0]) # catch went to party — exercise party->box too
 	if not game.box.is_empty():
-		var bp: Pal = game.box[0]
+		var bp: Kin = game.box[0]
 		game.box_to_party(bp)
 		check("box->party", bp.uid in game.party and bp.mode in ["bench", "partner"], "mode=%s" % bp.mode)
 		# the island: one ball on the field — send_out swaps who's deployed
@@ -254,7 +254,7 @@ func run() -> void:
 		var mp2 := game.gen_pal("fenlump", 3, p.pos)
 		mp2.mode = "box"; game.box.append(mp2); game.box_pal(mp2)
 		game.box_to_party(mp2)
-		var out0: Pal = game.party_pal()
+		var out0: Kin = game.party_pal()
 		var lead2: int = game.party[0]
 		for u9 in game.party: # pick anyone who ISN'T the current field pal
 			if out0 == null or u9 != out0.uid:
@@ -285,7 +285,7 @@ func run() -> void:
 				if not game.world.blocked(int(cand.x), int(cand.y), st_pal.pos.x, st_pal.pos.y):
 					prey_at = cand
 					break
-			var prey: Pal = game.gen_pal("fenjelly", 2, prey_at)
+			var prey: Kin = game.gen_pal("fenjelly", 2, prey_at)
 			prey.mode = "wild"; prey.max_hp = 4000; prey.hp = 4000
 			game.pals.append(prey)
 			game.cycle_stance(st_pal.uid) # auto -> aggressive
@@ -311,7 +311,7 @@ func run() -> void:
 			if prey.get_parent(): prey.get_parent().remove_child(prey)
 			prey.free()
 			# the island focus fire: the player's mark draws the partner in
-			var fprey: Pal = game.gen_pal("fenjelly", 2, st_pal.pos + Vector2(5, 0))
+			var fprey: Kin = game.gen_pal("fenjelly", 2, st_pal.pos + Vector2(5, 0))
 			fprey.mode = "wild"; fprey.max_hp = 4000; fprey.hp = 4000; fprey.aggro = -1
 			fprey.add_status("freeze", 8.0) # pinned in place — no flee lottery
 			game.pals.append(fprey)
@@ -333,12 +333,12 @@ func run() -> void:
 			if fprey.get_parent(): fprey.get_parent().remove_child(fprey)
 			fprey.free()
 		# partner auras (the island): the fielded species buffs its handler
-		var lm: Pal = game.gen_pal("sprigmelt", 5, p.pos)
+		var lm: Kin = game.gen_pal("sprigmelt", 5, p.pos)
 		lm.mode = "box"; game.box.append(lm); game.box_pal(lm)
 		game.box_to_party(lm); game.send_out(lm.uid)
 		var def0 := p.armor_def()
 		check("atk aura on field", absf(game.partner_aura("atk") - 0.10) < 0.001)
-		var dm: Pal = game.gen_pal("loammelt", 5, p.pos)
+		var dm: Kin = game.gen_pal("loammelt", 5, p.pos)
 		dm.mode = "box"; game.box.append(dm); game.box_pal(dm)
 		game.box_to_party(dm); game.send_out(dm.uid)
 		check("def aura on field", p.armor_def() == def0 + 4)
@@ -362,7 +362,7 @@ func run() -> void:
 			and p.speed_mult() <= spd0c * maxf(0.15, 1.5 - p.carry_wt() / p.carry_cap()) + 0.01,
 			"wt=%.0f/%.0f mult=%.2f spd0=%.2f" % [p.carry_wt(), p.carry_cap(), p.speed_mult(), spd0c])
 		var cap0: float = p.carry_cap()
-		var cm: Pal = game.gen_pal("puffmite", 5, p.pos)
+		var cm: Kin = game.gen_pal("puffmite", 5, p.pos)
 		cm.mode = "box"; game.box.append(cm); game.box_pal(cm)
 		game.box_to_party(cm); game.send_out(cm.uid)
 		# absolute check: the deployed mule adds exactly its aura to the
@@ -393,7 +393,7 @@ func run() -> void:
 		var mb0 := game.max_base_pals()
 		var made := []
 		while game.base_pals().size() < 2: # mission 1 wants 2 deployed
-			var qb: Pal = game.gen_pal("fenjelly", 3, p.pos)
+			var qb: Kin = game.gen_pal("fenjelly", 3, p.pos)
 			qb.mode = "base"; game.pals.append(qb); made.append(qb)
 		game.upgrade_base()
 		check("base upgrade lv2", game.base_level == 2 and game.max_base_pals() == mb0 + 2,
@@ -408,15 +408,15 @@ func run() -> void:
 		game.partner_skill()
 		check("partner_skill", game.projectiles.size() > prj0 or true, "%d->%d" % [prj0, game.projectiles.size()])
 		# bespoke partner actives (the island signatures): cindlump cone / briargoo rifle
-		var fp: Pal = game.gen_pal("cindlump", 10, p.pos)
+		var fp: Kin = game.gen_pal("cindlump", 10, p.pos)
 		fp.mode = "partner"
-		var wt: Pal = game.gen_pal("fenlump", 3, Vector2(p.pos.x + 2, p.pos.y))
+		var wt: Kin = game.gen_pal("fenlump", 3, Vector2(p.pos.x + 2, p.pos.y))
 		wt.mode = "wild"; wt.max_hp = 2000; wt.hp = 2000
 		game.pals.append(wt)
 		var wthp := wt.hp
 		check("cindlump flamethrower", game.run_partner_skill(fp, wt.pos,
 			game.PARTNER_SKILLS["cindlump"]) and wt.hp < wthp)
-		var tz: Pal = game.gen_pal("briargoo", 10, p.pos)
+		var tz: Kin = game.gen_pal("briargoo", 10, p.pos)
 		tz.mode = "partner"
 		var wthp2 := wt.hp
 		check("briargoo rifle", game.run_partner_skill(tz, wt.pos,
@@ -430,10 +430,10 @@ func run() -> void:
 		check("harness unlocks skill", game.partner_gear_ok("cindlump"))
 		game.items.erase("cindlump_harness")
 		# support partner skills (the island ranch-in-the-field): milk/eggs on tap
-		var cr: Pal = game.gen_pal("nibjelly", 5, p.pos)
+		var cr: Kin = game.gen_pal("nibjelly", 5, p.pos)
 		cr.mode = "partner"
 		var milk0: int = game.item_count("milk")
-		var lay: Pal = game.gen_pal("fenlump", 5, p.pos)
+		var lay: Kin = game.gen_pal("fenlump", 5, p.pos)
 		lay.mode = "partner"
 		var egg0: int = game.item_count("egg")
 		var sup: bool = game.run_partner_skill(cr, p.pos, game.PARTNER_SKILLS["nibjelly"]) \
@@ -442,14 +442,14 @@ func run() -> void:
 			and game.item_count("egg") == egg0 + 1,
 			"milk=%d egg=%d" % [game.item_count("milk") - milk0, game.item_count("egg") - egg0])
 		# Penguin Cannon (signature silliness): the bird is the payload
-		var pg: Pal = game.gen_pal("corlmite", 10, p.pos)
+		var pg: Kin = game.gen_pal("corlmite", 10, p.pos)
 		pg.mode = "partner"
 		var wthp3 := wt.hp
 		var pg_hit: bool = game.run_partner_skill(pg, wt.pos, game.PARTNER_SKILLS["corlmite"])
 		check("penguin cannon", pg_hit and wt.hp < wthp3, "hp=%.0f" % wt.hp)
 		check("cannon needs launcher", not game.partner_gear_ok("corlmite"))
 		# Roly Poly (fenjelly shield): an absorb bubble that pops
-		var lb: Pal = game.gen_pal("fenjelly", 10, p.pos)
+		var lb: Kin = game.gen_pal("fenjelly", 10, p.pos)
 		lb.mode = "partner"
 		game.run_partner_skill(lb, p.pos, game.PARTNER_SKILLS["fenjelly"])
 		var hp_s0 := p.hp
@@ -464,10 +464,10 @@ func run() -> void:
 			"blocked=%s leaked=%s" % [blocked, leaked])
 		# Dream Chaser (shadelump trick): BENCHED party shadelump
 		# still snipes at the deployed partner's fight
-		var dd: Pal = game.gen_pal("shadelump", 10, p.pos)
+		var dd: Kin = game.gen_pal("shadelump", 10, p.pos)
 		dd.mode = "bench"
 		game.bench.append(dd)
-		var dlead: Pal = game.gen_pal("puffmite", 10, p.pos)
+		var dlead: Kin = game.gen_pal("puffmite", 10, p.pos)
 		dlead.mode = "partner"
 		game.pals.append(dlead)
 		var party0: Array = game.party.duplicate()
@@ -558,19 +558,19 @@ func run() -> void:
 
 	# worker + production
 	# caught kin leaves game.kin; make two explicit base kin (M+F) for worker/ranch tests
-	var p2: Pal = load("res://src/kin.gd").new()
+	var p2: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(p2)
 	p2.setup(game, "dozantler", 3, p.pos)
 	p2.sex = "M"
 	p2.mode = "base"
 	game.pals.append(p2)
-	var p3: Pal = load("res://src/kin.gd").new()
+	var p3: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(p3)
 	p3.setup(game, "fenjelly", 3, p.pos)
 	p3.sex = "F"
 	p3.mode = "base"
 	game.pals.append(p3)
-	var base_pal: Pal = null
+	var base_pal: Kin = null
 	for q in game.pals:
 		if q.mode == "base":
 			base_pal = q
@@ -595,7 +595,7 @@ func run() -> void:
 		for kk4 in game.structures:
 			game.structures[kk4]["workers"].erase(p2)
 		p2.job_site = null
-		var tpw: Pal = game.gen_pal("snovmool", 5, p.pos)
+		var tpw: Kin = game.gen_pal("snovmool", 5, p.pos)
 		tpw.mode = "base"; game.pals.append(tpw)
 		game.assign_t = 1.9
 		game.tick_assign(0.2)
@@ -633,7 +633,7 @@ func run() -> void:
 			if game.structures[kk2].get("id") == "logging_site":
 				log_st2 = game.structures[kk2]
 		if log_st2 and not log_st2["workers"].is_empty():
-			var night_w: Pal = log_st2["workers"][0]
+			var night_w: Kin = log_st2["workers"][0]
 			var dark_night: bool = "dark" in night_w.spec.get("elements", [])
 			var all_diurnal := true
 			for w3 in log_st2["workers"]:
@@ -660,8 +660,8 @@ func run() -> void:
 			q.statuses.erase("sleep")
 		# the island: work suitability LEVEL scales output — lv2 logger beats lv1
 		if log_st2:
-			var w_lv2: Pal = game.gen_pal("dozantler", 5, game.player.pos)
-			var w_lv1: Pal = game.gen_pal("sprigmelt", 5, game.player.pos)
+			var w_lv2: Kin = game.gen_pal("dozantler", 5, game.player.pos)
+			var w_lv1: Kin = game.gen_pal("sprigmelt", 5, game.player.pos)
 			var saved_workers: Array = log_st2["workers"].duplicate()
 			var saved_timer: float = log_st2["timer"]
 			var timers := []
@@ -688,7 +688,7 @@ func run() -> void:
 			if mk.x >= 0:
 				mine_st = game.structures.get(mk)
 		if mine_st:
-			var dark_w: Pal = game.gen_pal("shademite", 5, game.player.pos)
+			var dark_w: Kin = game.gen_pal("shademite", 5, game.player.pos)
 			dark_w.mode = "base"; dark_w.san = 90.0; dark_w.ailment = ""; dark_w.passives = []
 			var saved_w: Array = mine_st["workers"].duplicate()
 			var saved_t: float = mine_st["timer"]
@@ -708,7 +708,7 @@ func run() -> void:
 		else:
 			check("dark night shift", false, "no mining site")
 		# the island nocturnals: dark kin aggro wider after dusk
-		var lup: Pal = game.gen_pal("noctmane", 5, p.pos + Vector2(4.5, 0))
+		var lup: Kin = game.gen_pal("noctmane", 5, p.pos + Vector2(4.5, 0))
 		lup.mode = "wild"; lup.aggro = -1
 		game.pals.append(lup)
 		game.tod = 23.0
@@ -726,7 +726,7 @@ func run() -> void:
 		# weather: rain puts water kin in their element on the crew
 		if mine_st:
 			var wt0: String = game.weather
-			var wp2: Pal = game.gen_pal("corlmite", 5, game.player.pos)
+			var wp2: Kin = game.gen_pal("corlmite", 5, game.player.pos)
 			wp2.mode = "base"; wp2.san = 90.0; wp2.ailment = ""; wp2.passives = []
 			var wsv2: Array = mine_st["workers"].duplicate()
 			var tsv2: float = mine_st["timer"]
@@ -745,7 +745,7 @@ func run() -> void:
 			game.weather = wt0; game.tod = tod0
 			game.pals.erase(wp2); wp2.free()
 			# the dry sky pays fire kin the same rate rain pays water
-			var fp2: Pal = game.gen_pal("cindlump", 5, game.player.pos)
+			var fp2: Kin = game.gen_pal("cindlump", 5, game.player.pos)
 			fp2.mode = "base"; fp2.san = 90.0; fp2.ailment = ""; fp2.passives = []
 			var wsv6: Array = mine_st["workers"].duplicate()
 			var tsv6: float = mine_st["timer"]
@@ -763,7 +763,7 @@ func run() -> void:
 			game.weather = wt0; game.tod = tod0
 			game.pals.erase(fp2); fp2.free()
 			# worker IVs: a T100 crew outpaces a T0 crew on the same site
-			var ivp: Pal = game.gen_pal("sprigmelt", 5, game.player.pos)
+			var ivp: Kin = game.gen_pal("sprigmelt", 5, game.player.pos)
 			ivp.mode = "base"; ivp.san = 90.0; ivp.ailment = ""; ivp.passives = []
 			var wsv3: Array = mine_st["workers"].duplicate()
 			var tsv3: float = mine_st["timer"]
@@ -781,7 +781,7 @@ func run() -> void:
 			game.pals.erase(ivp); ivp.free()
 
 			# the island condenser: a starred kin outworks its kin on the same site
-			var cst: Pal = game.gen_pal("sprigmelt", 5, game.player.pos)
+			var cst: Kin = game.gen_pal("sprigmelt", 5, game.player.pos)
 			cst.mode = "base"; cst.san = 90.0; cst.ailment = ""; cst.passives = []
 			var wsv5: Array = mine_st["workers"].duplicate()
 			var tsv5: float = mine_st["timer"]
@@ -799,7 +799,7 @@ func run() -> void:
 			game.pals.erase(cst); cst.free()
 
 			# hungry kin slack off (the island): starving crews stop producing
-			var hg: Pal = game.gen_pal("fenjelly", 5, game.player.pos)
+			var hg: Kin = game.gen_pal("fenjelly", 5, game.player.pos)
 			hg.mode = "base"; hg.san = 90.0; hg.ailment = ""
 			var wsv4: Array = mine_st["workers"].duplicate()
 			var tsv4: float = mine_st["timer"]
@@ -831,7 +831,7 @@ func run() -> void:
 	if sf_st and chest5:
 		for ci in [["lumenite", 3], ["wood", 3], ["stone", 3]]:
 			chest5["store"][ci[0]] = chest5["store"].get(ci[0], 0) + ci[1]
-		var hw: Pal = game.gen_pal("fenjelly", 5, game.player.pos)
+		var hw: Kin = game.gen_pal("fenjelly", 5, game.player.pos)
 		hw.mode = "base"; hw.san = 90.0; hw.ailment = ""; hw.passives = []
 		var saved_hw: Array = sf_st["workers"].duplicate()
 		sf_st["workers"] = [hw]; hw.job_site = sf_st
@@ -852,7 +852,7 @@ func run() -> void:
 	var xp_k: Vector2i = free_xy.call("expedition_post")
 	var xp_st = game.structures.get(xp_k) if xp_k.x >= 0 else null
 	if xp_st:
-		var scout: Pal = game.gen_pal("puffmite", 10, p.pos)
+		var scout: Kin = game.gen_pal("puffmite", 10, p.pos)
 		scout.mode = "base"; scout.san = 90.0; scout.hunger = 10.0
 		game.pals.append(scout)
 		xp_st["workers"] = [scout]; scout.job_site = xp_st
@@ -878,7 +878,7 @@ func run() -> void:
 	else:
 		check("expedition departs", false, "post not placed")
 
-	# Giga Works (the island assembly line II): organ-fed belt rolls giga spheres
+	# Giga Works (an assembly line II): organ-fed belt rolls giga spheres
 	for c0 in StructureData.STRUCTURES["sphere_factory_2"]["cost"]:
 		game.add_item(c0[0], int(c0[1]))
 	var g2_k: Vector2i = free_xy.call("sphere_factory_2")
@@ -894,7 +894,7 @@ func run() -> void:
 	if g2_st and chest6:
 		for ci in [["lumenite", 3], ["ingot", 2], ["electric_organ", 1]]:
 			chest6["store"][ci[0]] = chest6["store"].get(ci[0], 0) + ci[1]
-		var hw2: Pal = game.gen_pal("fenjelly", 5, game.player.pos)
+		var hw2: Kin = game.gen_pal("fenjelly", 5, game.player.pos)
 		hw2.mode = "base"; hw2.san = 90.0; hw2.ailment = ""; hw2.passives = []
 		hw2.talent = 50 # keep work_sum above the 300 mark deterministically
 		var saved_hw2: Array = g2_st["workers"].duplicate()
@@ -920,7 +920,7 @@ func run() -> void:
 	var ic_k: Vector2i = free_xy.call("cooler")
 	var ic_st = game.structures.get(ic_k) if ic_k.x >= 0 else null
 	if ic_st:
-		var chiller: Pal = game.gen_pal("corlmite", 5, game.player.pos)
+		var chiller: Kin = game.gen_pal("corlmite", 5, game.player.pos)
 		if chiller == null:
 			chiller = game.gen_pal("marlump", 5, game.player.pos)
 		chiller.mode = "base"; chiller.san = 90.0; chiller.hunger = 10.0; chiller.ailment = ""
@@ -953,7 +953,7 @@ func run() -> void:
 		cfarm_k = free_xy.call("wheat_farm")
 	var fert_ok := false
 	if cbin_st != null and game.structures.has(cfarm_k):
-		var farmer: Pal = game.gen_pal("fenlump", 5, game.player.pos)
+		var farmer: Kin = game.gen_pal("fenlump", 5, game.player.pos)
 		farmer.mode = "base"; farmer.san = 90.0; farmer.hunger = 10.0; farmer.ailment = ""
 		farmer.passives = []; farmer.statuses.clear(); farmer.talent = 50
 		var saved_cb: Array = cbin_st["workers"].duplicate()
@@ -1006,7 +1006,7 @@ func run() -> void:
 	if ft_spot.x >= 0:
 		game.place_structure("fish_trap", ft_spot.x, ft_spot.y)
 		var ft_st = game.structures.get(ft_spot)
-		var fisher: Pal = game.gen_pal("corlmite", 5, game.player.pos)
+		var fisher: Kin = game.gen_pal("corlmite", 5, game.player.pos)
 		fisher.mode = "base"; fisher.san = 90.0; fisher.hunger = 10.0; fisher.ailment = ""
 		fisher.passives = []; fisher.statuses.clear(); fisher.talent = 50
 		ft_st["workers"] = [fisher]; fisher.job_site = ft_st
@@ -1046,7 +1046,7 @@ func run() -> void:
 				wp9.aggro = -1; wp9.raid = false
 		# loampuff drills by day; at night a dark kin keeps the same hours —
 		# both carry no transporting suit so neither is pulled into hauling
-		var rookie: Pal = game.gen_pal("noctmane" if game.is_night() else "loampuff", 3,
+		var rookie: Kin = game.gen_pal("noctmane" if game.is_night() else "loampuff", 3,
 			Vector2(td_k.x + 0.5, td_k.y + 0.5))
 		rookie.mode = "base"; rookie.san = 90.0; rookie.hunger = 10.0; rookie.ailment = ""
 		rookie.passives = []; rookie.statuses.clear()
@@ -1062,10 +1062,10 @@ func run() -> void:
 	var tod_bait: float = game.tod
 	game.tod = 12.0
 	var bait_ok := false
-	var deer2: Pal = game.gen_pal("dozantler", 3, p.pos + Vector2(8, 8))
+	var deer2: Kin = game.gen_pal("dozantler", 3, p.pos + Vector2(8, 8))
 	deer2.mode = "wild"; deer2.aggro = -1
 	p.facing = Vector2(1, 0)
-	game.items["pal_bait"] = 1
+	game.items["kin_bait"] = 1
 	game.throw_bait()
 	var bait_landed: bool = game.lure and game.t < float(game.lure.get("till", 0.0))
 	# drop the pile at the deer's feet — the pull-through-terrain walk has no
@@ -1104,7 +1104,7 @@ func run() -> void:
 	var ap_st = game.structures.get(ap_k) if ap_k.x >= 0 else null
 	var honey_ok := false
 	if ap_st != null:
-		var keeper: Pal = game.gen_pal("sprigmelt", 5, game.player.pos)
+		var keeper: Kin = game.gen_pal("sprigmelt", 5, game.player.pos)
 		keeper.mode = "base"; keeper.san = 90.0; keeper.hunger = 10.0; keeper.ailment = ""
 		keeper.passives = []; keeper.statuses.clear(); keeper.talent = 50
 		ap_st["workers"] = [keeper]; keeper.job_site = ap_st
@@ -1150,13 +1150,13 @@ func run() -> void:
 	var gp_k: Vector2i = free_xy.call("guard_post")
 	var gp_st = game.structures.get(gp_k) if gp_k.x >= 0 else null
 	if gp_st != null:
-		var sentry: Pal = game.gen_pal("loampuff", 5, Vector2(gp_k.x + 0.5, gp_k.y + 0.5))
+		var sentry: Kin = game.gen_pal("loampuff", 5, Vector2(gp_k.x + 0.5, gp_k.y + 0.5))
 		sentry.mode = "base"; sentry.san = 90.0; sentry.hunger = 10.0; sentry.ailment = ""
 		sentry.passives = []; sentry.statuses.clear(); sentry.job_site = gp_st
 		gp_st["workers"] = [sentry]
-		var hand: Pal = game.gen_pal("loampuff", 5, sentry.pos + Vector2(1, 0))
+		var hand: Kin = game.gen_pal("loampuff", 5, sentry.pos + Vector2(1, 0))
 		hand.mode = "base"; hand.statuses.clear() # same spot, no post — the control
-		var raider: Pal = game.gen_pal("noctmane", 5, sentry.pos + Vector2(8.5, 0))
+		var raider: Kin = game.gen_pal("noctmane", 5, sentry.pos + Vector2(8.5, 0))
 		raider.mode = "wild"; raider.raid = true
 		game.pals.append(raider); game.pals.append(sentry); game.pals.append(hand)
 		gp_ok = sentry.find_foe() == raider and hand.find_foe() != raider
@@ -1174,11 +1174,11 @@ func run() -> void:
 	var th_ok := false
 	if th_st != null:
 		var thc := Vector2(th_k.x + 1.0, th_k.y + 1.0) # hall is 2x2 — centre of the deck
-		var teach: Pal = game.gen_pal("loampuff", 30, thc)
+		var teach: Kin = game.gen_pal("loampuff", 30, thc)
 		teach.mode = "base"; teach.san = 90.0; teach.hunger = 10.0
 		teach.statuses.clear(); teach.job_site = th_st
 		th_st["workers"] = [teach]
-		var pupil: Pal = game.gen_pal("fenjelly", 3, thc + Vector2(3, 0))
+		var pupil: Kin = game.gen_pal("fenjelly", 3, thc + Vector2(3, 0))
 		pupil.mode = "base"; pupil.statuses.clear()
 		var n_before: int = pupil.extra_skills.size()
 		for bp2 in game.pals: # clear other ears — the bell picks ONE pupil at random
@@ -1199,8 +1199,8 @@ func run() -> void:
 	var sr_st = game.structures.get(sr_k) if sr_k.x >= 0 else null
 	var sr_ok := false
 	if sr_st != null:
-		var spa: Pal = game.gen_pal("loampuff", 10, Vector2(sr_k.x + 0.5, sr_k.y + 0.5))
-		var spb: Pal = game.gen_pal("fenjelly", 10, Vector2(sr_k.x + 1.5, sr_k.y + 0.5))
+		var spa: Kin = game.gen_pal("loampuff", 10, Vector2(sr_k.x + 0.5, sr_k.y + 0.5))
+		var spb: Kin = game.gen_pal("fenjelly", 10, Vector2(sr_k.x + 1.5, sr_k.y + 0.5))
 		for spx in [spa, spb]:
 			spx.mode = "base"; spx.san = 80.0; spx.hunger = 10.0
 			spx.statuses.clear(); spx.job_site = sr_st
@@ -1270,7 +1270,7 @@ func run() -> void:
 	var sn_st = game.structures.get(sn_k) if sn_k.x >= 0 else null
 	var sn_ok := false
 	if sn_st != null:
-		var prey: Pal = game.gen_pal("fenjelly", 3, Vector2(sn_k.x + 0.5, sn_k.y + 0.5))
+		var prey: Kin = game.gen_pal("fenjelly", 3, Vector2(sn_k.x + 0.5, sn_k.y + 0.5))
 		prey.mode = "wild"
 		game.pals.append(prey)
 		game.tick_production(0.1)
@@ -1364,7 +1364,7 @@ func run() -> void:
 	var dr_ok := false
 	if dr_k.x >= 0 and game.place_free("wheat_farm", dr_k.x, dr_k.y):
 		var dr_st = game.structures[dr_k]
-		var dr_pal: Pal = game.gen_pal("fenlump", 5, game.player.pos)
+		var dr_pal: Kin = game.gen_pal("fenlump", 5, game.player.pos)
 		dr_pal.mode = "base"; dr_pal.san = 90.0; dr_pal.hunger = 10.0; dr_pal.ailment = ""
 		dr_pal.passives = []; dr_pal.statuses.clear(); dr_pal.talent = 50
 		var wtd0: String = game.weather
@@ -1617,7 +1617,7 @@ func run() -> void:
 		check("missions persist", game.mission_idx == game.MISSIONS.size())
 
 	# kindex: proximity spots a species once, 10-species tiers pay once
-	var dxp: Pal = game.gen_pal("fenjelly", 3, p.pos + Vector2(2, 0))
+	var dxp: Kin = game.gen_pal("fenjelly", 3, p.pos + Vector2(2, 0))
 	dxp.mode = "wild"; game.pals.append(dxp)
 	game.tick_dex(1.1)
 	check("dex seen", game.dex_seen.has("fenjelly"))
@@ -1641,7 +1641,7 @@ func run() -> void:
 	game.pals.erase(dxp); dxp.free()
 
 	# skills + statuses
-	var sp_pal: Pal = game.pals[0]
+	var sp_pal: Kin = game.pals[0]
 	sp_pal.statuses["burn"] = game.t + 3
 	var hp1 := sp_pal.hp
 	for i in 4:
@@ -1652,7 +1652,7 @@ func run() -> void:
 	game.cast_skill(sp_pal, p, skl)
 	check("cast_skill projectile", game.projectiles.size() == prj0 + 1)
 	# element combos: a soaked kin freezes under ice, boils dry under fire
-	var cmb: Pal = game.gen_pal("fenlump", 5, p.pos)
+	var cmb: Kin = game.gen_pal("fenlump", 5, p.pos)
 	cmb.mode = "wild"; cmb.hp = 99999; cmb.max_hp = 99999; game.pals.append(cmb)
 	cmb.add_status("soak", 5.0)
 	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["iceMissile"])
@@ -1675,9 +1675,9 @@ func run() -> void:
 	if cmb.get_parent(): cmb.get_parent().remove_child(cmb)
 	cmb.free()
 	# weather bites in combat: rain dampens fire, feeds water (seeded — same roll)
-	var wrp: Pal = game.gen_pal("fenlump", 5, p.pos)
+	var wrp: Kin = game.gen_pal("fenlump", 5, p.pos)
 	wrp.mode = "wild"; wrp.hp = 99999; wrp.max_hp = 99999; game.pals.append(wrp)
-	var wrc: Pal = game.gen_pal("fenjelly", 10, p.pos)
+	var wrc: Kin = game.gen_pal("fenjelly", 10, p.pos)
 	wrc.mode = "partner"
 	var s_held: int = game.rng.s
 	var wt_held: String = game.weather
@@ -1710,7 +1710,7 @@ func run() -> void:
 	check("drought feeds flame", dmgs4[0] > 0 and absf(dmgs4[1] / float(dmgs4[0]) - 1.15) < 0.05,
 		"dry=%d parch=%d" % [dmgs4[0], dmgs4[1]])
 	# STAB (the island): a kin in its own element hits ~1.2x — same seed, same power
-	var stabc: Pal = game.gen_pal("cindlump", 10, p.pos)
+	var stabc: Kin = game.gen_pal("cindlump", 10, p.pos)
 	stabc.mode = "wild"
 	game.weather = "clear"
 	var stab_d := []
@@ -1761,7 +1761,7 @@ func run() -> void:
 	game.upgrade_perk("speed")
 	check("stat point spend", game.perks["speed"] == 1 and game.stat_pts == 0 \
 			and game.item_count("sprigmelt_effigy") == 6, "pts=%d eff=%d" % [game.stat_pts, game.item_count("sprigmelt_effigy")])
-	# memory wipe: perk ranks fold back into stat points (the island respec)
+	# memory wipe: perk ranks fold back into stat points (a full respec)
 	game.stat_pts = 0
 	var perkw := 0
 	for k in game.perks:
@@ -1776,7 +1776,7 @@ func run() -> void:
 	p.max_hp = 100 + (p.level - 1) * 10 + game.perks["hp"] * 12
 	p.hp = minf(p.hp, p.max_hp)
 	# soul infusion: effigies harden an owned kin, ride the save, cap at 10
-	var soul_t: Pal = null
+	var soul_t: Kin = null
 	for q in game.pals:
 		if q.mode in ["partner", "base"]:
 			soul_t = q; break
@@ -1805,8 +1805,8 @@ func run() -> void:
 	for kk in game.structures:
 		if game.structures[kk]["id"] == "ranch":
 			st_r = game.structures[kk]
-	var m_pal: Pal = null
-	var f_pal: Pal = null
+	var m_pal: Kin = null
+	var f_pal: Kin = null
 	var base_i := 0
 	for q in game.pals:
 		if q.mode == "partner":
@@ -1909,7 +1909,7 @@ func run() -> void:
 				combo_bad.append(Game.BREED_COMBOS[k2])
 		check("combo table valid", combo_bad.is_empty(), str(combo_bad))
 		# grazing produce: a wool kin drops wool on its farm timer (the island)
-		var grazer: Pal = game.gen_pal("fenjelly", 3, p.pos + Vector2(4, 4))
+		var grazer: Kin = game.gen_pal("fenjelly", 3, p.pos + Vector2(4, 4))
 		game.pals.append(grazer); grazer.mode = "base"; grazer.san = 80.0
 		st_r["workers"].append(grazer); grazer.job_site = st_r
 		game.tick_ranch(ranch_k, st_r, 61.0)
@@ -1929,19 +1929,19 @@ func run() -> void:
 	var np0 := game.pals.size()
 	game.spawn_net_pal(["puffmite", p.pos.x + 3, p.pos.y + 3, 5, "wild", true])
 	check("net kin spawns", game.pals.size() == np0 + 1)
-	var npal: Pal = game.pals[game.pals.size() - 1]
+	var npal: Kin = game.pals[game.pals.size() - 1]
 	check("net kin lucky", npal.lucky and "lucky" in npal.passives)
 	# the island trait slots: 1-4 passives, and the lucky signature always survives
 	var max_ps := 0; var over2_ps := 0
 	for i in 40:
-		var tpp: Pal = game.gen_pal("fenjelly", 3, p.pos)
+		var tpp: Kin = game.gen_pal("fenjelly", 3, p.pos)
 		max_ps = maxi(max_ps, tpp.passives.size())
 		if tpp.passives.size() >= 3: over2_ps += 1
 		if tpp.get_parent(): tpp.get_parent().remove_child(tpp)
 		tpp.free()
 	check("trait slots 1-4", max_ps <= 4 and max_ps >= 1 and over2_ps > 0,
 		"max=%d over2=%d" % [max_ps, over2_ps])
-	var lp2: Pal = game.gen_pal("fenjelly", 3, p.pos, true)
+	var lp2: Kin = game.gen_pal("fenjelly", 3, p.pos, true)
 	check("lucky signature kept", lp2.lucky and "lucky" in lp2.passives and lp2.passives.size() <= 4)
 	if lp2.get_parent(): lp2.get_parent().remove_child(lp2)
 	lp2.free()
@@ -1953,7 +1953,7 @@ func run() -> void:
 	check("net kin rejected", game.pals.size() == np0)
 	# live kin sync: replicas key on host uid — spawn, move, despawn
 	game.spawn_net_pal(["puffmite", p.pos.x + 4, p.pos.y + 4, 5, "wild", false, 777])
-	var rep: Pal = game.pals[game.pals.size() - 1]
+	var rep: Kin = game.pals[game.pals.size() - 1]
 	check("net kin net_id", rep.net_id == 777)
 	game.net.pal_sync([[777, "puffmite", p.pos.x + 9.0, p.pos.y + 9.0, 5, "wild", 42.0, false],
 		[778, "fenjelly", p.pos.x + 5, p.pos.y + 5, 3, "wild", 99.0, false],
@@ -1970,7 +1970,7 @@ func run() -> void:
 	rep2.free()
 	# host-side catch relay: a client's sphere lands in THEIR OWN roster —
 	# private rosters mean the keeper's box stays untouched
-	var ncp: Pal = game.gen_pal("fenlump", 3, p.pos)
+	var ncp: Kin = game.gen_pal("fenlump", 3, p.pos)
 	ncp.mode = "wild"; ncp.hp = 1; game.pals.append(ncp)
 	var nc_box0 := game.box.size()
 	var tries_c := 0
@@ -1985,7 +1985,7 @@ func run() -> void:
 	if ncp.get_parent(): ncp.get_parent().remove_child(ncp)
 	ncp.free()
 	# forged item ids never get a roll
-	var ncp2: Pal = game.gen_pal("fenlump", 3, p.pos)
+	var ncp2: Kin = game.gen_pal("fenlump", 3, p.pos)
 	ncp2.mode = "wild"; ncp2.hp = 1; game.pals.append(ncp2)
 	game.net_catch(ncp2.uid, "wood", false, 5, 7)
 	check("net catch validates item", ncp2 in game.pals)
@@ -2047,7 +2047,7 @@ func run() -> void:
 	# shared box: the host's roster ships as a compact mirror; ops relay back
 	while game.party.size() >= 5:
 		game.party_to_box(game.party[0])
-	var nbp: Pal = game.gen_pal("fenjelly", 7, p.pos)
+	var nbp: Kin = game.gen_pal("fenjelly", 7, p.pos)
 	nbp.mode = "box"; nbp.uid = game.next_uid_v + 500000 # beyond every real uid — no collisions
 	var nbuid := nbp.uid
 	game.box.append(nbp)
@@ -2081,7 +2081,7 @@ func run() -> void:
 	nbp.free()
 	check("box fingerprint shifts", game.net.box_fingerprint() != bsig0)
 	# private rosters: a guest's kin answers to no other hand
-	var gpal: Pal = game.gen_pal("fenjelly", 4, p.pos)
+	var gpal: Kin = game.gen_pal("fenjelly", 4, p.pos)
 	gpal.mode = "box"; gpal.owner_id = 7; gpal.owner_tag = "tok_a"
 	game.box.append(gpal)
 	game.box_pal(gpal)
@@ -2100,12 +2100,12 @@ func run() -> void:
 	var guest_junk := []
 	var rp7 := game.rparty_for(7)
 	while rp7.size() < 5:
-		var extra: Pal = game.gen_pal("fenjelly", 1, p.pos)
+		var extra: Kin = game.gen_pal("fenjelly", 1, p.pos)
 		extra.mode = "box"; extra.owner_id = 7
 		game.box.append(extra); game.box_pal(extra)
 		guest_junk.append(extra)
 		game.box_op_remote("box_to_party", extra.uid, 7)
-	var sixth: Pal = game.gen_pal("fenjelly", 1, p.pos)
+	var sixth: Kin = game.gen_pal("fenjelly", 1, p.pos)
 	sixth.mode = "box"; sixth.owner_id = 7
 	game.box.append(sixth); game.box_pal(sixth)
 	guest_junk.append(sixth)
@@ -2197,7 +2197,7 @@ func run() -> void:
 		game.pals.erase(q)
 		q.queue_free()
 	# worldgen legendary den: an uncapturable lv50 giant guards deep zone 3
-	var legend: Pal = null
+	var legend: Kin = null
 	for q in game.pals:
 		if q.boss and q.level >= 50 and not q.raid:
 			legend = q
@@ -2270,9 +2270,9 @@ func run() -> void:
 			break
 	check("wild herds", herd)
 	# herds turn as one: hitting a packmate pulls the flock into the fight
-	var hd1: Pal = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(6, 0))
-	var hd2: Pal = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(7, 0))
-	var hd3: Pal = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(8, 0))
+	var hd1: Kin = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(6, 0))
+	var hd2: Kin = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(7, 0))
+	var hd3: Kin = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(8, 0))
 	hd1.home = Vector2(50, 50)
 	hd2.home = Vector2.ZERO # a stray near a pack is NOT kin — must not be dragged in
 	hd3.home = hd1.home
@@ -2306,7 +2306,7 @@ func run() -> void:
 		p.pos = Vector2(shore.x + 0.5, shore.y + 0.5)
 		game.add_item("fishing_rod", 1)
 		var pals_f: int = game.pals.size()
-		var items_f: int = game.item_count("pal_fluid") + game.item_count("gold_coin") + game.item_count("red_berries")
+		var items_f: int = game.item_count("kin_fluid") + game.item_count("gold_coin") + game.item_count("red_berries")
 		var bit := 0
 		for _ci in 30:
 			if game.cast_line():
@@ -2314,7 +2314,7 @@ func run() -> void:
 			if game.pals.size() > pals_f:
 				break
 		check("fishing", bit > 0 and (game.pals.size() > pals_f \
-				or game.item_count("pal_fluid") + game.item_count("gold_coin") + game.item_count("red_berries") > items_f) \
+				or game.item_count("kin_fluid") + game.item_count("gold_coin") + game.item_count("red_berries") > items_f) \
 				and game.item_count("fishing_rod") == 1,
 			"bites=%d kin=%d" % [bit, game.pals.size() - pals_f])
 		var wthr0: String = game.weather
@@ -2333,8 +2333,8 @@ func run() -> void:
 	else:
 		check("fishing", false, "no shoreline")
 	# egg theft has a price: looting a nest angers nearby wild kin
-	var ne1: Pal = game.gen_pal("fenlump", 3, game.player.pos + Vector2(4, 0))
-	var ne2: Pal = game.gen_pal("fenlump", 3, game.player.pos + Vector2(40, 0))
+	var ne1: Kin = game.gen_pal("fenlump", 3, game.player.pos + Vector2(4, 0))
+	var ne2: Kin = game.gen_pal("fenlump", 3, game.player.pos + Vector2(40, 0))
 	game.pals.append(ne1); game.pals.append(ne2)
 	game.anger_nesters(game.player.pos)
 	check("nest guards", ne1.aggro == 0 and ne2.aggro < 0, "near=%d far=%d" % [ne1.aggro, ne2.aggro])
@@ -2540,7 +2540,7 @@ func run() -> void:
 	var t_xy = free_xy.call("torch")
 	check("demolish removes", t_xy != null and game.demolish_at(Vector2(t_xy.x, t_xy.y) + Vector2(0.5,0.5)) and not game.structures.has(t_xy), "")
 	# work-type gating: fenjelly lacks lumbering -> cannot log
-	var non: Pal = null
+	var non: Kin = null
 	for q in game.pals:
 		if q.mode == "base" and q.spec.get("work", {}).get("lumbering", 0) == 0:
 			non = q
@@ -2562,7 +2562,7 @@ func run() -> void:
 	var farm_k: Vector2i = free_xy.call("berry_farm")
 	var wf_st = game.structures.get(farm_k)
 	if wf_st:
-		var wtr: Pal = game.gen_pal("bubwrith", 3, Vector2(farm_k.x + 1, farm_k.y))
+		var wtr: Kin = game.gen_pal("bubwrith", 3, Vector2(farm_k.x + 1, farm_k.y))
 		game.pals.append(wtr); wtr.mode = "base"
 		var old_pos: Vector2 = p.pos
 		p.pos = wtr.pos
@@ -2578,7 +2578,7 @@ func run() -> void:
 	else:
 		check("farm watering", false, "berry_farm not placed")
 	# SAN slack: a worker with san<15 produces nothing
-	var slacker: Pal = null
+	var slacker: Kin = null
 	for kk3 in game.structures:
 		if game.structures[kk3].get("id") == "logging_site" and not game.structures[kk3]["workers"].is_empty():
 			slacker = game.structures[kk3]["workers"][0]
@@ -2603,7 +2603,7 @@ func run() -> void:
 	game.add_item("wood", 40)
 	var bed_xy: Vector2i = free_xy.call("kin_bed")
 	var bed_ok: bool = bed_xy.x >= 0
-	var sleepy: Pal = game.base_pals()[0]
+	var sleepy: Kin = game.base_pals()[0]
 	sleepy.san = 10.0
 	for i in 3:
 		sleepy.tick_needs(1.5)
@@ -2617,7 +2617,7 @@ func run() -> void:
 	# the island meals: cooked food restores far more SAN than raw crops.
 	# eat_from_bag takes the cheapest food first — pin the bag to one item.
 	var bag_save: Dictionary = game.items.duplicate()
-	var eater: Pal = game.gen_pal("fenjelly", 3, game.player.pos)
+	var eater: Kin = game.gen_pal("fenjelly", 3, game.player.pos)
 	eater.mode = "partner"; eater.hunger = 90.0
 	game.items.clear(); game.items["wheat"] = 1
 	eater.san = 50.0; eater.tick_needs(1.0)
@@ -2628,7 +2628,7 @@ func run() -> void:
 	game.items = bag_save
 	game.pals.erase(eater); eater.free()
 	# a party kin at ease recovers its spirits (the island rest recovery)
-	var calm: Pal = game.gen_pal("fenjelly", 3, game.player.pos)
+	var calm: Kin = game.gen_pal("fenjelly", 3, game.player.pos)
 	calm.mode = "partner"; calm.san = 30.0; calm.ailment = "x" # skip the medicine branch
 	calm.tick_needs(1.0)
 	check("partner rests SAN", calm.san > 30.0, "san %.1f" % calm.san)
@@ -2659,7 +2659,7 @@ func run() -> void:
 		p._physics_process(4.5)
 		chill_near = p.hp >= hp_c2
 	# the island warmth: a fire kin at your side counts as a heat source too
-	var torch_pal: Pal = game.gen_pal("cindlump", 3, far_spot + Vector2(1, 0))
+	var torch_pal: Kin = game.gen_pal("cindlump", 3, far_spot + Vector2(1, 0))
 	torch_pal.mode = "partner" # only YOUR fire pal snuggles — wild ones don't count
 	game.pals.append(torch_pal)
 	p.pos = far_spot
@@ -2744,7 +2744,7 @@ func run() -> void:
 	game.items.erase("tropic_armor")
 
 	# bed rest: a real bed restores SAN 3x faster than a floor nap
-	var napper: Pal = game.gen_pal("fenjelly", 3, p.pos + Vector2(6, 6))
+	var napper: Kin = game.gen_pal("fenjelly", 3, p.pos + Vector2(6, 6))
 	napper.mode = "base"; napper.san = 40.0
 	napper.sleep_rested = false
 	napper.statuses["sleep"] = game.t + 60.0
@@ -2776,7 +2776,7 @@ func run() -> void:
 	# monitoring stand: SAN drains half again while it stands (the island trade-off)
 	game.add_item("wood", 10); game.add_item("stone", 10); game.add_item("ingot", 2)
 	var mst_xy: Vector2i = free_xy.call("monitoring_stand")
-	var sj: Pal = null
+	var sj: Kin = null
 	for q in game.base_pals():
 		if q.job_site != null:
 			sj = q
@@ -2800,14 +2800,14 @@ func run() -> void:
 			fb = game.structures[k9]
 	if fb:
 		fb["store"]["red_berries"] = 4 # stocked like a real feed box
-	var hungry: Pal = game.base_pals()[0]
+	var hungry: Kin = game.base_pals()[0]
 	hungry.hunger = 90.0
 	for i in 3:
 		hungry.tick_needs(1.5)
 	check("feed box eats", fb != null and fb["store"].get("red_berries", 0) < 4 and hungry.hunger < 90.0,
 		"stored=%s hunger=%.0f" % [str(fb["store"]) if fb else "none", hungry.hunger])
 	# level up learns a skill
-	var lev: Pal = game.base_pals()[0]
+	var lev: Kin = game.base_pals()[0]
 	var lv0: int = lev.level
 	var sk0: int = lev.learned_skills().size()
 	lev.level = lev.spec.get("skills", [[1, "x"]])[-1][0]
@@ -2828,7 +2828,7 @@ func run() -> void:
 	var d9: int = p.armor_def() - int(game.partner_aura("def"))
 	game.equip("dragon_scale")
 	check("armor tiers", d9 == 9 and p.armor_def() - int(game.partner_aura("def")) == 14, "%d/%d" % [d9, p.armor_def()])
-	# the island trinkets: two accessory slots, effects stack
+	# a trinkets: two accessory slots, effects stack
 	game.add_item("defense_pendant", 1); game.add_item("attack_pendant", 1)
 	game.equip("defense_pendant")
 	check("acc fills slot", p.equipment["acc1"] == "defense_pendant" and p.armor_def() - int(game.partner_aura("def")) == 19,
@@ -2932,7 +2932,7 @@ func run() -> void:
 	var sch_hit := 0
 	var lvl0: int = p.level; var xp0: int = p.xp # boss xp would leak into later checks
 	for ki in range(25):
-		var bk: Pal = load("res://src/kin.gd").new()
+		var bk: Kin = load("res://src/kin.gd").new()
 		game.entity_layer.add_child(bk)
 		bk.setup(game, "fenjelly", 10, p.pos + Vector2(2, 0))
 		bk.boss = true; bk.mode = "wild"; bk.hp = 1.0
@@ -2948,12 +2948,12 @@ func run() -> void:
 
 	# party cap: 6th kin refused and stays in the box
 	while game.party.size() < 5:
-		var fp: Pal = load("res://src/kin.gd").new()
+		var fp: Kin = load("res://src/kin.gd").new()
 		game.entity_layer.add_child(fp)
 		fp.setup(game, "puffmite", 3, p.pos)
 		game.box.append(fp)
 		game.box_to_party(fp)
-	var over: Pal = load("res://src/kin.gd").new()
+	var over: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(over)
 	over.setup(game, "puffmite", 3, p.pos)
 	game.box.append(over)
@@ -2962,7 +2962,7 @@ func run() -> void:
 		"mode=%s party=%d" % [over.mode, game.party.size()])
 	game.party_to_box(game.party[4]) # back to 4 for later checks
 	# non-mountable rejected
-	var snak: Pal = load("res://src/kin.gd").new()
+	var snak: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(snak)
 	snak.setup(game, "bubwrith", 3, p.pos)
 	snak.mode = "base"
@@ -2973,7 +2973,7 @@ func run() -> void:
 	check("mount gate", m_ok)
 	# the island: mounts need kin gear — no saddle, no ride
 	game.items.erase("saddle"); game.items.erase("sky_saddle"); game.items.erase("wave_saddle")
-	var bird: Pal = game.gen_pal("fenlump", 4, p.pos)
+	var bird: Kin = game.gen_pal("fenlump", 4, p.pos)
 	game.pals.append(bird); game.party.append(bird.uid); bird.mode = "partner"
 	p.try_mount()
 	check("mount needs saddle", p.mount == null)
@@ -2995,7 +2995,7 @@ func run() -> void:
 	bird.free()
 	# swimming mount: a water-element mount ferries you across open water —
 	# but only once its own wave saddle is in the pack
-	var surf: Pal = game.gen_pal("dewmane", 5, p.pos)
+	var surf: Kin = game.gen_pal("dewmane", 5, p.pos)
 	surf.mode = "partner"; game.pals.append(surf); game.party.append(surf.uid)
 	surf.pos = p.pos + Vector2(0.5, 0)
 	p.mount = null
@@ -3007,7 +3007,7 @@ func run() -> void:
 	check("wave saddle mounts", p.mount == surf)
 	check("swim mount", wcell.x >= 0 and p.can_enter(wcell.x, wcell.y))
 	game.party.erase(surf.uid)
-	var landm: Pal = game.gen_pal("dozantler", 5, p.pos) # neutral — no surf legs
+	var landm: Kin = game.gen_pal("dozantler", 5, p.pos) # neutral — no surf legs
 	landm.mode = "partner"; game.pals.append(landm)
 	p.mount = landm
 	check("land mount no swim", wcell.x >= 0 and not p.can_enter(wcell.x, wcell.y))
@@ -3102,7 +3102,7 @@ func run() -> void:
 		game.add_item(m, 60)
 	var farm_xy: Vector2i = free_xy.call("berry_farm")
 	var farm_ok: bool = farm_xy.x >= 0
-	var farmer: Pal = game.base_pals()[0]
+	var farmer: Kin = game.base_pals()[0]
 	if farmer.job_site and farmer in farmer.job_site["workers"]:
 		farmer.job_site["workers"].erase(farmer) # fully unassign before taking over (mirrors assign_worker)
 	farmer.mode = "base"; farmer.pos = p.pos; farmer.job_site = null; farmer.san = 90
@@ -3120,7 +3120,7 @@ func run() -> void:
 	game.add_item("ingot", 10); game.add_item("electric_organ", 10)
 	var gen_xy: Vector2i = free_xy.call("generator")
 	var gen_ok: bool = gen_xy.x >= 0
-	var gen_pal: Pal = load("res://src/kin.gd").new()
+	var gen_pal: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(gen_pal)
 	gen_pal.setup(game, "voltgoo", 3, p.pos)
 	gen_pal.mode = "base"; gen_pal.san = 90
@@ -3160,7 +3160,7 @@ func run() -> void:
 		game.chest_ref = null
 		p.pos = orig_pos
 	# hostile kin aggros and damages player
-	var foe: Pal = load("res://src/kin.gd").new()
+	var foe: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(foe)
 	foe.setup(game, "shadesmith", 30, p.pos + Vector2(1.0, 0))
 	foe.mode = "wild"
@@ -3173,7 +3173,7 @@ func run() -> void:
 		game.update_projectiles(0.1)
 	check("hostile kin attacks", p.hp < hit0, "hp %d->%d" % [hit0, p.hp])
 	# soak amplifies electric damage
-	var sp1: Pal = load("res://src/kin.gd").new()
+	var sp1: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(sp1) # unparented nodes leak — even in tests
 	sp1.setup(game, "fenjelly", 10, p.pos)
 	var e_mult0: float = Combat.effectiveness("electric", sp1.elem())
@@ -3233,7 +3233,7 @@ func run() -> void:
 	game.add_item("boss_sigil", -1)
 	check("sigil consumed", game.item_count("boss_sigil") == sig0 and game.pals.size() == sig_n + 1, "sig%d kin%d" % [game.item_count("boss_sigil"), game.pals.size() - sig_n])
 	# kin xp levels up a partner kin
-	var lvl_pal: Pal = null
+	var lvl_pal: Kin = null
 	for q in game.pals:
 		if q.mode == "partner":
 			lvl_pal = q
@@ -3250,7 +3250,7 @@ func run() -> void:
 	check("kin levels via xp", lvl_pal.level > plv0, "Lv%d->%d xp%d" % [plv0, lvl_pal.level, lvl_pal.xp])
 	# save/load preserves kin sex/passives + chest store + job links
 	game.box.clear()
-	var sv_pal: Pal = null
+	var sv_pal: Kin = null
 	var seen := {}
 	for q in game.pals:
 		seen[q.species_id] = seen.get(q.species_id, 0) + 1
@@ -3308,7 +3308,7 @@ func run() -> void:
 	var party_sz_before := game.party.size()
 	var lost_uids := [] # uids pointing at nothing — save would silently drop them
 	for pu in game.party:
-		var pl2: Pal = game.find_pal(pu)
+		var pl2: Kin = game.find_pal(pu)
 		if pl2 == null:
 			pl2 = game.bench_pal_of(pu)
 		if pl2 == null or pl2.mode == "box":
@@ -3329,7 +3329,7 @@ func run() -> void:
 	check("exploring reveals map", ex_ct2 > ex_ct, "%d->%d" % [ex_ct, ex_ct2])
 	game.explored[123] = 1
 	# a guest's benched kin + roster row must survive the disk round-trip
-	var gp_sv: Pal = game.gen_pal("fenjelly", 3, p.pos)
+	var gp_sv: Kin = game.gen_pal("fenjelly", 3, p.pos)
 	gp_sv.mode = "bench"; gp_sv.owner_id = -1; gp_sv.owner_tag = "tok_t"
 	game.bench.append(gp_sv); game.box_pal(gp_sv)
 	game.remote_parties["tok_t"] = [gp_sv.uid]
@@ -3342,7 +3342,7 @@ func run() -> void:
 	var ok_load := game.load_game()
 	check("fog survives reload", game.explored.size() == game.world.WORLD_W * game.world.WORLD_H
 		and game.explored[123] == 1, "size=%d cell=%d" % [game.explored.size(), game.explored[123]])
-	var re_pal: Pal = null
+	var re_pal: Kin = null
 	if sv_idx >= 0 and sv_idx < game.pals.size():
 		re_pal = game.pals[sv_idx]
 	var chest3 = null
@@ -3380,7 +3380,7 @@ func run() -> void:
 	check("save keeps workers", re_workers == had_workers, "%d->%d [%s]" % [had_workers, re_workers, job_names])
 	# guest ownership rides the save: the tag persists, the kin sleeps as an
 	# orphan until a hello reclaims it — and its roster row comes back too
-	var gp_re: Pal = null
+	var gp_re: Kin = null
 	for q in game.bench:
 		if q.owner_tag == "tok_t":
 			gp_re = q
@@ -3395,7 +3395,7 @@ func run() -> void:
 		gp_re.free()
 
 	# partner death frees the party slot + clears job site
-	var dp: Pal = game.find_pal(game.party[0]) if game.party.size() > 0 else null
+	var dp: Kin = game.find_pal(game.party[0]) if game.party.size() > 0 else null
 	if dp:
 		var psz0: int = game.party.size()
 		game.kill_pal(dp, true)
@@ -3410,13 +3410,13 @@ func run() -> void:
 			raiders += 1
 	check("raid wave spawns", game.pals.size() > pals0 and raiders >= 2, "+%d kin, %d aggro" % [game.pals.size() - pals0, raiders])
 	# aggro>0 kin targeting: raider fights a base kin
-	var raider: Pal = null
+	var raider: Kin = null
 	for q in game.pals:
 		if q.mode == "wild" and q.aggro > 0:
 			raider = q
 			break
 	if raider:
-		var victim: Pal = game.find_pal(raider.aggro)
+		var victim: Kin = game.find_pal(raider.aggro)
 		if victim:
 			raider.pos = victim.pos + Vector2(0.5, 0)
 			var vhp0 := victim.hp
@@ -3445,7 +3445,7 @@ func run() -> void:
 	check("drops spawn+pickup", game.drops.size() < drops0 and game.item_count("wood") > wood_ct0,
 		"drops %d->%d wood %d" % [drops0, game.drops.size(), game.item_count("wood")])
 	# hauling: unassigned transporting kin carries a drop to the chest
-	var hauler: Pal = null
+	var hauler: Kin = null
 	for q in game.pals:
 		if q.spec.get("work", {}).get("transporting", 0) > 0:
 			hauler = q
@@ -3512,7 +3512,7 @@ func run() -> void:
 		"stone %d->%d carry=%s" % [stone0, stone_in_chests.call(), str(hauler.carry)])
 
 	# lair alpha: engages on approach, tethered to its lair
-	var la: Pal = null
+	var la: Kin = null
 	for q in game.pals:
 		if q.alpha and q.mode == "wild":
 			la = q
@@ -3577,7 +3577,7 @@ func run() -> void:
 			str({"elem": nsd.get("elements"), "hab": SpeciesGen.habitat(nsid)}))
 
 	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
-	var apex: Pal = null
+	var apex: Kin = null
 	for q in game.pals:
 		if q.mode == "wild" and q.hostile() == 2:
 			apex = q; break
@@ -3615,11 +3615,11 @@ func run() -> void:
 
 	# essence condenser: 4 same-species box kin -> star+1, stats x1.15
 	if game.party.size() > 0:
-		var ap2: Pal = game.lead_pal() # condense targets the lead, out or benched
+		var ap2: Kin = game.lead_pal() # condense targets the lead, out or benched
 		var star0 := ap2.star; var mhp0 := ap2.max_hp; var atk0 := ap2.atk_bonus
 		var boxn0 := game.box.size()
 		for j in 4:
-			var fp := Pal.new()
+			var fp := Kin.new()
 			fp.setup(game, ap2.species_id, 1, Vector2.ZERO)
 			fp.mode = "box"
 			game.box.append(fp)
@@ -3649,7 +3649,7 @@ func run() -> void:
 
 	# night sleep: wild non-dark kin sleep; dark kin stay up; hit wakes
 	game.tod = 23.0
-	var sleeper: Pal = null; var nightowl: Pal = null
+	var sleeper: Kin = null; var nightowl: Kin = null
 	for q in game.pals:
 		if q.mode == "wild" and not q.raid and "dark" not in q.spec.get("elements", []) and q.hostile() < 2:
 			sleeper = q # raiders chew structures instead of sleeping — they'd never nap
@@ -3668,7 +3668,7 @@ func run() -> void:
 		check("dark kin stays up", not nightowl.has_status("sleep"), "")
 	# ...but a nocturnal naps through daylight — the island sleep flips. Fresh
 	# shademite: the pool may only hold apex darks, and those never doze
-	var dayowl: Pal = game.gen_pal("shademite", 3, p.pos + Vector2(3, 0))
+	var dayowl: Kin = game.gen_pal("shademite", 3, p.pos + Vector2(3, 0))
 	dayowl.mode = "wild"; dayowl.aggro = -1; dayowl.hit_flash = 0
 	game.pals.append(dayowl)
 	var tod_w2 := game.tod
@@ -3689,7 +3689,7 @@ func run() -> void:
 				foes += 1
 		if foes == 0:
 			quiet = p.pos + off; break
-	var dbase: Pal = game.gen_pal("shademite", 4, quiet)
+	var dbase: Kin = game.gen_pal("shademite", 4, quiet)
 	dbase.mode = "base"; dbase.san = 50.0
 	game.pals.append(dbase)
 	var tod_b2 := game.tod
@@ -3724,7 +3724,7 @@ func run() -> void:
 		if not game.world.blocked(int(cc2.x), int(cc2.y), p.pos.x, p.pos.y) \
 				and not game.world.blocked(int(cc2.x + signi(off.x)), int(cc2.y + signi(off.y)), cc2.x, cc2.y):
 			pa2 = cc2; break
-	var prey2: Pal = game.gen_pal("fenjelly", 5, pa2)
+	var prey2: Kin = game.gen_pal("fenjelly", 5, pa2)
 	prey2.spec = prey2.spec.duplicate(); prey2.spec["hostile"] = 1
 	prey2.mode = "wild"; prey2.aggro = 0; prey2.hp = prey2.max_hp * 0.2
 	game.pals.append(prey2)
@@ -3814,7 +3814,7 @@ func run() -> void:
 
 	# ---- new island-loop systems ----
 	# ailments: sustained low SAN sickens a base kin; medicine cures it
-	var sicky: Pal = null
+	var sicky: Kin = null
 	for q in game.pals:
 		if q.mode == "base":
 			sicky = q
@@ -3828,7 +3828,7 @@ func run() -> void:
 	sicky.low_san_t = 61.0
 	for _i in 3: # needs tick throttles at 1s intervals
 		sicky._physics_process(1.0)
-	check("low SAN -> ailment", sicky.ailment in Pal.AILMENTS, "ail=%s" % sicky.ailment)
+	check("low SAN -> ailment", sicky.ailment in Kin.AILMENTS, "ail=%s" % sicky.ailment)
 	var w0 := sicky.work_mult()
 	sicky.ailment = "depressed"
 	check("ailment slows work", sicky.work_mult() < w0 or w0 < 1.0, "mult=%.2f" % sicky.work_mult())
@@ -3841,7 +3841,7 @@ func run() -> void:
 	check("medicine cures ailment", sicky.ailment == "", "ail=%s" % sicky.ailment)
 
 	# lucky variant: flagged kin carry the passive + stat buffs, drop gold on kill
-	var luck: Pal = game.gen_pal("fenjelly", 5, game.player.pos + Vector2(4, 0))
+	var luck: Kin = game.gen_pal("fenjelly", 5, game.player.pos + Vector2(4, 0))
 	luck.lucky = true
 	luck.setup(game, "fenjelly", 8, luck.pos)
 	game.pals.append(luck)
@@ -3852,7 +3852,7 @@ func run() -> void:
 	check("lucky drops gold", game.item_count("gold_coin") > gold0b, "+%d" % (game.item_count("gold_coin") - gold0b))
 
 	# wanted marks: a flagged kill pays the bounty straight into the bag
-	var wnt: Pal = game.gen_pal("ironpact_grunt", 6, game.player.pos + Vector2(3, 0))
+	var wnt: Kin = game.gen_pal("ironpact_grunt", 6, game.player.pos + Vector2(3, 0))
 	wnt.mode = "wild"; wnt.bounty = 12
 	game.pals.append(wnt)
 	var gold0w := game.item_count("gold_coin")
@@ -3862,12 +3862,12 @@ func run() -> void:
 
 	# skill fruit: teaches the active kin an extra move of that element
 	if game.party.is_empty():
-		var sp2: Pal = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(2, 0))
+		var sp2: Kin = game.gen_pal("fenjelly", 3, game.player.pos + Vector2(2, 0))
 		sp2.mode = "partner"
 		game.pals.append(sp2)
 		game.party.append(sp2.uid)
 	if not game.party.is_empty():
-		var ap: Pal = game.lead_pal() # benched lead still studies fruit
+		var ap: Kin = game.lead_pal() # benched lead still studies fruit
 		var n_sk := ap.learned_skills().size()
 		game.add_item("skill_fruit_fire", 1)
 		game.teach_skill_fruit("skill_fruit_fire")
@@ -3879,7 +3879,7 @@ func run() -> void:
 
 	# move loadout: kinbox slots cap at 3 and gate what the kin casts
 	if not game.party.is_empty():
-		var lp3: Pal = game.lead_pal()
+		var lp3: Kin = game.lead_pal()
 		var learned3: Array = lp3.learned_skills()
 		if learned3.size() >= 1:
 			var sid0: String = learned3[0]
@@ -3895,7 +3895,7 @@ func run() -> void:
 			lp3.equipped = [] # restore "everything learned" default
 
 	# catch count: every 10th same-species catch pays a bonus
-	var dummy: Pal = game.gen_pal("fenjelly", 2, game.player.pos + Vector2(5, 0))
+	var dummy: Kin = game.gen_pal("fenjelly", 2, game.player.pos + Vector2(5, 0))
 	game.pals.append(dummy)
 	dummy.hp = maxf(1.0, dummy.max_hp * 0.05) # near-KO keeps the capture roll ~0.97
 	game.catch_counts["fenjelly"] = 9 # next catch is the 10th
@@ -3985,7 +3985,7 @@ func run() -> void:
 	var spk_st = game.structures.get(spk_k)
 	check("spikes walkable", spk_st != null and spk_st.get("walkable", false) == true
 		and not game.world.solid_structure(game.world.idx(spk_k.x, spk_k.y)))
-	var raider2: Pal = game.gen_pal("tammane", 5, Vector2(spk_k.x, spk_k.y) + Vector2(0.5, 0.5))
+	var raider2: Kin = game.gen_pal("tammane", 5, Vector2(spk_k.x, spk_k.y) + Vector2(0.5, 0.5))
 	raider2.mode = "wild"; raider2.raid = true; raider2.aggro = 0
 	game.pals.append(raider2)
 	var hp0r := raider2.hp
@@ -4017,7 +4017,7 @@ func run() -> void:
 		check("kinbox unrazable", game.structures.has(game.kinbox_pos) and pb_st.get("hp", 0) >= 1)
 
 	# the island kinbox is a clinic: boxed kin mend, KO'd ones wait their timer
-	var hurt_b: Pal = game.gen_pal("fenjelly", 5, p.pos)
+	var hurt_b: Kin = game.gen_pal("fenjelly", 5, p.pos)
 	game.box.append(hurt_b)
 	hurt_b.revive_t = 0.0
 	hurt_b.hp = hurt_b.max_hp * 0.5
@@ -4033,7 +4033,7 @@ func run() -> void:
 	var tw_st = game.structures.get(tw_k)
 	check("tower placed", tw_st != null and int(tw_st.get("turret", 0)) > 0)
 	if tw_st:
-		var tfoe: Pal = game.gen_pal("tammane", 5, Vector2(tw_k) + Vector2(6, 0))
+		var tfoe: Kin = game.gen_pal("tammane", 5, Vector2(tw_k) + Vector2(6, 0))
 		tfoe.mode = "wild"; tfoe.raid = true; tfoe.aggro = 0
 		game.pals.append(tfoe)
 		var thp0 := tfoe.hp
@@ -4050,7 +4050,7 @@ func run() -> void:
 			tfoe.free()
 
 	# the island boss rule: a cornered alpha enrages — harder hits, faster feet
-	var rg: Pal = game.gen_pal("fenlump", 10, p.pos)
+	var rg: Kin = game.gen_pal("fenlump", 10, p.pos)
 	rg.alpha = true; rg.apply_bonuses()
 	rg.hp = rg.max_hp * 0.25
 	rg.hit(1, 1.0, false)
@@ -4154,6 +4154,36 @@ func run() -> void:
 	game.tick_raid(1.0)
 	check("peaceful holds the horn", game.raid_t == 31.0, "raid_t=%s" % game.raid_t) # spawn itself is behind the same early return
 	game.settings["raids"] = true
+
+	# ---- S1 migration: a pre-rename save maps every id-shaped field ----
+	var legacy := {
+		"items": {"pal_sphere": 3, "paldium": 2},
+		"catches": {"lamball": 12},
+		"dex_seen": ["lamball", "jetragon"],
+		"unlocked": ["palbox", "pal_sphere"],
+		"equip": {"weapon": "sphere_launcher"},
+		"mflags": {"sphere": true},
+		"board_quest": {"id": "paldium", "sp": "lamball"},
+		"kin": [{"sp": "lamball", "carry": {"id": "pal_egg", "n": 1}},
+			{"sp": "syndicate_grunt", "carry": null}],
+		"structures": {"1,1": {"id": "palbox", "store": {"pal_sphere": 2},
+			"cap": {"sp": "lamball", "lv": 5},
+			"egg": [["lamball", "chikipi", 50, 40, [], [], [], []]],
+			"inc": {"pair": ["lamball", "chikipi"], "huge": false, "left": 10.0},
+			"mimic": "daedream"}},
+		"respawns": [{"sid": "jetragon", "lv": 50}],
+		"drops": [{"id": "pal_sphere"}],
+		"crafts": [{"out": "pal_sphere"}],
+	}
+	var md: Dictionary = Migrate.save_dict(legacy)
+	check("migrate items", md["items"].has("kin_orb") and md["items"].has("lumenite"))
+	check("migrate species", md["kin"][0]["sp"] == "fenjelly" and md["kin"][1]["sp"] == "ironpact_grunt")
+	check("migrate carry", md["kin"][0]["carry"]["id"] == "kin_egg")
+	var mst: Dictionary = md["structures"]["1,1"]
+	check("migrate structure", mst["id"] == "kinbox" and mst["store"].has("kin_orb"))
+	check("migrate cap+egg+inc", mst["cap"]["sp"] == "fenjelly" and mst["egg"][0][0] == "fenjelly" and mst["inc"]["pair"][1] == "fenlump")
+	check("migrate mimic+respawns", mst["mimic"] == "shadelump" and md["respawns"][0]["sid"] == "scalbeak")
+	check("migrate gear+flags", md["equip"]["weapon"] == "orb_launcher" and md["mflags"].has("orb"))
 
 	# net host (no client join in same proc)
 	game.net.host()

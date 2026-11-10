@@ -62,7 +62,7 @@ export interface ItemDrop {
   t: number; // age
 }
 
-export interface Sphere {
+export interface Orb {
   uid: number;
   itemId: string;
   x: number; y: number;
@@ -107,7 +107,7 @@ export interface Player {
   dodgeT: number;
   inv: Map<string, number>;
   weapon: string | null;
-  sphereSel: number; // index into owned sphere tiers for throwing
+  sphereSel: number; // index into owned orb tiers for throwing
   unlocked: Set<string>;
 }
 
@@ -130,7 +130,7 @@ export interface GameState {
   structures: Structure[];
   jobs: Job[];
   projectiles: Projectile[];
-  spheres: Sphere[];
+  orbs: Orb[];
   drops: ItemDrop[];
   floaters: FloatingText[];
   log: string[];       // message log (bottom-left)

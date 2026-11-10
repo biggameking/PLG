@@ -230,7 +230,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ],
@@ -511,7 +511,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ]
@@ -827,7 +827,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     2,
     4
    ],
@@ -872,7 +872,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ],
@@ -887,7 +887,7 @@ const SPECIES = {
  },
  "ironpact_grunt": {
   "id": "ironpact_grunt",
-  "name": "IronpactGrunt",
+  "name": "Ironpact Grunt",
   "glyph": "§",
   "color": "#3a3a4a",
   "elements": [
@@ -930,7 +930,7 @@ const SPECIES = {
  },
  "ironpact_sweeper": {
   "id": "ironpact_sweeper",
-  "name": "IronpactGlaclumpper",
+  "name": "Ironpact Sweeper",
   "glyph": "§",
   "color": "#5a2e4a",
   "elements": [
@@ -1208,7 +1208,7 @@ const SPECIES_LIST = [
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ],
@@ -1489,7 +1489,7 @@ const SPECIES_LIST = [
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ]
@@ -1805,7 +1805,7 @@ const SPECIES_LIST = [
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     2,
     4
    ],
@@ -1850,7 +1850,7 @@ const SPECIES_LIST = [
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ],

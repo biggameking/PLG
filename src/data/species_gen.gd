@@ -455,7 +455,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ]
@@ -544,7 +544,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     3
    ]
@@ -583,7 +583,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     1
    ]
@@ -632,7 +632,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     2,
     4
    ],
@@ -685,7 +685,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     2,
     5
    ],
@@ -738,7 +738,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     4,
     6
    ],
@@ -783,7 +783,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     3
    ],
@@ -828,7 +828,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ],
@@ -2771,7 +2771,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ],
@@ -2905,7 +2905,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ],
@@ -2951,7 +2951,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ],
@@ -3424,7 +3424,7 @@ const SPECIES = {
     5
    ],
    [
-    "pal_fluid",
+    "kin_fluid",
     2,
     4
    ]
@@ -3522,7 +3522,7 @@ const SPECIES = {
     3
    ],
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     3
    ]
@@ -3703,7 +3703,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ]
@@ -3828,7 +3828,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     3
    ],
@@ -4112,7 +4112,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     1,
     2
    ]
@@ -4291,7 +4291,7 @@ const SPECIES = {
   ],
   "drops": [
    [
-    "pal_fluid",
+    "kin_fluid",
     2,
     4
    ],

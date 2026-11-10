@@ -36,4 +36,27 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
    Far wild pals already tick at ~8Hz; keep new per-pal work behind the same
    accumulation pattern.
 8. After changes: smoke test must report 0 failures, and the exit banner must
-   not grow new `ObjectDB instances were leaked` counts vs. baseline.
+   not grow new `ObjectDB instances were leaked` counts vs. baseline
+   (observed jitter is ~8-17 — treat >13 as a flag, re-run once).
+
+## Rename & sweep rules (learned the hard way in S1)
+
+1. **Mass renames live in ONE idempotent script** covering ids, display names,
+   filenames, `.import` internals (source_file + dest_files), `.uid` files,
+   `class_name`s, and docs. Never hand-patch a generated rename — fix the name
+   table and re-run the whole pipeline including a final `--import`.
+2. **Save migrations are written against the serialized schema** — enumerate
+   every key `save_game()` writes before touching `Migrate`, not the runtime
+   dict shapes they came from.
+3. **Display-string replacements must be word-bounded and case-classed**
+   (`PAL`/`Pal`/`pal`), and every remaining hit gets human review.
+4. **Every rename ships a migration gate:** map values must resolve against
+   current data (species/items/structures), plus a smoke fixture that feeds a
+   legacy-shaped dict through `Migrate.save_dict`. `tools/check_ip.sh` is the
+   committed "old lexicon is gone" check.
+5. **Post-sweep orphan pass:** stale `.uid`, `.import` dest paths, export
+   metadata, generator sources (`prototype/`, `tools/gen_*.py`) — a rename that
+   the generators would revert on next run is not done.
+6. New mechanics need checks that would fail on the old behavior, and checks
+   must isolate their fixtures (see the `apex.raid = false` hardening — tests
+   that depend on random world spawns or leaked raid state flake).

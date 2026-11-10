@@ -1,5 +1,5 @@
 extends Control
-# HUD + panels: HP/XP, spheres, log, time, party; B build / I inv / T tech /
+# HUD + panels: HP/XP, orbs, log, time, party; B build / I inv / T tech /
 # E interact (craft near workbench, kinbox mgmt near kinbox); ESC closes.
 
 var game: Game
@@ -242,7 +242,7 @@ func run_click(cr: Dictionary) -> void:
 		"butcher": "butcher_pal", "sell_pal": "sell_pal"}
 	if game.net != null and game.net.is_client() and KINBOX_OPS.has(cr["act"]):
 		var uid := 0
-		if cr["arg"] is Pal:
+		if cr["arg"] is Kin:
 			uid = cr["arg"].net_id if cr["arg"].net_id > 0 else cr["arg"].uid
 		else:
 			uid = int(cr["arg"])
@@ -344,7 +344,7 @@ func interact() -> void:
 		return
 	# pet: a friendly kin in arm's reach takes the E tap first —
 	# deliberate affection shouldn't lose to a structure probe
-	var pet: Pal = null
+	var pet: Kin = null
 	var pd2 := 1.4
 	for q in game.pals:
 		if q.mode not in ["partner", "base"] or q.hp <= 0 or q.petted_t > game.t:
@@ -491,7 +491,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(sx + 4, 49), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		sx += 74
-	draw_equipment_line() # was never called — gear row under the sphere chips
+	draw_equipment_line() # was never called — gear row under the orb chips
 	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # the island meal timer chip
 		var btxt := ""
 		for bk in pl.meal_buff:
@@ -508,7 +508,7 @@ func _draw() -> void:
 			var sid2: String = tiers2[clampi(pl.sphere_sel, 0, tiers2.size() - 1)]
 			var mp2 := get_global_mouse_position()
 			var tw2: Vector2 = Iso.from_screen(mp2.x, mp2.y, pl.elev())
-			var bp2: Pal = null
+			var bp2: Kin = null
 			var bd2 := 1.6
 			for q in game.pals:
 				if q.mode != "wild" or q.hp <= 0:
@@ -538,7 +538,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(r.x / 2 - 62, 24), "RAID IN %ds" % int(ceilf(game.raid_t)),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ff8d7e"))
 	# boss bar: nearest alpha/boss in the fray gets a name + hp strip
-	var boss: Pal = null
+	var boss: Kin = null
 	var bd := 18.0
 	for q in game.pals:
 		if q.hp <= 0 or not (q.boss or q.alpha):
@@ -635,7 +635,7 @@ func _draw() -> void:
 			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h",
-			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  KINDEX p  CHAT enter",
+			"MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter",
 			"1-5 sends that party kin out (press again to recall) — one ball on the field",
 			"v cycles the field kin's orders: auto / aggressive / passive",
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
@@ -1145,7 +1145,7 @@ func use_item(k: String) -> void:
 				game.add_item(k, -1)
 		"fertilizer":
 			game.fertilize()
-		"pal_bait":
+		"kin_bait":
 			game.throw_bait()
 		"treasure_map":
 			game.use_treasure_map()
@@ -1269,7 +1269,7 @@ func draw_chat(r: Vector2) -> void:
 	draw_string(font, rr.position + Vector2(10, 19), "Say: " + chat_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
 
-func star_str(p: Pal) -> String:
+func star_str(p: Kin) -> String:
 	var s := ""
 	for i in p.star:
 		s += "*"
@@ -1277,7 +1277,7 @@ func star_str(p: Pal) -> String:
 		s = " " + s
 	return s
 
-func passive_str(p: Pal) -> String:
+func passive_str(p: Kin) -> String:
 	var s := ""
 	for k in p.passives:
 		var pv: Dictionary = PassiveData.PASSIVES.get(k, {})
@@ -1320,7 +1320,7 @@ func draw_statues(r: Vector2) -> void:
 	draw_string(font, Vector2(r.x + 16, y - 16), "SOUL INFUSION (+4%/soul)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c08cff"))
 	var infused := []
 	for uid in game.party:
-		var qp: Pal = game.find_pal(uid)
+		var qp: Kin = game.find_pal(uid)
 		if qp == null:
 			qp = game.bench_pal_of(uid)
 		if qp != null:

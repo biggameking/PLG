@@ -24,7 +24,7 @@ func _boot() -> void:
 			if game.world.blocked(int(at.x), int(at.y)):
 				continue
 			var pool: Array = SpeciesGen.zone_pool(game.world.zone_at(int(at.x), int(at.y)))
-			var p: Pal = game.gen_pal(pool[rng.randi_range(0, pool.size() - 1)], 5, at)
+			var p: Kin = game.gen_pal(pool[rng.randi_range(0, pool.size() - 1)], 5, at)
 			p.mode = "wild"
 			game.pals.append(p)
 			made.append(p)
@@ -49,7 +49,7 @@ func _boot() -> void:
 		# 2b) box churn: catch -> box -> butcher round trip on disposable kin
 		game.add_item("meat_cleaver", 1)
 		for i3 in 6:
-			var cp: Pal = game.gen_pal("fenlump", 3, game.player.pos)
+			var cp: Kin = game.gen_pal("fenlump", 3, game.player.pos)
 			cp.mode = "box"; game.box.append(cp); game.box_pal(cp)
 			game.butcher_pal(cp.uid)
 		for d2 in game.drops.duplicate():

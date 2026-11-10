@@ -42,7 +42,7 @@ func _boot() -> void:
 			var at2: Vector2 = bc + Vector2(cos(a2), sin(a2)) * rng.randf_range(6, 12)
 			if game.world.blocked(int(at2.x), int(at2.y)):
 				continue
-			var rp: Pal = game.gen_pal("ironpact_grunt", rng.randi_range(5, 15), at2)
+			var rp: Kin = game.gen_pal("ironpact_grunt", rng.randi_range(5, 15), at2)
 			rp.mode = "wild"; rp.raid = true; rp.aggro = 0
 			rp.set_meta("raid_t0", game.t)
 			game.pals.append(rp)
@@ -101,7 +101,7 @@ func _boot() -> void:
 		for st2 in sites:
 			if st2 == null or st2.get("workers") == null:
 				continue
-			var wp: Pal = game.gen_pal("fenjelly", 8, Vector2(bc2.x, bc2.y))
+			var wp: Kin = game.gen_pal("fenjelly", 8, Vector2(bc2.x, bc2.y))
 			wp.mode = "base"; wp.san = 90.0
 			game.pals.append(wp)
 			st2["workers"].append(wp); wp.job_site = st2

@@ -38,7 +38,7 @@ const ITEMS = {
   "stack": 999,
   "food": 15,
   "price": 10,
-  "desc": "Glaclumpt comb straight from the apiary."
+  "desc": "Sweet comb straight from the apiary."
  },
  "honey_bun": {
   "id": "honey_bun",
@@ -61,8 +61,8 @@ const ITEMS = {
   "price": 60,
   "desc": "A surveyor's faded chart — follow the gold mark and dig where it lands."
  },
- "pal_bait": {
-  "id": "pal_bait",
+ "kin_bait": {
+  "id": "kin_bait",
   "name": "Kin Bait",
   "glyph": "❁",
   "color": "#d8b84a",
@@ -96,7 +96,7 @@ const ITEMS = {
   "color": "#4dd0e1",
   "kind": "material",
   "stack": 999,
-  "desc": "Glowing fragment; sphere crafting."
+  "desc": "Glowing fragment; orb crafting."
  },
  "ore": {
   "id": "ore",
@@ -179,8 +179,8 @@ const ITEMS = {
   "stack": 999,
   "desc": "Electric organ."
  },
- "pal_fluid": {
-  "id": "pal_fluid",
+ "kin_fluid": {
+  "id": "kin_fluid",
   "name": "Kin Fluid",
   "glyph": "○",
   "color": "#4d9de0",
@@ -353,7 +353,7 @@ const ITEMS = {
   "stack": 999,
   "food": 55,
   "buff": {"atk": 0.1, "t": 300},
-  "desc": "Glaclumpt bun. +10% attack for a while."
+  "desc": "Sweet bun. +10% attack for a while."
  },
  "fenlump_poultry": {
   "id": "fenlump_poultry",
@@ -498,10 +498,10 @@ const ITEMS = {
   "name": "Kin Orb",
   "glyph": "◐",
   "color": "#4d9de0",
-  "kind": "sphere",
+  "kind": "orb",
   "stack": 50,
   "spherePower": 26,
-  "desc": "Standard sphere."
+  "desc": "Standard orb."
  },
  "mega_orb": {
   "id": "mega_orb",
@@ -509,10 +509,10 @@ const ITEMS = {
   "name": "Mega Orb",
   "glyph": "◐",
   "color": "#4caf50",
-  "kind": "sphere",
+  "kind": "orb",
   "stack": 50,
   "spherePower": 42,
-  "desc": "Improved sphere."
+  "desc": "Improved orb."
  },
  "giga_orb": {
   "id": "giga_orb",
@@ -520,10 +520,10 @@ const ITEMS = {
   "name": "Giga Orb",
   "glyph": "◐",
   "color": "#e8d44d",
-  "kind": "sphere",
+  "kind": "orb",
   "stack": 50,
   "spherePower": 58,
-  "desc": "Strong sphere."
+  "desc": "Strong orb."
  },
  "ultra_orb": {
   "id": "ultra_orb",
@@ -531,10 +531,10 @@ const ITEMS = {
   "name": "Ultra Orb",
   "glyph": "◐",
   "color": "#e8963c",
-  "kind": "sphere",
+  "kind": "orb",
   "stack": 50,
   "spherePower": 75,
-  "desc": "Very strong sphere."
+  "desc": "Very strong orb."
  },
  "legendary_orb": {
   "id": "legendary_orb",
@@ -542,10 +542,10 @@ const ITEMS = {
   "name": "Legendary Orb",
   "glyph": "◐",
   "color": "#e64533",
-  "kind": "sphere",
+  "kind": "orb",
   "stack": 50,
   "spherePower": 95,
-  "desc": "Best sphere."
+  "desc": "Best orb."
  },
  "wooden_club": {
   "id": "wooden_club",
@@ -694,7 +694,7 @@ const ITEMS = {
    "cd": 1.0,
    "dur": 40
   },
-  "desc": "Hurls your selected sphere downrange — catches without creeping close."
+  "desc": "Hurls your selected orb downrange — catches without creeping close."
  },
  "metal_axe": {
   "id": "metal_axe",
@@ -787,7 +787,7 @@ const ITEMS = {
   "usable": true,
   "stack": 10,
   "price": 120,
-  "desc": "the island respec: refunds every statue perk as stat points."
+  "desc": "a full respec: refunds every statue perk as stat points."
  },
  "kin_egg": {
   "id": "kin_egg",
@@ -872,7 +872,7 @@ const ITEMS = {
   "stack": 1,
   "tech": "saddle",
   "price": 90,
-  "desc": "the island saddle: required in the pack to ride a land mount."
+  "desc": "a riding saddle: required in the pack to ride a land mount."
  },
  "sky_saddle": {
   "id": "sky_saddle",
@@ -883,7 +883,7 @@ const ITEMS = {
   "stack": 1,
   "tech": "sky_saddle",
   "price": 160,
-  "desc": "the island saddle: required in the pack to ride a flying mount."
+  "desc": "a riding saddle: required in the pack to ride a flying mount."
  },
  "wave_saddle": {
   "id": "wave_saddle",
@@ -894,7 +894,7 @@ const ITEMS = {
   "stack": 1,
   "tech": "wave_saddle",
   "price": 140,
-  "desc": "the island saddle: required in the pack to ride a swimming mount."
+  "desc": "a riding saddle: required in the pack to ride a swimming mount."
  },
  "grappling_hook": {
   "id": "grappling_hook",
@@ -905,7 +905,7 @@ const ITEMS = {
   "stack": 1,
   "tech": "grappling_hook",
   "price": 180,
-  "desc": "the island hookshot: haul yourself UP a cliff face — one-way, no descents."
+  "desc": "a hookshot: haul yourself UP a cliff face — one-way, no descents."
  },
  "cindlump_harness": {
   "id": "cindlump_harness",
@@ -1060,7 +1060,7 @@ const ITEMS = {
   "name": "Attack Pendant",
   "kind": "accessory",
   "acc": {"atk": 0.12},
-  "desc": "the island trinket: +12% damage dealt. Two accessory slots.",
+  "desc": "a trinket: +12% damage dealt. Two accessory slots.",
   "stack": 1,
   "price": 150
  },
@@ -1069,7 +1069,7 @@ const ITEMS = {
   "name": "Defense Pendant",
   "kind": "accessory",
   "acc": {"def": 5},
-  "desc": "the island trinket: +5 armor. Two accessory slots.",
+  "desc": "a trinket: +5 armor. Two accessory slots.",
   "stack": 1,
   "price": 150
  },
@@ -1078,7 +1078,7 @@ const ITEMS = {
   "name": "Swift Charm",
   "kind": "accessory",
   "acc": {"spd": 0.10},
-  "desc": "the island trinket: +10% move speed. Two accessory slots.",
+  "desc": "a trinket: +10% move speed. Two accessory slots.",
   "stack": 1,
   "price": 150
  },
@@ -1087,7 +1087,7 @@ const ITEMS = {
   "name": "Ring of Mercy",
   "kind": "accessory",
   "acc": {"mercy": 1},
-  "desc": "the island trinket: your blows weaken wild kin but can never drop one below 1 HP.",
+  "desc": "a trinket: your blows weaken wild kin but can never drop one below 1 HP.",
   "stack": 1,
   "price": 300
  }
@@ -1498,7 +1498,7 @@ const RECIPES = [
   ],
   "cost": [
    [
-    "pal_fluid",
+    "kin_fluid",
     3
    ],
    [
@@ -1529,7 +1529,7 @@ const RECIPES = [
     2
    ],
    [
-    "pal_fluid",
+    "kin_fluid",
     2
    ]
   ],
@@ -1597,9 +1597,9 @@ const RECIPES = [
   "work": 40
  },
  {
-  "id": "pal_bait",
+  "id": "kin_bait",
   "out": [
-   "pal_bait",
+   "kin_bait",
    2
   ],
   "cost": [

@@ -1,6 +1,6 @@
 extends Entity
 class_name Player
-# WASD/arrows move · SHIFT sprint · LMB melee/harvest · Q aim sphere ·
+# WASD/arrows move · SHIFT sprint · LMB melee/harvest · Q aim orb ·
 # click throws · E interact · SPACE dodge.
 
 var game: Game
@@ -28,9 +28,9 @@ var level := 1
 var xp := 0
 var capture_level := 1
 var dodge_t := 0.0
-var mount: Pal = null
+var mount: Kin = null
 var facing := Vector2(1, 0)  # last move direction, for harvest/interact
-var equipment := {"weapon": "", "armor": "", "acc1": "", "acc2": ""} # the island trinkets ride the acc slots
+var equipment := {"weapon": "", "armor": "", "acc1": "", "acc2": ""} # a trinkets ride the acc slots
 var weapon_wear := -1.0       # uses left; -1 = unbreakable or bare hands
 var armor_wear := -1.0        # hits absorbed left; -1 = unarmored/unbreakable
 var atk_cd := 0.0
@@ -111,15 +111,15 @@ func melee() -> void:
 		game.try_harvest(pos, facing)
 
 func launch_sphere(wd: Dictionary) -> void:
-	# sphere launcher: slings the selected ball downrange at the
+	# orb launcher: slings the selected ball downrange at the
 	# wild kin nearest the facing line — long-range catch, no stealth crawl
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
-		game.log_msg("No spheres loaded!")
+		game.log_msg("No orbs loaded!")
 		return
 	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
 	var sid: String = tiers[sphere_sel]
-	var best: Pal = null
+	var best: Kin = null
 	var best_dot := 0.3
 	var reach: float = wd.get("range", 8.0)
 	for p in game.pals:
@@ -143,14 +143,14 @@ func launch_sphere(wd: Dictionary) -> void:
 func throw_sphere() -> void:
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
-		game.log_msg("No spheres! Craft kin_orb at a workbench.")
+		game.log_msg("No orbs! Craft kin_orb at a workbench.")
 		aiming = false
 		return
 	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
 	var sid: String = tiers[sphere_sel]
 	var mpos := get_global_mouse_position()
 	var tw := Iso.from_screen(mpos.x, mpos.y, elev())
-	var best: Pal = null
+	var best: Kin = null
 	var bd := 1.6
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
@@ -346,7 +346,7 @@ func _physics_process(dt: float) -> void:
 		moving = true
 	sync_screen()
 
-func dismount_if(p: Pal) -> void:
+func dismount_if(p: Kin) -> void:
 	if mount == p:
 		mount.visible = true
 		mount = null
@@ -362,7 +362,7 @@ func try_mount() -> void:
 		# replicas are host-driven — riding one would fight its net_target lerp
 		game.log_msg("Can't ride a host kin over the wire")
 		return
-	var best: Pal = null
+	var best: Kin = null
 	var bd := 1.4
 	for p in game.pals:
 		# the island: land mounts AND rideable flyers (bird body) — but each
@@ -426,13 +426,13 @@ func wear_armor() -> void:
 		if armor_wear <= 0.0:
 			game.break_armor(equipment["armor"])
 
-func acc_total(k: String) -> float: # the island trinket math — both slots stack
+func acc_total(k: String) -> float: # a trinket math — both slots stack
 	var t := 0.0
 	for s in ["acc1", "acc2"]:
 		t += float(ItemData.ITEMS.get(equipment[s], {}).get("acc", {}).get(k, 0.0))
 	return t
 
-func mercy_dmg(d: int, p: Pal) -> int: # Ring of Mercy: my hits can weaken, never kill
+func mercy_dmg(d: int, p: Kin) -> int: # Ring of Mercy: my hits can weaken, never kill
 	if acc_total("mercy") > 0.0 and d >= p.hp:
 		return maxi(0, p.hp - 1)
 	return d

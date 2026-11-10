@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://opf48kldhpol"
-path="res://.godot/imported/corllump_f0.png-55398b997f18083b24d8123fb1257baa.ctex"
+path="res://.godot/imported/quackbill_f0.png-7ade16c99b86728e27d85b2da82dde02.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/kin/quackbill_f0.png"
-dest_files=["res://.godot/imported/corllump_f0.png-55398b997f18083b24d8123fb1257baa.ctex"]
+dest_files=["res://.godot/imported/quackbill_f0.png-7ade16c99b86728e27d85b2da82dde02.ctex"]
 
 [params]
 

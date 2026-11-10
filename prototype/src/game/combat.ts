@@ -202,7 +202,7 @@ export function catchChance(s: GameState, p: Pal, spherePower: number, behind: b
 
 export function throwSphere(s: GameState, sphereId: string, target: Pal, tx: number, ty: number): void {
   const behind = isBehind(s, target);
-  s.spheres.push({
+  s.orbs.push({
     uid: uid(s), itemId: sphereId,
     x: s.player.x, y: s.player.y, tx, ty,
     targetUid: target.uid, t: 0,
@@ -217,7 +217,7 @@ function isBehind(s: GameState, p: Pal): boolean {
 }
 
 export function updateSpheres(s: GameState, dt: number): void {
-  for (const sp of [...s.spheres]) {
+  for (const sp of [...s.orbs]) {
     sp.t += dt;
     // fly toward target over ~0.25s
     const k = Math.min(1, sp.t / 0.25);
@@ -225,7 +225,7 @@ export function updateSpheres(s: GameState, dt: number): void {
     sp.y = sp.y + (sp.ty - sp.y) * k * 0.4;
     if (sp.t < 0.45) continue;
     const target = s.pals.find((p) => p.uid === sp.targetUid);
-    s.spheres = s.spheres.filter((o) => o.uid !== sp.uid);
+    s.orbs = s.orbs.filter((o) => o.uid !== sp.uid);
     if (!target || target.mode !== "wild" || target.hp <= 0) continue;
     const chance = catchChance(s, target, ITEMS[sp.itemId].spherePower ?? 26, isBehind(s, target));
     resolveCapture(s, target, chance);
