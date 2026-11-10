@@ -412,7 +412,7 @@ func run_click(cr: Dictionary) -> void:
 			elif cr["act"] == "chest_dep" or cr["act"] == "chest_wd":
 				chest_bulk(cr["act"])
 
-const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "set_back", "resume",
+const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_chat", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
 	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
 
@@ -428,6 +428,8 @@ func shell_act(act: String) -> void:
 			game.panel = "settings"
 		"m_join":
 			game.panel = "join"; join_buf = ""
+		"m_chat":
+			game.panel = "chat"; chat_buf = ""
 		"set_back":
 			game.panel = ""
 		"resume":
@@ -1066,6 +1068,8 @@ func pause_rows() -> Array:
 	var rows := [["RESUME", "resume"], ["SAVE GAME", "m_save"], ["SETTINGS", "m_settings"]]
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join"])
+	if multiplayer.multiplayer_peer != null:
+		rows.append(["CHAT", "m_chat"])
 	rows.append(["SAVE & QUIT TO TITLE", "to_title"])
 	rows.append(["SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6)])
 	return rows

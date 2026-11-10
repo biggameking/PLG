@@ -4625,6 +4625,18 @@ func run() -> void:
 	for row in hudn.pause_rows():
 		if row[1] == "m_join": join_rows += 1
 	check("pause shell offers join", join_rows == 1, "rows=%s" % join_rows)
+	var chat_rows := 0
+	for row in hudn.pause_rows():
+		if row[1] == "m_chat": chat_rows += 1
+	check("no chat row without a peer", chat_rows == 0)
+	var tmp_peer := ENetMultiplayerPeer.new() # a live peer flips the row on
+	tmp_peer.create_client("127.0.0.1", 1)
+	game.net.multiplayer.multiplayer_peer = tmp_peer
+	chat_rows = 0
+	for row in hudn.pause_rows():
+		if row[1] == "m_chat": chat_rows += 1
+	check("chat row when peered", chat_rows == 1)
+	tmp_peer.close()
 	game.net.multiplayer.multiplayer_peer = peer_bak
 	hudn.run_click({"act": "m_join", "arg": null}) # the REAL click path, not the helper
 	hudn._process(0.016)
