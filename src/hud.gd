@@ -333,6 +333,9 @@ func interact() -> void:
 				game.use_waypoint()
 				return
 			"chest":
+				if str(st.get("mimic", "")) != "":
+					game.open_mimic(st)
+					return
 				game.chest_ref = st
 				game.panel = "chest"
 				return

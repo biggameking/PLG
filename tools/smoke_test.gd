@@ -1429,6 +1429,21 @@ func run() -> void:
 			and game.box[-1].species_id == free_sp
 	check("camp captive joins the box", camp_ok, "cage=%s" % (cage_st != null))
 
+	# mimic chest: some dungeon boxes are only chest-shaped — open and it grins
+	var mm_k: Vector2i = free_xy.call("chest")
+	var mm_ok := false
+	if mm_k.x >= 0:
+		var mm_st: Dictionary = game.structures[mm_k]
+		mm_st["mimic"] = "daedream"
+		game.open_mimic(mm_st)
+		var mm_pal = null # find by identity — the spawn isn't guaranteed tail position
+		for q in game.pals:
+			if q.species_id == "daedream" and q.mode == "wild" and q.aggro == 0:
+				mm_pal = q
+				break
+		mm_ok = mm_pal != null and not game.structures.has(mm_k)
+	check("mimic chest opens back", mm_ok)
+
 	# miner's cap: the lamp rides on the armor slot, swapped out with the set
 	var mc_armor0: String = p.equipment["armor"]
 	p.equipment["armor"] = "miner_cap"
@@ -1942,7 +1957,8 @@ func run() -> void:
 		var st3: Dictionary = game.structures[k3]
 		if st3.get("loot", false):
 			loot_n += 1
-			if not st3.get("store", {}).is_empty(): loot_stocked += 1
+			if not st3.get("store", {}).is_empty() or str(st3.get("mimic", "")) != "":
+				loot_stocked += 1 # stocked goods or a waiting grin both count
 			loot_k = k3
 	check("lair treasure chests", loot_n >= 1 and loot_stocked == loot_n,
 		"%d/%d stocked" % [loot_stocked, loot_n])
@@ -2005,7 +2021,7 @@ func run() -> void:
 		for ks in game.structures:
 			var s2: Dictionary = game.structures[ks]
 			if s2["id"] == "chest" and Vector2(ks.x, ks.y).distance_to(Vector2(gp.x, gp.y)) < 4.0 \
-					and not s2["store"].is_empty():
+					and (not s2["store"].is_empty() or str(s2.get("mimic", "")) != ""):
 				loot = true
 		check("sealed grotto", ring_rock and warden and loot, "rock=%s boss=%s loot=%s" % [ring_rock, warden, loot])
 		# multi-room: grotto_room2 is authoritative — when set, a lv45 warden, a
@@ -2020,8 +2036,8 @@ func run() -> void:
 			for ks in game.structures:
 				var s3: Dictionary = game.structures[ks]
 				if s3["id"] == "chest" and Vector2(ks.x, ks.y).distance_to(Vector2(g2.x, g2.y)) < 4.0 \
-						and s3["store"].get("legendary_sphere", 0) > 0:
-					room2_loot = true
+						and (s3["store"].get("legendary_sphere", 0) > 0 or str(s3.get("mimic", "")) != ""):
+					room2_loot = true # the deep room pays in gold or in teeth
 			var r2d := Vector2i(int(signf(g2.x - gp.x)), int(signf(g2.y - gp.y)))
 			var dc2 := gp + r2d * 4
 			var off2 := dc2 + (Vector2i(0, 1) if dc2.y == gp.y else Vector2i(1, 0))

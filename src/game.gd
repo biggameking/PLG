@@ -2904,7 +2904,8 @@ func save_game() -> void:
 			"exp": ({"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t), "cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)} if st["id"] == "expedition_post" else null),
 			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
 			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null,
-			"cap": st.get("captive") if st["id"] == "pal_cage" else null}
+			"cap": st.get("captive") if st["id"] == "pal_cage" else null,
+			"mimic": st.get("mimic") if st["id"] == "chest" else null}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
@@ -3223,6 +3224,8 @@ func load_game() -> bool:
 			"snare": s.get("snare", false),
 			"loot": sv.get("loot", false) == true if sv is Dictionary else false}
 		if sv is Dictionary:
+			if sv.get("mimic") is String and str(sv["mimic"]) != "" and sid == "chest":
+				st["mimic"] = str(sv["mimic"]) # a saved hunger survives the save
 			if sv.get("cap") is Dictionary and sid == "pal_cage":
 				var cap_d: Dictionary = sv["cap"]
 				st["captive"] = {"sp": str(cap_d.get("sp", "")), "lv": clampi(int(cap_d.get("lv", 5)), 1, 60)}
@@ -3746,6 +3749,22 @@ func free_captive(st: Dictionary) -> void:
 	log_msg("Freed %s Lv%d — it scurries into your palbox" % [bp.spec["name"], bp.level])
 	net_remove_structure(st)
 
+func open_mimic(st: Dictionary) -> void:
+	# some dungeon chests are only chest-shaped — open it and it opens back
+	var sp: String = str(st.get("mimic", ""))
+	if sp == "" or SpeciesData.species_of(sp).is_empty():
+		return
+	var cell: Vector2i = cell_of(st)
+	net_remove_structure(st) # the box was a mouth; deferred so nothing iterates a ghost
+	var m: Pal = gen_pal(sp, wild_lv(world.zone_at(cell.x, cell.y)) + 4,
+		Vector2(cell.x + 0.5, cell.y + 0.5))
+	m.mode = "wild"
+	m.aggro = 0 # the mimic picks its fight before you pick yours
+	pals.append(m)
+	floater(m.pos, "IT GRINS.", "#e8452f")
+	log_msg("The chest was a %s — it was never a chest!" % m.spec["name"])
+	sfx_play("fail")
+
 func spawn_lairs() -> void:
 	# Zone-3 boss lairs: torch ring + an Alpha guarding elite guards
 	var placed := 0
@@ -3888,9 +3907,12 @@ func spawn_grotto() -> void:
 		if place_free("chest", tx + 1, ty + 1):
 			var st: Dictionary = structures[Vector2i(tx + 1, ty + 1)]
 			st["loot"] = true # dungeon treasure — off the base logistics net
-			st["store"] = {"gold_coin": rng.int_range(20, 40), "mega_sphere": 3,
-				"pal_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
-				"electric", "ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
+			if rng.chance(0.12): # some chests are only chest-shaped
+				st["mimic"] = ["daedream", "mau", "depresso"][rng.int_range(0, 2)]
+			else:
+				st["store"] = {"gold_coin": rng.int_range(20, 40), "mega_sphere": 3,
+					"pal_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
+					"electric", "ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
 		grotto_pos = Vector2i(tx, ty)
 		grotto_room2 = Vector2i(-1, -1)
 		# second chamber (Palworld multi-room dungeon): a 5x5 treasure room in
@@ -3941,8 +3963,11 @@ func spawn_grotto() -> void:
 		if place_free("chest", bx - 1, by - 1):
 			var st2: Dictionary = structures[Vector2i(bx - 1, by - 1)]
 			st2["loot"] = true
-			st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
-				"lifmunk_effigy": 3, "pal_egg": 2, "huge_pal_egg": 1}
+			if rng.chance(0.15): # deeper rooms hold deeper appetites
+				st2["mimic"] = ["daedream", "loupmoon"][rng.int_range(0, 1)]
+			else:
+				st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
+					"lifmunk_effigy": 3, "pal_egg": 2, "huge_pal_egg": 1}
 		grotto_room2 = Vector2i(bx, by)
 		# third chamber (Palworld's deepest boss room): chains off room 2 in any
 		# cardinal direction that won't double back onto the first chamber.
@@ -3990,11 +4015,14 @@ func spawn_grotto() -> void:
 			if place_free("chest", cx3 + 1, cy3 - 1):
 				var st3: Dictionary = structures[Vector2i(cx3 + 1, cy3 - 1)]
 				st3["loot"] = true
-				st3["store"] = {"gold_coin": rng.int_range(60, 120), "legendary_sphere": 3,
-					"ancient_part": 2, "huge_pal_egg": 1, "lifmunk_effigy": 4,
-					"boss_sigil": 1,
-					"skill_fruit_" + ["neutral", "fire", "water", "grass", "electric",
-					"ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
+				if rng.chance(0.15):
+					st3["mimic"] = ["loupmoon", "mau", "daedream"][rng.int_range(0, 2)]
+				else:
+					st3["store"] = {"gold_coin": rng.int_range(60, 120), "legendary_sphere": 3,
+						"ancient_part": 2, "huge_pal_egg": 1, "lifmunk_effigy": 4,
+						"boss_sigil": 1,
+						"skill_fruit_" + ["neutral", "fire", "water", "grass", "electric",
+						"ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
 			log_msg("A sealed grotto echoes in the deep wilds — something huge breathes within")
 			return
 		log_msg("A sealed grotto echoes in the deep wilds — it sounds deep")
