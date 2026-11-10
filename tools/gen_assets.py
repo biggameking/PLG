@@ -858,6 +858,15 @@ def make_structure(sid, color, w, h):
         for sx in (-8, -1, 6):
             d.rectangle([W//2 + sx - 2, 19 + (sx % 3), W//2 + sx + 2, 26 + (sx % 3)], fill=hxc("#e8dcc0") + (255,))
         d.rectangle([W//2 - 13, 28, W//2 + 13, 30], fill=hxc("#5e462e") + (255,))
+    elif sid == "pal_gacha":
+        # brass capsule machine — glass dome of eggs over a coin slot
+        d.rectangle([W//2 - 10, 28, W//2 + 10, 44], fill=hxc("#a87830") + (255,))
+        d.rectangle([W//2 - 10, 28, W//2 + 10, 30], fill=hxc("#e8b830") + (255,))
+        d.rectangle([W//2 - 2, 34, W//2 + 2, 38], fill=hxc("#3a2a18") + (255,))
+        d.ellipse([W//2 - 9, 12, W//2 + 9, 28], fill=hxc("#cfe8f0") + (255,))
+        for ex, ey in ((-4, 20), (3, 18), (0, 24)):
+            d.ellipse([W//2 + ex - 2, ey - 2, W//2 + ex + 2, ey + 2], fill=hxc("#e8f0f2") + (255,))
+        d.rectangle([W//2 - 10, 42, W//2 + 10, 44], fill=hxc("#8a6a30") + (255,))
     elif sid == "snare_trap":
         # leaf litter over steel jaws — the trap hides until it bites
         d.ellipse([W//2 - 14, 30, W//2 + 14, 42], fill=hxc("#7a8a4a") + (255,))
@@ -981,6 +990,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "sparring_ring": ("#a87848", 2, 2),
     "notice_board": ("#c9a15a", 1, 1),
     "snare_trap": ("#8a7a5a", 1, 1),
+    "pal_gacha": ("#e8b830", 1, 1),
     "war_banner": ("#b84a3a", 1, 1),
     "spyglass": ("#7a9ab8", 1, 1),
     "well": ("#6a8ab0", 1, 1),

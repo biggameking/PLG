@@ -1216,6 +1216,25 @@ func run() -> void:
 		"got=%d kind=%s" % [hq_mid, game.board_quest.get("kind", "")])
 	game.board_quest = hq0
 
+	# pal gacha: twenty gold in the slot, an egg rattles out
+	game.add_item("wood", 10); game.add_item("ingot", 6); game.add_item("paldium", 4)
+	var gc_k: Vector2i = free_xy.call("pal_gacha")
+	var gc_ok := false
+	if gc_k.x >= 0:
+		var gc_eggs0: int = game.item_count("pal_egg") + game.item_count("huge_pal_egg")
+		var gc_pe0: int = game.item_count("pal_egg")
+		var gc_he0: int = game.item_count("huge_pal_egg")
+		var gc_gold0: int = game.item_count("gold_coin")
+		game.add_item("gold_coin", 100)
+		game.gacha_pull()
+		gc_ok = game.item_count("pal_egg") + game.item_count("huge_pal_egg") == gc_eggs0 + 1 \
+			and game.item_count("gold_coin") == gc_gold0 + 80 # 100 in, 20 spent
+		game.add_item("gold_coin", -(game.item_count("gold_coin") - gc_gold0))
+		# the pulled egg must leave too — the incubator test counts its own eggs
+		game.add_item("pal_egg", gc_pe0 - game.item_count("pal_egg"))
+		game.add_item("huge_pal_egg", gc_he0 - game.item_count("huge_pal_egg"))
+	check("gacha rattles out an egg", gc_ok, "gc=%s" % (gc_k.x >= 0))
+
 	# snare trap: a wild foot on the plate is held fast — and the spring is spent
 	game.add_item("wood", 5); game.add_item("fiber", 2)
 	var sn_k: Vector2i = free_xy.call("snare_trap")

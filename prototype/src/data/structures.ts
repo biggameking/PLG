@@ -245,6 +245,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     cost: [["wood", 8], ["fiber", 3]],
     desc: "A pitch-pine board — each dawn a fresh request goes up: fill it for coin and credit.",
   },
+  pal_gacha: {
+    id: "pal_gacha", name: "Pal Gacha", glyph: "◉", color: "#e8b830", w: 1, h: 1,
+    hp: 120,
+    cost: [["wood", 10], ["ingot", 6], ["paldium", 4]],
+    desc: "A brass capsule machine — feed it 20 gold and it rattles out an egg. Mostly ordinary; once in a while it coughs up something huge.",
+  },
   snare_trap: {
     id: "snare_trap", name: "Snare Trap", glyph: "⋔", color: "#8a7a5a", w: 1, h: 1,
     hp: 40, walkable: true, snare: true,
@@ -374,6 +380,7 @@ export const TECH: TechNode[] = [
   { id: "sparring_ring", name: "Sparring Ring", tier: 4, cost: 1 },
   { id: "notice_board", name: "Notice Board", tier: 2, cost: 1 },
   { id: "snare_trap", name: "Snare Trap", tier: 2, cost: 1 },
+  { id: "pal_gacha", name: "Pal Gacha", tier: 4, cost: 1 },
   { id: "war_banner", name: "War Banner", tier: 4, cost: 1 },
   { id: "spyglass", name: "Spyglass Tower", tier: 5, cost: 2 },
   { id: "well", name: "Well", tier: 3, cost: 1 },

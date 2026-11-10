@@ -348,6 +348,9 @@ func interact() -> void:
 			"notice_board":
 				game.notice_board_action()
 				return
+			"pal_gacha":
+				game.gacha_pull()
+				return
 			"pal_cage":
 				game.free_captive(st)
 				return

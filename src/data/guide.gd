@@ -131,7 +131,9 @@ Parents pass down passive traits and even learned skills —
 breed for the pal you want. Rare HUGE EGGS (nests, alphas,
 the odd grotto chest, the shadier merchants) always hatch a
 LUCKY variant: bigger, stronger, twice the drops, and coins
-to boot. You'll hear the chime when one spawns.
+to boot. You'll hear the chime when one spawns. Short on
+eggs? The brass pal gacha takes twenty gold a pull and
+rattles one out — mostly plain, sometimes huge.
 
 Condense spare pals of the same species for star ranks;
 the statue feeds their soul.""",

@@ -547,6 +547,30 @@ const STRUCTURES = {
   ],
   "desc": "A pitch-pine board — each dawn a fresh request goes up: fill it for coin and credit."
  },
+"pal_gacha": {
+  "id": "pal_gacha",
+  "name": "Pal Gacha",
+  "glyph": "◉",
+  "color": "#e8b830",
+  "w": 1,
+  "h": 1,
+  "hp": 120,
+  "cost": [
+   [
+    "wood",
+    10
+   ],
+   [
+    "ingot",
+    6
+   ],
+   [
+    "paldium",
+    4
+   ]
+  ],
+  "desc": "A brass capsule machine — feed it 20 gold and it rattles out an egg. Mostly ordinary; once in a while it coughs up something huge."
+ },
 "snare_trap": {
   "id": "snare_trap",
   "name": "Snare Trap",
@@ -1529,6 +1553,12 @@ const TECH = [
   "id": "snare_trap",
   "name": "Snare Trap",
   "tier": 2,
+  "cost": 1
+ },
+ {
+  "id": "pal_gacha",
+  "name": "Pal Gacha",
+  "tier": 4,
   "cost": 1
  },
  {

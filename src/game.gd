@@ -4609,6 +4609,19 @@ func notice_board_action() -> void:
 	log_msg("Board request filled: %d %s → +%d gold" % [qn, iname, gold])
 	board_quest["id"] = "" # filled — the board stays quiet until tomorrow
 
+func gacha_pull() -> void:
+	# feed the brass mouth 20 gold — it rattles out an egg, mostly ordinary
+	if item_count("gold_coin") < 20:
+		log_msg("Pal gacha: it wants 20 gold in the slot")
+		return
+	add_item("gold_coin", -20)
+	var eid: String = "huge_pal_egg" if rng.chance(0.1) else "pal_egg"
+	add_item(eid, 1)
+	floater(player.pos, "★ %s!" % ItemData.ITEMS[eid]["name"],
+		"#ffd76e" if eid == "huge_pal_egg" else "#e8f0f2")
+	log_msg("The gacha rattles — out rolls a %s" % ItemData.ITEMS[eid]["name"])
+	sfx_play("catch")
+
 func board_hunt_credit(sp: String) -> void:
 	# the guild pays for thinning whether the pal leaves in a bag or a box
 	if str(board_quest.get("kind", "")) != "hunt" \
