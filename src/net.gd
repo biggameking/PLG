@@ -80,12 +80,33 @@ func my_tag() -> String:
 		cf.save("user://plg_net.cfg")
 	return t
 
+func _throttle(pid: int, key: String, rate: float, burst: float) -> bool:
+	# shared abuse brake: one token bucket per verb per ghost — honest clicks
+	# never clip, a scripted 60Hz spam converges to the rate
+	var g = ghosts.get(pid)
+	if g == null:
+		return false
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var a: float = minf(float(g.get_meta(key, burst)) \
+		+ (now - float(g.get_meta(key + "_t", now))) * rate, burst)
+	g.set_meta(key + "_t", now)
+	if a < 1.0:
+		g.set_meta(key, a)
+		return false
+	g.set_meta(key, a - 1.0)
+	return true
+
 @rpc("any_peer", "call_remote", "reliable")
 func hello(tag: String) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
-	peer_tags[pid] = str(tag).substr(0, 24)
+	var tag_s := str(tag).substr(0, 24)
+	for other in peer_tags:
+		if other != pid and peer_tags[other] == tag_s:
+			rpc_id(pid, "net_note", "That keeper tag is already claimed")
+			return # a live session holds this identity — don't clobber its roster
+	peer_tags[pid] = tag_s
 	game.rebind_owner(pid, peer_tags[pid])
 	# they may already own kin here — hand the roster over immediately
 	rpc_id(pid, "box_sync", box_state_pack(pid), game.rparty_for(pid).duplicate(), party_state_pack(pid))
@@ -119,6 +140,7 @@ func _on_peer_disconnected(id: int) -> void:
 		ghosts.erase(id)
 	if is_host:
 		game.r_retract(id) # a leaving keeper's field pal balls up under their tag
+		game.orphan_guest_kin(id) # roster survives under the tag for a rejoin
 		peer_tags.erase(id) # the tag survives in remote_parties for a rejoin
 		rpc("peer_left", id)
 
@@ -233,6 +255,7 @@ func _on_server_disconnected() -> void:
 			ghosts[gid].queue_free()
 	ghosts.clear()
 	game.clear_net_drops() # replica loot dies with the session too
+	game.purge_replicas() # statue kin can't linger as free catches post-session
 	is_host = false
 	multiplayer.multiplayer_peer = null # a dead peer must not keep net_live() true
 	game.net_danger = false # the raid verdict belonged to the session — rejoin clean
@@ -257,8 +280,8 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if not ghosts.has(id):
 		return
-	var nx := float(x); var ny := float(y)
-	if not (is_finite(nx) and is_finite(ny)):
+	var nx := float(x); var ny := float(y); var nz := float(elev)
+	if not (is_finite(nx) and is_finite(ny) and is_finite(nz)):
 		return # NaN/infinity coordinates are not a place anyone can stand
 	if nx < 0.0 or ny < 0.0 or nx >= World.WORLD_W or ny >= World.WORLD_H:
 		return # every proximity gate trusts this position — keep it inside the island
@@ -272,7 +295,7 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		var allow: float = minf(float(g.get_meta("pos_allow", POS_BURST)) \
 			+ (now - float(g.get_meta("pos_t", now))) * POS_RATE, POS_BURST)
 		var step := Vector2(nx, ny).distance_to(Vector2(g.net_pos.x, g.net_pos.y))
-		if step > allow and not _legit_blink(Vector2(g.net_pos.x, g.net_pos.y), Vector2(nx, ny)):
+		if step > allow and not _legit_blink(g, Vector2(g.net_pos.x, g.net_pos.y), Vector2(nx, ny)):
 			g.set_meta("pos_t", now) # time accrues even when a spoof dies at the door
 			g.set_meta("pos_allow", allow)
 			return # a jump this big that lands on no pad is a spoofed anchor
@@ -280,13 +303,14 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		g.set_meta("pos_allow", allow - minf(step, allow))
 	# a blink drains the bucket too: a guest that just teleported has no
 	# honest need to be sprinting the very next frame
-	g.net_pos = Vector3(nx, ny, float(elev))
+	g.net_pos = Vector3(nx, ny, clampf(nz, -1.0, 8.0))
 	if is_host:
 		rpc("peer_pos", id, nx, ny, float(elev))  # relay so clients see each other
 
 const BLINK_RADIUS := 5.0 # landing tolerance: nearest_free can shove a few tiles
 const POS_RATE := 40.0 # mounted sprint peaks ~29 u/s; cap leaves 38% headroom
 const POS_BURST := 6.0 # absorbs ~5 dropped 20Hz packets before honest steps clip
+const BLINK_CD := 3.0 # home-lane cooldown — deaths are minutes apart, not seconds
 
 func _near_travel_node(p: Vector2) -> String:
 	# waypoint stones and kinbox terminals are the only sanctioned blink pads —
@@ -299,12 +323,18 @@ func _near_travel_node(p: Vector2) -> String:
 			return st["id"]
 	return ""
 
-func _legit_blink(from: Vector2, to: Vector2) -> bool:
+func _legit_blink(g, from: Vector2, to: Vector2) -> bool:
 	# a big jump is only honest when it lands where the game's own teleports do
 	var dst := _near_travel_node(to)
 	if dst == "kinbox" or \
 			to.distance_to(Vector2(game.world.spawn) + Vector2(0.5, 0.5)) <= BLINK_RADIUS:
-		return true # respawns come from wherever death found the keeper
+		# respawns come from wherever death found the keeper — but a home-blink
+		# is also the cheapest escape, so the free lane gets a cooldown
+		var now: float = Time.get_ticks_msec() / 1000.0
+		if now - float(g.get_meta("blink_t", -60.0)) < BLINK_CD:
+			return false
+		g.set_meta("blink_t", now)
+		return true
 	# waypoint hops have a visible departure too — the stone you stood on
 	return dst == "waypoint" and _near_travel_node(from) != ""
 
@@ -322,17 +352,24 @@ func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
 		return # fail closed: the swing has to come from somewhere real
-	p.hit(clampf(float(dmg), 0.0, 500.0), 1.0, false, pid) # the guest who swung takes the aggro — the host doesn't tank for remote blows
-	if sleep_s > 0.0 and p.hp > 0: # a tranq dart lands after the sting — same rule as the host's own shot
-		p.statuses["sleep"] = game.t + clampf(float(sleep_s), 0.5, 15.0)
-		game.floater(p.pos, "zzz", "#9ad8ff")
+	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
+		return # honest swings top out ~2.2/s — a 60Hz claim feed is a script
+	var bound := Combat.damage(500.0, 34.0,
+		Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(),
+		2.2, game.rng) # the formula's own ceiling against THIS target's def
+	p.hit(clampf(float(dmg), 0.0, minf(bound * 1.3, 250.0)), 1.0, false, pid)
+	# the guest who swung takes the aggro — the host doesn't tank remote blows
+	if sleep_s > 0.0 and p.hp > 0:
+		game.apply_sleep_claim(p, clampf(float(sleep_s), 0.5, 15.0))
 
 @rpc("any_peer", "call_remote", "reliable")
 func sphere_catch(nid: int, sid: String, behind: bool, cap_lv: int) -> void:
 	if not is_host:
 		return
-	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 10),
-		multiplayer.get_remote_sender_id())
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "catch_bkt", 0.7, 1.0):
+		return # honest throws pay flight+wobble seconds — not one per frame
+	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 20), pid)
 
 # Ground loot rides the same 2Hz broadcast as kin. A client never owns a
 # drop: it walks over a replica, asks with take_drop, and the host pays out
@@ -358,6 +395,8 @@ func take_drop(did: int) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	var gp = ghosts.get(pid)
+	if gp != null and not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return # loot mashing is human; a per-frame vacuum is a script
 	for d in game.drops:
 		if d.get("did", -1) != int(did):
 			continue
@@ -406,13 +445,19 @@ func decor_delta(arr: Array) -> void:
 func harvest_req(tx: int, ty: int) -> void:
 	if not is_host:
 		return
-	game.net_harvest(int(tx), int(ty), multiplayer.get_remote_sender_id())
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	game.net_harvest(int(tx), int(ty), pid)
 
 @rpc("any_peer", "call_remote", "reliable")
 func build_req(sid: String, tx: int, ty: int) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "build_bkt", 0.7, 1.0):
+		rpc_id(pid, "build_deny", str(sid))
+		return # one blueprint per breath — a fill script can't pave the island
 	if not game.net_place(str(sid), int(tx), int(ty), pid):
 		rpc_id(pid, "build_deny", str(sid)) # the client paid up front — refund the bill
 
@@ -429,7 +474,10 @@ func build_deny(sid: String) -> void:
 func demolish_req(tx: int, ty: int) -> void:
 	if not is_host:
 		return
-	game.net_demolish(int(tx), int(ty), multiplayer.get_remote_sender_id())
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "dem_bkt", 1.0, 1.0):
+		return # razing is deliberate — a sweep script gets one refusal per beat
+	game.net_demolish(int(tx), int(ty), pid)
 
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
@@ -534,21 +582,26 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 func box_req(op: String, uid: int) -> void:
 	if not is_host:
 		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
 	# every roster is private — the op lands only if the kin answers to the sender
-	game.box_op_remote(str(op), int(uid), multiplayer.get_remote_sender_id())
+	game.box_op_remote(str(op), int(uid), pid)
 
 @rpc("any_peer", "call_remote", "reliable")
 func assign_req(x: float, y: float) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
 	var at := Vector2(clampf(float(x), 0.0, game.world.WORLD_W), clampf(float(y), 0.0, game.world.WORLD_H))
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(at) > 8.0:
 		return # a hand can't post a pal it isn't standing next to
 	game.assign_remote(pid, at)
 
-var chat_last := 0.0 # cheap flood brake — one relayed line per tick beat
+var chat_last := {} # pid -> last relay time — one spammer can't starve the table
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
 	# the claimed sender is a lie — the wire's sender_id is the only honest id
@@ -557,11 +610,14 @@ func chat(t: String, from_id: int = 0) -> void:
 		real_from = from_id
 	if real_from == multiplayer.get_unique_id():
 		return # the server relayed your own line back — hud already echoed it
+	if int(from_id) == multiplayer.get_unique_id():
+		return # my own line came back through the relay — don't double-print it
 	var line: String = str(t).left(160) # the log window can't hold a novel
 	if multiplayer.is_server():
-		if Time.get_ticks_msec() / 1000.0 - chat_last < 0.25:
-			return # a peer spamming chat gets exactly one relay per beat — and no log line either
-		chat_last = Time.get_ticks_msec() / 1000.0
+		var now: float = Time.get_ticks_msec() / 1000.0
+		if now - float(chat_last.get(real_from, -9.0)) < 0.25:
+			return # a spamming peer gets one relay per beat — and no log line either
+		chat_last[real_from] = now
 	game.log_msg("[friend] " + line)
 	if multiplayer.is_server():
 		rpc("chat", line, int(real_from)) # ENet is a star: relay to other clients

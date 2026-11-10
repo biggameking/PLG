@@ -209,3 +209,19 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     blink test that hunted "an existing waypoint" found nothing. Plant
     the structures the test needs (or compute provably-empty spots) —
     a check that reads ambient world content flakes on suite order.
+43. **Bound untrusted claims against the model, not a magic number.** A
+    flat 500 clamp on `pal_hit` still let a client deal ~10x real damage.
+    The honest bound is the formula's own ceiling: run Combat.damage at
+    max plausible atk vs the actual target's def, add small slack, cap
+    there. Claims you can't re-derive get model bounds, not wishes.
+44. **Ring-buffered signals need content asserts, not size deltas.**
+    `messages` (6) and `floaters` (80) evict at cap — `size() - before`
+    is 0 even when a call fires. Assert on the tail's content instead.
+    Bucket-gated RPCs in tests: `_throttle` lives on the ghost's meta —
+    set_meta a fresh token between sequential probes or the second call
+    starves at the rate gate, not the logic gate.
+45. **Ghost-gated handlers fail closed when the ghost is missing.**
+    Every sender-proximity/sender-bucket check resolves through
+    `ghosts.get(pid)` — a null ghost means refuse, and headless tests
+    must `spawn_ghost(sender_pid)` before calling the RPC, not just
+    set `is_host`.

@@ -392,10 +392,11 @@ func run() -> void:
 		if game.party_pal() != cm: # box_to_party auto-fields an empty strip —
 			game.send_out(cm.uid)  # a second tap on the out pal recalls it
 		# absolute check: the fielded mule IS the cap — the outgoing pal's aura
-		# leaves with it, so mirror carry_cap's own formula, not a +120 delta
+		# leaves with it, so mirror carry_cap's own formula, not a +120 delta.
+		# (bag weight is seed-dependent — the contract is the cap, not the load)
 		var want_cap: float = 300.0 + (p.level - 1) * 10.0 + 120.0
-		check("pack mule lifts cap", absf(p.carry_cap() - want_cap) < 0.01
-			and p.carry_wt() < p.carry_cap(), "cap=%.0f want=%.0f base=%.0f" % [p.carry_cap(), want_cap, cap0])
+		check("pack mule lifts cap", absf(p.carry_cap() - want_cap) < 0.01,
+			"cap=%.0f want=%.0f base=%.0f" % [p.carry_cap(), want_cap, cap0])
 		game.retract_out()
 		game.pals.erase(cm); game.party.erase(cm.uid); game.bench.erase(cm)
 		if cm.get_parent(): cm.get_parent().remove_child(cm)
@@ -2166,6 +2167,7 @@ func run() -> void:
 	game.net.box_sync(pack, [nbuid], ppack)
 	check("party sync mirror", game.net_party.size() == ppack.size())
 	game.net.is_host = true
+	game.net.spawn_ghost(0) # the wire's headless sender carries a bucket
 	game.net.box_req("box_to_party", nbuid)
 	check("box req promotes", nbp not in game.box and game.party.has(nbuid))
 	game.net.box_req("party_to_box", nbuid)
@@ -2174,6 +2176,7 @@ func run() -> void:
 			game.bench.has(nbp), game.pals.has(nbp), str(game.party)])
 	game.net.box_req("bogus_op", nbuid)
 	check("box req whitelist", nbp in game.box) # unknown ops no-op, pal survives
+	game.net.ghosts[0].queue_free(); game.net.ghosts.erase(0)
 	game.net.is_host = false
 	game.box.erase(nbp)
 	if nbp.get_parent(): nbp.get_parent().remove_child(nbp)
@@ -4613,23 +4616,28 @@ func run() -> void:
 	# The save-coercion tests leave the world structure-less: plant fixtures.
 	var kb := Vector2i(-1, -1)
 	var wk := Vector2i(-1, -1)
+	var px3 := int(game.player.pos.x); var py3 := int(game.player.pos.y)
 	for r3 in range(6, 70):
 		if kb.x >= 0 and wk.x >= 0:
 			break
-		var cc := Vector2i(int(game.player.pos.x) + r3, int(game.player.pos.y))
-		var clear := true
-		for dy3 in range(3):
-			for dx3 in range(3):
-				var k3 := cc + Vector2i(dx3, dy3)
-				if not game.world.in_bounds(k3.x, k3.y) or game.world.blocked(k3.x, k3.y) \
-						or game.structures.has(k3):
-					clear = false
-		if not clear:
-			continue
-		if kb.x < 0 and game.place_free("kinbox", cc.x, cc.y):
-			kb = cc
-		elif wk.x < 0 and cc.distance_to(kb) > 16.0 and game.place_free("waypoint", cc.x, cc.y):
-			wk = cc
+		for d6 in [Vector2i(r3, 0), Vector2i(-r3, 0), Vector2i(0, r3), Vector2i(0, -r3),
+				Vector2i(r3, r3), Vector2i(-r3, -r3), Vector2i(r3, -r3), Vector2i(-r3, r3)]:
+			if kb.x >= 0 and wk.x >= 0:
+				break
+			var cc: Vector2i = Vector2i(px3, py3) + d6
+			var clear := true
+			for dy3 in range(3):
+				for dx3 in range(3):
+					var k3: Vector2i = cc + Vector2i(dx3, dy3)
+					if not game.world.in_bounds(k3.x, k3.y) or game.world.blocked(k3.x, k3.y) \
+							or game.structures.has(k3):
+						clear = false
+			if not clear:
+				continue
+			if kb.x < 0 and game.place_free("kinbox", cc.x, cc.y):
+				kb = cc
+			elif wk.x < 0 and cc.distance_to(kb) > 16.0 and game.place_free("waypoint", cc.x, cc.y):
+				wk = cc
 	check("blink fixtures planted", kb.x >= 0 and wk.x >= 0, "kb=%s wk=%s" % [kb, wk])
 	if kb.x >= 0:
 		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0)
@@ -4645,28 +4653,208 @@ func run() -> void:
 		g0.net_pos = Vector3(src_far.x, src_far.y, 0) # open ground, far from stones
 		game.net.sync_pos(wdst.x, wdst.y, 0.0)
 		check("waypoint jump off-node dies", g0.net_pos == Vector3(src_far.x, src_far.y, 0))
-		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0) # home first…
+		# the home lane has a cooldown — a death-blink isn't a free escape rope
+		g0.net_pos = Vector3(src_far.x, src_far.y, 0)
+		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0)
+		check("home blink cooldown bites", g0.net_pos == Vector3(src_far.x, src_far.y, 0))
+		g0.net_pos = Vector3(kb.x + 0.5, kb.y + 2.5, 0) # standing at the pad
 		game.net.sync_pos(wdst.x, wdst.y, 0.0) # …then node→node
 		check("node-to-node hop lands", g0.net_pos == Vector3(wdst.x, wdst.y, 0))
+	# elevation is validated too — guests can't float above the skybox
+	g0.net_pos = Vector3(151, 150, 0) # a hop-length step away, no blink needed
+	g0.set_meta("pos_allow", 6.0) # earlier blinks drained the bucket
+	game.net.sync_pos(152.0, 150.0, 99.0)
+	check("sync_pos clamps elevation", g0.net_pos == Vector3(152, 150, 8))
+	g0.set_meta("pos_allow", 6.0)
+	game.net.sync_pos(152.0, 150.0, NAN)
+	check("sync_pos kills NaN elev", g0.net_pos == Vector3(152, 150, 8))
 	g0.queue_free(); game.net.ghosts.erase(0)
-	# pal_hit clamps the claimed number — the wire says 99999, the kin feels ≤500
+	# pal_hit bounds the claim by the formula's own ceiling vs THIS target —
+	# the wire says 99999, the kin feels the model's max (~a couple hundred)
 	game.net.is_host = true # the relay only runs host-side
 	var vt: Kin = game.gen_pal("fenjelly", 5, Vector2(160, 150))
 	vt.mode = "wild"; game.pals.append(vt)
 	game.net.spawn_ghost(0)
 	game.net.ghosts[0].net_pos = Vector3(vt.pos.x, vt.pos.y, 0)
+	vt.max_hp = 99999.0; vt.hp = vt.max_hp # deep pool so the bound is what caps
 	var hp_v: float = vt.hp
 	game.net.pal_hit(vt.uid, 99999.0)
-	check("pal_hit clamps claims", vt.hp >= hp_v - 500.0 and vt.hp < hp_v,
+	check("pal_hit bounds claims", vt.hp >= hp_v - 260.0 and vt.hp < hp_v,
 		"hp=%.0f/%0f" % [vt.hp, hp_v])
+	# per-sender hit bucket: after the burst, rapid claims starve out
+	var nhits := 0
+	for i in 12:
+		var hp_b: float = vt.hp
+		game.net.pal_hit(vt.uid, 50.0)
+		if vt.hp < hp_b:
+			nhits += 1
+	check("pal_hit rate-limits spam", nhits <= 5 and nhits > 0, "landed=%d" % nhits)
+	# forged sleep can't chain-lock: a darted kin resists re-darting after waking
+	vt.hp = vt.max_hp
+	game.net.ghosts[0].set_meta("hit_bkt", 6.0) # fresh bucket for the sleep claims
+	game.net.pal_hit(vt.uid, 0.0, 10.0)
+	check("sleep claim lands", vt.statuses.get("sleep", 0.0) > game.t)
+	vt.statuses.erase("sleep")
+	game.net.ghosts[0].set_meta("hit_bkt", 6.0)
+	game.net.pal_hit(vt.uid, 0.0, 10.0)
+	check("chain sleep resisted", not vt.statuses.has("sleep"))
+	vt.statuses.clear(); vt.set_meta("slp_immune", 0.0)
 	game.net.ghosts[0].queue_free(); game.net.ghosts.erase(0)
 	game.pals.erase(vt)
 	if vt.get_parent():
 		vt.get_parent().remove_child(vt)
 	vt.free()
+	# sphere_catch throttles the roll — one throw per breath, not per frame
+	game.net.is_host = true
+	var ct: Kin = game.gen_pal("fenjelly", 3, Vector2(165, 150))
+	ct.mode = "wild"; game.pals.append(ct)
+	game.net.spawn_ghost(0)
+	game.net.ghosts[0].net_pos = Vector3(ct.pos.x, ct.pos.y, 0)
+	game.net.sphere_catch(ct.uid, "kin_orb", false, 99) # over-clamp cap_lv
+	game.net.sphere_catch(ct.uid, "kin_orb", false, 99) # same breath — dies
+	var fz: int = game.floaters.size()
+	var f_last: String = str(game.floaters[fz - 1]["t"])
+	var f_prev: String = str(game.floaters[fz - 2]["t"])
+	check("catch roll throttled",
+		(f_last.contains("CAUGHT") or f_last.contains("broke free"))
+		and not (f_prev.contains("CAUGHT") or f_prev.contains("broke free")),
+		"tail=%s/%s" % [f_prev, f_last])
+	game.pals.erase(ct); game.box.erase(ct); game.bench.erase(ct)
+	game.remote_parties.erase("_pid0") # a caught kin lands under the sender's key
+	if ct.get_parent():
+		ct.get_parent().remove_child(ct)
+	ct.free()
+	# demolish gates: anchors refuse, foreign builds refuse, own build razed
+	var kbx: Variant = null
+	for kk in game.structures:
+		if game.structures[kk]["id"] == "kinbox":
+			kbx = kk; break
+	check("kinbox fixture found", kbx != null)
+	if kbx != null:
+		game.net.demolish_req(kbx.x, kbx.y)
+		check("anchor refuses raze", game.structures.get(kbx) != null)
+	var cd := Vector2i(-1, -1)
+	for r4 in range(4, 60): # seed-proof: scan outward from the keeper
+		var c4 := Vector2i(int(game.player.pos.x) + r4, int(game.player.pos.y))
+		if game.world.in_bounds(c4.x, c4.y) and not game.world.blocked(c4.x, c4.y) \
+				and not game.structures.has(c4) and game.place_free("campfire", c4.x, c4.y):
+			cd = c4; break
+	check("campfire fixture planted", cd.x >= 0)
+	if cd.x >= 0:
+		game.net.spawn_ghost(0)
+		game.net.ghosts[0].net_pos = Vector3(cd.x + 0.5, cd.y + 0.5, 0)
+		var stc: Dictionary = game.structures[cd]
+		stc["placed_by"] = 7 # a guest's build
+		game.net.ghosts[0].set_meta("dem_bkt", 1.0) # dem_bkt feeds one refusal per beat
+		game.net.demolish_req(cd.x, cd.y) # headless sender pid=0 ≠ 7
+		check("foreign build refuses raze", game.structures.get(cd) != null)
+		stc["placed_by"] = 0 # host-built — razing needs a witnessed ghost in reach
+		game.net.ghosts[0].set_meta("dem_bkt", 1.0)
+		game.net.demolish_req(cd.x, cd.y)
+		check("own build razes", game.structures.get(cd) == null)
+	# net_place stamps who built it — the tag drives the demolish gate
+	if "campfire" not in game.unlocked:
+		game.unlocked.append("campfire") # save tests may have pruned the tech list
+	var cd2 := Vector2i(-1, -1)
+	var cp_n := 0
+	game.net.spawn_ghost(5) # the sender's ghost vouches for proximity
+	for r5 in range(2, 40):
+		if cd2.x >= 0:
+			break
+		for d5 in [Vector2i(r5, 0), Vector2i(-r5, 0), Vector2i(0, r5), Vector2i(0, -r5),
+				Vector2i(r5, r5), Vector2i(-r5, r5), Vector2i(r5, -r5), Vector2i(-r5, -r5)]:
+			var c5: Vector2i = Vector2i(int(game.player.pos.x), int(game.player.pos.y)) + d5
+			if not (game.world.in_bounds(c5.x, c5.y)
+					and game.can_place("campfire", c5.x, c5.y)):
+				continue
+			cp_n += 1
+			game.net.ghosts[5].net_pos = Vector3(c5.x + 0.5, c5.y + 0.5, 0)
+			if game.net_place("campfire", c5.x, c5.y, 5):
+				cd2 = c5; break
+	var st_ct := 0
+	var seen2 := []
+	for k2x in game.structures:
+		if game.structures[k2x] not in seen2:
+			seen2.append(game.structures[k2x]); st_ct += 1
+	check("guest build tagged", cd2.x >= 0
+		and int(game.structures.get(cd2, {}).get("placed_by", -1)) == 5,
+		"cd2=%s canplace=%d structs=%d/%d" % [cd2, cp_n, st_ct, game.MAX_STRUCTURES])
+	if cd2.x >= 0:
+		game.net_remove_structure(game.structures[cd2]) # leave no trace
+	game.net.ghosts[5].queue_free(); game.net.ghosts.erase(5)
+	game.net.ghosts[0].queue_free(); game.net.ghosts.erase(0) # no stray bait for wild_ai
+	# orphaned roster: field kin box up under the tag, ids go -1 for rebind
+	var op1: Kin = game.gen_pal("fenjelly", 2, Vector2(150, 152))
+	op1.mode = "partner"; op1.owner_id = 7; op1.owner_tag = "tok_z"
+	game.pals.append(op1)
+	var op2: Kin = game.gen_pal("fenjelly", 2, Vector2(150, 152))
+	op2.mode = "base"; op2.owner_id = 7
+	var jobsite := {"workers": [op2], "id": "campfire", "cells": []}
+	op2.job_site = jobsite
+	game.pals.append(op2)
+	game.orphan_guest_kin(7)
+	check("orphans boxed", op1.mode == "box" and op2.mode == "box"
+		and op1.owner_id == -1 and op2.owner_id == -1
+		and op2.job_site == null
+		and op1 in game.box and op2 in game.box and op1 not in game.pals)
+	game.rebind_owner(7, "tok_z")
+	check("rejoin reclaims orphans", op1.owner_id == 7)
+	game.box.erase(op1); game.box.erase(op2)
+	op1.free(); op2.free()
+	# severed session: host-owned replicas purge, they can't be free catches
+	var rex: Kin = game.gen_pal("fenjelly", 2, Vector2(150, 152))
+	rex.mode = "wild"; rex.net_id = 4242; game.pals.append(rex)
+	var rex2: Kin = game.gen_pal("fenjelly", 2, Vector2(150, 152))
+	rex2.mode = "box"; rex2.net_id = 4243; game.box.append(rex2); game.box_pal(rex2)
+	game.remote_parties[9] = [1, 2]
+	game.purge_replicas()
+	check("replicas purged", rex not in game.pals and rex2 not in game.box
+		and game.remote_parties.is_empty())
+	rex.free(); rex2.free()
+	# a guest's field pal doesn't graze the host pantry or medicine chest
+	var fk: Kin = game.gen_pal("fenjelly", 3, Vector2(152, 152))
+	fk.mode = "partner"; fk.owner_id = 7; fk.hunger = 90.0
+	fk.hp = fk.max_hp; fk.san = 50.0; fk.ailment = ""
+	game.pals.append(fk)
+	game.items["milk"] = 3
+	fk.tick_needs(1.0)
+	check("foreign pal skips host bag", int(game.items["milk"]) == 3)
+	fk.ailment = "sick"; fk.san = 30.0
+	fk.tick_needs(1.0)
+	check("foreign pal skips host meds", fk.ailment == "sick" and int(game.items["milk"]) == 3)
+	game.pals.erase(fk); fk.free(); game.items.erase("milk")
+	# the host can evict a foreign worker but can't post one
+	var fw: Kin = game.gen_pal("fenjelly", 3, game.player.pos)
+	fw.mode = "base"; fw.owner_id = 7
+	var fjs := {"workers": [fw], "id": "campfire", "cells": []}
+	fw.job_site = fjs
+	game.pals.append(fw)
+	game.assign_worker() # F on it: evict, not post
+	check("host evicts foreign worker", fw.job_site == null and fjs["workers"].is_empty())
+	game.assign_worker() # F again: foreign pal stays unposted
+	check("host can't post foreign", fw.job_site == null)
+	game.pals.erase(fw); fw.free()
+	# chat: the brake is per-sender, and my own relayed line doesn't echo.
+	# The brake lives host-side — a real server peer flips is_server() on.
+	var srv := ENetMultiplayerPeer.new()
+	srv.create_server(7789)
+	game.net.multiplayer.multiplayer_peer = srv
+	game.net.chat("hi", 5)
+	game.net.chat("again", 5) # same sender inside the beat — dropped
+	game.net.chat("yo", 6) # a different sender still reaches the log
+	check("chat per-peer brake", game.messages.has("[friend] hi")
+		and game.messages.has("[friend] yo")
+		and not game.messages.has("[friend] again"), "msgs=%s" % str(game.messages))
+	game.net.chat("mine", game.net.multiplayer.get_unique_id())
+	check("chat self-echo muted", not game.messages.has("[friend] mine"))
+	# live-tag guard: a claimed identity refuses a second session
+	game.net.peer_tags[5] = "tok_a"
+	game.net.hello("tok_a") # pid 0 headless — the tag belongs to live peer 5
+	check("stolen tag refused", not game.net.peer_tags.has(0))
+	game.net.peer_tags.erase(5)
+	game.net.multiplayer.multiplayer_peer = fake_peer
+	srv.close()
 	game.net.is_host = false
-	# wild kin cast at ghost coordinates — a guest draws real skill fire, not
-	# just melee bites; the kinds filter keeps body-required skills off them
 	var caster2: Kin = game.gen_pal("fenjelly", 10, Vector2(160, 150))
 	caster2.mode = "wild"; game.pals.append(caster2)
 	caster2.extra_skills = ["airCannon"]

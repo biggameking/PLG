@@ -516,7 +516,7 @@ func partner_ai(dt: float) -> void:
 				var mult := Combat.effectiveness("neutral", best.elem())
 				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus * atk_mult(), 30,
 					Combat.stat_at(best.spec["def"], best.level, best.talent) * best.def_bonus * best.def_mult(), mult, game.rng)
-				best.hit(d, mult, true)
+				best.hit(d, mult, true, owner_id) # a guest's pal provokes the guest, not the host
 		elif bd > 5.0:
 			step_toward(best.pos, dt)
 		return
@@ -593,7 +593,7 @@ func base_ai(dt: float) -> void:
 				var mult := Combat.effectiveness("neutral", foe.elem())
 				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus * atk_mult(), 25,
 					Combat.stat_at(foe.spec["def"], foe.level, foe.talent) * foe.def_bonus * foe.def_mult(), mult, game.rng)
-				foe.hit(d, mult, true)
+				foe.hit(d, mult, true, owner_id) # a guest's pal provokes the guest, not the host
 		return
 	# the island night shift: diurnal kin doze off after dark — production skips
 	# sleepers; dark-element kin are nocturnal — lights on overnight, napping
@@ -751,7 +751,9 @@ func tick_needs(dt: float) -> void:
 		else:
 			low_san_t = 0.0
 	else: # sick pals self-medicate: base stock for workers, the bag for partners
-		if game.take_medicine(mode == "partner"):
+		if owner_id > 0 and mode == "partner":
+			pass # a guest's pal can't raid the host's bag — its keeper packs the meds
+		elif game.take_medicine(mode == "partner"):
 			ailment = ""
 			san = minf(100.0, san + 30.0)
 			game.log_msg("%s took medicine - recovered" % spec["name"])
@@ -766,7 +768,7 @@ func tick_needs(dt: float) -> void:
 		var ate := 0
 		if mode == "base" and game.has_structure("feed_box"):
 			ate = game.eat_food_item() # stocked base food
-		elif mode == "partner":
+		elif mode == "partner" and owner_id <= 0:
 			ate = game.eat_from_bag() # party pals share the player's pack
 		if ate > 0:
 			hunger = maxf(0, hunger - float(ate) * 2.5)

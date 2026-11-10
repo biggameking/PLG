@@ -3228,8 +3228,6 @@ func assign_worker() -> void:
 	var best: Kin = null
 	var bd := 3.0
 	for p in base_pals():
-		if p.owner_id != 0:
-			continue # a guest's pal answers to its keeper, not to your F
 		var d := player.pos.distance_to(p.pos)
 		if d < bd:
 			bd = d
@@ -3242,6 +3240,9 @@ func assign_worker() -> void:
 		best.job_site = null
 		log_msg("%s unassigned" % best.spec["name"])
 		return
+	if best.owner_id != 0:
+		log_msg("%s answers to its keeper" % best.spec["name"])
+		return # the host's yard, the host's call: evict is allowed, posting is not
 	var site: Variant = find_work_site(best, 6.0)
 	if site:
 		if best not in site["workers"]:
@@ -3432,7 +3433,7 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 				tp.statuses.erase("soak")
 		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus * caster.atk_mult(),
 			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus * tp.def_mult(), mult, rng)
-		tp.hit(d, mult, caster.mode != "wild")
+		tp.hit(d, mult, caster.mode != "wild", caster.owner_id) # a guest's pal provokes the guest
 		tp.apply_skill_status(sk)
 		if caster.mode == "partner":
 			gain_xp(maxi(1, d / 4))
@@ -3472,8 +3473,7 @@ func update_projectiles(dt: float) -> void:
 						else:
 							p.hit(player.mercy_dmg(d, p), mult, true)
 							if float(pr.get("sleep", 0.0)) > 0.0 and p.hp > 0: # a tranq dart lands AFTER the sting — the hit would wake it otherwise
-								p.statuses["sleep"] = t + float(pr["sleep"])
-								floater(p.pos, "zzz", "#9ad8ff")
+								apply_sleep_claim(p, float(pr["sleep"])) # same anti-chain gate the wire claims use
 						dead = true
 						break
 			if dead:
@@ -5439,14 +5439,67 @@ func net_place(sid: String, tx: int, ty: int, pid: int) -> bool:
 	if not can_place(sid, tx, ty): # terrain/footprint/cap rules still hold
 		return false
 	if place_free(sid, tx, ty): # the client already paid locally
+		var st2 = structures.get(Vector2i(tx, ty))
+		if st2 != null:
+			st2["placed_by"] = pid # guest-built means guest-demolishable — host work isn't
 		log_msg("Player %d built %s" % [pid, s.get("name", sid)])
 		return true
 	return false
+
+func apply_sleep_claim(p: Kin, dur: float) -> void:
+	# chain-sleep is cheese: a darted kin resists re-darting for a beat after
+	# it wakes — same rule for the keeper's own tranq and the wire's claim
+	if p.get_meta("slp_immune", 0.0) > t:
+		return
+	p.statuses["sleep"] = t + dur
+	p.set_meta("slp_immune", t + dur + 5.0)
+	floater(p.pos, "zzz", "#9ad8ff")
+
+func orphan_guest_kin(pid: int) -> void:
+	# a leaving keeper's roster waits under its tag — same -1 orphan contract
+	# load_game uses for foreign pals. Field kin (partner/base) retreat into
+	# cold storage: a pal with no keeper doesn't shadow the host or keep
+	# eating the pantry — it waits for the tag to walk back in.
+	for p in pals.duplicate():
+		if is_instance_valid(p) and p.owner_id == pid:
+			player.dismount_if(p)
+			if p.job_site != null:
+				p.job_site["workers"].erase(p)
+				p.job_site = null
+			pals.erase(p)
+			p.mode = "box"
+			box.append(p)
+			box_pal(p)
+	for coll in [box, bench]:
+		for p in coll:
+			if is_instance_valid(p) and p.owner_id == pid:
+				p.owner_id = -1
+
+func purge_replicas() -> void:
+	# severed session: host-owned statue kin (net_id > 0) die with the wire —
+	# left behind they'd be locally catchable clone-pals
+	for p in pals.duplicate():
+		if p.net_id > 0:
+			pals.erase(p)
+			p.queue_free()
+	for q in box.duplicate():
+		if q.net_id > 0:
+			box.erase(q)
+			q.queue_free()
+	for q2 in bench.duplicate():
+		if q2.net_id > 0:
+			bench.erase(q2)
+			q2.queue_free()
+	remote_parties.clear()
 
 func net_demolish(tx: int, ty: int, pid: int) -> void:
 	var st = structures.get(Vector2i(tx, ty))
 	if st == null:
 		return
+	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false):
+		return # the kinbox holds every stored pal — nobody razes the anchor
+	if int(st.get("placed_by", 0)) != pid:
+		return # guests raze only what they built — the host's walls aren't theirs
 	var gp = net.ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
 		return # fail closed: razing needs a witnessed ghost in range
@@ -5467,6 +5520,12 @@ func net_remove_structure(st: Dictionary) -> void:
 		st["workers"].erase(w)
 		if is_instance_valid(w):
 			w.job_site = null
+	var xp3: Kin = st.get("exp_pal") # a razed post recalls its expedition pal
+	if is_instance_valid(xp3) and xp3.mode == "expedition":
+		xp3.mode = "base"; xp3.visible = true
+		xp3.job_site = null
+		if not cells.is_empty():
+			xp3.pos = Vector2(cells[0].x + 0.5, cells[0].y + 0.5)
 	for k in cells:
 		structures.erase(k)
 		world.structures.erase(world.idx(k.x, k.y))

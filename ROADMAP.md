@@ -182,3 +182,27 @@ build-tools/apksigner).
   (rain/storm streaks, drought motes) and a pulsing red danger vignette
   while `danger_active` holds. Smoke covers shake kick + decay; FX are
   deterministic game.t lanes, zero allocation.
+- S21 authority hardening — DONE: shared `_throttle` token-bucket helper
+  keyed on the sender's ghost drives every per-peer rate limit
+  (pal_hit 3/s+6 burst, sphere_catch ~1.4s, build/demolish ~1s+,
+  harvest/loot/roster shared 8/s+10). pal_hit claims now bounded by the
+  formula's own ceiling vs THIS target (atk=500 model, ≤250 landed) and
+  sleep claims route through `apply_sleep_claim`'s chain-sleep immunity
+  (host tranq uses the same gate). sphere_catch cap_lv clamp fixed 10→20
+  (real capture_level range). demolish refuses anchors outright and any
+  structure not stamped `placed_by = sender` (net_place stamps it).
+  Disconnect: `_on_peer_disconnected` retracts the field pal then
+  `orphan_guest_kin` boxes every owned kin under its tag for rejoin
+  (`rebind_owner` reclaims on hello); `_on_server_disconnected` purges
+  host replicas (no statue kin left catchable). Foreign partner kin no
+  longer graze the host bag/medicine; `assign_worker` lets the host
+  evict (unassign) foreign workers but never post them. `sync_pos` now
+  validates elevation (finite, clamp −1..8) and home-lane blinks carry a
+  3s cooldown. `skill_hit`/`hit` pass `caster.owner_id` so a guest's pal
+  provokes the guest. Razing a structure recalls its `exp_pal`. chat is
+  per-sender braked + self-echo deduped; hello rejects a tag held by a
+  live peer. Smoke +26 checks covering every new gate's accept/reject.
+  Deferred honestly: client damage/sleep claims are bounded, not
+  re-derived; guest bag/orb spend unverifiable (private rosters);
+  build_deny refunds a possibly-forged request (bounded by tech gate +
+  throttle; only the cheater's client sees the refund).
