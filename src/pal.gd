@@ -48,6 +48,8 @@ var low_san_t := 0.0        # sustained seconds under SAN 15 — onset timer
 var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
 var net_target := Vector2.INF # last host-reported world pos (INF = none yet)
+var owner_id := 0           # multiplayer owner: 0 = the keeper (host/local), >0 = a client's peer id
+var owner_tag := ""         # keeper's stable install token — survives save/load across sessions
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
 	game = g
@@ -347,11 +349,19 @@ func wild_ai(dt: float) -> void:
 	if hostile() >= 1 and dist < trigger and not has_status("sleep"):
 		aggro = 0
 
+func anchor_pos() -> Vector2:
+	# a guest's partner heels to its keeper's ghost, not to our player —
+	# host pals keep the old anchor so single-player is untouched
+	if owner_id > 0 and game.net != null:
+		var g = game.net.ghosts.get(owner_id)
+		if g != null and g.net_pos.x >= 0:
+			return Vector2(g.net_pos.x, g.net_pos.y)
+	return game.player.pos
+
 func partner_ai(dt: float) -> void:
 	if not visible:
-		pos = game.player.pos
+		pos = anchor_pos()
 		return
-	var pl := game.player
 	# attack nearest wild pal threatening player — stance tunes who counts
 	# (Palworld pal commands: auto defends, aggressive hunts on sight)
 	var best: Pal = null
@@ -399,13 +409,14 @@ func partner_ai(dt: float) -> void:
 		if pos.distance_squared_to(grab["pos"]) > 0.4:
 			step_toward(grab["pos"], dt)
 		elif grab in game.drops: # a hauler may have beaten us to it
-			game.add_item(grab["id"], grab["n"])
+			game.give_remote(owner_id, grab["id"], grab["n"])
 			game.floater(grab["pos"], "+%d %s" % [grab["n"],
 				ItemData.ITEMS.get(grab["id"], {}).get("name", grab["id"])], "#ffe08a")
 			game.take_drop(grab)
 		return
-	if pos.distance_to(pl.pos) > 1.8:
-		step_toward(pl.pos, dt)
+	var anchor := anchor_pos()
+	if pos.distance_to(anchor) > 1.8:
+		step_toward(anchor, dt)
 
 func find_foe() -> Pal:
 	# nearest flagged hostile on the beat — 12 tiles for a posted sentry,

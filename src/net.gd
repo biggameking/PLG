@@ -10,6 +10,7 @@ var entity_layer: Node2D
 var ghosts := {}  # peer_id -> Node2D
 var send_timer := 0.0
 var is_host := false
+var peer_tags := {} # peer_id -> install token — a guest's stable keeper identity
 
 func setup(g: Game, layer: Node2D) -> void:
 	game = g
@@ -54,13 +55,47 @@ func _on_peer_connected(id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	spawn_ghost(1)  # host
+	rpc("hello", my_tag()) # our install token claims our pals on their world
 	game.log_msg("Connected to host")
+
+func my_tag() -> String:
+	# one random token per install — lets a guest's pals find their keeper
+	# again across sessions without any account system
+	var cf := ConfigFile.new()
+	var t := ""
+	if cf.load("user://plg_net.cfg") == OK:
+		t = str(cf.get_value("net", "tag", ""))
+	if t == "":
+		t = "%x%x" % [randi(), int(Time.get_unix_time_from_system() * 1000) & 0x7FFFFFFF]
+		cf.set_value("net", "tag", t)
+		cf.save("user://plg_net.cfg")
+	return t
+
+@rpc("any_peer", "call_remote", "reliable")
+func hello(tag: String) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	peer_tags[pid] = str(tag).substr(0, 24)
+	game.rebind_owner(pid, peer_tags[pid])
+	# they may already own pals here — hand the roster over immediately
+	rpc_id(pid, "box_sync", box_state_pack(pid), game.rparty_for(pid).duplicate(), party_state_pack(pid))
+
+@rpc("authority", "call_remote", "reliable")
+func net_note(msg: String) -> void:
+	game.log_msg(str(msg).substr(0, 120)) # a host whisper in the guest's log
+
+@rpc("authority", "call_remote", "reliable")
+func net_floater(x: float, y: float, txt: String, col: String) -> void:
+	game.floater(Vector2(float(x), float(y)), str(txt).substr(0, 24), str(col))
 
 func _on_peer_disconnected(id: int) -> void:
 	if ghosts.has(id):
 		ghosts[id].queue_free()
 		ghosts.erase(id)
 	if is_host:
+		game.r_retract(id) # a leaving keeper's field pal balls up under their tag
+		peer_tags.erase(id) # the tag survives in remote_parties for a rejoin
 		rpc("peer_left", id)
 
 @rpc("authority", "call_remote", "reliable")
@@ -87,7 +122,7 @@ func state_snapshot() -> Dictionary:
 	# wild/base pals, not an empty world (capped upstream by MAX_PALS)
 	var parr := []
 	for p in game.pals:
-		if p.mode in ["wild", "base"] and p.hp > 0:
+		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
 			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid])
 	return {"structures": arr, "tod": game.tod, "day": game.day, "pals": parr}
 
@@ -101,7 +136,7 @@ func state_sync(d: Dictionary) -> void:
 	# drop the population our own regenerate() spawned — the host's wild/base
 	# pals replace it, otherwise clients see every pal twice
 	for p in game.pals.duplicate():
-		if p.mode in ["wild", "base"]:
+		if p.mode in ["wild", "base", "partner"]: # partner replicas are host truth too
 			game.pals.erase(p)
 			p.queue_free()
 	var np := 0
@@ -316,30 +351,39 @@ var box_resend := 0.0
 func box_fingerprint() -> int:
 	var h := game.box.size() * 131 + game.party.size() * 7919
 	for bp in game.box:
-		h = (h * 31 + bp.uid + int(bp.hp) + (1 if bp.fav else 0)) & 0x7FFFFFFF
+		h = (h * 31 + bp.uid + int(bp.hp) + bp.owner_id + (1 if bp.fav else 0)) & 0x7FFFFFFF
 	for bb in game.bench:
-		h = (h * 31 + bb.uid + int(bb.hp)) & 0x7FFFFFFF
+		h = (h * 31 + bb.uid + int(bb.hp) + bb.owner_id) & 0x7FFFFFFF
 	for u in game.party:
 		h = (h * 17 + int(u)) & 0x7FFFFFFF
 	var out := game.party_pal()
 	if out != null:
 		h = (h * 13 + int(out.hp)) & 0x7FFFFFFF
+	for p2 in game.pals: # a guest's field pal is part of their strip's truth
+		if p2.mode == "partner":
+			h = (h * 13 + p2.owner_id * 7 + int(p2.hp)) & 0x7FFFFFFF
+	for tag in game.remote_parties:
+		for u2 in game.remote_parties[tag]:
+			h = (h * 17 + int(u2) + str(tag).hash()) & 0x7FFFFFFF
 	return h
 
-func box_state_pack() -> Array:
+func box_state_pack(pid: int) -> Array:
 	var arr := []
 	for bp in game.box:
+		if bp.owner_id != pid:
+			continue # a guest sees their own roster, nobody else's
 		arr.append([bp.uid, bp.species_id, bp.level, int(bp.hp), int(bp.max_hp),
 			bp.sex, bp.lucky, bp.talent, str(bp.ailment), bp.fav, int(bp.star),
 			game.work_str(bp.spec)])
 	return arr
 
-func party_state_pack() -> Array:
+func party_state_pack(pid: int) -> Array:
 	# the client's party strip: every party member in order — the out pal and
 	# the benched spheres alike (bench pals have no world replica to read)
 	var arr := []
-	var out_pal := game.party_pal()
-	for u in game.party:
+	var out_pal: Pal = game.party_pal() if pid == 0 else game.r_out_pal(pid)
+	var uids: Array = game.party if pid == 0 else game.rparty_for(pid)
+	for u in uids:
 		var p: Pal = game.find_pal(u)
 		if p == null:
 			p = game.bench_pal_of(u)
@@ -401,21 +445,19 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 func box_req(op: String, uid: int) -> void:
 	if not is_host:
 		return
-	var p: Pal = game.find_pal(int(uid))
-	if p == null:
-		p = game.find_box_uid(int(uid))
-	if p == null:
+	# every roster is private — the op lands only if the pal answers to the sender
+	game.box_op_remote(str(op), int(uid), multiplayer.get_remote_sender_id())
+
+@rpc("any_peer", "call_remote", "reliable")
+func assign_req(x: float, y: float) -> void:
+	if not is_host:
 		return
-	match str(op):
-		"box_to_party": game.box_to_party(p)
-		"party_to_box": game.party_to_box(p.uid)
-		"deploy_to_base": game.deploy_to_base(p)
-		"base_to_box": game.base_to_box(p)
-		"toggle_fav": game.toggle_fav(p.uid)
-		"make_active": game.make_active(p.uid)
-		"cycle_stance": game.cycle_stance(p.uid)
-		"butcher_pal": game.butcher_pal(p.uid)
-		"sell_pal": game.sell_pal_to_merchant(p.uid)
+	var pid := multiplayer.get_remote_sender_id()
+	var at := Vector2(clampf(float(x), 0.0, game.world.WORLD_W), clampf(float(y), 0.0, game.world.WORLD_H))
+	var gp = ghosts.get(pid)
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(at) > 8.0:
+		return # a hand can't post a pal it isn't standing next to
+	game.assign_remote(pid, at)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
@@ -443,7 +485,8 @@ func _process(dt: float) -> void:
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
 				box_sig = sig
 				box_resend = 15.0
-				rpc("box_sync", box_state_pack(), game.party.duplicate(), party_state_pack())
+				for pid in multiplayer.get_peers(): # each keeper opens their own box
+					rpc_id(pid, "box_sync", box_state_pack(pid), game.rparty_for(pid).duplicate(), party_state_pack(pid))
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
 				rpc("decor_delta", dd)

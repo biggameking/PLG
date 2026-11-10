@@ -28,6 +28,8 @@ var drops: Array = []        # ground drops {id,n,pos,node,did}
 var net_drops := {}          # client-side drop replicas: did -> {id,n,pos,node}
 var net_box := []            # client-side mirror of the host's box roster (dicts)
 var net_party := []          # client-side mirror of the host's party roster (dicts)
+var remote_parties := {}     # multiplayer: owner_tag -> [pal uids] — each guest's own party strip
+const MAX_REMOTE_TAGS := 32  # a roster row per keeper — enough guests for any sane co-op night
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
 var next_drop_id := 1        # host: wire key for drop_sync (never reused)
 var dirty_decor := {}        # decor cell idx -> value; host ships deltas to clients
@@ -251,6 +253,252 @@ func add_item(id: String, n: int) -> void:
 
 func item_count(id: String) -> int:
 	return items.get(id, 0)
+
+func give_remote(pid: int, id: String, n: int) -> void:
+	# a remote-owned pal's produce routes to its keeper's bag over the wire;
+	# host pals keep the local path — and a peer that dropped mid-op spills
+	# into ours rather than vanishing
+	if pid > 0 and net != null and multiplayer.get_peers().has(pid):
+		net.rpc_id(pid, "got_loot", id, n)
+	else:
+		add_item(id, n)
+
+func note_remote(pid: int, msg: String) -> void:
+	if pid > 0 and net != null and multiplayer.get_peers().has(pid):
+		net.rpc_id(pid, "net_note", msg)
+	else:
+		log_msg(msg) # offline rigs and absent peers hear it in the keeper's log
+
+func peer_pos_of(pid: int) -> Vector2:
+	# where a remote keeper stands — their ghost's last synced position
+	if net != null:
+		var g = net.ghosts.get(pid)
+		if g != null and g.net_pos.x >= 0:
+			return Vector2(g.net_pos.x, g.net_pos.y)
+	return player.pos
+
+func owns_pid(p: Pal, pid: int) -> bool:
+	return p != null and p.owner_id == pid
+
+func rparty_by_tag(tag: String) -> Array:
+	# a guest's party strip keyed by their install token — stable across
+	# sessions (peer ids are not), capped at the same 5 slots as ours
+	if not remote_parties.has(tag):
+		if remote_parties.size() >= MAX_REMOTE_TAGS:
+			# evict a cold keeper's row — their pals stay benched and rebind
+			# rebuilds the strip if they ever say hello again
+			var live: Array = net.peer_tags.values() if net != null else []
+			var victim := ""
+			for k in remote_parties:
+				if k not in live:
+					victim = k
+					break
+			remote_parties.erase(victim if victim != "" else remote_parties.keys()[0])
+		remote_parties[tag] = []
+	return remote_parties[tag]
+
+func rparty_for(pid: int) -> Array:
+	# resolve a peer id to its strip; a guest that never said hello still
+	# gets a private row keyed by session id, never the keeper's roster
+	var tag := ""
+	if net != null:
+		tag = str(net.peer_tags.get(pid, ""))
+	return rparty_by_tag(tag if tag != "" else "_pid%d" % pid)
+
+func box_count_of(pid: int) -> int:
+	var n := 0
+	for bp in box:
+		if bp.owner_id == pid:
+			n += 1
+	return n
+
+func rebind_owner(pid: int, tag: String) -> void:
+	# a guest says hello with their install token: every pal carrying it
+	# (including ones restored from the save) comes back under their hand
+	if tag == "":
+		return
+	for coll in [pals, box, bench]:
+		for p in coll:
+			# a live peer's pals are not up for grabs — only orphans (-1) and
+			# this caller's own session id can rebind to the tag
+			if is_instance_valid(p) and p.owner_tag == tag and (p.owner_id <= 0 or p.owner_id == pid):
+				p.owner_id = pid
+	# rebuild the strip from the pals themselves — it survives row eviction
+	# and any drift between the roster and the bench it describes
+	var kept := []
+	for p2 in bench:
+		if p2.owner_id == pid:
+			kept.append(p2.uid)
+	for p3 in pals:
+		if p3.mode == "partner" and p3.owner_id == pid:
+			kept.push_front(p3.uid) # the field pal leads its keeper's strip
+	remote_parties[tag] = kept.slice(0, 5)
+
+func box_op_remote(op: String, uid: int, pid: int) -> void:
+	# a client's palbox click, host-validated: only the pal's owner may move
+	# it — box, party strip and work posts are all private
+	var p: Pal = find_pal(uid)
+	if p == null:
+		p = find_box_uid(uid)
+	if p == null or not owns_pid(p, pid):
+		return
+	if pid <= 0: # sender 0 means the keeper's own machine — local paths
+		match op:
+			"box_to_party": box_to_party(p)
+			"party_to_box": party_to_box(p.uid)
+			"deploy_to_base": deploy_to_base(p)
+			"base_to_box": base_to_box(p)
+			"toggle_fav": toggle_fav(p.uid)
+			"make_active": make_active(p.uid)
+			"cycle_stance": cycle_stance(p.uid)
+			"butcher_pal": butcher_pal(p.uid)
+			"sell_pal": sell_pal_to_merchant(p.uid)
+		return
+	match op:
+		"box_to_party": r_box_to_party(p, pid)
+		"party_to_box": r_party_to_box(p, pid)
+		"deploy_to_base": deploy_to_base(p)
+		"base_to_box": r_base_to_box(p, pid)
+		"toggle_fav": toggle_fav(p.uid)
+		"make_active": r_make_active(p.uid, pid)
+		"cycle_stance": cycle_stance(p.uid)
+		"butcher_pal": r_butcher(p, pid)
+		"sell_pal": r_sell_pal(p, pid)
+
+func r_out_pal(pid: int) -> Pal:
+	for p in pals:
+		if p.mode == "partner" and p.owner_id == pid:
+			return p
+	return null
+
+func r_retract(pid: int) -> void:
+	var cur := r_out_pal(pid)
+	if cur == null:
+		return
+	pals.erase(cur)
+	cur.mode = "bench"
+	bench.append(cur)
+	box_pal(cur)
+	note_remote(pid, "%s recalled" % cur.spec["name"])
+
+func r_send_out(uid: int, pid: int) -> void:
+	var bp := bench_pal_of(uid)
+	if bp == null or bp.hp <= 0 or not owns_pid(bp, pid):
+		return
+	r_retract(pid)
+	var rp := rparty_for(pid)
+	if not rp.has(uid) and rp.size() >= 5:
+		return # a stray bench uid must not overflow the guest's strip
+	rp.erase(uid)
+	rp.push_front(uid)
+	bench.erase(bp)
+	pals.append(bp)
+	bp.mode = "partner"
+	var anchor := peer_pos_of(pid)
+	bp.pos = nearest_free(anchor.x + 1.2, anchor.y)
+	unbox_pal(bp)
+	note_remote(pid, "%s sent out!" % bp.spec["name"])
+
+func r_make_active(uid: int, pid: int) -> void:
+	var cur := r_out_pal(pid)
+	if cur != null and cur.uid == uid:
+		r_retract(pid) # tapping the field pal calls it back
+		return
+	r_send_out(uid, pid)
+
+func r_box_to_party(bp: Pal, pid: int) -> void:
+	if bp.hp <= 0 or bp.mode != "box":
+		return
+	var rp := rparty_for(pid)
+	if rp.size() >= 5:
+		note_remote(pid, "Party full (5)")
+		return
+	box.erase(bp)
+	rp.append(bp.uid)
+	bp.mode = "bench"
+	bench.append(bp)
+	note_remote(pid, "%s joined your party (%d/5)" % [bp.spec["name"], rp.size()])
+	if r_out_pal(pid) == null:
+		r_send_out(bp.uid, pid)
+
+func r_party_to_box(p: Pal, pid: int) -> void:
+	var rp := rparty_for(pid)
+	rp.erase(p.uid)
+	pals.erase(p)
+	bench.erase(p)
+	if p.job_site:
+		if p in p.job_site["workers"]:
+			p.job_site["workers"].erase(p)
+		p.job_site = null
+	p.mode = "box"
+	if p.carry != null:
+		give_remote(pid, p.carry["id"], p.carry["n"])
+		p.carry = null
+	if p not in box:
+		box.append(p)
+	box_pal(p)
+	note_remote(pid, "%s -> box" % p.spec["name"])
+
+func r_base_to_box(p: Pal, pid: int) -> void:
+	# a guest recalls their own worker — job dropped, cargo goes to their bag
+	if p.job_site:
+		if p in p.job_site["workers"]:
+			p.job_site["workers"].erase(p)
+		p.job_site = null
+	if p.carry != null:
+		give_remote(pid, p.carry["id"], p.carry["n"])
+		p.carry = null
+	pals.erase(p)
+	p.mode = "box"
+	if p not in box:
+		box.append(p)
+	box_pal(p)
+	note_remote(pid, "%s -> box" % p.spec["name"])
+
+func r_butcher(p: Pal, pid: int) -> void:
+	# the cleaver is host-side property, but a guest's own pal is theirs to
+	# spend — the goods spill at their feet, not ours
+	if p.mode != "box" or p.fav:
+		return
+	box.erase(p)
+	var mult := 3 if p.lucky else 1
+	for dr in p.spec.get("drops", []):
+		spawn_drop(dr[0], rng.int_range(dr[1], dr[2]) * mult, peer_pos_of(pid))
+	p.free() # box-holder path — same teardown as condense/sell
+	note_remote(pid, "You butchered %s… it dropped its goods" % p.spec["name"])
+
+func r_sell_pal(p: Pal, pid: int) -> void:
+	if p.mode != "box" or p.fav or merchant == null:
+		return
+	var gain := pal_sell_price(p)
+	box.erase(p)
+	p.free()
+	give_remote(pid, "gold_coin", gain)
+	note_remote(pid, "Sold %s for %dg" % [p.spec["name"], gain])
+
+func assign_remote(pid: int, at: Vector2) -> void:
+	# a guest's F: nearest of THEIR base pals toggles its post — the shared
+	# yard takes any hand, but nobody touches another keeper's pal
+	var best: Pal = null
+	var bd := 3.0
+	for p in base_pals():
+		if not owns_pid(p, pid):
+			continue
+		var d := at.distance_to(p.pos)
+		if d < bd:
+			bd = d
+			best = p
+	if best == null:
+		return
+	if best.job_site != null:
+		best.job_site["workers"].erase(best)
+		best.job_site = null
+		return
+	var site: Variant = find_work_site(best, 6.0)
+	if site:
+		if best not in site["workers"]:
+			site["workers"].append(best)
+		best.job_site = site
 
 # Palworld carry weight: every item pulls on the bag. Kind defaults,
 # a few heavy standouts get their own numbers.
@@ -1101,8 +1349,8 @@ func catch_fail() -> void:
 
 func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> void:
 	# Host-authoritative catch for a client's throw. The wire id is our own
-	# uid (client replicas mirror it). The world is shared, so a caught pal
-	# goes to the shared palbox — same as a full-party catch.
+	# uid (client replicas mirror it). The world is shared, the roster is
+	# not: the catch answers to the keeper who threw the ball.
 	var target: Pal = find_pal(nid)
 	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss:
 		return
@@ -1114,12 +1362,16 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
 		sp_pow, target.any_status(), behind, cap_lv))
 	if randf() < chance:
-		if box.size() >= MAX_BOX:
+		var rp := rparty_for(pid)
+		if rp.size() >= 5 and box_count_of(pid) >= MAX_BOX:
 			floater(target.pos, "BOX FULL", "#e8963c")
 			log_msg("Palbox is full (%d) - %s got away" % [MAX_BOX, target.spec["name"]])
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
-		log_msg("Player %d caught %s Lv%d — into the palbox" % [pid, target.spec["name"], target.level])
+		if net != null and multiplayer.get_peers().has(pid):
+			net.rpc_id(pid, "net_floater", target.pos.x, target.pos.y, "★ CAUGHT!", "#4dd0e1")
+		log_msg("Player %d caught %s Lv%d — into their palbox" % [pid, target.spec["name"], target.level])
+		note_remote(pid, "You caught %s Lv%d" % [target.spec["name"], target.level])
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		if catch_counts[target.species_id] == 10: # paldeck mastery unlocks — sharpen the whole line
 			log_msg("Paldeck mastery: %s +10%%" % target.spec["name"])
@@ -1128,11 +1380,22 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
-		target.net_id = 0 # it's our pal now — replicas stop being tracked
-		target.mode = "box"
-		box.append(target)
-		pals.erase(target)
-		box_pal(target)
+		target.net_id = 0 # it's a keeper's pal now — replicas stop being tracked
+		target.owner_id = pid
+		target.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
+		if rp.size() < 5: # a catch joins the party until the strip is full
+			target.mode = "bench"
+			rp.append(target.uid)
+			bench.append(target)
+			pals.erase(target)
+			box_pal(target)
+			if r_out_pal(pid) == null:
+				r_send_out(target.uid, pid) # an empty strip means the catch takes the field
+		else:
+			target.mode = "box"
+			box.append(target)
+			pals.erase(target)
+			box_pal(target)
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free from player %d's sphere" % [target.spec["name"], pid])
@@ -1254,7 +1517,7 @@ func condense_active() -> void:
 		var need0: int = CONDENSE_COST[ap0.star]
 		var have0 := 0
 		for bp0 in box:
-			if bp0.species_id == ap0.species_id:
+			if bp0.species_id == ap0.species_id and bp0.owner_id == 0:
 				have0 += 1
 		if have0 >= need0:
 			if t > condense_arm: # first E previews; second E within 4s commits
@@ -1272,8 +1535,8 @@ func condense_active() -> void:
 	# fodder = same-species pals in the box (weakest first, active excluded)
 	var fodder: Array = []
 	for bp in box:
-		if bp.species_id == ap.species_id and bp.uid != ap.uid and not bp.fav:
-			fodder.append(bp) # heart-locked pals are never fodder
+		if bp.species_id == ap.species_id and bp.uid != ap.uid and not bp.fav and bp.owner_id == 0:
+			fodder.append(bp) # heart-locked pals are never fodder — nor are guests'
 	fodder.sort_custom(func(a, b): return a.level < b.level)
 	if fodder.size() < need:
 		log_msg("Need %d same-species pals for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
@@ -2540,6 +2803,8 @@ func deploy_to_base(p: Pal) -> void:
 		return
 	player.dismount_if(p)
 	party.erase(p.uid)
+	if p.owner_id > 0:
+		rparty_for(p.owner_id).erase(p.uid) # a guest's slot frees when their pal takes a post
 	box.erase(p)
 	bench.erase(p)
 	if p.mode in ["box", "bench"]:
@@ -2595,6 +2860,8 @@ func assign_worker() -> void:
 	var best: Pal = null
 	var bd := 3.0
 	for p in base_pals():
+		if p.owner_id != 0:
+			continue # a guest's pal answers to its keeper, not to your F
 		var d := player.pos.distance_to(p.pos)
 		if d < bd:
 			bd = d
@@ -2886,7 +3153,7 @@ func save_game() -> void:
 			"san": p.san, "hunger": p.hunger, "job": jc, "carry": p.carry,
 			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment, "sb": p.soul_boost,
 			"lucky": p.lucky, "extra": p.extra_skills, "stance": p.stance,
-			"bnt": p.bounty, "eq": p.equipped,
+			"bnt": p.bounty, "eq": p.equipped, "own": p.owner_tag,
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -2895,6 +3162,7 @@ func save_game() -> void:
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "carry": bp.carry, "sb": bp.soul_boost,
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills, "eq": bp.equipped,
+			"own": bp.owner_tag,
 			"revive": maxf(0.0, bp.revive_t - t)})
 	for bp in bench: # spheres ride in the save too — party state survives a reload
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -2903,7 +3171,27 @@ func save_game() -> void:
 			"passives": bp.passives, "alpha": bp.alpha, "star": bp.star,
 			"xp": bp.xp, "san": bp.san, "hunger": bp.hunger, "sb": bp.soul_boost,
 			"ail": bp.ailment, "lucky": bp.lucky, "extra": bp.extra_skills,
-			"stance": bp.stance, "eq": bp.equipped})
+			"stance": bp.stance, "eq": bp.equipped, "own": bp.owner_tag})
+	var rparties_sv := {} # guests' party strips — indexed like party_idx, keyed by install tag
+	for tag in remote_parties:
+		var idxs := []
+		for u in remote_parties[tag]:
+			var pp2: Pal = find_pal(int(u))
+			if pp2 == null:
+				pp2 = bench_pal_of(int(u))
+			if pp2 == null:
+				continue
+			var i2: int = pals.find(pp2)
+			if i2 < 0:
+				i2 = box.find(pp2)
+				i2 = pals.size() + i2 if i2 >= 0 else -1
+			if i2 < 0:
+				i2 = bench.find(pp2)
+				i2 = pals.size() + box.size() + i2 if i2 >= 0 else -1
+			if i2 >= 0:
+				idxs.append(i2)
+		if not idxs.is_empty():
+			rparties_sv[str(tag).substr(0, 24)] = idxs
 	var structs := {}
 	var seen_st := {} # one entry per structure — footprint cells share a st; writing
 	# them as separate records made rebuild order-dependent and ate buildings
@@ -2922,7 +3210,7 @@ func save_game() -> void:
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
-		"unlocked": unlocked, "items": items, "party": party,
+		"unlocked": unlocked, "items": items, "party": party, "rparties": rparties_sv,
 		"party_idx": party.map(func(u):
 			var pp: Pal = find_pal(u)
 			if pp == null:
@@ -3166,6 +3454,8 @@ func load_game() -> bool:
 		np.fav = pd.get("fav") == true # anything but a real bool stays unlocked
 		np.soul_boost = clampi(int(pd.get("sb", 0)), 0, 10)
 		np.bounty = clampi(int(pd.get("bnt", 0)), 0, 999) # foreign saves can't mint a fortune
+		np.owner_tag = str(pd.get("own", "")).substr(0, 24)
+		np.owner_id = 0 if np.owner_tag == "" else -1 # foreign-owned pals sleep until their keeper says hello
 		if pd.get("lucky") is bool:
 			np.lucky = pd["lucky"]
 		if np.lucky and "lucky" not in np.passives:
@@ -3201,6 +3491,16 @@ func load_game() -> bool:
 				party.append(loaded[pi].uid)
 	else: # pre-party_idx saves stored raw uids — new pals got fresh uids, so old refs are dead
 		party = party.filter(func(u): return find_pal(u) != null or bench_pal_of(u) != null)
+	remote_parties.clear()
+	var rps = d.get("rparties", {})
+	if rps is Dictionary:
+		for tag in rps:
+			var arr := []
+			for pi2 in (rps[tag] if rps[tag] is Array else []):
+				if (pi2 is float or pi2 is int) and int(pi2) >= 0 and int(pi2) < loaded.size():
+					arr.append(loaded[int(pi2)].uid)
+			if not arr.is_empty():
+				remote_parties[str(tag).substr(0, 24)] = arr.slice(0, 5)
 	var pbx_sv := Vector2i(-9999, -9999) # saved primary palbox, if the save is new enough
 	var pv = d.get("pbx", [])
 	if pv is Array and pv.size() >= 2:

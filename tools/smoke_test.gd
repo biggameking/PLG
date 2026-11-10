@@ -1966,16 +1966,22 @@ func run() -> void:
 	game.pals.erase(rep2)
 	if rep2.get_parent(): rep2.get_parent().remove_child(rep2)
 	rep2.free()
-	# host-side catch relay: a client's sphere lands in the shared palbox
+	# host-side catch relay: a client's sphere lands in THEIR OWN roster —
+	# private rosters mean the keeper's box stays untouched
 	var ncp: Pal = game.gen_pal("chikipi", 3, p.pos)
 	ncp.mode = "wild"; ncp.hp = 1; game.pals.append(ncp)
 	var nc_box0 := game.box.size()
 	var tries_c := 0
-	while tries_c < 400 and ncp in game.pals: # ~97%/try — effectively deterministic
+	while tries_c < 400 and ncp.mode == "wild": # ~97%/try — effectively deterministic
 		game.net_catch(ncp.uid, "pal_sphere", false, 5, 7)
 		tries_c += 1
-	check("net catch to box", ncp not in game.pals and game.box.size() == nc_box0 + 1
-		and ncp.mode == "box" and tries_c < 400, "tries=%d" % tries_c)
+	check("net catch claims guest", ncp.owner_id == 7 and ncp.mode == "partner"
+		and game.rparty_for(7).has(ncp.uid) and game.box.size() == nc_box0
+		and tries_c < 400, "mode=%s box=%d tries=%d" % [ncp.mode, game.box.size(), tries_c])
+	game.remote_parties.clear() # the fake keeper's roster ends with the test
+	game.pals.erase(ncp)
+	if ncp.get_parent(): ncp.get_parent().remove_child(ncp)
+	ncp.free()
 	# forged item ids never get a roll
 	var ncp2: Pal = game.gen_pal("chikipi", 3, p.pos)
 	ncp2.mode = "wild"; ncp2.hp = 1; game.pals.append(ncp2)
@@ -2044,7 +2050,7 @@ func run() -> void:
 	var nbuid := nbp.uid
 	game.box.append(nbp)
 	var bsig0: int = game.net.box_fingerprint()
-	var pack: Array = game.net.box_state_pack()
+	var pack: Array = game.net.box_state_pack(0)
 	check("box pack rows", pack.size() == game.box.size() and pack.back()[0] == nbuid)
 	game.net.box_sync(pack, [nbuid])
 	check("box sync mirror", game.net_box.size() == pack.size()
@@ -2053,7 +2059,7 @@ func run() -> void:
 	check("work suits text", game.work_str(SpeciesData.species_of("lamball")) == "FA1 HA1 TR1")
 	game.net.box_sync(["junk", [1, 2]], [])
 	check("box sync drops junk", game.net_box.is_empty() and game.party.is_empty())
-	var ppack: Array = game.net.party_state_pack()
+	var ppack: Array = game.net.party_state_pack(0)
 	check("party pack rows", ppack.size() == mini(game.party.size(), 8)
 		and ppack.all(func(e9): return e9.size() >= 14), "rows=%d party=%d" % [ppack.size(), game.party.size()])
 	game.net.box_sync(pack, [nbuid], ppack)
@@ -2072,6 +2078,55 @@ func run() -> void:
 	if nbp.get_parent(): nbp.get_parent().remove_child(nbp)
 	nbp.free()
 	check("box fingerprint shifts", game.net.box_fingerprint() != bsig0)
+	# private rosters: a guest's pal answers to no other hand
+	var gpal: Pal = game.gen_pal("lamball", 4, p.pos)
+	gpal.mode = "box"; gpal.owner_id = 7; gpal.owner_tag = "tok_a"
+	game.box.append(gpal)
+	game.box_pal(gpal)
+	check("box pack scopes owner", game.net.box_state_pack(7).size() == 1
+		and game.net.box_state_pack(0).size() == game.box.size() - 1)
+	game.box_op_remote("box_to_party", gpal.uid, 9) # peer 9 doesn't own it
+	check("foreign op refused", gpal.mode == "box" and gpal in game.box
+		and not game.rparty_for(9).has(gpal.uid))
+	game.box_op_remote("box_to_party", gpal.uid, 7)
+	check("owner op deploys", gpal.mode == "partner" and gpal in game.pals
+		and game.rparty_for(7).has(gpal.uid))
+	game.r_retract(7) # the keeper leaving balls their field pal up
+	check("retract to bench", gpal.mode == "bench" and gpal in game.bench
+		and gpal not in game.pals and game.rparty_for(7).has(gpal.uid))
+	# five slots per keeper — a sixth promote is refused
+	var guest_junk := []
+	var rp7 := game.rparty_for(7)
+	while rp7.size() < 5:
+		var extra: Pal = game.gen_pal("lamball", 1, p.pos)
+		extra.mode = "box"; extra.owner_id = 7
+		game.box.append(extra); game.box_pal(extra)
+		guest_junk.append(extra)
+		game.box_op_remote("box_to_party", extra.uid, 7)
+	var sixth: Pal = game.gen_pal("lamball", 1, p.pos)
+	sixth.mode = "box"; sixth.owner_id = 7
+	game.box.append(sixth); game.box_pal(sixth)
+	guest_junk.append(sixth)
+	game.box_op_remote("box_to_party", sixth.uid, 7)
+	check("guest strip caps at 5", rp7.size() == 5 and sixth.mode == "box")
+	# install-token rebind: a dropped peer orphans its pals — ops refuse until
+	# the same token says hello; a live claim can't be re-stolen by a stranger
+	for q in game.box + game.bench + game.pals:
+		if q.owner_id == 7:
+			q.owner_id = -1
+	game.box_op_remote("box_to_party", sixth.uid, 7)
+	check("orphan ops refused", sixth.mode == "box")
+	game.rebind_owner(7, "tok_a")
+	check("tag rebinds orphan", gpal.owner_id == 7
+		and game.rparty_by_tag("tok_a").has(gpal.uid))
+	game.rebind_owner(9, "tok_a") # a stranger echoing the token gets nothing live
+	check("live claim not stolen", gpal.owner_id == 7)
+	guest_junk.append(gpal)
+	for q in guest_junk:
+		game.box.erase(q); game.bench.erase(q); game.pals.erase(q)
+		if q.get_parent(): q.get_parent().remove_child(q)
+		q.free()
+	game.remote_parties.clear()
 	# Palworld den treasure: stocked chests wait behind the lair boss —
 	# flagged "loot" so the logistics network never drags one home
 	var loot_n := 0; var loot_stocked := 0; var loot_k := Vector2i(-1, -1)
@@ -3238,6 +3293,11 @@ func run() -> void:
 		if b != 0: ex_ct2 += 1
 	check("exploring reveals map", ex_ct2 > ex_ct, "%d->%d" % [ex_ct, ex_ct2])
 	game.explored[123] = 1
+	# a guest's benched pal + roster row must survive the disk round-trip
+	var gp_sv: Pal = game.gen_pal("lamball", 3, p.pos)
+	gp_sv.mode = "bench"; gp_sv.owner_id = -1; gp_sv.owner_tag = "tok_t"
+	game.bench.append(gp_sv); game.box_pal(gp_sv)
+	game.remote_parties["tok_t"] = [gp_sv.uid]
 	game.save_game()
 	# mutate state then reload
 	for q in game.pals:
@@ -3283,6 +3343,21 @@ func run() -> void:
 		if q.job_site:
 			job_names += q.species_id + " "
 	check("save keeps workers", re_workers == had_workers, "%d->%d [%s]" % [had_workers, re_workers, job_names])
+	# guest ownership rides the save: the tag persists, the pal sleeps as an
+	# orphan until a hello reclaims it — and its roster row comes back too
+	var gp_re: Pal = null
+	for q in game.bench:
+		if q.owner_tag == "tok_t":
+			gp_re = q
+	check("guest tag survives reload", gp_re != null and gp_re.owner_id == -1
+		and game.remote_parties.get("tok_t", []).has(gp_re.uid))
+	game.rebind_owner(33, "tok_t")
+	check("save rebind claims pal", gp_re != null and gp_re.owner_id == 33)
+	if gp_re != null:
+		game.bench.erase(gp_re)
+		game.remote_parties.clear()
+		if gp_re.get_parent(): gp_re.get_parent().remove_child(gp_re)
+		gp_re.free()
 
 	# partner death frees the party slot + clears job site
 	var dp: Pal = game.find_pal(game.party[0]) if game.party.size() > 0 else null

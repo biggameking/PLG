@@ -134,7 +134,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	if event.is_action_pressed("party_toggle"):
-		game.assign_worker()
+		if game.net != null and game.net.is_client():
+			game.net.rpc("assign_req", game.player.pos.x, game.player.pos.y)
+		else:
+			game.assign_worker()
 		return
 	if event.is_action_pressed("pal_stance"):
 		# Palworld pal command: cycle the field pal's standing order
@@ -810,6 +813,8 @@ func draw_palbox(r: Vector2) -> void:
 		y += 17
 	# deployed workforce (Palworld: pals working the base live in the world)
 	var workers := game.base_pals()
+	if game.net == null or not game.net.is_client():
+		workers = workers.filter(func(wp): return wp.owner_id == 0) # a guest's hands aren't yours to recall
 	if not workers.is_empty():
 		y += 8
 		draw_string(font, Vector2(rr.position.x + 16, y), "BASE (%d/%d) — click to recall" % [workers.size(), game.max_base_pals()],
@@ -911,6 +916,8 @@ func box_rows() -> Array:
 				"wk": str(d.get("wk", ""))})
 	else:
 		for bp in game.box:
+			if bp.owner_id != 0:
+				continue # a guest's stock doesn't show in the keeper's box
 			out.append({"arg": bp, "uid": bp.uid, "name": bp.spec["name"], "lucky": bp.lucky,
 				"sex": bp.sex, "lv": bp.level, "talent": bp.talent, "hp": int(bp.hp),
 				"max_hp": int(bp.max_hp), "ailment": bp.ailment, "fav": bp.fav,

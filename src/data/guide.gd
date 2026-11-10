@@ -89,7 +89,14 @@ the same target for a few breaths.
 A benched daedream still fires at your fight. Cremis and
 mozzarina squeeze milk on command, chikipi lays — the ranch
 walks in your pocket. Lamball rolls under you as an absorb
-bubble; pengullet, with its launcher, IS the ammunition.""",
+bubble; pengullet, with its launcher, IS the ammunition.
+
+Fellow keepers on the same island carry their own belt and
+box — the yard is shared, the pals are not. A catch answers
+to the hand that threw the ball: another keeper's pal takes
+no orders from you, shares no bench with yours, and drops its
+haul in its own master's bag. Sail home mid-visit and your
+field pal balls up under your name, waiting for your return.""",
 """— VOL. IV —
 THE BASE AND ITS WORKERS
 
