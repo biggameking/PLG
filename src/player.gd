@@ -273,8 +273,9 @@ func _physics_process(dt: float) -> void:
 			stamina = minf(100.0, stamina + 25.0 * dt) # quick catch-up
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
-	# miner's cap: the lamp rides on the armor, swapped in and out with the set
-	var lamp_r := int(ItemData.ITEMS.get(equipment["armor"], {}).get("light", 0))
+	# miner's cap: the lamp rides on the armor — or a bellyful of glowcaps
+	var lamp_r := maxi(int(ItemData.ITEMS.get(equipment["armor"], {}).get("light", 0)),
+		int(meal_buff.get("glow", 0.0)))
 	if lamp_r > 0 and _lamp == null:
 		_lamp = PointLight2D.new()
 		_lamp.texture = game.light_tex()
@@ -403,6 +404,8 @@ func eat_buff(b: Dictionary) -> void:
 	for k in ["warm", "cool"]: # climate fare carries flags, not stats
 		if float(b.get(k, 0.0)) > 0.0:
 			meal_buff[k] = 1.0
+	if float(b.get("glow", 0.0)) > 0.0: # glowcap soup pays a radius, not a flag
+		meal_buff["glow"] = float(b["glow"])
 	for k in meal_buff.keys(): # keep only the stats the meal actually grants
 		if float(meal_buff[k]) <= 0.0:
 			meal_buff.erase(k)

@@ -399,6 +399,17 @@ const ITEMS = {
   "buff": {"spd": 0.15, "t": 300},
   "desc": "Crisp shore-side fare — +15% speed for a while."
  },
+ "glowcap_soup": {
+  "id": "glowcap_soup",
+  "name": "Glowcap Soup",
+  "glyph": "♨",
+  "color": "#8ef0a8",
+  "kind": "food",
+  "stack": 999,
+  "food": 30,
+  "buff": {"glow": 5.0, "t": 240},
+  "desc": "Cave mushrooms simmered down — you glow for a while."
+ },
  "spicy_stew": {
   "id": "spicy_stew",
   "name": "Spicy Stew",
@@ -1565,6 +1576,21 @@ const RECIPES = [
    [
     "raw_fish",
     1
+   ]
+  ],
+  "station": "campfire",
+  "work": 40
+ },
+ {
+  "id": "glowcap_soup",
+  "out": [
+   "glowcap_soup",
+   1
+  ],
+  "cost": [
+   [
+    "mushroom",
+    3
    ]
   ],
   "station": "campfire",

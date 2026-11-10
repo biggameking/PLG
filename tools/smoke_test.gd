@@ -1454,6 +1454,15 @@ func run() -> void:
 	check("miner cap lamp swaps with armor", lamp_on and p._lamp == null,
 		"on=%s off=%s" % [lamp_on, p._lamp == null])
 
+	# glowcap soup: cave mushrooms simmered down — the light comes from inside
+	p.eat_buff({"glow": 5.0, "t": 240})
+	p._physics_process(0.1)
+	var glow_on: bool = p._lamp != null
+	p.meal_buff = {}
+	p._physics_process(0.1)
+	check("glowcap soup lights the eater", glow_on and p._lamp == null,
+		"on=%s off=%s" % [glow_on, p._lamp == null])
+
 	# catch streak: each landed capture pays a little more — one escape snaps it
 	var stk0 := game.catch_streak
 	game.catch_streak = 0
