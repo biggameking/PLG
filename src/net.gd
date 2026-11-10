@@ -262,16 +262,30 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	if nx < 0.0 or ny < 0.0 or nx >= World.WORLD_W or ny >= World.WORLD_H:
 		return # every proximity gate trusts this position — keep it inside the island
 	var g = ghosts[id]
-	if g.net_pos.x >= 0 and Vector2(nx, ny).distance_to(Vector2(g.net_pos.x, g.net_pos.y)) > 12.0:
-		# legit big moves exist: waypoint hops land on a travel node and
-		# respawns wake at a kinbox or spawn — shape the allowance, not the trust
-		if not _legit_blink(Vector2(g.net_pos.x, g.net_pos.y), Vector2(nx, ny)):
-			return # a jump anywhere else is a spoofed anchor
+	if g.net_pos.x >= 0:
+		# token-bucket speed cap: allowance accrues at POS_RATE tiles/sec up to
+		# POS_BURST, so honest packets (and lossy-network clumping) always fit
+		# while sustained spoofed walking converges to the cap — and legit big
+		# moves (waypoint hops, death respawns) take the shaped blink lane
+		var now: float = Time.get_ticks_msec() / 1000.0
+		var allow: float = minf(float(g.get_meta("pos_allow", POS_BURST)) \
+			+ (now - float(g.get_meta("pos_t", now))) * POS_RATE, POS_BURST)
+		var step := Vector2(nx, ny).distance_to(Vector2(g.net_pos.x, g.net_pos.y))
+		if step > allow and not _legit_blink(Vector2(g.net_pos.x, g.net_pos.y), Vector2(nx, ny)):
+			g.set_meta("pos_t", now) # time accrues even when a spoof dies at the door
+			g.set_meta("pos_allow", allow)
+			return # a jump this big that lands on no pad is a spoofed anchor
+		g.set_meta("pos_t", now)
+		g.set_meta("pos_allow", allow - minf(step, allow))
+	# a blink drains the bucket too: a guest that just teleported has no
+	# honest need to be sprinting the very next frame
 	g.net_pos = Vector3(nx, ny, float(elev))
 	if is_host:
 		rpc("peer_pos", id, nx, ny, float(elev))  # relay so clients see each other
 
 const BLINK_RADIUS := 5.0 # landing tolerance: nearest_free can shove a few tiles
+const POS_RATE := 40.0 # mounted sprint peaks ~29 u/s; cap leaves 38% headroom
+const POS_BURST := 6.0 # absorbs ~5 dropped 20Hz packets before honest steps clip
 
 func _near_travel_node(p: Vector2) -> String:
 	# waypoint stones and kinbox terminals are the only sanctioned blink pads —
