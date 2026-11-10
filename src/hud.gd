@@ -587,6 +587,12 @@ func _draw() -> void:
 		draw_string(font, Vector2(r.x - 212, hy), "» " + h["text"],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.85, 0.9, 0.95))
 		hy += 17
+	if game.spires_done.size() > 0 or game.crowned: # the campaign spine's tally
+		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
+		draw_string(font, Vector2(r.x - 212, hy),
+			"SPIRES %d/%d%s" % [game.spires_done.size(), game.SPIRE_DEFS.size(),
+				" — CROWNED" if game.crowned else ""],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e"))
 	var my := r.y - 24
 	for i in range(game.messages.size()):
 		var m: String = game.messages[game.messages.size() - 1 - i]

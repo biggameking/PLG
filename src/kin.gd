@@ -113,6 +113,8 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 	if hp > 0 and rage_mult() > 1.0 and not _enraged:
 		_enraged = true
 		game.floater(pos, "ENRAGED!", "#ff5544")
+	if boss and phase == 1 and hp > 0 and hp < max_hp * 0.5:
+		enter_phase_two()
 	game.floater(pos, str(dmg) + ("!" if mult >= 2 else ("·" if mult <= 0.6 else "")),
 		"#e8d44d" if mult >= 2 else "#e8f0f2")
 	if hp <= 0:
@@ -135,6 +137,42 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 						and m.home != Vector2.ZERO and m.aggro < 0:
 					m.aggro = aggro
 					m.statuses.erase("sleep")
+
+# ---- boss phases: at half health the guardian changes the fight ----
+var phase := 1
+var summon_t := 0.0
+var spire_tag := "" # non-empty on Pact-spire guardians; game.record_spire reads it
+
+func enter_phase_two() -> void:
+	phase = 2
+	game.floater(pos, "IT CALLS THE PACK", "#ff9966")
+	game.sfx_play("horn")
+	# two loyal adds answer the roar — capped per boss, capped by MAX_PALS
+	var n := 0
+	for q in game.pals:
+		if q.mode == "wild" and q.hp > 0 and q.get_meta("summoner", -1) == uid:
+			n += 1
+	while n < 2 and game.pals.size() < game.MAX_PALS:
+		var m := preload("res://src/kin.gd").new()
+		game.entity_layer.add_child(m)
+		m.setup(game, species_id, maxi(1, level - 10),
+			game.nearest_free(pos.x + 1.0, pos.y))
+		m.set_meta("summoner", uid)
+		m.aggro = 0
+		m.home = home
+		game.pals.append(m)
+		n += 1
+
+func pact_slam() -> void:
+	# phase-two signature: a shock ring that punishes the pile-up
+	game.floater(pos, "PACT SLAM", "#ff5544")
+	var pl = game.player
+	if pl != null and pos.distance_to(pl.pos) <= 2.6:
+		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
+	for q in game.pals:
+		if q != self and q.hp > 0 and q.mode in ["partner", "base"] \
+				and pos.distance_to(q.pos) <= 2.6:
+			q.hit(maxi(2, int(spec.get("atk", 40) * 0.5 * rage_mult())), 1.0, false)
 
 func elem() -> Array:
 	return spec.get("elements", ["neutral"])
@@ -278,6 +316,11 @@ func wild_ai(dt: float) -> void:
 					game.hurt_player(spec.get("atk", 50) * rage_mult(), self)
 			elif dist > spec.get("reach", 4.0):
 				step_toward(pl.pos, dt)
+			if boss and phase == 2:
+				summon_t += dt
+				if summon_t >= 5.0:
+					summon_t = 0.0
+					pact_slam()
 			if dist > 14:
 				aggro = -1
 		else:

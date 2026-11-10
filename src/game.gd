@@ -794,7 +794,9 @@ func kill_pal(p: Kin, by_player: bool) -> void:
 	else:
 		if p.has_meta("gauntlet") and not gauntlet.is_empty():
 			gauntlet["left"] -= 1
-		if (p.alpha or p.boss) and not p.raid and p.home != Vector2.ZERO \
+		if p.spire_tag != "":
+			record_spire(p.spire_tag)
+		if (p.alpha or p.boss) and not p.raid and p.spire_tag == "" and p.home != Vector2.ZERO \
 				and boss_respawns.size() < MAX_RESPAWNS:
 			# the island dens refill: a slain boss returns to its anchor ~1.5 days
 			# on. Raid/gauntlet attackers have no den — they stay dead.
@@ -3423,6 +3425,7 @@ func save_game() -> void:
 		"pbx": [kinbox_pos.x, kinbox_pos.y], # which kinbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
+		"spires": spires_done.keys(), "crowned": crowned,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
 		"board_quest": board_quest,
@@ -3529,6 +3532,15 @@ func load_game() -> bool:
 			if not SpeciesData.species_of(str(sid)).is_empty():
 				dex_seen[str(sid)] = true # unknown ids from other builds just don't get seen
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
+	spires_done.clear()
+	var spv = d.get("spires", [])
+	if spv is Array: # only real spire tags — a foreign save can't forge a crown
+		for tg in spv:
+			var stg := str(tg)
+			if stg.begins_with("spire_") and int(stg.trim_prefix("spire_")) >= 0 \
+					and int(stg.trim_prefix("spire_")) < SPIRE_DEFS.size():
+				spires_done[stg] = true
+	crowned = d.get("crowned", false) == true and spires_done.size() >= SPIRE_DEFS.size() # the crown must be earned, not written
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm", "drought"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	pray_cd = t + clampf(float(d.get("pray_left", 0.0)), 0.0, 600.0)
@@ -4442,6 +4454,7 @@ func spawn_lairs() -> void:
 		placed += 1
 	spawn_legendary_den()
 	spawn_grotto()
+	spawn_pact_spires()
 	spawn_nests()
 	spawn_waypoints()
 	log_msg("%d boss lairs marked deep in the world" % placed)
@@ -4653,6 +4666,87 @@ func spawn_grotto() -> void:
 const LEGENDARY_DEN := ["scalbeak", "snovstride", "nibhand", "shadekin",
 	"wyrmhoof", "cindchew", "flarbeak", "tidscale", "scalcrest", "vermtrot"]
 
+# The Pact spires: five element shrines seeded through the island's bands —
+# break every guardian and the island crowns you. The campaign's spine: each
+# one is an orb-immune boss that phases at half health.
+const SPIRE_DEFS := [
+	{"elem": "fire", "lv": 25, "zone": 1},
+	{"elem": "water", "lv": 30, "zone": 2},
+	{"elem": "grass", "lv": 35, "zone": 2},
+	{"elem": "dark", "lv": 42, "zone": 3},
+	{"elem": "dragon", "lv": 50, "zone": 3},
+]
+var spires_done := {} # tag -> true — persists with the save
+var crowned := false
+
+func spire_pick(elem: String) -> String:
+	# a guardian that matches the shrine's element; the dragon spire deserves
+	# legendary stock — every spire boss is orb-immune regardless of species
+	var pool := (SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()).filter(
+		func(s): return elem in SpeciesData.species_of(str(s)).get("elements", []))
+	if elem == "dragon":
+		var legs := pool.filter(func(s): return s in LEGENDARY_DEN)
+		if not legs.is_empty():
+			pool = legs
+	if pool.is_empty():
+		pool = LEGENDARY_DEN.duplicate()
+	return str(pool[rng.int_range(0, pool.size() - 1)])
+
+func spawn_pact_spires() -> void:
+	var tries := 0
+	var placed := 0
+	while tries < 8000 and placed < SPIRE_DEFS.size():
+		tries += 1
+		var tx := rng.int_range(8, World.WORLD_W - 10)
+		var ty := rng.int_range(8, World.WORLD_H - 10)
+		var sd: Dictionary = SPIRE_DEFS[placed]
+		if world.zone_at(tx, ty) != int(sd["zone"]):
+			continue
+		var ok := true
+		for dy in range(-3, 4):
+			for dx in range(-3, 4):
+				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+					ok = false
+		if not ok:
+			continue
+		# rock ring, door facing south — a proper arena, not a field bump
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				if maxi(absi(dx), absi(dy)) == 2 and not (dy == 2 and dx == 0):
+					var j := world.idx(tx + dx, ty + dy)
+					world.decor[j] = World.Decor.ROCK
+					world.hp[j] = 60
+		var bp := preload("res://src/kin.gd").new()
+		bp.boss = true
+		bp.alpha = true
+		entity_layer.add_child(bp)
+		bp.setup(self, spire_pick(str(sd["elem"])), int(sd["lv"]), Vector2(tx + 0.5, ty + 0.5))
+		bp.home = bp.pos
+		bp.spire_tag = "spire_%d" % placed
+		bp.sprite.scale = Vector2(1.9, 1.9)
+		pals.append(bp)
+		if place_free("chest", tx - 1, ty - 1):
+			var st: Dictionary = structures[Vector2i(tx - 1, ty - 1)]
+			st["loot"] = true
+			st["store"] = {"gold_coin": 30 + placed * 15, "legendary_orb": 1,
+				"ancient_part": 1 + placed}
+		placed += 1
+	if placed > 0:
+		log_msg("The Iron Pact raised %d spires across the Wildmere — break them all" % placed)
+
+func record_spire(tag: String) -> void:
+	spires_done[tag] = true
+	var n := spires_done.size()
+	log_msg("Pact spire broken! %d of %d" % [n, SPIRE_DEFS.size()])
+	if n >= SPIRE_DEFS.size() and not crowned:
+		crowned = true
+		add_item("legendary_orb", 3)
+		add_item("gold_coin", 300)
+		add_item("ancient_part", 10)
+		log_msg("ISLAND CROWNED — every spire lies broken. The Wildmere is yours.")
+		if player != null:
+			floater(player.pos, "ISLAND CROWNED", "#ffd76e")
+
 func spawn_legendary_den() -> void:
 	# one per world: bigger ring, an uncapturable giant, elite honour guard
 	var tries := 0
@@ -4730,6 +4824,8 @@ func regenerate(s: int) -> void:
 	grotto_pos = Vector2i(-1, -1)
 	grotto_room2 = Vector2i(-1, -1)
 	boss_respawns.clear() # the old world's dens died with it
+	spires_done.clear() # a fresh island raises fresh spires
+	crowned = false
 	gauntlet = {} # and so did any trial in progress
 	craft_queue.clear() # queued builds die with the world too
 	mission_idx = 0 # missions belong to the world they were earned in

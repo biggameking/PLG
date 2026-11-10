@@ -4241,6 +4241,30 @@ func run() -> void:
 	check("pause swallows strikes", game.player.atk_cd == ac0)
 	game.state = "play"
 
+	# ---- S7: bosses phase, spires crown ----
+	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))
+	sb.boss = true
+	sb.max_hp = 1000
+	sb.hp = int(sb.max_hp * 0.45)
+	var spn0 := game.pals.size()
+	sb.hit(1, 1.0, false)
+	check("boss phases at half", sb.phase == 2)
+	check("phase two summons adds", game.pals.size() > spn0)
+	game.player.pos = sb.pos + Vector2(1.0, 0)
+	var php := game.player.hp
+	sb.pact_slam()
+	check("pact slam reaches the player", game.player.hp < php)
+	game.player.hp = 100.0
+	sb.hit(99999, 1.0, false)
+	check("boss dies clean", sb.hp <= 0)
+	game.spires_done.clear()
+	game.crowned = false
+	for i in game.SPIRE_DEFS.size():
+		game.record_spire("spire_%d" % i)
+	check("five spires crown", game.crowned)
+	game.crowned = false
+	game.spires_done.clear()
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)
