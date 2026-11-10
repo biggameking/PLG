@@ -88,8 +88,16 @@ func _process(dt: float) -> void:
 				nav_hold = 0.33
 	else:
 		nav_hold = 0.0
+	# text panels on touch need the OS keyboard — it never appears on its own
+	var texty := game != null and game.panel in ["join", "chat"]
+	if texty != _vkbd_open:
+		_vkbd_open = texty
+		if game.touch_ui:
+			if texty: DisplayServer.virtual_keyboard_show("")
+			else: DisplayServer.virtual_keyboard_hide()
 
 var _menu_key := "" # last drawn "state|panel" — rects belong to exactly one menu
+var _vkbd_open := false
 
 func _input(event: InputEvent) -> void:
 	# last-seen device drives hint phrasing — sticks drift, so gate on intent
@@ -415,6 +423,8 @@ func shell_act(act: String) -> void:
 				game.state = "play"
 		"m_settings":
 			game.panel = "settings"
+		"m_join":
+			game.panel = "join"; join_buf = ""
 		"set_back":
 			game.panel = ""
 		"resume":
@@ -1026,11 +1036,16 @@ func draw_pause(r: Vector2) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
 	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 6, pw, 2), Color(0.91, 0.83, 0.30, 0.4)) # gold rule under the header
 	var y := r.y * 0.42
-	y = menu_row(cx, y, 220, "RESUME", "resume")
-	y = menu_row(cx, y, 220, "SAVE GAME", "m_save")
-	y = menu_row(cx, y, 220, "SETTINGS", "m_settings")
-	y = menu_row(cx, y, 220, "SAVE & QUIT TO TITLE", "to_title")
-	y = menu_row(cx, y, 220, "SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6))
+	for row in pause_rows():
+		y = menu_row(cx, y, 220, row[0], row[1], row[2] if row.size() > 2 else Color.WHITE)
+
+func pause_rows() -> Array:
+	var rows := [["RESUME", "resume"], ["SAVE GAME", "m_save"], ["SETTINGS", "m_settings"]]
+	if game.net != null and multiplayer.multiplayer_peer == null:
+		rows.append(["JOIN SESSION", "m_join"])
+	rows.append(["SAVE & QUIT TO TITLE", "to_title"])
+	rows.append(["SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6)])
+	return rows
 
 func draw_settings(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 190, r.y * 0.25, 380, 300)

@@ -4553,6 +4553,24 @@ func run() -> void:
 		and game.touch_ui == (str(game.settings["touch"]) == "on"))
 	game.settings["touch"] = tm0; game.apply_settings()
 	game.touch_ui = tui0
+	# join/chat panels must summon the OS keyboard on touch and the pause
+	# shell needs a JOIN row — before this, K was the only door in
+	game.state = "paused"
+	var peer_bak = game.net.multiplayer.multiplayer_peer
+	game.net.multiplayer.multiplayer_peer = null # a guest sees no join row
+	var join_rows := 0
+	for row in hudn.pause_rows():
+		if row[1] == "m_join": join_rows += 1
+	check("pause shell offers join", join_rows == 1, "rows=%s" % join_rows)
+	game.net.multiplayer.multiplayer_peer = peer_bak
+	hudn.shell_act("m_join")
+	hudn._process(0.016)
+	check("join panel opens + vkbd tracks", game.panel == "join" and hudn._vkbd_open,
+		"panel=%s vkbd=%s" % [game.panel, hudn._vkbd_open])
+	game.panel = ""
+	hudn._process(0.016)
+	check("vkbd drops with panel", not hudn._vkbd_open)
+	game.state = "play"
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))
