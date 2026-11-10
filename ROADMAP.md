@@ -78,3 +78,17 @@ warning reset shipped in `2f41030`.
 - S8 numbers sim — DONE (`tools/sim_balance.gd` — real-formula probe; found+buffed legendary_orb 95→110)
 - S9 localization + store shell — NEXT
 - S10 hero art/audio depth — NEXT
+- S9 localization slice — DONE (en→zh shell+settings+hints via locale/zh.csv; lang setting persisted+coerced)
+- S10 audit-fix batch — DONE (S4–S7 external review: 4H/4M/7L fixed; rules 18–24 in AGENTS.md; `docs/reviews/s4-s7-audit.md`)
+- S11 hero art/audio depth + platform validation — NEXT
+
+**S4–S7 (external review, `docs/reviews/s4-s7-audit.md`):** gates belong at
+choke points, not enumerations — the acquirable pool filtered spawn sites
+while `resolve_sphere`/`net_catch` trusted the `boss` flag, so phase-2 adds
+walked the legendary ban back in. Pad binds stacked onto unaudited `ui_*`
+defaults (B dodged AND paused). `spire_tag`/`phase` never entered the save
+contract — reloads forged uncompletable campaigns. Worldgen rolled the
+session stream while delta sync assumed determinism — clients grew phantom
+walls. Menu rects outlived their menu; a negative cursor wrapped to QUIT.
+And a bounty predicate matched a display string ("Iron Pact") instead of
+canonical ids, so it never fired once. Fixes shipped in `479ae2a`.
