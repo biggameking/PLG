@@ -212,6 +212,13 @@ export const STRUCTURES: Record<string, StructureDef> = {
       consumes: [["spoiled_food", 2], ["fiber", 1]], produces: [["fertilizer", 1]] },
     desc: "A farming pal turns rot and straw into rich fertilizer — every scrap earns its keep.",
   },
+  fish_trap: {
+    id: "fish_trap", name: "Fish Trap", glyph: "≋", color: "#5a8ac0", w: 1, h: 1,
+    needsWater: true,
+    cost: [["wood", 15], ["fiber", 6]],
+    job: { kind: "work", workType: "watering", amount: 150, produces: [["raw_fish", 1]] },
+    desc: "A woven weir at the water's edge — a watering pal works the catch. Build beside water.",
+  },
   watch_tower: {
     id: "watch_tower", name: "Watch Tower", glyph: "♜", color: "#c9a86a", w: 1, h: 1,
     cost: [["wood", 20], ["stone", 10], ["ingot", 2]], turret: 14, hp: 300, light: 1,
@@ -277,4 +284,5 @@ export const TECH: TechNode[] = [
   { id: "expedition_post", name: "Expedition Post", tier: 7, cost: 3, parts: 1 },
   { id: "sphere_factory_2", name: "Giga Works", tier: 8, cost: 4, parts: 2 },
   { id: "compost_bin", name: "Compost Bin", tier: 2, cost: 1 },
+  { id: "fish_trap", name: "Fish Trap", tier: 3, cost: 1 },
 ];

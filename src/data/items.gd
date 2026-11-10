@@ -335,6 +335,28 @@ const ITEMS = {
   "food": 35,
   "desc": "Mutton."
  },
+"raw_fish": {
+  "id": "raw_fish",
+  "name": "Raw Fish",
+  "glyph": "≋",
+  "color": "#6aa8d8",
+  "kind": "food",
+  "perish": 1,
+  "stack": 999,
+  "food": 25,
+  "desc": "Fresh from the weir — better cooked."
+ },
+ "fried_fish": {
+  "id": "fried_fish",
+  "name": "Fried Fish",
+  "glyph": "≋",
+  "color": "#d8a84a",
+  "kind": "food",
+  "stack": 999,
+  "food": 55,
+  "buff": {"spd": 0.15, "t": 300},
+  "desc": "Crisp shore-side fare — +15% speed for a while."
+ },
  "roast_mutton": {
   "id": "roast_mutton",
   "name": "Roast Mutton",
@@ -1374,6 +1396,21 @@ const RECIPES = [
   "cost": [
    [
     "lamball_mutton",
+    1
+   ]
+  ],
+  "station": "campfire",
+  "work": 40
+ },
+ {
+  "id": "fried_fish",
+  "out": [
+   "fried_fish",
+   1
+  ],
+  "cost": [
+   [
+    "raw_fish",
     1
    ]
   ],

@@ -813,6 +813,16 @@ def make_structure(sid, color, w, h):
         d.line([(W//2, 26), (W//2, 16)], fill=hxc("#7a9a4a") + (255,), width=2)
         d.ellipse([W//2 - 5, 14, W//2 - 1, 18], fill=hxc("#9acd32") + (255,))
         d.ellipse([W//2 + 1, 13, W//2 + 6, 17], fill=hxc("#9acd32") + (255,))
+    elif sid == "fish_trap":
+        # woven weir box over lapping water — stakes, net, a silver catch
+        d.rectangle([W//2 - 16, 30, W//2 + 16, 44], fill=hxc("#3a6ea8") + (255,))
+        for i in range(3):
+            d.arc([W//2 - 18 + i * 8, 34, W//2 - 10 + i * 8, 42], 0, 180, fill=hxc("#7fc8f8") + (255,), width=1)
+        for sx in range(3):
+            d.line([(W//2 - 12 + sx * 12, 14), (W//2 - 12 + sx * 12, 32)], fill=hxc("#8a6d4d") + (255,), width=2)
+        d.line([(W//2 - 14, 20), (W//2 + 14, 20)], fill=hxc("#5e462e") + (255,), width=2)
+        d.line([(W//2 - 14, 27), (W//2 + 14, 27)], fill=hxc("#5e462e") + (255,), width=2)
+        d.ellipse([W//2 - 5, 28, W//2 + 5, 33], fill=hxc("#9ac8e8") + (255,))
     elif sid == "expedition_post":
         # rally flag over a supply crate — Palworld's dispatch camp
         d.rectangle([W//2 - 20, 34, W//2 - 6, 44], fill=hxc("#8a6d4d") + (255,))
@@ -859,6 +869,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "sphere_factory": ("#4dd0e1", 2, 1),
     "sphere_factory_2": ("#4dd0e1", 2, 1),
     "compost_bin": ("#7a9a4a", 1, 1),
+    "fish_trap": ("#5a8ac0", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
 

@@ -440,7 +440,28 @@ const STRUCTURES = {
   "job": {"kind": "chill", "workType": "cooling", "amount": 120, "produces": [["ice_organ", 1]]},
   "desc": "A cooling pal condenses ice organs here."
  },
- "oil_extractor": {
+ "fish_trap": {
+  "id": "fish_trap",
+  "name": "Fish Trap",
+  "glyph": "≋",
+  "color": "#5a8ac0",
+  "w": 1,
+  "h": 1,
+  "needsWater": true,
+  "cost": [
+   [
+    "wood",
+    15
+   ],
+   [
+    "fiber",
+    6
+   ]
+  ],
+  "job": {"kind": "work", "workType": "watering", "amount": 150, "produces": [["raw_fish", 1]]},
+  "desc": "A woven weir set at the water's edge — a watering pal works the catch. Build beside water."
+ },
+"oil_extractor": {
   "id": "oil_extractor",
   "name": "Oil Extractor",
   "glyph": "⛽",
@@ -1188,6 +1209,12 @@ const TECH = [
   "id": "compost_bin",
   "name": "Compost Bin",
   "tier": 2,
+  "cost": 1
+ },
+ {
+  "id": "fish_trap",
+  "name": "Fish Trap",
+  "tier": 3,
   "cost": 1
  }
 ]

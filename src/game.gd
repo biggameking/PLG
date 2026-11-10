@@ -1406,6 +1406,17 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 			var dc: int = world.decor[world.idx(cx0, cy0)]
 			if dc in [World.Decor.ROCK, World.Decor.ORE_GOLD, World.Decor.ORE_COAL]:
 				return false # trees/bushes clear themselves; outcrops don't
+	if s.get("needsWater", false):
+		var shore := false
+		for dy in range(-1, h + 1):
+			for dx in range(-1, w + 1):
+				var nx := tx + dx; var ny := ty + dy
+				if dx >= 0 and dx < w and dy >= 0 and dy < h:
+					continue # footprint itself is land
+				if world.in_bounds(nx, ny) and world.tile_at(nx, ny) == World.Tile.WATER:
+					shore = true
+		if not shore:
+			return false
 	return true
 
 func palbox_count() -> int:

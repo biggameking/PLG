@@ -967,6 +967,55 @@ func run() -> void:
 	else:
 		check("compost and surge", false, "bin=%s farm=%s" % [cbin_st != null, cfarm_k])
 
+	# fish trap: a weir only stands where it can drink — shore-locked,
+	# watering pal pulls fish on the clock
+	var ft_spot := Vector2i(-1, -1)
+	for ty in range(2, World.WORLD_H - 2):
+		for tx in range(2, World.WORLD_W - 2):
+			if game.world.tile_at(tx, ty) == World.Tile.WATER:
+				continue
+			var shorey := false
+			for d2 in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
+				if game.world.in_bounds(tx + d2.x, ty + d2.y) and game.world.tile_at(tx + d2.x, ty + d2.y) == World.Tile.WATER:
+					shorey = true
+			if shorey and game.can_place("fish_trap", tx, ty):
+				ft_spot = Vector2i(tx, ty)
+				break
+		if ft_spot.x >= 0:
+			break
+	var trap_ok := false
+	if ft_spot.x >= 0:
+		game.place_structure("fish_trap", ft_spot.x, ft_spot.y)
+		var ft_st = game.structures.get(ft_spot)
+		var fisher: Pal = game.gen_pal("pengullet", 5, game.player.pos)
+		fisher.mode = "base"; fisher.san = 90.0; fisher.hunger = 10.0; fisher.ailment = ""
+		fisher.passives = []; fisher.statuses.clear(); fisher.talent = 50
+		ft_st["workers"] = [fisher]; fisher.job_site = ft_st
+		ft_st["timer"] = 149.5
+		game.tick_production(1.0)
+		trap_ok = ft_st["store"].get("raw_fish", 0) >= 1
+		ft_st["workers"] = []; fisher.job_site = null
+		game.pals.erase(fisher); fisher.free()
+	# and it refuses dry land — probe one inland tile
+	var dry_reject := false
+	var dry_done := false
+	for ty2 in range(2, World.WORLD_H - 2):
+		if dry_done:
+			break
+		for tx2 in range(2, World.WORLD_W - 2):
+			if game.world.tile_at(tx2, ty2) == World.Tile.WATER or game.structures.has(Vector2i(tx2, ty2)):
+				continue
+			var near_w := false
+			for d3 in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
+				if game.world.in_bounds(tx2 + d3.x, ty2 + d3.y) and game.world.tile_at(tx2 + d3.x, ty2 + d3.y) == World.Tile.WATER:
+					near_w = true
+			if not near_w and game.world.flat_at(tx2, ty2, 1, 1):
+				dry_reject = not game.can_place("fish_trap", tx2, ty2)
+				dry_done = true
+				break
+	check("fish trap yields", trap_ok and ft_spot.x >= 0 and dry_reject, "spot=%s fish=%s dry=%s" % [
+		ft_spot, game.structures.get(ft_spot, {}).get("store", {}).get("raw_fish", 0) if ft_spot.x >= 0 else -1, dry_reject])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
