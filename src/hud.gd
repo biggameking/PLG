@@ -62,7 +62,7 @@ func _process(dt: float) -> void:
 	# arrows and dpad share the ui_* actions; after a 0.42s first step the
 	# cursor keeps marching on a 0.09s cadence — a long list stops being a
 	# button-mash. Edge presses still come from _input's action_pressed.
-	if game != null and game.state in ["title", "paused"] and not click_rects.is_empty():
+	if game != null and (game.state in ["title", "paused"] or game.panel != "") and not click_rects.is_empty():
 		var dir := int(Input.is_action_pressed("ui_down")) - int(Input.is_action_pressed("ui_up"))
 		if dir == 0:
 			nav_hold = 0.0
@@ -199,6 +199,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			dex_scroll += 1
+			get_viewport().set_input_as_handled()
+			return
+	# panels take the pad cursor too: dpad/arrows pick a row, A/Enter
+	# confirms. The world verbs below already refuse to fire while a panel
+	# is up — a menu that can't be driven without a mouse isn't a menu.
+	if game.state == "play" and game.panel != "" and not click_rects.is_empty():
+		if event.is_action_pressed("ui_down"):
+			menu_sel = wrapi(menu_sel + 1, 0, click_rects.size())
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_up"):
+			menu_sel = wrapi(menu_sel - 1, 0, click_rects.size())
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_accept"):
+			if menu_sel >= 0 and menu_sel < click_rects.size():
+				run_click(click_rects[menu_sel])
 			get_viewport().set_input_as_handled()
 			return
 	if event.is_action_pressed("party_toggle"):
@@ -758,7 +775,7 @@ func _draw() -> void:
 		draw_title(r)
 	elif game.state == "paused" and game.panel == "":
 		draw_pause(r)
-	if game.state != "play" and not click_rects.is_empty():
+	if (game.state != "play" or game.panel != "") and not click_rects.is_empty():
 		menu_sel = clampi(menu_sel, 0, click_rects.size() - 1) # panels swap rows under the cursor
 		var msel: Rect2 = click_rects[menu_sel]["rect"]
 		draw_rect(msel, Color(0.55, 0.7, 0.95, 0.9), false, 2.0) # pad/arrow-key cursor
@@ -767,7 +784,7 @@ func _draw() -> void:
 
 func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Color = Color.WHITE) -> float:
 	var rr := Rect2(cx - w / 2, y, w, 30)
-	var hov := game.state != "play" and click_rects.size() == menu_sel # cursor row glows
+	var hov := (game.state != "play" or game.panel != "") and click_rects.size() == menu_sel # cursor row glows
 	draw_rect(rr, Color(0.09, 0.12, 0.16, 0.95) if hov else Color(0.05, 0.05, 0.07, 0.9))
 	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
 	click_rects.append({"rect": rr, "act": act, "arg": null})

@@ -116,3 +116,8 @@ build-tools/apksigner).
   weather/STAB/freeze smoke assertions rewritten as absolute-delta checks —
   double `int()` truncation at low base damage was producing seeded 1.2-vs-
   1.15 ratio flakes, not a formula regression. Suite 8×0-fail, sim 0, IP CLEAN.
+- S18b pad panel nav + tranq flake kill — DONE: in-play panels (inv/build/
+  tech/dex/shop/chest) now take the same dpad cursor + A-confirm as the
+  shell menus; hold-to-repeat covers them. Tranq-dart smoke assert parked
+  the wild herd before firing — the dart bites the FIRST kin it reaches,
+  so a wandering packmate made it flake (same isolation class as weather).

@@ -1477,7 +1477,14 @@ func run() -> void:
 	bd_p.queue_free()
 	game.pals.erase(bd_p)
 
-	# tranq gun: a dart drops a wild kin asleep mid-stride — the sting still lands first
+	# tranq gun: a dart drops a wild kin asleep mid-stride — the sting still lands first.
+	# Other wild pals can wander into the line of fire: the dart bites the FIRST
+	# kin it reaches, so park the herd before shooting or the assert goes flaky.
+	var tg_away := {}
+	for wp2 in game.pals:
+		if wp2.mode == "wild" and is_instance_valid(wp2):
+			tg_away[wp2] = wp2.pos
+			wp2.pos = Vector2(-9999, -9999)
 	var tg_wd: Dictionary = ItemData.ITEMS["tranq_gun"]["weapon"]
 	var tg_p = game.gen_pal("fenjelly", 5, Vector2(p.pos.x + 1, p.pos.y))
 	game.pals.append(tg_p)
@@ -1490,6 +1497,9 @@ func run() -> void:
 		"slept=%s hp=%s" % [tg_slept, tg_p.hp])
 	tg_p.queue_free()
 	game.pals.erase(tg_p)
+	for wp2 in tg_away.keys():
+		if is_instance_valid(wp2):
+			wp2.pos = tg_away[wp2]
 
 	# hot spring soak: standing in the steam mends the keeper too
 	var hs_k := Vector2i(-1, -1)
@@ -4392,6 +4402,28 @@ func run() -> void:
 	check("release stops marching", hudn.menu_sel == 2)
 	hudn.click_rects.clear(); hudn.menu_sel = 0
 	game.state = "play"
+
+	# panels take the same cursor: dpad steps rows, A confirms — without
+	# this a pad user opens the bag and is stuck there
+	game.panel = "inv"
+	hudn._unhandled_input(InputEventAction.new()) # flush the state|panel transition — stale rows get voided there
+	hudn.click_rects = [{"rect": Rect2(), "act": "m_settings"}, {"rect": Rect2(), "act": "craft", "arg": "nope"}]
+	hudn.menu_sel = 0
+	var nav_down := InputEventAction.new()
+	nav_down.action = "ui_down"; nav_down.pressed = true
+	hudn._unhandled_input(nav_down)
+	check("panel nav steps", hudn.menu_sel == 1, "sel=%d" % hudn.menu_sel)
+	var nav_up := InputEventAction.new()
+	nav_up.action = "ui_up"; nav_up.pressed = true
+	hudn._unhandled_input(nav_up)
+	check("panel nav back", hudn.menu_sel == 0)
+	hudn.menu_sel = 0
+	var nav_ok := InputEventAction.new()
+	nav_ok.action = "ui_accept"; nav_ok.pressed = true
+	hudn._unhandled_input(nav_ok) # act m_settings swaps the panel — confirm fires
+	check("panel confirm fires", game.panel == "settings", "panel=%s" % game.panel)
+	game.panel = ""
+	hudn.click_rects.clear(); hudn.menu_sel = 0
 
 	# rumble is a pad-only helper: headless it must no-op cleanly both ways
 	game.using_pad = false; game.rumble(0.5, 0.5, 0.1)

@@ -46,8 +46,8 @@ the interaction-verb layer was not. Closed in this pass:
 ## Deferred — honest list
 
 - **Android preset unverified**: local SDK lacks `build-tools`/`apksigner`; also zero touch input implemented — treat mobile as not-a-target for this release.
-- **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence) and rumble on
-  catch/hit all ship; UI rows aren't pad-scrollable inside panels yet.
+- **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence), rumble on
+  catch/hit, and panel row navigation (dpad steps, A confirms) all ship.
 - **UI art**: still default-font panels + procedural icons; hero-species polish is procedural accessory layer only.
 - **MP — guest combat parity is approximate**: host wildlife engages the
   nearest warm body (player OR ghost), melee bites AND wild projectiles reach
