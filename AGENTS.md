@@ -91,3 +91,29 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     reset); pins share a const with the threshold they dodge (`RAID_WARN_T`).
 17. **Tests leave no dirty state.** Anything written to `user://` in a smoke
     run gets backed up and restored (see the settings round-trip fixture).
+18. **Ownable kin pass through one gate.** Every path that can put a kin in
+    party/box/bench — catch, summon, load, shop, cage, boss-phase adds —
+    answers to `acquirable()`. `resolve_sphere`/`net_catch` reject
+    non-acquirable targets regardless of `boss`; spawn pools filter at the
+    source AND the catch layer refuses what slipped through.
+19. **Pad binds may not collide with `ui_*` defaults.** `bind_gamepad` strips
+    joypad events from every action it touches before adding its own — B can
+    never dodge AND pause, and a scene reload can't stack duplicates.
+20. **New kin fields are a save contract.** A gameplay-meaningful `Kin`
+    member lands in `pals_data` write + load coercion + `pal_state_pack` (if
+    net-visible), or carries a "transient by design" comment. Campaign tags
+    (`spire_tag`, `phase`) get a save→load→kill smoke round-trip.
+21. **Worldgen is seed-deterministic.** `regenerate()` reseeds the placement
+    stream from `world.seed`; a joining client lands the same POIs/decor as
+    the host. Delta-only sync assumes deterministic state — don't mix a
+    session rng into placement.
+22. **Fix the pattern, not the instance.** A gate added for one call site
+    (`acquirable`, `net_id > 0`, `state` checks) gets grepped across every
+    other site of the same verb before the fix is closed; replicas never run
+    `hit()`/`kill_pal()` locally — authority lives at the choke point.
+23. **Menu state resets on transitions.** `menu_sel`/`click_rects` belong to
+    exactly one `state|panel`; a transition voids them before the next event
+    dispatches. Cursors never wrap to a negative index.
+24. **No dead predicates.** Match canonical ids (`ironpact_*`), never display
+    or theme strings ("Iron Pact"). Every predicate added gets at least one
+    smoke check that fires it positively.

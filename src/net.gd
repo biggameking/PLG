@@ -123,7 +123,8 @@ func state_snapshot() -> Dictionary:
 	var parr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid])
+			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid,
+				p.boss, p.alpha, p.spire_tag])
 	return {"structures": arr, "tod": game.tod, "day": game.day, "kin": parr}
 
 @rpc("authority", "call_remote", "reliable")
@@ -154,7 +155,8 @@ func pal_state_pack() -> Array:
 	var arr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky, p.boss])
+			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky, p.boss,
+				p.alpha, p.spire_tag])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -169,10 +171,12 @@ func pal_sync(arr: Array) -> void:
 		seen[nid] = true
 		var p := game.find_net_pal(nid)
 		if p == null:
-			# [species, x, y, lv, mode, lucky, net_id] — spawn_net_pal's wire shape
+			# [species, x, y, lv, mode, lucky, net_id, boss, alpha, spire_tag] — spawn_net_pal's wire shape
 			game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
 				e[7] if e.size() > 7 else false, nid,
-				e[8] if e.size() > 8 else false])
+				e[8] if e.size() > 8 else false,
+				e[9] if e.size() > 9 else false,
+				e[10] if e.size() > 10 else ""])
 		else:
 			p.net_target = Vector2(float(e[2]), float(e[3]))
 			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp

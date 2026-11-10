@@ -2199,7 +2199,7 @@ func run() -> void:
 	# worldgen legendary den: an uncapturable lv50 giant guards deep zone 3
 	var legend: Kin = null
 	for q in game.pals:
-		if q.boss and q.level >= 50 and not q.raid:
+		if q.boss and q.level >= 50 and not q.raid and q.spire_tag == "": # spire guardians are one-shot — they never respawn
 			legend = q
 	check("legendary den", legend != null and legend.species_id in Game.LEGENDARY_DEN,
 		"boss=%s" % (legend.species_id if legend else "none"))
@@ -2497,6 +2497,25 @@ func run() -> void:
 			game.resolve_sphere({"sid": "legendary_orb", "target": q})
 			check("boss immune", game.box.size() == bx)
 			break
+	# the ownable gate covers what the boss flag misses: a non-boss legendary
+	# (boss-phase adds summon wild kin) still can't be balled
+	var ladd: Kin = game.gen_pal(Game.LEGENDARY_DEN[0], 10, p.pos + Vector2(2, 0))
+	game.pals.append(ladd)
+	var bx2 := game.box.size()
+	game.resolve_sphere({"sid": "legendary_orb", "target": ladd})
+	check("non-boss legendary immune", game.box.size() == bx2)
+	game.pals.erase(ladd); ladd.queue_free()
+	# replicas take wounds and deaths only from the host snapshot — a local
+	# hit must not spawn phase adds, a local kill must not schedule respawns
+	var repl: Kin = game.gen_pal("fenjelly", 5, p.pos + Vector2(1, 0))
+	repl.net_id = 77
+	var rhp := repl.hp
+	repl.hit(50, 1.0, true)
+	repl.boss = true; repl.alpha = true; repl.home = repl.pos
+	var rb1 := game.boss_respawns.size()
+	game.kill_pal(repl, true)
+	check("replica takes no local wounds", repl.hp == rhp and game.boss_respawns.size() == rb1)
+	repl.queue_free()
 
 	# passives
 	var any_passive := false
@@ -3771,6 +3790,22 @@ func run() -> void:
 	game.items.erase("gold_coin")
 	game.load_game()
 	check("save/load", game.item_count("gold_coin") == gold0, "%d" % game.item_count("gold_coin"))
+	# campaign tags ride the save: a spire guardian stays tagged (else its kill
+	# can't record and the campaign soft-locks), a phase-2 boss stays phased
+	if game.pals.size() > 0:
+		game.pals[0].spire_tag = "spire_0"
+		game.pals[0].phase = 2
+		game.save_game()
+		game.load_game()
+		var stag_back := false
+		for q in game.pals:
+			if q.spire_tag == "spire_0" and q.phase == 2:
+				stag_back = true
+		check("spire tag + phase survive save", stag_back)
+		game.spires_done.clear(); game.crowned = false
+		for q in game.pals: # don't leave a campaign pin on a random wild kin
+			if q.spire_tag == "spire_0":
+				q.spire_tag = ""; q.phase = 1
 
 	# corrupt save: missing fields / wrong types must be refused, not crash the world
 	var pals_before := game.pals.size()
@@ -3800,13 +3835,14 @@ func run() -> void:
 		"player": {"pos": ["no", "no"], "hp": "full", "level": "2"},
 		"kin": [{"sp": "fenjelly", "pos": [game.player.pos.x + 1, game.player.pos.y],
 				"mode": 7, "hp": "lots", "sex": 9, "boss": "yes", "san": "hi",
-				"passives": "nope", "star": "s", "raid": "y"}],
+				"passives": "nope", "star": "s", "raid": "y", "stag": "hax", "ph": "x"}],
 		"structures": {}})
 	ff.close()
 	var fload: bool = game.load_game()
 	var fok := false
 	for q in game.pals:
-		if q.species_id == "fenjelly" and q.mode == "wild" and q.hp is float and q.sex == "M" and q.boss == false:
+		if q.species_id == "fenjelly" and q.mode == "wild" and q.hp is float and q.sex == "M" and q.boss == false \
+				and q.spire_tag == "" and q.phase == 1: # "hax"/"x" refused: no forged campaign tags
 			fok = true # mode 7 -> "wild" fallback, sex 9 -> "M", boss "yes" -> skipped (not a real bool)
 	check("foreign-typed save coerces", fload == true and fok and game.player.hp is float and game.item_count("wood") == 12, "kin=%d" % game.pals.size())
 	game.tod = 8.0 # float("late") coerced tod to 0.0 = night: keep later checks on day shift
@@ -4232,6 +4268,13 @@ func run() -> void:
 		func(e): return e is InputEventJoypadMotion))
 	check("pad cancel bound", InputMap.action_get_events("ui_cancel").any(
 		func(e): return e is InputEventJoypadButton))
+	# B is dodge — it must NOT also sit on ui_cancel or every dodge pauses;
+	# and rebinding after a scene reload must not stack duplicate events
+	check("pad B off ui_cancel", not InputMap.action_get_events("ui_cancel").any(
+		func(e): return e is InputEventJoypadButton and e.button_index == JOY_BUTTON_B))
+	var dodge0 := InputMap.action_get_events("dodge").size()
+	game.bind_gamepad()
+	check("pad bind idempotent", InputMap.action_get_events("dodge").size() == dodge0)
 	# shell menus don't leak input to the sim: a swing at pause must not fire
 	game.state = "paused"
 	var ac0 := game.player.atk_cd

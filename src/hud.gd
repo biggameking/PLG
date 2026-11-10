@@ -59,7 +59,14 @@ func _ready() -> void:
 func _process(_dt: float) -> void:
 	queue_redraw()
 
+var _menu_key := "" # last drawn "state|panel" — rects belong to exactly one menu
+
 func _unhandled_input(event: InputEvent) -> void:
+	var mk := "%s|%s" % [game.state, game.panel]
+	if mk != _menu_key: # a transition just happened: last frame's rows are void
+		_menu_key = mk
+		click_rects.clear()
+		menu_sel = 0
 	# shell states own the whole input stack — menus don't leak to gameplay
 	if game.state == "title" or game.state == "paused":
 		if event.is_action_pressed("ui_cancel"):
@@ -71,15 +78,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		# pad/dpad menu nav: stick and arrows move the cursor, A/Enter confirms
 		if event.is_action_pressed("ui_down"):
-			menu_sel = mini(menu_sel + 1, click_rects.size() - 1)
+			if not click_rects.is_empty():
+				menu_sel = wrapi(menu_sel + 1, 0, click_rects.size()) # never park on -1: negative wraps to the last row
 			get_viewport().set_input_as_handled()
 			return
 		if event.is_action_pressed("ui_up"):
-			menu_sel = maxi(menu_sel - 1, 0)
+			if not click_rects.is_empty():
+				menu_sel = wrapi(menu_sel - 1, 0, click_rects.size())
 			get_viewport().set_input_as_handled()
 			return
 		if event.is_action_pressed("ui_accept"):
-			if menu_sel < click_rects.size():
+			if menu_sel >= 0 and menu_sel < click_rects.size():
 				run_click(click_rects[menu_sel])
 			get_viewport().set_input_as_handled()
 			return
@@ -513,7 +522,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(sx + 4, 49), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		sx += 74
-	draw_equipment_line() # was never called — gear row under the orb chips
+	draw_equipment_line() # gear row under the orb chips
 	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # the island meal timer chip
 		var btxt := ""
 		for bk in pl.meal_buff:
@@ -740,7 +749,7 @@ func draw_title(r: Vector2) -> void:
 	draw_string(font, Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.8, 0.85))
 	var y := r.y * 0.42
-	if FileAccess.file_exists("user://savegame.plg"):
+	if game.has_save:
 		y = menu_row(cx, y, 220, "CONTINUE", "continue")
 	y = menu_row(cx, y, 220, "NEW GAME", "new_game")
 	y = menu_row(cx, y, 220, "SETTINGS", "m_settings")

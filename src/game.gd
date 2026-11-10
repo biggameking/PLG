@@ -220,6 +220,7 @@ func _ready() -> void:
 	music_night.play()
 	load_settings()
 	bind_gamepad()
+	has_save = FileAccess.file_exists("user://savegame.plg") # stat once at boot
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
 	# player
@@ -689,6 +690,10 @@ func spawn_net_pal(d) -> void:
 	np.mode = str(d[4]) if str(d[4]) in ["base", "partner", "wild"] else "wild"
 	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
 	np.boss = bool(d[7]) if d.size() > 7 else false # den/grotto bosses keep their orb immunity on clients too
+	np.alpha = bool(d[8]) if d.size() > 8 else false
+	var nstag := str(d[9]) if d.size() > 9 else ""
+	if nstag.begins_with("spire_") and int(nstag.trim_prefix("spire_")) < SPIRE_DEFS.size():
+		np.spire_tag = nstag # same whitelist the save path uses
 	pals.append(np)
 
 func find_net_pal(nid: int) -> Kin:
@@ -729,6 +734,8 @@ func lead_pal() -> Kin:
 	return p
 
 func kill_pal(p: Kin, by_player: bool) -> void:
+	if p.net_id > 0:
+		return # replicas die by host snapshot, never by local simulation
 	player.dismount_if(p)
 	var owned := p.mode in ["partner", "base", "bench"]
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
@@ -1333,6 +1340,11 @@ func resolve_sphere(sp) -> void:
 	if target.boss:
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
+	if not acquirable(target.species_id):
+		# single ownable-kin gate — boss-phase adds, wire-forged targets, and
+		# anything else the spawn pools missed can never join a roster
+		floater(target.pos, "IMMUNE", "#e8452f")
+		return
 	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
 	var hp_frac := maxf(0, target.hp) / target.max_hp
 	var cap_pow: float = cap_power_of(target)
@@ -1401,7 +1413,8 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	# uid (client replicas mirror it). The world is shared, the roster is
 	# not: the catch answers to the keeper who threw the ball.
 	var target: Kin = find_pal(nid)
-	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss:
+	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss \
+			or not acquirable(target.species_id): # the ownable gate — same rule as resolve_sphere
 		return
 	var sp_pow: float = float(ItemData.ITEMS.get(sid, {}).get("spherePower", 0.0))
 	if sp_pow <= 0.0:
@@ -1691,13 +1704,23 @@ func queue_redraw_decor() -> void:
 
 # gamepad layer: bindings are added at runtime so project.godot's input map
 # stays keyboard-clean, and headless runs bind identically. ui_* actions keep
-# Godot's built-in pad defaults (A confirm, dpad/stick nav, B cancel).
+# Godot's built-in pad defaults (A confirm, dpad/stick nav) — but every action
+# we touch is first stripped of joypad events, so binding is idempotent across
+# scene reloads and no gameplay button may share a ui_* action (B would dodge
+# AND pause). Pad menu cancel lives on Start.
+func _pad_erase(action: String) -> void:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventJoypadButton or e is InputEventJoypadMotion:
+			InputMap.action_erase_event(action, e)
+
 func _pad_btn(action: String, b: int) -> void:
+	_pad_erase(action)
 	var e := InputEventJoypadButton.new()
 	e.button_index = b
 	InputMap.action_add_event(action, e)
 
 func _pad_axis(action: String, ax: int, v: float) -> void:
+	_pad_erase(action)
 	var e := InputEventJoypadMotion.new()
 	e.axis = ax
 	e.axis_value = v
@@ -1719,7 +1742,7 @@ func bind_gamepad() -> void:
 	_pad_btn("party_toggle", JOY_BUTTON_RIGHT_SHOULDER)
 	_pad_btn("pal_stance", JOY_BUTTON_LEFT_SHOULDER)
 	_pad_btn("build", JOY_BUTTON_BACK)
-	_pad_btn("ui_cancel", JOY_BUTTON_START)
+	_pad_btn("ui_cancel", JOY_BUTTON_START) # erase also drops default B cancel
 	_pad_axis("zoom_in", JOY_AXIS_RIGHT_Y, -1.0)
 	_pad_axis("zoom_out", JOY_AXIS_RIGHT_Y, 1.0)
 
@@ -3344,6 +3367,7 @@ func save_game() -> void:
 			"star": p.star, "xp": p.xp, "raid": p.raid, "ail": p.ailment, "sb": p.soul_boost,
 			"lucky": p.lucky, "extra": p.extra_skills, "stance": p.stance,
 			"bnt": p.bounty, "eq": p.equipped, "own": p.owner_tag,
+			"stag": p.spire_tag, "ph": p.phase, # spire guardians keep their campaign tag; a phase-2 boss must not re-summon on reload
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -3446,6 +3470,7 @@ func save_game() -> void:
 		return
 	f.store_var(d)
 	f.close()
+	has_save = true
 	log_msg("Saved.")
 
 func load_game() -> bool:
@@ -3637,6 +3662,10 @@ func load_game() -> bool:
 			np.sprite.scale = Vector2(1.6, 1.6)
 		if pd.get("boss") is bool:
 			np.boss = pd["boss"] # only a real bool assigns — GDScript has no bool() ctor and String==true throws
+		var pstg := str(pd.get("stag", ""))
+		if pstg.begins_with("spire_") and int(pstg.trim_prefix("spire_")) < SPIRE_DEFS.size():
+			np.spire_tag = pstg # same whitelist as the spires_done restore — foreign tags can't forge campaign progress
+		np.phase = clampi(int(pd.get("ph", 1)), 1, 2) # a phase-2 boss reloading at 1 would re-run its summon
 		np.san = clampf(float(pd.get("san", np.san)), 0.0, 200.0)
 		np.hunger = clampf(float(pd.get("hunger", 0.0)), 0.0, 100.0)
 		var cv2 = pd.get("carry")
@@ -3980,7 +4009,7 @@ func start_raid() -> void:
 			var rp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(rp)
 			rp.setup(self, sid, rng.int_range(3 + zone * 3 + day_bonus, 6 + zone * 5 + day_bonus), Vector2(tx + 0.5, ty + 0.5))
-			if sid.begins_with("Iron Pact") and rng.chance(0.3):
+			if sid.begins_with("ironpact") and rng.chance(0.3): # canonical ids, not the theme string
 				rp.bounty = rng.int_range(8, 18) # wanted criminals pay cash on the spot
 			# raider picks nearest non-wild kin; falls back to the player
 			rp.aggro = 0
@@ -4681,12 +4710,16 @@ const SPIRE_DEFS := [
 ]
 var spires_done := {} # tag -> true — persists with the save
 var crowned := false
+var has_save := false # cached file_exists for the title row — no per-frame stat syscall
 
 func spire_pick(elem: String) -> String:
 	# a guardian that matches the shrine's element; the dragon spire deserves
 	# legendary stock — every spire boss is orb-immune regardless of species
-	var pool := (SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()).filter(
-		func(s): return elem in SpeciesData.species_of(str(s)).get("elements", []))
+	var pool := []
+	for s in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
+		# a spire boss must be a beast — no ironpact in a robe
+		if elem in SpeciesData.species_of(str(s)).get("elements", []) and SpeciesData.body_of(str(s)) != "human":
+			pool.append(str(s))
 	if elem == "dragon":
 		var legs := pool.filter(func(s): return s in LEGENDARY_DEN)
 		if not legs.is_empty():
@@ -4696,46 +4729,55 @@ func spire_pick(elem: String) -> String:
 	return str(pool[rng.int_range(0, pool.size() - 1)])
 
 func spawn_pact_spires() -> void:
-	var tries := 0
 	var placed := 0
-	while tries < 8000 and placed < SPIRE_DEFS.size():
-		tries += 1
-		var tx := rng.int_range(8, World.WORLD_W - 10)
-		var ty := rng.int_range(8, World.WORLD_H - 10)
-		var sd: Dictionary = SPIRE_DEFS[placed]
-		if world.zone_at(tx, ty) != int(sd["zone"]):
-			continue
-		var ok := true
-		for dy in range(-3, 4):
-			for dx in range(-3, 4):
-				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
-					ok = false
-		if not ok:
-			continue
-		# rock ring, door facing south — a proper arena, not a field bump
-		for dy in range(-2, 3):
-			for dx in range(-2, 3):
-				if maxi(absi(dx), absi(dy)) == 2 and not (dy == 2 and dx == 0):
-					var j := world.idx(tx + dx, ty + dy)
-					world.decor[j] = World.Decor.ROCK
-					world.hp[j] = 60
-		var bp := preload("res://src/kin.gd").new()
-		bp.boss = true
-		bp.alpha = true
-		entity_layer.add_child(bp)
-		bp.setup(self, spire_pick(str(sd["elem"])), int(sd["lv"]), Vector2(tx + 0.5, ty + 0.5))
-		bp.home = bp.pos
-		bp.spire_tag = "spire_%d" % placed
-		bp.sprite.scale = Vector2(1.9, 1.9)
-		pals.append(bp)
-		if place_free("chest", tx - 1, ty - 1):
-			var st: Dictionary = structures[Vector2i(tx - 1, ty - 1)]
-			st["loot"] = true
-			st["store"] = {"gold_coin": 30 + placed * 15, "legendary_orb": 1,
-				"ancient_part": 1 + placed}
-		placed += 1
+	# strict pass wants a clear 7x7; the relaxed pass only needs the right zone —
+	# five spires is a campaign contract, a map may never ship fewer
+	for relaxed in [false, true]:
+		var tries := 0
+		while tries < 8000 and placed < SPIRE_DEFS.size():
+			tries += 1
+			var tx := rng.int_range(8, World.WORLD_W - 10)
+			var ty := rng.int_range(8, World.WORLD_H - 10)
+			var sd: Dictionary = SPIRE_DEFS[placed]
+			if world.zone_at(tx, ty) != int(sd["zone"]):
+				continue
+			var ok := true
+			if not relaxed:
+				for dy in range(-3, 4):
+					for dx in range(-3, 4):
+						if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+							ok = false
+			if not ok:
+				continue
+			_place_spire(sd, tx, ty, placed)
+			placed += 1
+	if placed < SPIRE_DEFS.size():
+		push_warning("only %d of %d pact spires placed — campaign uncompletable on this map" % [placed, SPIRE_DEFS.size()])
 	if placed > 0:
 		log_msg("The Iron Pact raised %d spires across the Wildmere — break them all" % placed)
+
+func _place_spire(sd: Dictionary, tx: int, ty: int, placed: int) -> void:
+	# rock ring, door facing south — a proper arena, not a field bump
+	for dy in range(-2, 3):
+		for dx in range(-2, 3):
+			if maxi(absi(dx), absi(dy)) == 2 and not (dy == 2 and dx == 0):
+				var j := world.idx(tx + dx, ty + dy)
+				world.decor[j] = World.Decor.ROCK
+				world.hp[j] = 60
+	var bp := preload("res://src/kin.gd").new()
+	bp.boss = true
+	bp.alpha = true
+	entity_layer.add_child(bp)
+	bp.setup(self, spire_pick(str(sd["elem"])), int(sd["lv"]), Vector2(tx + 0.5, ty + 0.5))
+	bp.home = bp.pos
+	bp.spire_tag = "spire_%d" % placed
+	bp.sprite.scale = Vector2(1.9, 1.9)
+	pals.append(bp)
+	if place_free("chest", tx - 1, ty - 1):
+		var st: Dictionary = structures[Vector2i(tx - 1, ty - 1)]
+		st["loot"] = true
+		st["store"] = {"gold_coin": 30 + placed * 15, "legendary_orb": 1,
+			"ancient_part": 1 + placed}
 
 func record_spire(tag: String) -> void:
 	spires_done[tag] = true
@@ -4845,16 +4887,22 @@ func regenerate(s: int) -> void:
 	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	lure = {}; treasure = {}; board_quest = {} # tossed bait, marked charts and old postings belong to the old world
+	hint_seen.clear() # a new island earns its nudges again
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
 	drawer.setup(world)
 	queue_redraw_decor() # the decor pool is keyed by cell — old-world sprites must be rebuilt
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
-	spawn_lairs() # joining clients need their own lair bosses (pals are locally authoritative)
+	# POI placement rolls off the world seed — a joining client lands the same
+	# spires/lairs/decor as the host instead of phantom walls it can't see
+	var rsav := rng.s
+	rng.s = (s ^ 0x9E3779B9) & 0xFFFFFFFF
+	spawn_lairs()
 	spawn_camps() # Iron Pact poacher camps — guards spawn locally like lair bosses
 	spawn_fossils() # old bones re-spawned with the world
 	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
+	rng.s = rsav # gameplay rolls resume from the session stream
 
 # ---------- effigy statues ----------
 const PERK_COST := 2

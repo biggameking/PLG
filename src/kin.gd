@@ -108,6 +108,9 @@ func any_status() -> bool:
 	return false
 
 func hit(dmg: int, mult: float, by_player: bool) -> void:
+	if net_id > 0:
+		return # replicas take wounds only through the host's pal_sync — a local
+		# hit would spawn ghost adds (phase 2) and ghost respawn timers
 	hp -= dmg
 	hit_flash = 0.4
 	if hp > 0 and rage_mult() > 1.0 and not _enraged:
@@ -170,8 +173,8 @@ func pact_slam() -> void:
 	if pl != null and pos.distance_to(pl.pos) <= 2.6:
 		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
 	for q in game.pals:
-		if q != self and q.hp > 0 and q.mode in ["partner", "base"] \
-				and pos.distance_to(q.pos) <= 2.6:
+		if q != self and q.hp > 0 and q.mode == "partner" \
+				and pos.distance_to(q.pos) <= 2.6: # punish the pile-up, not parked farmhands
 			q.hit(maxi(2, int(spec.get("atk", 40) * 0.5 * rage_mult())), 1.0, false)
 
 func elem() -> Array:
@@ -829,5 +832,5 @@ func condense() -> void:
 var atk_bonus := 1.0
 var def_bonus := 1.0
 var speed_bonus := 1.0
-var star := 0
-var raid := false            # spawned by a raid wave — blocks sleeping # essence-condense rank 0-4; each star multiplies combat stats
+var star := 0                # essence-condense rank 0-4; each star multiplies combat stats
+var raid := false            # spawned by a raid wave — blocks sleeping
