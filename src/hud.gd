@@ -339,6 +339,9 @@ func interact() -> void:
 			"monitoring_stand":
 				game.cycle_work_mode()
 				return
+			"weather_shrine":
+				game.pray_weather()
+				return
 			"pal_condenser":
 				game.condense_active()
 				return

@@ -614,6 +614,7 @@ var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
 var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of game hours
 var weather_t := 0.0
+var pray_cd := 0.0            # absolute t — shrine prayer cooldown
 var explored := PackedByteArray() # fog of war — one byte per world cell
 var lure := {}                   # thrown bait {pos, till} — one pile at a time
 var treasure := {}               # treasure-map dig spot {pos} — one chart at a time
@@ -952,6 +953,24 @@ func dig_check() -> void: # called on the frame tick — standing on the X digs
 		add_item("mega_sphere", 2)
 	floater(player.pos, "TREASURE!", "#ffd76e")
 	log_msg("Unearthed a cache: %d gold and a keepsake" % coin)
+	sfx_play("level")
+
+func pray_weather() -> void:
+	# Palworld weather-shrine: offer paldium, cycle the sky. One altar's mood
+	# is everyone's sky — the cooldown is global, not per building
+	if t < pray_cd:
+		log_msg("The sky is still settling (%.0fs)" % (pray_cd - t))
+		return
+	if int(items.get("paldium", 0)) < 3:
+		log_msg("The shrine wants 3 paldium")
+		return
+	var nxt: String = {"clear": "rain", "rain": "storm", "storm": "clear"}.get(weather, "rain")
+	add_item("paldium", -3)
+	weather = nxt
+	weather_t = 0.0 # the forced sky holds until the next natural roll
+	pray_cd = t + 600.0
+	log_msg({"rain": "You offer paldium — rain answers", "storm": "The altar drinks paldium — thunder answers",
+		"clear": "The offering burns off — the sky clears"}.get(nxt, "The sky shifts"))
 	sfx_play("level")
 
 func throw_bait() -> void:
@@ -2834,6 +2853,7 @@ func save_game() -> void:
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
+		"pray_left": maxf(0.0, pray_cd - t),
 		"explored": explored,
 		"treasure": ([treasure["pos"].x, treasure["pos"].y] if treasure else null),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
@@ -2936,6 +2956,7 @@ func load_game() -> bool:
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
+	pray_cd = t + clampf(float(d.get("pray_left", 0.0)), 0.0, 600.0)
 	var ex = d.get("explored", null) # fog of war rides the save — or starts dark
 	if ex is PackedByteArray and ex.size() == world.WORLD_W * world.WORLD_H:
 		explored = ex
@@ -3849,6 +3870,7 @@ func regenerate(s: int) -> void:
 	dex_claimed = 0 # a fresh world hasn't proven its ecology yet
 	weather = "clear"
 	weather_t = 0.0
+	pray_cd = 0.0
 	explored.clear() # a fresh world is unexplored from edge to edge
 	explored.resize(world.WORLD_W * world.WORLD_H)
 	work_mode = 1

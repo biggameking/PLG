@@ -460,6 +460,25 @@ const STRUCTURES = {
   ],
   "desc": "A straw sparring partner — idle pals swing on it and grow a little stronger."
  },
+"weather_shrine": {
+  "id": "weather_shrine",
+  "name": "Weather Shrine",
+  "glyph": "☂",
+  "color": "#7fb8d8",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "stone",
+    20
+   ],
+   [
+    "paldium",
+    10
+   ]
+  ],
+  "desc": "A sky-touched altar — offer paldium and the heavens take requests."
+ },
 "apiary": {
   "id": "apiary",
   "name": "Apiary",
@@ -1268,6 +1287,12 @@ const TECH = [
   "name": "Apiary",
   "tier": 3,
   "cost": 1
+ },
+ {
+  "id": "weather_shrine",
+  "name": "Weather Shrine",
+  "tier": 6,
+  "cost": 2
  }
 ]
 

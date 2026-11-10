@@ -821,6 +821,13 @@ def make_structure(sid, color, w, h):
         d.ellipse([W//2 - 6, 12, W//2 + 6, 24], fill=hxc("#d8b84a") + (255,))
         d.rectangle([W//2 - 7, 20, W//2 + 7, 23], fill=hxc("#a08050") + (255,))
         d.line([(W//2 - 3, 15), (W//2 + 3, 19)], fill=hxc("#8a6d4d") + (255,), width=1)
+    elif sid == "weather_shrine":
+        # stone altar with a floating paldium crystal and swirling wind lines
+        d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
+        d.rectangle([W//2 - 8, 30, W//2 + 8, 36], fill=hxc("#8b8f92") + (255,))
+        d.polygon([(W//2, 12), (W//2 + 7, 22), (W//2, 30), (W//2 - 7, 22)], fill=hxc("#4dd0e1") + (255,))
+        d.arc([W//2 - 14, 8, W//2 - 6, 16], 0, 270, fill=hxc("#7fb8d8") + (255,), width=1)
+        d.arc([W//2 + 6, 14, W//2 + 15, 22], 0, 270, fill=hxc("#7fb8d8") + (255,), width=1)
     elif sid == "apiary":
         # a domed bee skep — straw rings, little door, drifting bees
         d.ellipse([W//2 - 13, 22, W//2 + 13, 44], fill=hxc("#d8b830") + (255,))
@@ -887,6 +894,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "compost_bin": ("#7a9a4a", 1, 1),
     "fish_trap": ("#5a8ac0", 1, 1),
     "apiary": ("#d8b830", 1, 1),
+    "weather_shrine": ("#7fb8d8", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

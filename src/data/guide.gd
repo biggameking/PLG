@@ -20,7 +20,10 @@ the pantry — honey bakes into buns that quicken the step.
 
 The island keeps a clock. Daylight is for building; night is
 when the dark element pals wake and hunt wide. Cold bites past
-dusk — stand near a fire, hug a fire pal, or wear hide.
+dusk — stand near a fire, hug a fire pal, or wear hide. And if
+the sky won't cooperate, a weather shrine takes paldium in
+exchange for a word with the heavens: sun, rain, thunder, and
+back again — choose the sky your yard needs.
 
 The far north freezes around the clock. The far south scorches
 by day and snaps cold at night. Pack warm fur and a tropical

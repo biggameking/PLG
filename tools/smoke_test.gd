@@ -1096,6 +1096,20 @@ func run() -> void:
 		game.pals.erase(keeper); keeper.free()
 	check("apiary drips honey", honey_ok, "ap=%s" % (ap_st != null))
 
+	# weather shrine: paldium buys the sky — prayer cycles and then rests
+	var ws_ok := false
+	var ws_k: Vector2i = free_xy.call("weather_shrine")
+	if ws_k.x >= 0:
+		game.items["paldium"] = 5
+		var w0: String = game.weather
+		game.pray_cd = 0.0
+		game.pray_weather()
+		var cycled: bool = game.weather != w0 and game.pray_cd > game.t
+		game.pray_weather() # second prayer too soon — refused
+		ws_ok = cycled and game.items.get("paldium", 0) == 2 and int(game.pray_cd - game.t) > 500
+		game.weather = w0 # hand the sky back — later checks assume a neutral one
+	check("shrine calls weather", ws_ok, "w=%s cd=%.0f" % [game.weather, game.pray_cd - game.t])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
