@@ -872,6 +872,14 @@ def make_structure(sid, color, w, h):
         d.polygon([(W//2 + 2, 10), (W//2 + 20, 13), (W//2 + 20, 24), (W//2 + 2, 21)], fill=hxc("#b84a3a") + (255,))
         d.line([(W//2 + 6, 12), (W//2 + 6, 21)], fill=hxc("#d8b84a") + (255,), width=2)
         d.rectangle([W//2 - 5, 44, W//2 + 5, 47], fill=hxc("#6b6f72") + (255,))
+    elif sid == "spyglass":
+        # a lookout platform — timber legs, a deck, a brass spyglass on a post
+        for px6 in (-9, 9):
+            d.line([(W//2 + px6, 24), (W//2 + px6, 44)], fill=hxc("#5e462e") + (255,), width=3)
+        d.rectangle([W//2 - 13, 22, W//2 + 13, 27], fill=hxc("#8a6d4d") + (255,))
+        d.line([(W//2, 10), (W//2, 22)], fill=hxc("#5e462e") + (255,), width=2)
+        d.ellipse([W//2 - 7, 5, W//2 + 7, 13], outline=hxc("#d8b84a") + (255,), width=2)
+        d.ellipse([W//2 - 4, 7, W//2 + 4, 11], fill=hxc("#7a9ab8") + (255,))
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -952,6 +960,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "notice_board": ("#c9a15a", 1, 1),
     "snare_trap": ("#8a7a5a", 1, 1),
     "war_banner": ("#b84a3a", 1, 1),
+    "spyglass": ("#7a9ab8", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

@@ -2088,6 +2088,12 @@ func tick_production(dt: float) -> void:
 				log_msg("%s is caught in the snare!" % snared.spec.get("name", snared.species_id))
 				st["snare"] = false # spent — disarm now, remove after the tick (no mid-iteration erase)
 				call_deferred("net_remove_structure", st) # one bite and the trap is spent
+		if st["id"] == "spyglass":
+			st["timer"] += dt # the brass glass sweeps a wider arc every half minute
+			if st["timer"] >= 30.0:
+				st["timer"] = 0.0
+				st["spy_r"] = minf(float(st.get("spy_r", 6.0)) + 1.0, 18.0)
+				reveal_at(Vector2(key.x + 0.5, key.y + 0.5), float(st["spy_r"]))
 		if int(st.get("turret", 0)) > 0:
 			st["turret_cd"] = float(st.get("turret_cd", 0.0)) - dt
 			if float(st["turret_cd"]) <= 0.0:

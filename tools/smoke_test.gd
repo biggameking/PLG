@@ -1227,6 +1227,24 @@ func run() -> void:
 		bn_ok = game.near_banner(wpos + Vector2(4, 0)) and not game.near_banner(wpos + Vector2(20, 0))
 	check("banner rallies the yard", bn_ok, "wb=%s" % (wb_k.x >= 0))
 
+	# spyglass tower: the brass glass charts more fog each sweep, capped at 18
+	game.add_item("wood", 12); game.add_item("cloth", 4); game.add_item("ingot", 2)
+	var sg_k: Vector2i = free_xy.call("spyglass")
+	var sg_st = game.structures.get(sg_k) if sg_k.x >= 0 else null
+	var sg_ok := false
+	if sg_st != null:
+		var fog0 := 0
+		for b2 in game.explored:
+			fog0 += int(b2 == 0)
+		for i13 in range(3):
+			sg_st["timer"] = 29.9
+			game.tick_production(0.2)
+		var fog1 := 0
+		for b3 in game.explored:
+			fog1 += int(b3 == 0)
+		sg_ok = fog1 < fog0 and float(sg_st.get("spy_r", 0.0)) > 6.0 and float(sg_st.get("spy_r", 0.0)) <= 18.0
+	check("spyglass charts the fog", sg_ok, "sg=%s r=%s" % [sg_st != null, str(sg_st.get("spy_r", "-") if sg_st else "-")])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

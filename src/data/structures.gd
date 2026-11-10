@@ -589,6 +589,30 @@ const STRUCTURES = {
   ],
   "desc": "A dyed banner on a tall pole — pals working within sight of its colors put on a little more pace."
  },
+"spyglass": {
+  "id": "spyglass",
+  "name": "Spyglass Tower",
+  "glyph": "◎",
+  "color": "#7a9ab8",
+  "w": 1,
+  "h": 1,
+  "hp": 140,
+  "cost": [
+   [
+    "wood",
+    12
+   ],
+   [
+    "cloth",
+    4
+   ],
+   [
+    "ingot",
+    2
+   ]
+  ],
+  "desc": "A lookout platform with a brass spyglass — every half minute it charts a little more of the wilds around it."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1458,6 +1482,12 @@ const TECH = [
   "name": "War Banner",
   "tier": 4,
   "cost": 1
+ },
+ {
+  "id": "spyglass",
+  "name": "Spyglass Tower",
+  "tier": 5,
+  "cost": 2
  }
 ]
 
