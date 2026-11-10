@@ -54,6 +54,9 @@ static func pad(chords: Array, bar := 6.0, vol := 0.13, arp_step := 0.0, arp_vol
 			qc.append(round(float(f) * bar) / bar)
 		q.append(qc)
 	var arp_pat := [0, 1, 2, 1, 0, 2, 1, 2] # chord-tone walk — reads like a line, not an arpeggiator demo
+	if arp_step > 0.0: # pluck slots must divide the loop or the tail chops at wrap
+		var total := bar * chords.size()
+		arp_step = total / maxf(1.0, round(total / arp_step))
 	for i in n:
 		var t := float(i) / RATE
 		var ci := int(t / bar)
@@ -72,8 +75,9 @@ static func pad(chords: Array, bar := 6.0, vol := 0.13, arp_step := 0.0, arp_vol
 			var nt := t - ni * arp_step
 			var tone: float = q[ci][arp_pat[ni % arp_pat.size()] % q[ci].size()] * 2.0
 			v += arp_vol * exp(-6.0 * nt / arp_step) * (sin(TAU * tone * t) + 0.3 * sin(TAU * tone * 2.0 * t))
-		# gentle attack at t=0 keeps the sample edge quiet
-		data[i] = int(128 + 127 * v * minf(1.0, t * 2.0))
+		# no fade-in here: quantized freqs already zero the wrap edge — a ramp
+		# would carve a periodic dip into every loop, which IS the seam
+		data[i] = int(128 + 127 * v)
 	var st := AudioStreamWAV.new()
 	st.format = AudioStreamWAV.FORMAT_8_BITS
 	st.mix_rate = RATE

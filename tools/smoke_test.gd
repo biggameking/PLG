@@ -4399,6 +4399,17 @@ func run() -> void:
 		and game.music_danger.stream.data != game.music_day.stream.data) # arp layer must land inside the loop, not past it
 	check("pads are distinct voices", game.music_day.stream.data != game.music_night.stream.data
 		and game.music_night.stream.data != game.music_danger.stream.data)
+	# the loop seam is real until proven: the wrap edge must carry no dip —
+	# quantized freqs make head and tail meet at ~0, and a non-dividing
+	# arp_step must be snapped onto the loop boundary, not chopped mid-tail
+	var ddat: PackedByteArray = game.music_day.stream.data
+	var e0 := int(ddat[0]); var e1 := int(ddat[ddat.size() - 1])
+	check("pad wrap has no seam", abs(e0 - 128) <= 12 and abs(e1 - 128) <= 12
+		and abs(e1 - e0) <= 12, "head=%d tail=%d" % [e0, e1])
+	var seam_pad: AudioStreamWAV = game.SFX_LIB.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6]], 6.0, 0.13, 0.7, 0.05)
+	var sdat: PackedByteArray = seam_pad.data
+	check("arp slots divide the loop", abs(int(sdat[0]) - 128) <= 12
+		and abs(int(sdat[sdat.size() - 1]) - 128) <= 12)
 	game.tod = 22.0; game.tick_music(1.0)
 	# night fade: while the danger drone owns the mix both pastoral pads duck —
 	# the crossfade contract is day-ducked always, night-up only when calm
@@ -4940,6 +4951,9 @@ func run() -> void:
 	game.net.peer_tags[5] = "tok_a"
 	game.net.hello("tok_a") # pid 0 headless — the tag belongs to live peer 5
 	check("stolen tag refused", not game.net.peer_tags.has(0))
+	game.net.hello("tok_b") # pid 0 headless — a fresh identity registers
+	check("hello registers tag", game.net.peer_tags.get(0, "") == "tok_b")
+	game.net.peer_tags.erase(0)
 	game.net.peer_tags.erase(5)
 	game.net.multiplayer.multiplayer_peer = fake_peer
 	srv.close()
