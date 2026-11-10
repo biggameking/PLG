@@ -829,6 +829,8 @@ func touch_layout(r: Vector2) -> Dictionary:
 		"roll": Vector2(r.x - 66, r.y - 164),
 		"e": Vector2(r.x - 156, r.y - 140),
 		"orb": Vector2(r.x - 226, r.y - 92),
+		"inv": Vector2(r.x - 226, r.y - 170),
+		"bld": Vector2(r.x - 296, r.y - 116),
 		"menu": Vector2(r.x - 38, 44)}}
 
 func touch_down(p: Vector2, idx: int) -> void:
@@ -871,6 +873,11 @@ func touch_verb(b: String) -> void:
 			pl.sphere_sel = (pl.sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
 		"e":
 			interact()
+		"inv":
+			game.panel = "inv"
+		"bld":
+			game.panel = "build"
+			build_sel = -1
 		"roll":
 			if pl.statuses.get("sleep", 0) <= game.t and pl.dodge_t <= 0 and pl.stamina >= 15.0:
 				pl.dodge_t = 0.35; pl.stamina -= 15.0; pl.stam_wait = 0.8
@@ -891,7 +898,8 @@ func draw_touch(r: Vector2) -> void:
 	draw_arc(jc, JOY_R, 0, TAU, 24, Color(0.9, 0.95, 1.0, 0.30), 1.5)
 	var knob := jc + game.player.touch_vec * (JOY_R * 0.55)
 	draw_circle(knob, 20, Color(0.3, 0.82, 0.88, 0.55))
-	var labels := {"atk": "ATK", "aim": "AIM", "roll": "ROLL", "e": "E", "orb": "ORB", "menu": "≡"}
+	var labels := {"atk": "ATK", "aim": "AIM", "roll": "ROLL", "e": "E", "orb": "ORB",
+		"inv": "INV", "bld": "BLD", "menu": "≡"}
 	for b in lay["btns"]:
 		var c: Vector2 = lay["btns"][b]
 		var rad := 36.0 if b == "atk" else BTN_R

@@ -4538,6 +4538,11 @@ func run() -> void:
 	hudn.touch_down(lay_t["btns"]["menu"], 5); hudn.touch_up(5)
 	check("touch MENU pauses", game.state == "paused")
 	game.state = "play"
+	hudn.touch_down(lay_t["btns"]["inv"], 6); hudn.touch_up(6)
+	check("touch INV opens bag", game.panel == "inv")
+	game.panel = ""
+	hudn.touch_down(lay_t["btns"]["bld"], 6); hudn.touch_up(6)
+	check("touch BLD opens build", game.panel == "build")
 	game.panel = "inv"
 	hudn.touch_down(lay_t["joy"], 6)
 	check("panel owns taps", hudn.joy_idx < 0)
