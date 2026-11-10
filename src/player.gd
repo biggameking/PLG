@@ -6,7 +6,7 @@ class_name Player
 var game: Game
 var hp := 100.0
 var hunger := 80.0          # 0-100; drains ~100 over ~22 min
-var stamina := 100.0        # Palworld stamina: sprint/swim/dodge burn it
+var stamina := 100.0        # the island stamina: sprint/swim/dodge burn it
 var stam_wait := 0.0        # regen delay after a drain
 var cold_t := 0.0           # night-chill accumulator — resets by the fire
 var shield_t := 0.0         # Roly Poly bubble: deadline (game.t)
@@ -14,7 +14,7 @@ var shield_n := 0.0         # absorb pool left in the bubble
 var _lamp: PointLight2D = null # miner's cap light — one node, swapped on armor change
 
 func absorb_hit(final: int) -> int:
-	# Palworld's Lamball partner skill — a plush ball eats the hit for you
+	# Fenjelly partner skill — a plush ball eats the hit for you
 	if shield_t <= game.t or final <= 0:
 		return final
 	var got := mini(final, int(shield_n))
@@ -30,14 +30,14 @@ var capture_level := 1
 var dodge_t := 0.0
 var mount: Pal = null
 var facing := Vector2(1, 0)  # last move direction, for harvest/interact
-var equipment := {"weapon": "", "armor": "", "acc1": "", "acc2": ""} # Palworld trinkets ride the acc slots
+var equipment := {"weapon": "", "armor": "", "acc1": "", "acc2": ""} # the island trinkets ride the acc slots
 var weapon_wear := -1.0       # uses left; -1 = unbreakable or bare hands
 var armor_wear := -1.0        # hits absorbed left; -1 = unarmored/unbreakable
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
 var statuses := {}
-var meal_buff := {}          # one active food buff {atk|def|spd: frac} — Palworld meal bonus
+var meal_buff := {}          # one active food buff {atk|def|spd: frac} — the island meal bonus
 var meal_t := 0.0            # seconds left on the meal buff
 
 func setup(g: Game, at: Vector2) -> void:
@@ -45,7 +45,7 @@ func setup(g: Game, at: Vector2) -> void:
 	world = g.world
 	pos = at
 	speed = 5.0
-	setup_visuals("res://assets/pals/player_f0.png", "res://assets/pals/player_f1.png")
+	setup_visuals("res://assets/kin/player_f0.png", "res://assets/kin/player_f1.png")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("aim"):
@@ -74,7 +74,7 @@ func melee() -> void:
 		return
 	var w: Dictionary = ItemData.ITEMS.get(equipment["weapon"], {})
 	var wd: Dictionary = w.get("weapon", {})
-	if w.get("id") == "sphere_launcher":
+	if w.get("id") == "orb_launcher":
 		launch_sphere(wd)
 		return
 	if wd.get("range", 0) > 3:
@@ -100,7 +100,7 @@ func melee() -> void:
 		else:
 			p.hit(d, mult, true)
 		hit_any = true
-	# Palworld crime: a swung weapon can also strike the trader — expect consequences
+	# the island crime: a swung weapon can also strike the trader — expect consequences
 	if game.merchant != null and is_instance_valid(game.merchant) \
 			and game.merchant_hp > 0 and pos.distance_to(game.merchant.pos) <= reach:
 		game.hit_merchant(atk)
@@ -111,8 +111,8 @@ func melee() -> void:
 		game.try_harvest(pos, facing)
 
 func launch_sphere(wd: Dictionary) -> void:
-	# Palworld's sphere launcher: slings the selected ball downrange at the
-	# wild pal nearest the facing line — long-range catch, no stealth crawl
+	# sphere launcher: slings the selected ball downrange at the
+	# wild kin nearest the facing line — long-range catch, no stealth crawl
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
 		game.log_msg("No spheres loaded!")
@@ -133,7 +133,7 @@ func launch_sphere(wd: Dictionary) -> void:
 		if dot > best_dot:
 			best_dot = dot; best = p
 	if best == null:
-		game.log_msg("No pal in the line of fire")
+		game.log_msg("No kin in the line of fire")
 		return
 	atk_cd = wd.get("cd", 1.0)
 	wear_tick()
@@ -143,7 +143,7 @@ func launch_sphere(wd: Dictionary) -> void:
 func throw_sphere() -> void:
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
-		game.log_msg("No spheres! Craft pal_sphere at a workbench.")
+		game.log_msg("No spheres! Craft kin_orb at a workbench.")
 		aiming = false
 		return
 	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
@@ -171,32 +171,32 @@ func can_enter(nx: float, ny: float) -> bool:
 	var tx := int(nx); var ty := int(ny)
 	if not world.blocked(tx, ty, pos.x, pos.y):
 		return true
-	# flying mount (Palworld): a bird carries you over water and cliffs both ways
+	# flying mount (the island): a bird carries you over water and cliffs both ways
 	if flying() and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
 		if world.decor[i] == World.Decor.NONE and not world.solid_structure(i):
 			return true
 		return false # trees/rocks/walls still block a flyer
-	# swimming mount (Palworld): a water-element mount ferries you across water —
+	# swimming mount (the island): a water-element mount ferries you across water —
 	# nothing else about terrain changes: decor, structures and cliffs still block
 	if mount != null and world.in_bounds(tx, ty):
 		var i2 := world.idx(tx, ty)
 		if world.tiles[i2] == World.Tile.WATER and "water" in mount.spec.get("elements", []):
 			return world.decor[i2] == World.Decor.NONE and not world.solid_structure(i2)
-	# swimming on foot (Palworld): deep water is crossable without a mount —
+	# swimming on foot (the island): deep water is crossable without a mount —
 	# just slow and tiring
 	if mount == null and world.in_bounds(tx, ty):
 		var i3 := world.idx(tx, ty)
 		if world.tiles[i3] == World.Tile.WATER:
 			return world.decor[i3] == World.Decor.NONE and not world.solid_structure(i3)
-	# glider (Palworld): riding the wind down a cliff is safe — uphill is not
+	# glider (the island): riding the wind down a cliff is safe — uphill is not
 	var fi := world.idx(clampi(int(pos.x), 0, World.WORLD_W - 1), clampi(int(pos.y), 0, World.WORLD_H - 1))
 	if game.item_count("glider") > 0 and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
 		if world.tiles[i] != World.Tile.WATER and world.decor[i] == World.Decor.NONE \
 				and not world.solid_structure(i) and world.elev[i] < world.elev[fi]:
 			return true
-	# grappling hook (Palworld): the hook hauls you UP a ledge — one-way
+	# grappling hook (the island): the hook hauls you UP a ledge — one-way
 	if game.item_count("grappling_hook") > 0 and world.in_bounds(tx, ty):
 		var i := world.idx(tx, ty)
 		if world.tiles[i] != World.Tile.WATER and world.decor[i] == World.Decor.NONE \
@@ -208,7 +208,7 @@ func swimming() -> bool:
 	return mount == null and world.in_bounds(int(pos.x), int(pos.y)) \
 		and world.tiles[world.idx(int(pos.x), int(pos.y))] == World.Tile.WATER
 
-# Palworld carry weight: the bag pulls you down once it tops capacity
+# the island carry weight: the bag pulls you down once it tops capacity
 func carry_wt() -> float:
 	var w := 0.0
 	for sid in game.items:
@@ -223,7 +223,7 @@ func speed_mult() -> float:
 	if swimming():
 		m *= 0.5
 	if mount != null:
-		# Palworld: mounts differ — a swift deer outruns a sluggish boar
+		# the island: mounts differ — a swift deer outruns a sluggish boar
 		m *= 1.3 + minf(float(mount.spec.get("speed", 2.6)), 5.0) * 0.2
 	if hunger < 25.0:
 		m *= 0.8
@@ -235,7 +235,7 @@ func speed_mult() -> float:
 	var cap := carry_cap()
 	var wt := carry_wt()
 	if wt > cap:
-		m *= maxf(0.15, 1.5 - wt / cap) # over-encumbered crawl (Palworld)
+		m *= maxf(0.15, 1.5 - wt / cap) # over-encumbered crawl (the island)
 	return m
 
 func _physics_process(dt: float) -> void:
@@ -257,7 +257,7 @@ func _physics_process(dt: float) -> void:
 		meal_t -= dt
 		if meal_t <= 0.0:
 			meal_buff = {} # the meal wore off
-	# Palworld stamina: swimming burns it — run dry mid-water and you drown
+	# the island stamina: swimming burns it — run dry mid-water and you drown
 	var stam_drain := 0.0
 	if swimming():
 		stam_drain = 4.0 * dt
@@ -286,14 +286,14 @@ func _physics_process(dt: float) -> void:
 	elif lamp_r <= 0 and _lamp != null:
 		_lamp.queue_free()
 		_lamp = null
-	# a soak in the spring mends the keeper too (Palworld bath comfort)
+	# a soak in the spring mends the keeper too (the island bath comfort)
 	if hp < max_hp:
 		for k in game.structures:
 			var st4: Dictionary = game.structures[k]
 			if st4["id"] == "hot_spring" and Vector2(k).distance_to(pos) <= 2.5:
 				hp = minf(max_hp, hp + max_hp * 0.02 * dt)
 				break
-	# Palworld night chill + latitude bands: past dusk and away from
+	# the island night chill + latitude bands: past dusk and away from
 	# firelight the cold bleeds hp — never below 30%. The far north freezes
 	# all day; the far south scorches by day (a swim or cooling armor saves
 	# you) and snaps cold again after dark, desert-style.
@@ -358,12 +358,12 @@ func try_mount() -> void:
 		return
 	if game.net != null and game.net.is_client():
 		# replicas are host-driven — riding one would fight its net_target lerp
-		game.log_msg("Can't ride a host pal over the wire")
+		game.log_msg("Can't ride a host kin over the wire")
 		return
 	var best: Pal = null
 	var bd := 1.4
 	for p in game.pals:
-		# Palworld: land mounts AND rideable flyers (bird body) — but each
+		# the island: land mounts AND rideable flyers (bird body) — but each
 		# wants its own tack (land/sky/wave saddle)
 		if p.uid in game.party and p.mode == "partner" and game.has_saddle_for(p) \
 				and (SpeciesData.mountable(p.species_id) or SpeciesData.body_of(p.species_id) == "bird"):
@@ -376,7 +376,7 @@ func try_mount() -> void:
 		best.visible = false
 		game.log_msg("Riding %s" % best.spec["name"])
 	else:
-		game.log_msg("No mountable pal nearby (right saddle in pack?)")
+		game.log_msg("No mountable kin nearby (right saddle in pack?)")
 
 func shoot_weapon(wd: Dictionary) -> void:
 	var ammo_id: String = wd.get("ammo", "")
@@ -394,7 +394,7 @@ func armor_def() -> int:
 	return int((ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0) + acc_total("def") + game.partner_aura("def")) * (1.0 + meal_bonus("def")))
 
 func meal_bonus(stat: String) -> float:
-	# Palworld meal bonus: one cooked-food buff at a time, timed
+	# the island meal bonus: one cooked-food buff at a time, timed
 	if meal_t <= 0.0:
 		return 0.0
 	return float(meal_buff.get(stat, 0.0))
@@ -411,20 +411,20 @@ func eat_buff(b: Dictionary) -> void:
 			meal_buff.erase(k)
 	meal_t = float(b.get("t", 300.0))
 
-func wear_tick() -> void: # Palworld tools wear out — a swing costs a use
+func wear_tick() -> void: # the island tools wear out — a swing costs a use
 	if weapon_wear > 0.0:
 		weapon_wear -= 1.0
 		if weapon_wear <= 0.0:
 			game.break_weapon(equipment["weapon"])
 
 func wear_armor() -> void:
-	# Palworld armor wears too — every hit taken chews the plate
+	# the island armor wears too — every hit taken chews the plate
 	if armor_wear > 0.0:
 		armor_wear -= 1.0
 		if armor_wear <= 0.0:
 			game.break_armor(equipment["armor"])
 
-func acc_total(k: String) -> float: # Palworld trinket math — both slots stack
+func acc_total(k: String) -> float: # the island trinket math — both slots stack
 	var t := 0.0
 	for s in ["acc1", "acc2"]:
 		t += float(ItemData.ITEMS.get(equipment[s], {}).get("acc", {}).get(k, 0.0))

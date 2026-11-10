@@ -1,4 +1,4 @@
-// Palbox operations: party <-> box <-> base deployment.
+// Kinbox operations: party <-> box <-> base deployment.
 import { GameState, Pal } from "./types.ts";
 import { SPECIES } from "../data/species.ts";
 import { log } from "./state.ts";
@@ -14,7 +14,7 @@ export function deployedPals(s: GameState): Pal[] {
 }
 
 export function deployToBase(s: GameState, p: Pal): void {
-  if (!s.baseCenter) { log(s, "Build a Palbox first."); return; }
+  if (!s.baseCenter) { log(s, "Build a Kinbox first."); return; }
   // remove from all holding areas
   s.box = s.box.filter((o) => o.uid !== p.uid);
   s.palparty = s.palparty.filter((o) => o.uid !== p.uid);
@@ -36,7 +36,7 @@ export function toBox(s: GameState, p: Pal): void {
   s.box.push(p);
   if (s.activePal >= 0 && s.party.length === 0) s.activePal = -1;
   else if (s.activePal >= s.party.length) s.activePal = s.party.length - 1;
-  log(s, `${SPECIES[p.speciesId].name} moved to Palbox.`);
+  log(s, `${SPECIES[p.speciesId].name} moved to Kinbox.`);
 }
 
 export function toParty(s: GameState, p: Pal): boolean {

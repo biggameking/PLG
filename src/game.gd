@@ -1,6 +1,6 @@
 extends Node2D
 class_name Game
-# Root game state: world, player, pals, inventory, time, messages, floaters.
+# Root game state: world, player, kin, inventory, time, messages, floaters.
 # Multiplayer-ready seams: all state lives here; sim runs deterministically.
 
 var world := World.new()
@@ -11,8 +11,8 @@ var perks := {"capture": 0, "speed": 0, "atk": 0, "hp": 0, "work": 0, "xp": 0}
 var pals: Array[Pal] = []
 var items := {}            # item_id -> count
 var party: Array[int] = [] # pal uids
-var box: Array = []        # Pal data dicts (in palbox)
-var bench: Array = []      # party pals in their spheres — Palworld fields ONE out at a time
+var box: Array = []        # Pal data dicts (in kinbox)
+var bench: Array = []      # party pals in their spheres — the island fields ONE out at a time
 var spheres_flying := []   # {sid, target, t}
 var floaters := []         # {pos, text, color, t}
 var messages := []
@@ -21,7 +21,7 @@ var day := 1
 var tod := 8.0             # hour of day
 var next_uid_v := 1
 var raid_t := 180.0          # countdown to next base raid wave
-const MAX_CRAFT_QUEUE := 8   # Palworld timed crafting: station recipes queue up
+const MAX_CRAFT_QUEUE := 8   # the island timed crafting: station recipes queue up
 var queue_crafts := true     # smoke tests flip this off to keep crafts instant
 var craft_queue := []        # {out,n,left,cost} — station builds in progress
 var drops: Array = []        # ground drops {id,n,pos,node,did}
@@ -54,11 +54,11 @@ func add_glow(spr: Sprite2D, radius: int) -> void:
 	L.color = Color(1.0, 0.78, 0.45)
 	spr.add_child(L)
 var structures := {}          # Vector2i -> {id, node, timer, workers:[]}
-var palbox_pos := Vector2i(-1, -1)  # primary base anchor; -1 = no base yet
-const MAX_EXTRA_BOXES := 2          # Palworld runs up to 3 bases — 1 primary + 2 outposts
-var extra_boxes: Array[Vector2i] = [] # outpost palbox origins, shared box network
+var kinbox_pos := Vector2i(-1, -1)  # primary base anchor; -1 = no base yet
+const MAX_EXTRA_BOXES := 2          # the island runs up to 3 bases — 1 primary + 2 outposts
+var extra_boxes: Array[Vector2i] = [] # outpost kinbox origins, shared box network
 var tech_points := 0
-var unlocked := ["palbox", "pal_bed", "feed_box", "campfire", "workbench", "straw_bed"]
+var unlocked := ["kinbox", "kin_bed", "feed_box", "campfire", "workbench", "straw_bed"]
 var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
 var panel := ""
@@ -77,57 +77,57 @@ const MAX_PALS := 220         # wild + owned + raid; AI tick cost scales with th
 const MAX_BOX := 400          # stored pals are out-of-tree nodes — real bytes
 const MAX_EGG_QUEUE := 32     # ranch parentage queue (eggs can also be sold/eaten)
 const MAX_MERCH_STOCK := 64   # merchant inventory refresh
-# Signature breeding pairs (Palworld combos): "a+b" -> offspring species.
+# Signature breeding pairs (the island combos): "a+b" -> offspring species.
 # Checked both directions at hatch time; unlisted pairs inherit a parent.
 const BREED_COMBOS := {
-	"lamball+chikipi": "cattiva",
-	"cattiva+lifmunk": "vixy",
-	"foxparks+rooby": "flambelle",
-	"pengullet+cattiva": "kelpsea",
-	"fuack+pengullet": "surfdog",
-	"mozzarina+lamball": "melpaca",
-	"direhowl+lovander": "loupmoon",
-	"mossanda+rayhound": "grizzbolt",
-	"helzephyr+anubis": "shadowbeak",
-	"relaxaurus+grizzbolt": "stormpuff",
-	"jetragon+grizzbolt": "astegon",
-	"pengullet+fuack": "penking",
-	"eikthyrdeer+cattiva": "galeclaw",
-	"mossanda+dinossom": "elphidran",
-	"rayhound+direhowl": "univolt",
-	"arsox+blazehowl": "ragnahawk",
-	"kelpsea+gobfin": "azurobe",
-	"cinnamoth+beegarde": "elizabee",
-	"anubis+gorirat": "menasting",
-	"sweepa+reindrix": "wumpo",
-	"flambelle+rooby": "arsox",
-	"dumud+maraith": "mirelurk",
-	"dazzi+hoocrates": "glimmora",
-	"caprity+sweety": "woolipop",
-	"tocotoco+chikipi": "beakon",
-	"ribbuny+flopie": "verdash",
-	"digtoise+fuddler": "reptyro",
-	"hydrostar+vapori": "chillet",
-	"thornite+cragboar": "dreadmaw",
-	"penking+bushi": "anubis",
-	"ragnahawk+tombat": "anubis",
-	"mossanda+grizzbolt": "rayhound",
-	"beakon+helzephyr": "quivern",
-	"tanzee+lifmunk": "gorirat",
-	"nox+daedream": "tombat",
-	"mau+dazzi": "catress",
-	"emberwing+cawgnito": "helzephyr",
-	"broncherry+dinossom": "petallia",
-	"wumpo+caprity": "grintale",
-	"depresso+lunaris": "nox",
-	"bombird+beakon": "cawgnito",
+	"fenjelly+fenlump": "puffmite",
+	"puffmite+sprigmelt": "doztail",
+	"cindlump+branpurr": "pyrejelly",
+	"corlmite+puffmite": "bubwrith",
+	"quackbill+corlmite": "dewmane",
+	"piplump+fenjelly": "mimtrot",
+	"tammane+hushsmith": "noctmane",
+	"fernchim+zaptrot": "statchew",
+	"noctplume+terrkin": "veilplume",
+	"ripbell+statchew": "faradwisp",
+	"scalbeak+statchew": "wyrmhoof",
+	"corlmite+quackbill": "marlump",
+	"dozantler+puffmite": "bramplume",
+	"fernchim+briarmaw": "vermtrot",
+	"zaptrot+tammane": "statstride",
+	"scalfang+cindpaw": "pyreplume",
+	"bubwrith+bubgoo": "ripwrith",
+	"mosswisp+wortling": "mossveil",
+	"terrkin+puffchim": "shadesmith",
+	"rimemane+snovfawn": "snovmool",
+	"pyrejelly+branpurr": "scalfang",
+	"loammelt+shadewisp": "lazburr",
+	"sparkwhisk+shadehand": "sprigveil",
+	"petalantler+mossjelly": "mimspike",
+	"tambeak+fenlump": "zapplume",
+	"hushnib+thornmelt": "briarchim",
+	"loamquill+terrnib": "grithoof",
+	"dewpuff+bubgloom": "frostfang",
+	"wortquill+digsnout": "noctfang",
+	"marlump+branling": "terrkin",
+	"pyreplume+duskwing": "terrkin",
+	"fernchim+statchew": "zaptrot",
+	"zapplume+noctplume": "scalcrest",
+	"briargoo+sprigmelt": "puffchim",
+	"shadegloom+shadelump": "duskwing",
+	"shademelt+sparkwhisk": "duskpurr",
+	"soltalon+murkwing": "noctplume",
+	"leaftrot+briarmaw": "floraling",
+	"snovmool+petalantler": "tawtail",
+	"shademite+grimling": "shadegloom",
+	"brancrest+zapplume": "murkwing",
 }
 
 func _exit_tree() -> void:
 	# Orphan sweep: nodes DETACHED from the tree are not freed by the engine —
-	# box pals are remove_child'd Node2Ds and leak at quit otherwise.
+	# box kin are remove_child'd Node2Ds and leak at quit otherwise.
 	if OS.has_environment("PLG_ORPHANS"):
-		print("_exit_tree sweep: box=%d pals=%d" % [box.size(), pals.size()])
+		print("_exit_tree sweep: box=%d kin=%d" % [box.size(), pals.size()])
 	for bp in box:
 		if is_instance_valid(bp):
 			bp.free() # not in tree: free(), never queue_free()
@@ -139,14 +139,14 @@ func _exit_tree() -> void:
 
 @onready var entity_layer: Node2D = $YSort/Entities
 @onready var drawer = $World/Terrain
-# Detached-node leak prevention: box pals live under this hidden holder instead
-# of floating parentless. Every pal is ALWAYS inside the tree — the engine
+# Detached-node leak prevention: box kin live under this hidden holder instead
+# of floating parentless. Every kin is ALWAYS inside the tree — the engine
 # reclaims them at exit and no code path can orphan one.
 var box_holder: Node2D
 
 func box_pal(p: Pal) -> void:
-	# send a live pal to the box: keep it parented (to box_holder) so it can
-	# never leak; process is disabled there so stored pals cost nothing.
+	# send a live kin to the box: keep it parented (to box_holder) so it can
+	# never leak; process is disabled there so stored kin cost nothing.
 	if p.get_parent() == box_holder:
 		return
 	if p.get_parent() == null:
@@ -198,7 +198,7 @@ func _ready() -> void:
 	entity_layer.add_child(player)
 	player.setup(self, Vector2(spawn.x + 0.5, spawn.y + 0.5))
 	# starter kit
-	for id in ["pal_sphere", "pal_sphere", "pal_sphere", "torch"]:
+	for id in ["kin_orb", "kin_orb", "kin_orb", "torch"]:
 		add_item(id, 1)
 	log_msg("Welcome to PLG. Press H for help.")
 	spawn_wild()
@@ -207,7 +207,7 @@ func _ready() -> void:
 	spawn_fossils()
 
 func saddle_for(p: Pal) -> String:
-	# Palworld gear rule: every mount wants its own tack — flyers, swimmers
+	# the island gear rule: every mount wants its own tack — flyers, swimmers
 	# and land runners each take a different saddle
 	if SpeciesData.body_of(p.species_id) == "bird":
 		return "sky_saddle"
@@ -220,7 +220,7 @@ func has_saddle_for(p: Pal) -> bool:
 
 func sphere_tiers() -> Array:
 	var out := []
-	for id in ["pal_sphere", "mega_sphere", "giga_sphere", "ultra_sphere", "legendary_sphere"]:
+	for id in ["kin_orb", "mega_orb", "giga_orb", "ultra_orb", "legendary_orb"]:
 		if items.get(id, 0) > 0:
 			out.append(id)
 	return out
@@ -255,8 +255,8 @@ func item_count(id: String) -> int:
 	return items.get(id, 0)
 
 func give_remote(pid: int, id: String, n: int) -> void:
-	# a remote-owned pal's produce routes to its keeper's bag over the wire;
-	# host pals keep the local path — and a peer that dropped mid-op spills
+	# a remote-owned kin's produce routes to its keeper's bag over the wire;
+	# host kin keep the local path — and a peer that dropped mid-op spills
 	# into ours rather than vanishing
 	if pid > 0 and net != null and multiplayer.get_peers().has(pid):
 		net.rpc_id(pid, "got_loot", id, n)
@@ -285,7 +285,7 @@ func rparty_by_tag(tag: String) -> Array:
 	# sessions (peer ids are not), capped at the same 5 slots as ours
 	if not remote_parties.has(tag):
 		if remote_parties.size() >= MAX_REMOTE_TAGS:
-			# evict a cold keeper's row — their pals stay benched and rebind
+			# evict a cold keeper's row — their kin stay benched and rebind
 			# rebuilds the strip if they ever say hello again
 			var live: Array = net.peer_tags.values() if net != null else []
 			var victim := ""
@@ -313,17 +313,17 @@ func box_count_of(pid: int) -> int:
 	return n
 
 func rebind_owner(pid: int, tag: String) -> void:
-	# a guest says hello with their install token: every pal carrying it
+	# a guest says hello with their install token: every kin carrying it
 	# (including ones restored from the save) comes back under their hand
 	if tag == "":
 		return
 	for coll in [pals, box, bench]:
 		for p in coll:
-			# a live peer's pals are not up for grabs — only orphans (-1) and
+			# a live peer's kin are not up for grabs — only orphans (-1) and
 			# this caller's own session id can rebind to the tag
 			if is_instance_valid(p) and p.owner_tag == tag and (p.owner_id <= 0 or p.owner_id == pid):
 				p.owner_id = pid
-	# rebuild the strip from the pals themselves — it survives row eviction
+	# rebuild the strip from the kin themselves — it survives row eviction
 	# and any drift between the roster and the bench it describes
 	var kept := []
 	for p2 in bench:
@@ -335,7 +335,7 @@ func rebind_owner(pid: int, tag: String) -> void:
 	remote_parties[tag] = kept.slice(0, 5)
 
 func box_op_remote(op: String, uid: int, pid: int) -> void:
-	# a client's palbox click, host-validated: only the pal's owner may move
+	# a client's kinbox click, host-validated: only the kin's owner may move
 	# it — box, party strip and work posts are all private
 	var p: Pal = find_pal(uid)
 	if p == null:
@@ -456,7 +456,7 @@ func r_base_to_box(p: Pal, pid: int) -> void:
 	note_remote(pid, "%s -> box" % p.spec["name"])
 
 func r_butcher(p: Pal, pid: int) -> void:
-	# the cleaver is host-side property, but a guest's own pal is theirs to
+	# the cleaver is host-side property, but a guest's own kin is theirs to
 	# spend — the goods spill at their feet, not ours
 	if p.mode != "box" or p.fav:
 		return
@@ -477,8 +477,8 @@ func r_sell_pal(p: Pal, pid: int) -> void:
 	note_remote(pid, "Sold %s for %dg" % [p.spec["name"], gain])
 
 func assign_remote(pid: int, at: Vector2) -> void:
-	# a guest's F: nearest of THEIR base pals toggles its post — the shared
-	# yard takes any hand, but nobody touches another keeper's pal
+	# a guest's F: nearest of THEIR base kin toggles its post — the shared
+	# yard takes any hand, but nobody touches another keeper's kin
 	var best: Pal = null
 	var bd := 3.0
 	for p in base_pals():
@@ -500,7 +500,7 @@ func assign_remote(pid: int, at: Vector2) -> void:
 			site["workers"].append(best)
 		best.job_site = site
 
-# Palworld carry weight: every item pulls on the bag. Kind defaults,
+# the island carry weight: every item pulls on the bag. Kind defaults,
 # a few heavy standouts get their own numbers.
 const KIND_WT := {
 	"material": 2.0, "food": 0.6, "fruit": 0.4, "medicine": 0.5,
@@ -509,7 +509,7 @@ const KIND_WT := {
 }
 const ITEM_WT := {
 	"stone": 3.0, "ore": 5.0, "ingot": 6.0, "coal": 4.0,
-	"pal_egg": 5.0, "huge_pal_egg": 8.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
+	"kin_egg": 5.0, "huge_kin_egg": 8.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
 }
 
 func item_wt(sid: String) -> float:
@@ -538,16 +538,16 @@ func floater(pos: Vector2, text: String, color: String) -> void:
 		floaters.pop_front() # cosmetic spam is evictable
 	floaters.push_back({"p": pos, "t": text, "c": color, "age": 0.0})
 
-# ---------- wild pals ----------
+# ---------- wild kin ----------
 const ZONE_SPECIES := {
-	0: ["lamball", "chikipi", "lifmunk", "cattiva", "tanzee"],
-	1: ["foxparks", "jolthog", "fuack", "pengullet", "cremis", "sparkit", "mau"],
-	2: ["rushoar", "eikthyrdeer", "mozzarina", "depresso", "daedream"],
-	3: ["dumud", "penking", "daedream"],
+	0: ["fenjelly", "fenlump", "sprigmelt", "puffmite", "briargoo"],
+	1: ["cindlump", "faradlump", "quackbill", "corlmite", "nibjelly", "voltgoo", "shademelt"],
+	2: ["loampuff", "dozantler", "piplump", "shademite", "shadelump"],
+	3: ["loammelt", "marlump", "shadelump"],
 }
 
 func wild_lv(zone: int) -> int:
-	# Palworld: the night shift spawns meaner — same table, +2 after dusk
+	# the island: the night shift spawns meaner — same table, +2 after dusk
 	return rng.int_range(1 + zone * 3, 4 + zone * 5) + (2 if is_night() else 0)
 
 func spawn_wild() -> void:
@@ -575,21 +575,21 @@ func spawn_wild() -> void:
 		elif world.blocked(x, y):
 			continue
 		var lv := wild_lv(zone)
-		var p := preload("res://src/pal.gd").new()
+		var p := preload("res://src/kin.gd").new()
 		p.alpha = zone >= 2 and rng.chance(0.08)
-		p.lucky = not p.alpha and rng.chance(0.015) # Palworld "Lucky" rare variant
+		p.lucky = not p.alpha and rng.chance(0.015) # the island "Lucky" rare variant
 		entity_layer.add_child(p)
 		p.setup(self, sid, lv + (6 if p.alpha else 0) + (3 if p.lucky else 0), Vector2(x + 0.5, y + 0.5))
 		if p.lucky:
 			floater(p.pos, "☆ LUCKY ☆", "#ffd76e")
 			if player.pos.distance_to(p.pos) < 24.0:
-				sfx_play("lucky") # Palworld's shiny jingle — rare luck within earshot
+				sfx_play("lucky") # shiny jingle — rare luck within earshot
 		if p.alpha and rng.chance(0.4):
-			p.bounty = p.level * 2 # Palworld's wanted marks: some alphas carry a price on their head
+			p.bounty = p.level * 2 # wanted marks: some alphas carry a price on their head
 		p.home = p.pos # lair anchor — alphas tether here
 		pals.append(p)
 		wild_n += 1
-		# Palworld herds: same-species pals roam in loose packs — followers
+		# the island herds: same-species kin roam in loose packs — followers
 		# share the leader's species/level band and anchor to its home cell
 		if rng.chance(0.35) and not p.alpha:
 			for _i in rng.int_range(1, 2):
@@ -600,7 +600,7 @@ func spawn_wild() -> void:
 				var m_in_water: bool = world.tiles[world.idx(mx, my)] == World.Tile.WATER
 				if m_in_water != in_water or (not m_in_water and world.blocked(mx, my)):
 					continue
-				var mp := preload("res://src/pal.gd").new()
+				var mp := preload("res://src/kin.gd").new()
 				entity_layer.add_child(mp)
 				mp.setup(self, sid, maxi(1, lv + rng.int_range(-2, 2)), Vector2(mx + 0.5, my + 0.5))
 				mp.home = p.home
@@ -608,7 +608,7 @@ func spawn_wild() -> void:
 				wild_n += 1
 
 func pick_wild_species(pool: Array) -> String:
-	# Palworld day/night ecology: dark pals are nocturnal — they only spawn
+	# the island day/night ecology: dark kin are nocturnal — they only spawn
 	# after dusk, and they dominate the night table in mixed zones.
 	var dark := pool.filter(func(s): return "dark" in SpeciesData.species_of(str(s)).get("elements", []))
 	if is_night():
@@ -621,8 +621,8 @@ func pick_wild_species(pool: Array) -> String:
 	return pool[rng.int_range(0, pool.size() - 1)]
 
 func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Pal:
-	# test/dev factory: a live pal in the entity layer; caller picks its mode
-	var p := preload("res://src/pal.gd").new()
+	# test/dev factory: a live kin in the entity layer; caller picks its mode
+	var p := preload("res://src/kin.gd").new()
 	p.lucky = lucky # must be set before setup — passives/scale roll there
 	entity_layer.add_child(p)
 	p.setup(self, sp_id, lv, at)
@@ -630,7 +630,7 @@ func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Pal:
 	return p
 
 func spawn_net_pal(d) -> void:
-	# client-side replica of a host pal — untrusted wire data, validate the shape
+	# client-side replica of a host kin — untrusted wire data, validate the shape
 	if pals.size() >= MAX_PALS or not (d is Array) or d.size() < 5:
 		return
 	var sp_id := str(d[0])
@@ -690,8 +690,8 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			add_item("gold_coin", rng.int_range(3, 8)) # lucky pals bleed money
 			log_msg("Lucky %s dropped gold!" % p.spec["name"])
 		if p.boss:
-			add_item("legendary_sphere", 1)
-			add_item("lifmunk_effigy", 3)
+			add_item("legendary_orb", 1)
+			add_item("sprigmelt_effigy", 3)
 			add_item("gold_coin", 10)
 			log_msg("RAID CLEARED! Legendary sphere + loot!")
 		if p.alpha or p.boss:
@@ -703,13 +703,13 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		for d in p.spec.get("drops", []):
 			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 		if p.alpha:
-			add_item("pal_sphere", 1)
+			add_item("kin_orb", 1)
 			log_msg("Alpha %s down! Bonus sphere." % p.spec["name"])
-			add_item("lifmunk_effigy", 2)
+			add_item("sprigmelt_effigy", 2)
 			add_item("ancient_part", rng.int_range(1, 2)) # ancient tech currency
 			if rng.chance(0.15):
-				spawn_drop("huge_pal_egg", 1, p.pos) # Palworld's huge eggs hide on alphas
-			if rng.chance(0.08): # Palworld schematics drop off elites
+				spawn_drop("huge_kin_egg", 1, p.pos) # huge eggs hide on alphas
+			if rng.chance(0.08): # the island schematics drop off elites
 				var sch: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
 				add_item(sch, 1)
 				log_msg("Found a %s!" % ItemData.ITEMS[sch]["name"])
@@ -739,7 +739,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 		p.mode = "box"
 		p.statuses.clear() # a KO'd pal shouldn't come out of the box still burning
 		p.stun_t = 0.0
-		p.revive_t = t + 300.0  # Palworld-style revive timer
+		p.revive_t = t + 300.0  # the island-style revive timer
 		box.append(p)
 		box_pal(p)
 		sfx_play("ko")
@@ -749,7 +749,7 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			gauntlet["left"] -= 1
 		if (p.alpha or p.boss) and not p.raid and p.home != Vector2.ZERO \
 				and boss_respawns.size() < MAX_RESPAWNS:
-			# Palworld dens refill: a slain boss returns to its anchor ~1.5 days
+			# the island dens refill: a slain boss returns to its anchor ~1.5 days
 			# on. Raid/gauntlet attackers have no den — they stay dead.
 			boss_respawns.append({"sid": p.species_id, "lv": p.level,
 				"pos": [p.home.x, p.home.y], "alpha": p.alpha, "boss": p.boss,
@@ -770,7 +770,7 @@ func tick_boss_respawns() -> void:
 			continue # cap reached or corrupted entry — the den stays empty
 		var pp: Array = br.get("pos", [0, 0])
 		var at := Vector2(float(pp[0]), float(pp[1])) if pp.size() >= 2 else Vector2.ZERO
-		var np := preload("res://src/pal.gd").new()
+		var np := preload("res://src/kin.gd").new()
 		np.alpha = bool(br.get("alpha", false))
 		np.boss = bool(br.get("boss", false))
 		entity_layer.add_child(np)
@@ -780,16 +780,16 @@ func tick_boss_respawns() -> void:
 		log_msg("A boss stirs again at its den")
 
 # ---------- gauntlet trial ----------
-# Palworld's tower fights, distilled: a sigil starts a 3-wave escalating
-# battle at the palbox. Transient like a raid — never saved, never net-synced.
+# tower fights, distilled: a sigil starts a 3-wave escalating
+# battle at the kinbox. Transient like a raid — never saved, never net-synced.
 var gauntlet := {} # {"wave": int, "left": int} — empty while idle
 
 func start_gauntlet() -> bool:
 	if not gauntlet.is_empty():
 		log_msg("A gauntlet is already running")
 		return false
-	if palbox_pos.x < 0:
-		log_msg("The gauntlet needs a palbox to answer to")
+	if kinbox_pos.x < 0:
+		log_msg("The gauntlet needs a kinbox to answer to")
 		return false
 	gauntlet = {"wave": 0, "left": 0}
 	gauntlet_next_wave()
@@ -810,13 +810,13 @@ func gauntlet_next_wave() -> void:
 		for i in int(grp[1]):
 			if pool.is_empty() or pals.size() >= MAX_PALS:
 				continue
-			var np := preload("res://src/pal.gd").new()
+			var np := preload("res://src/kin.gd").new()
 			np.alpha = true
 			np.boss = bool(grp[3])
 			entity_layer.add_child(np)
 			np.setup(self, pool[rng.int_range(0, pool.size() - 1)],
 				rng.int_range(int(grp[2][0]), int(grp[2][1])),
-				nearest_free(palbox_pos.x + 2.5 + i, palbox_pos.y + 2.5 + i))
+				nearest_free(kinbox_pos.x + 2.5 + i, kinbox_pos.y + 2.5 + i))
 			if np.boss:
 				np.sprite.scale = Vector2(2.2, 2.2)
 				np.sprite.position.y = -70.0
@@ -835,8 +835,8 @@ func tick_gauntlet() -> void:
 		gauntlet_next_wave()
 		return
 	gauntlet = {}
-	add_item("legendary_sphere", 2)
-	add_item("lifmunk_effigy", 5)
+	add_item("legendary_orb", 2)
+	add_item("sprigmelt_effigy", 5)
 	add_item("gold_coin", 150)
 	add_item("gauntlet_sigil", 1) # it pays for the next run — if you survive
 	log_msg("GAUNTLET CLEARED! Legendary spheres + effigies + gold")
@@ -844,22 +844,22 @@ func tick_gauntlet() -> void:
 	mission_flags["gauntlet"] = true
 
 # ---------- base missions ----------
-# Palworld's guide rope: an ordered checklist of base milestones that pays
+# guide rope: an ordered checklist of base milestones that pays
 # out gold + tech points. Checked against live state once a second — never
 # event-driven, so a missed signal can only delay a reward, not lose it.
 const MISSIONS := [
-	{"text": "Build a Palbox", "gold": 30, "tp": 1},
-	{"text": "Catch 3 pals", "gold": 40, "tp": 1},
-	{"text": "Deploy a pal to base (palbox)", "gold": 40, "tp": 1},
+	{"text": "Build a Kinbox", "gold": 30, "tp": 1},
+	{"text": "Catch 3 kin", "gold": 40, "tp": 1},
+	{"text": "Deploy a kin to base (kinbox)", "gold": 40, "tp": 1},
 	{"text": "Build a Logging Site", "gold": 50, "tp": 1},
-	{"text": "Craft a pal sphere", "gold": 50, "tp": 1},
+	{"text": "Craft a kin sphere", "gold": 50, "tp": 1},
 	{"text": "Build a Ranch", "gold": 60, "tp": 1},
-	{"text": "Build a Pal Bed", "gold": 60, "tp": 1},
+	{"text": "Build a Kin Bed", "gold": 60, "tp": 1},
 	{"text": "Defeat an alpha or boss", "gold": 100, "tp": 2},
 	{"text": "Hatch a bred egg", "gold": 100, "tp": 2},
 	{"text": "Clear the gauntlet sigil", "gold": 200, "tp": 3},
 ]
-const MISSION_KEYS := ["palbox", "catch3", "deploy", "logger", "sphere",
+const MISSION_KEYS := ["kinbox", "catch3", "deploy", "logger", "sphere",
 	"ranch", "bed", "elite", "egg", "gauntlet"]
 var mission_idx := 0
 var mission_flags := {} # event-only goals: crafted sphere, elite kill, ...
@@ -874,7 +874,7 @@ var explored := PackedByteArray() # fog of war — one byte per world cell
 var lure := {}                   # thrown bait {pos, till} — one pile at a time
 var treasure := {}               # treasure-map dig spot {pos} — one chart at a time
 var reveal_t := 0.0               # throttle: sight updates twice a second
-var focus_target: Pal = null      # Palworld focus fire: the pal you last hit
+var focus_target: Pal = null      # the island focus fire: the pal you last hit
 var focus_t := 0.0                # ...stays the partner's priority for 4s
 
 func total_catches() -> int:
@@ -885,13 +885,13 @@ func total_catches() -> int:
 
 func mission_done(idx: int) -> bool:
 	match MISSION_KEYS[idx]:
-		"palbox": return has_structure("palbox")
+		"kinbox": return has_structure("kinbox")
 		"catch3": return total_catches() >= 3
 		"deploy": return base_pals().size() >= 1
 		"logger": return has_structure("logging_site")
 		"sphere": return mission_flags.has("sphere")
 		"ranch": return has_structure("ranch")
-		"bed": return has_structure("pal_bed")
+		"bed": return has_structure("kin_bed")
 		"elite": return mission_flags.has("elite")
 		"egg": return mission_flags.has("egg")
 		"gauntlet": return mission_flags.has("gauntlet")
@@ -902,7 +902,7 @@ func note_crafted(out_id: String) -> void:
 		mission_flags["sphere"] = true
 
 func tick_dex(dt: float) -> void:
-	# paldeck cadence — separate accumulator so the dex keeps spotting
+	# kindex cadence — separate accumulator so the dex keeps spotting
 	# species long after the mission chain has run dry
 	dex_t += dt
 	if dex_t < 1.0:
@@ -914,12 +914,12 @@ func tick_dex(dt: float) -> void:
 	var tier := catch_counts.size() / 10 # unique species caught, floored to 10s
 	if tier > dex_claimed:
 		tech_points += (tier - dex_claimed) * 2
-		log_msg("PALDECK: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
-		floater(player.pos, "PALDECK MILESTONE", "#c08cff")
+		log_msg("KINDEX: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
+		floater(player.pos, "KINDEX MILESTONE", "#c08cff")
 		dex_claimed = tier
 
 func reveal_at(c: Vector2, r: float) -> void:
-	# Palworld fog of war: walking peels the dark back a sight-radius at a time
+	# the island fog of war: walking peels the dark back a sight-radius at a time
 	if explored.size() != world.WORLD_W * world.WORLD_H:
 		explored.resize(world.WORLD_W * world.WORLD_H)
 	var cx := int(c.x); var cy := int(c.y); var ri := int(ceil(r))
@@ -930,7 +930,7 @@ func reveal_at(c: Vector2, r: float) -> void:
 
 func tick_weather(dt: float) -> void:
 	# four-state sky, ~half a game day per roll — rain waters the fields,
-	# a drought parches them, and every loud or dry sky has its pal
+	# a drought parches them, and every loud or dry sky has its kin
 	weather_t += dt
 	if weather_t < 120.0:
 		return
@@ -939,7 +939,7 @@ func tick_weather(dt: float) -> void:
 	var next := "storm" if roll < 0.15 else ("rain" if roll < 0.45 else ("drought" if roll < 0.60 else "clear"))
 	if next != weather:
 		weather = next
-		log_msg({"rain": "Rain sweeps over the island", "storm": "A thunderstorm rolls in — electric pals crackle",
+		log_msg({"rain": "Rain sweeps over the island", "storm": "A thunderstorm rolls in — electric kin crackle",
 			"drought": "A drought settles in — the fields thirst", "clear": "The sky clears"}.get(weather, "The sky clears"))
 
 func tick_missions(dt: float) -> void:
@@ -968,7 +968,7 @@ func hurt_player(atk: float, from: Pal) -> void:
 	player.hp -= final
 	player.hit_flash = 0.4
 	floater(player.pos, "-" + str(final), "#e64533")
-	player.wear_armor() # Palworld: the plate takes the wear, not the skin
+	player.wear_armor() # the island: the plate takes the wear, not the skin
 	if player.hp <= 0:
 		respawn_player()
 
@@ -1037,7 +1037,7 @@ func chest_withdraw_all(st) -> int:
 
 var death_marks: Array[Vector2] = [] # map tombstones where you dropped your pack (session-only)
 func respawn_player() -> void:
-	# Palworld rule: your pack spills where you fell; walk back to reclaim
+	# the island rule: your pack spills where you fell; walk back to reclaim
 	var dropped := 0
 	for id in items.keys():
 		if items[id] > 0:
@@ -1048,7 +1048,7 @@ func respawn_player() -> void:
 			unequip_if_gone(id)
 	if dropped > 0:
 		log_msg("You dropped %d items where you fell!" % dropped)
-		death_marks.append(player.pos) # Palworld tombstone: the map remembers the spill
+		death_marks.append(player.pos) # the island tombstone: the map remembers the spill
 		if death_marks.size() > 3:
 			death_marks.pop_front() # only the freshest few spills earn a mark
 	if player.mount != null: # dead men don't ride
@@ -1057,26 +1057,26 @@ func respawn_player() -> void:
 	player.hp = int(player.max_hp * 0.5)
 	player.hunger = 40.0
 	player.statuses.clear()
-	if palbox_pos.x >= 0:
-		var nb := nearest_palbox(player.pos)
+	if kinbox_pos.x >= 0:
+		var nb := nearest_kinbox(player.pos)
 		player.pos = nearest_free(nb.x + 0.5, nb.y + 2.5)
 	else: # no base yet: back to the landing point, not back into the jaws
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5)
 	log_msg("You wake up battered at base…")
 
 func travel_nodes() -> Array:
-	# every waypoint stone + every palbox terminal is a node on the net
+	# every waypoint stone + every kinbox terminal is a node on the net
 	var out := []
 	for k in structures:
 		var sid: String = structures[k]["id"]
-		if sid == "waypoint" or sid == "palbox":
+		if sid == "waypoint" or sid == "kinbox":
 			out.append({"key": k, "id": sid,
 				"dist": player.pos.distance_to(Vector2(k.x, k.y))})
 	out.sort_custom(func(a, b): return a["dist"] < b["dist"])
 	return out
 
 func use_waypoint() -> void:
-	# Palworld fast travel: touched stone opens the travel net
+	# the island fast travel: touched stone opens the travel net
 	if travel_nodes().size() < 2:
 		log_msg("The waypoint hums… but there's nowhere to go yet")
 		return
@@ -1086,7 +1086,7 @@ func travel_to(k: Vector2i) -> void:
 	if not structures.has(k):
 		return
 	var sid: String = structures[k]["id"]
-	if sid != "waypoint" and sid != "palbox":
+	if sid != "waypoint" and sid != "kinbox":
 		return
 	player.pos = nearest_free(k.x + 0.5, k.y + 2.5)
 	player.sync_screen()
@@ -1110,23 +1110,23 @@ func sleep_to_morning() -> void:
 			q.hp = q.max_hp
 			q.san = 100.0
 			q.hunger = 0.0
-	for qb in bench: # spheres rest too — Palworld party pals wake fresh
+	for qb in bench: # spheres rest too — the island party pals wake fresh
 		qb.hp = qb.max_hp
 		qb.san = 100.0
 		qb.hunger = 0.0
 	log_msg("You sleep until dawn. Day %d" % day)
 
 func summon_raid() -> bool:
-	if palbox_pos.x < 0:
-		log_msg("Need a palbox to summon the raid")
+	if kinbox_pos.x < 0:
+		log_msg("Need a kinbox to summon the raid")
 		return false
 	var pool: Array = SpeciesGen.zone_pool(3)
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
-	var bp := preload("res://src/pal.gd").new()
+	var bp := preload("res://src/kin.gd").new()
 	bp.alpha = true
 	bp.boss = true # set before setup so apply_bonuses folds the 2x in once
 	entity_layer.add_child(bp)
-	bp.setup(self, sid, 45, nearest_free(palbox_pos.x + 2.5, palbox_pos.y + 2.5))
+	bp.setup(self, sid, 45, nearest_free(kinbox_pos.x + 2.5, kinbox_pos.y + 2.5))
 	bp.sprite.scale = Vector2(2.2, 2.2)
 	bp.sprite.position.y = -70.0
 	bp.aggro = 0  # player
@@ -1138,8 +1138,8 @@ func summon_raid() -> bool:
 
 var assist_t := 0.0
 
-func tick_daedream() -> void:
-	# Daedream's Dream Chaser (Palworld's weirdest trick): a daedream riding
+func tick_shadelump() -> void:
+	# Shadelump's Dream Chaser (weirdest trick): a shadelump riding
 	# BENCHED in your party still takes pot-shots at whatever you're fighting.
 	var lead := party_pal()
 	if lead == null or lead.mode != "partner" or lead.hp <= 0:
@@ -1147,7 +1147,7 @@ func tick_daedream() -> void:
 	var d: Pal = null
 	for i in range(1, party.size()):
 		var bp := bench_pal_of(party[i])
-		if bp != null and bp.species_id == "daedream" and bp.hp > 0:
+		if bp != null and bp.species_id == "shadelump" and bp.hp > 0:
 			d = bp
 			break
 	if d == null:
@@ -1199,33 +1199,33 @@ func dig_check() -> void: # called on the frame tick — standing on the X digs
 	add_item("gold_coin", coin)
 	var bonus := rng.next()
 	if bonus < 0.10:
-		add_item("huge_pal_egg", 1)
+		add_item("huge_kin_egg", 1)
 	elif bonus < 0.45:
-		add_item("paldium", 4)
+		add_item("lumenite", 4)
 	elif bonus < 0.80:
 		add_item("ingot", 3)
 	else:
-		add_item("mega_sphere", 2)
+		add_item("mega_orb", 2)
 	floater(player.pos, "TREASURE!", "#ffd76e")
 	log_msg("Unearthed a cache: %d gold and a keepsake" % coin)
 	sfx_play("level")
 
 func pray_weather() -> void:
-	# Palworld weather-shrine: offer paldium, cycle the sky. One altar's mood
+	# the island weather-shrine: offer lumenite, cycle the sky. One altar's mood
 	# is everyone's sky — the cooldown is global, not per building
 	if t < pray_cd:
 		log_msg("The sky is still settling (%.0fs)" % (pray_cd - t))
 		return
-	if int(items.get("paldium", 0)) < 3:
-		log_msg("The shrine wants 3 paldium")
+	if int(items.get("lumenite", 0)) < 3:
+		log_msg("The shrine wants 3 lumenite")
 		return
 	var nxt: String = {"clear": "rain", "rain": "storm", "storm": "drought", "drought": "clear"}.get(weather, "rain")
-	add_item("paldium", -3)
+	add_item("lumenite", -3)
 	weather = nxt
 	weather_t = 0.0 # the forced sky holds until the next natural roll
 	pray_cd = t + 600.0
-	log_msg({"rain": "You offer paldium — rain answers", "storm": "The altar drinks paldium — thunder answers",
-		"drought": "The altar drinks paldium — a dry wind answers",
+	log_msg({"rain": "You offer lumenite — rain answers", "storm": "The altar drinks lumenite — thunder answers",
+		"drought": "The altar drinks lumenite — a dry wind answers",
 		"clear": "The offering burns off — the sky clears"}.get(nxt, "The sky shifts"))
 	sfx_play("level")
 
@@ -1266,7 +1266,7 @@ func fertilize() -> void:
 	log_msg("%s surges for five minutes" % StructureData.STRUCTURES[structures[best]["id"]]["name"])
 
 func cap_power_of(target: Pal) -> float:
-	# luckies resist; Palworld's real gate is level — a lv50 shrugs off a
+	# luckies resist; real gate is level — a lv50 shrugs off a
 	# ball that would bag a lv5, which is what pushes the sphere ladder
 	return float(target.spec["capturePower"]) * (1.35 if target.lucky else 1.0) \
 		* (1.0 + 0.05 * maxf(0.0, target.level - 1.0))
@@ -1292,7 +1292,7 @@ func resolve_sphere(sp) -> void:
 	if randf() < chance:
 		if party.size() >= 5 and box.size() >= MAX_BOX: # backstop: an over-stuffed box is real memory
 			floater(target.pos, "BOX FULL", "#e8963c")
-			log_msg("Palbox is full (%d) - can't store %s" % [MAX_BOX, target.spec["name"]])
+			log_msg("Kinbox is full (%d) - can't store %s" % [MAX_BOX, target.spec["name"]])
 			target.aggro = -1
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
@@ -1301,7 +1301,7 @@ func resolve_sphere(sp) -> void:
 		gain_xp(catch_xp(target.level))
 		if catch_streak >= 3:
 			floater(target.pos, "STREAK x%d!" % catch_streak, "#ffd76e")
-		# Palworld catch-count bonus: every 10th of a species pays a fat bonus
+		# the island catch-count bonus: every 10th of a species pays a fat bonus
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		board_hunt_credit(target.species_id) # a boxed pal still thins the herd
 		if catch_counts[target.species_id] % 10 == 0:
@@ -1309,14 +1309,14 @@ func resolve_sphere(sp) -> void:
 			gain_xp(bonus)
 			floater(target.pos, "CATCH x%d! +%dxp" % [catch_counts[target.species_id], bonus], "#ffd76e")
 			log_msg("%dth %s caught - bonus XP!" % [catch_counts[target.species_id], target.spec["name"]])
-		if catch_counts[target.species_id] == 10: # paldeck mastery unlocks — sharpen the whole line
-			log_msg("Paldeck mastery: %s +10%%" % target.spec["name"])
+		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
+			log_msg("Kindex mastery: %s +10%%" % target.spec["name"])
 			for mp in pals:
 				if mp.mode != "wild" and mp.species_id == target.species_id:
 					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
-		if party.size() < 5: # Palworld rule: catch joins the party until it's full
+		if party.size() < 5: # the island rule: catch joins the party until it's full
 			target.mode = "bench"
 			party.append(target.uid)
 			bench.append(target)
@@ -1365,16 +1365,16 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		var rp := rparty_for(pid)
 		if rp.size() >= 5 and box_count_of(pid) >= MAX_BOX:
 			floater(target.pos, "BOX FULL", "#e8963c")
-			log_msg("Palbox is full (%d) - %s got away" % [MAX_BOX, target.spec["name"]])
+			log_msg("Kinbox is full (%d) - %s got away" % [MAX_BOX, target.spec["name"]])
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		if net != null and multiplayer.get_peers().has(pid):
 			net.rpc_id(pid, "net_floater", target.pos.x, target.pos.y, "★ CAUGHT!", "#4dd0e1")
-		log_msg("Player %d caught %s Lv%d — into their palbox" % [pid, target.spec["name"], target.level])
+		log_msg("Player %d caught %s Lv%d — into their kinbox" % [pid, target.spec["name"], target.level])
 		note_remote(pid, "You caught %s Lv%d" % [target.spec["name"], target.level])
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
-		if catch_counts[target.species_id] == 10: # paldeck mastery unlocks — sharpen the whole line
-			log_msg("Paldeck mastery: %s +10%%" % target.spec["name"])
+		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
+			log_msg("Kindex mastery: %s +10%%" % target.spec["name"])
 			for mp in pals:
 				if mp.mode != "wild" and mp.species_id == target.species_id:
 					mp.apply_bonuses()
@@ -1446,7 +1446,7 @@ func dirty_decor_pack() -> Array:
 	return arr
 
 func spawn_drop(id: String, n: int, at: Vector2) -> void:
-	# tiny tinted bag icon; drops persist until picked up (player or hauler pal)
+	# tiny tinted bag icon; drops persist until picked up (player or hauler kin)
 	if drops.size() >= MAX_DROPS:
 		take_drop(drops.front()) # flood backstop: oldest bag evaporates
 	drops.append({"id": id, "n": n, "pos": at, "node": drop_sprite(id, at),
@@ -1505,12 +1505,12 @@ func take_drop(d: Dictionary) -> void:
 	if is_instance_valid(d["node"]):
 		d["node"].queue_free()
 
-# condense costs: star 0->1 needs 4 fodder, then 16/32/64 (Palworld ladder)
+# condense costs: star 0->1 needs 4 fodder, then 16/32/64 (the island ladder)
 const CONDENSE_COST := [4, 16, 32, 64]
 
 func condense_active() -> void:
 	if party.is_empty():
-		log_msg("No active pal to condense")
+		log_msg("No active kin to condense")
 		return
 	var ap0: Pal = lead_pal()
 	if ap0 != null and ap0.star < CONDENSE_COST.size():
@@ -1532,14 +1532,14 @@ func condense_active() -> void:
 		log_msg("%s is already max star" % ap.spec["name"])
 		return
 	var need: int = CONDENSE_COST[ap.star]
-	# fodder = same-species pals in the box (weakest first, active excluded)
+	# fodder = same-species kin in the box (weakest first, active excluded)
 	var fodder: Array = []
 	for bp in box:
 		if bp.species_id == ap.species_id and bp.uid != ap.uid and not bp.fav and bp.owner_id == 0:
 			fodder.append(bp) # heart-locked pals are never fodder — nor are guests'
 	fodder.sort_custom(func(a, b): return a.level < b.level)
 	if fodder.size() < need:
-		log_msg("Need %d same-species pals for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
+		log_msg("Need %d same-species kin for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
 		return
 	for i in need:
 		var fp: Pal = fodder[i]
@@ -1549,7 +1549,7 @@ func condense_active() -> void:
 	log_msg("%s condensed to star %d!" % [ap.spec["name"], ap.star])
 
 func eat_food_item() -> int:
-	# feed-box rule: pals eat the cheapest stored food — feed_box store
+	# feed-box rule: kin eat the cheapest stored food — feed_box store
 	# first, then any chest's store (never the player's bag remotely)
 	var best = null; var best_id := ""; var best_v := 1 << 30
 	var stores := []
@@ -1572,7 +1572,7 @@ func eat_food_item() -> int:
 	return best_v
 
 func eat_from_bag() -> int:
-	# party pals eat straight from the player's inventory (Palworld rule)
+	# party kin eat straight from the player's inventory (the island rule)
 	var best_id := ""; var best_v := 1 << 30
 	for id in items.keys():
 		var it: Dictionary = ItemData.ITEMS.get(id, {})
@@ -1585,7 +1585,7 @@ func eat_from_bag() -> int:
 	return best_v
 
 func take_medicine(from_bag: bool) -> bool:
-	# sick pals self-medicate (Palworld): partner eats from the player's bag,
+	# sick kin self-medicate (the island): partner eats from the player's bag,
 	# base workers pull from the feed box / any chest holding medicine.
 	if from_bag:
 		for id in items.keys():
@@ -1661,7 +1661,7 @@ func _process(dt: float) -> void:
 			var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
 			sp["node"].position = Vector2(pp.x, pp.y - 14 - arc)
 		if sp["t"] > 0.45:
-			# Palworld wobble theatre: the ball lands and rocks a beat before
+			# the island wobble theatre: the ball lands and rocks a beat before
 			# the verdict — 3 shakes of tension, then resolve
 			if not sp.has("wt"):
 				sp["wt"] = 0.0
@@ -1684,7 +1684,7 @@ func _process(dt: float) -> void:
 	assist_t += dt
 	if assist_t >= 3.0:
 		assist_t = 0.0
-		tick_daedream()
+		tick_shadelump()
 	spoil_t += dt
 	if spoil_t >= 480.0: # perishables rot on their own clock — local bag, client-safe
 		spoil_t = 0.0
@@ -1721,7 +1721,7 @@ func _process(dt: float) -> void:
 			add_item(d["id"], d["n"])
 			floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
 			if "egg" in d["id"]:
-				anger_nesters(d["pos"]) # Palworld: parents guard their nests — egg thieves get swarmed
+				anger_nesters(d["pos"]) # the island: parents guard their nests — egg thieves get swarmed
 			take_drop(d)
 	# client-side drop replicas: we ask, the host decides (and pays via got_loot)
 	if net != null and net.is_client():
@@ -1767,7 +1767,7 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
 	if s.is_empty():
 		return false
-	if sid == "palbox" and palbox_count() >= 1 + MAX_EXTRA_BOXES:
+	if sid == "kinbox" and kinbox_count() >= 1 + MAX_EXTRA_BOXES:
 		return false # ghost must agree with place_structure's outpost cap
 	var w: int = s.get("w", 2)
 	var h: int = s.get("h", 2)
@@ -1798,19 +1798,19 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 			return false
 	return true
 
-func palbox_count() -> int:
+func kinbox_count() -> int:
 	var seen := []
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st["id"] == "palbox" and st not in seen:
+		if st["id"] == "kinbox" and st not in seen:
 			seen.append(st) # footprint cells share one st dict — dedupe
 	return seen.size()
 
-func nearest_palbox(at: Vector2) -> Vector2i:
-	var best := palbox_pos
+func nearest_kinbox(at: Vector2) -> Vector2i:
+	var best := kinbox_pos
 	var bd := INF
-	if palbox_pos.x >= 0:
-		bd = at.distance_to(Vector2(palbox_pos))
+	if kinbox_pos.x >= 0:
+		bd = at.distance_to(Vector2(kinbox_pos))
 	for bx2 in extra_boxes:
 		var dd := at.distance_to(Vector2(bx2))
 		if dd < bd:
@@ -1835,8 +1835,8 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 			add_item(c[0], -c[1])
 		net.rpc("build_req", sid, tx, ty)
 		return true
-	if sid == "palbox" and palbox_count() >= 1 + MAX_EXTRA_BOXES:
-		log_msg("Max %d palboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))
+	if sid == "kinbox" and kinbox_count() >= 1 + MAX_EXTRA_BOXES:
+		log_msg("Max %d kinboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))
 		return false
 	var seen_st := []
 	for k in structures:
@@ -1894,13 +1894,13 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 				mark_decor(ci0)
 			structures[Vector2i(tx + dx, ty + dy)] = st
 			world.structures[ci0] = st
-	if sid == "palbox":
-		if palbox_pos.x < 0:
-			palbox_pos = Vector2i(tx, ty)
-			log_msg("Base established! Assign pals with F.")
+	if sid == "kinbox":
+		if kinbox_pos.x < 0:
+			kinbox_pos = Vector2i(tx, ty)
+			log_msg("Base established! Assign kin with F.")
 		else:
 			extra_boxes.append(Vector2i(tx, ty))
-			log_msg("Outpost palbox online — shared box network")
+			log_msg("Outpost kinbox online — shared box network")
 	log_msg("Built %s" % s["name"])
 	sfx_play("build")
 	return true
@@ -1940,11 +1940,11 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 				mark_decor(ci1)
 			structures[Vector2i(tx + dx, ty + dy)] = st
 			world.structures[ci1] = st
-	if sid == "palbox":
+	if sid == "kinbox":
 		var o := Vector2i(tx, ty)
-		if palbox_pos.x < 0:
-			palbox_pos = o
-		elif o != palbox_pos and o not in extra_boxes:
+		if kinbox_pos.x < 0:
+			kinbox_pos = o
+		elif o != kinbox_pos and o not in extra_boxes:
 			extra_boxes.append(o)
 	return true
 
@@ -1978,26 +1978,26 @@ func demolish_at(at: Vector2) -> bool:
 	st["node"].queue_free()
 	if chest_ref == st:
 		chest_ref = null # the panel's container just died — stop referencing it
-	if sid == "palbox":
+	if sid == "kinbox":
 		var origin: Vector2i = cells[0]
 		for cc in cells:
 			if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
 				origin = cc
-		if origin == palbox_pos:
-			palbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
-			if palbox_pos.x >= 0:
+		if origin == kinbox_pos:
+			kinbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
+			if kinbox_pos.x >= 0:
 				log_msg("Outpost promoted to primary base")
 		else:
 			extra_boxes.erase(origin)
 	log_msg("Demolished %s (50%% refund)" % StructureData.STRUCTURES[sid]["name"])
 	return true
 
-# raiders chew on the base itself (Palworld): structures carry hp and drop
-# their contents when razed. The palbox is hardened — losing the anchor
-# would orphan every base pal's job and the respawn point.
+# raiders chew on the base itself (the island): structures carry hp and drop
+# their contents when razed. The kinbox is hardened — losing the anchor
+# would orphan every base kin's job and the respawn point.
 func tick_repairs(dt: float) -> void:
-	# Palworld: free hands patch the base up — idle handiwork-suitable pals
-	# slowly mend damaged structures (assigned pals are busy elsewhere)
+	# the island: free hands patch the base up — idle handiwork-suitable kin
+	# slowly mend damaged structures (assigned kin are busy elsewhere)
 	var fixers := 0.0
 	for q in pals:
 		if q.mode == "base" and q.hp > 0 and q.san >= 15.0 and q.hunger < 80.0 and q.job_site == null \
@@ -2022,7 +2022,7 @@ func hit_structure(cell: Vector2i, dmg: int) -> void:
 	if st == null:
 		return
 	var anchor: bool = StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false)
-	if anchor: # the palbox holds every stored pal — losing it would orphan the box
+	if anchor: # the kinbox holds every stored pal — losing it would orphan the box
 		st["hp"] = maxf(1.0, st.get("hp", 4000) - dmg)
 		floater(Vector2(cell.x + 0.5, cell.y + 0.5), "ANCHORED", "#4dd0e1")
 		return
@@ -2057,8 +2057,8 @@ func raze_structure(st) -> void:
 		st["node"].queue_free()
 	if chest_ref == st:
 		chest_ref = null
-	if sid == "palbox":
-		palbox_pos = Vector2i(-1, -1)
+	if sid == "kinbox":
+		kinbox_pos = Vector2i(-1, -1)
 	log_msg("%s was destroyed in the raid!" % StructureData.STRUCTURES.get(sid, {}).get("name", sid))
 
 func tech_node(sid: String) -> Dictionary:
@@ -2121,8 +2121,8 @@ func craft(recipe_id: String) -> void:
 			log_msg("Missing materials")
 			return
 	if queue_crafts and stn != "hand":
-		# Palworld bench rule: station crafts take real time; idle handy base
-		# pals pitch in and hurry the queue along
+		# the island bench rule: station crafts take real time; idle handy base
+		# kin pitch in and hurry the queue along
 		if craft_queue.size() >= MAX_CRAFT_QUEUE:
 			log_msg("Craft queue is full")
 			return
@@ -2149,7 +2149,7 @@ func repair_quote_armor() -> Dictionary:
 	return repair_quote_for("armor")
 
 func repair_quote_for(slot: String) -> Dictionary:
-	# Palworld repair: worn gear mends at its crafting station for half its
+	# the island repair: worn gear mends at its crafting station for half its
 	# recipe (rounded up, min 1 each). {} = nothing to repair here.
 	var iid: String = player.equipment[slot]
 	var wear: float = player.weapon_wear if slot == "weapon" else player.armor_wear
@@ -2205,7 +2205,7 @@ func repair_armor() -> void:
 func tick_crafts(dt: float) -> void:
 	if craft_queue.is_empty():
 		return
-	# idle handiwork-suitable base pals hurry the bench — 1.5x per helper
+	# idle handiwork-suitable base kin hurry the bench — 1.5x per helper
 	var helpers := 0.0
 	for q in pals:
 		if q.mode == "base" and q.hp > 0 and q.job_site == null \
@@ -2241,7 +2241,7 @@ func gain_xp(n: int) -> void:
 	for q in pals:
 		if q.mode == "partner":
 			pal_gain_xp(q, int(n * 0.5))
-	for qb in bench: # benched pals share the field lesson too (Palworld party xp)
+	for qb in bench: # benched pals share the field lesson too (the island party xp)
 		pal_gain_xp(qb, int(n * 0.25))
 	player.xp += n
 	while true: # a big kill can cross several levels
@@ -2253,11 +2253,11 @@ func gain_xp(n: int) -> void:
 		player.max_hp += 10
 		player.hp = player.max_hp
 		tech_points += 2
-		stat_pts += 1 # Palworld: every level banks a stat point for the statue
+		stat_pts += 1 # the island: every level banks a stat point for the statue
 		log_msg("Level up! Lv%d (+2 tech, +1 stat)" % player.level)
 		sfx_play("level")
 
-func tick_box(dt: float) -> void: # Palworld palbox is a clinic — wounds mend inside
+func tick_box(dt: float) -> void: # the island kinbox is a clinic — wounds mend inside
 	for bp in box:
 		if bp.revive_t > 0:
 			if t > bp.revive_t:
@@ -2271,7 +2271,7 @@ func tick_box(dt: float) -> void: # Palworld palbox is a clinic — wounds mend 
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt) # ~33s to full
 
 func cooler_active() -> bool:
-	# Palworld cold chain: an ice box with a cooling pal on duty keeps the
+	# the island cold chain: an ice box with a cooling kin on duty keeps the
 	# larder from turning — same SAN/hunger/sleep gates as any work shift
 	for key in structures:
 		var st = structures[key]
@@ -2312,7 +2312,7 @@ func near_well(at: Vector2) -> bool: # a well keeps its shadow watered even in f
 	return false
 
 func near_banner(at: Vector2) -> bool:
-	# a war banner rallies pals working within sight of its colors
+	# a war banner rallies kin working within sight of its colors
 	for k in structures:
 		var st = structures[k]
 		if st["id"] == "war_banner" and Vector2(k).distance_to(at) <= 8.0:
@@ -2348,7 +2348,7 @@ func tick_production(dt: float) -> void:
 		if st["id"] == "incubator":
 			var inc = st.get("egg_inc")
 			if inc is Dictionary:
-				# Palworld temperature rule, continuous: a campfire within 6
+				# the island temperature rule, continuous: a campfire within 6
 				# cells keeps the egg toasty — countdown runs 1.5x while it burns
 				var warm := false
 				for k3 in structures:
@@ -2412,7 +2412,7 @@ func tick_production(dt: float) -> void:
 			if float(st["turret_cd"]) <= 0.0:
 				st["turret_cd"] = 2.5
 				var tgt: Pal = null
-				var tr := 12.0 # Palworld defense towers plink raiders on approach
+				var tr := 12.0 # the island defense towers plink raiders on approach
 				for p in pals:
 					if p.mode != "wild" or p.hp <= 0 or not (p.raid or p.aggro >= 0):
 						continue
@@ -2432,13 +2432,13 @@ func tick_production(dt: float) -> void:
 		var wtype: String = job.get("workType", "")
 		var night := is_night()
 		for w in active:
-			# Palworld: suitability LEVEL matters — a lv4 logger outworks a lv1
+			# the island: suitability LEVEL matters — a lv4 logger outworks a lv1
 			var lv: int = int(w.spec.get("work", {}).get(wtype, 0))
 			if s.get("farmField", false):
 				lv = maxi(lv, int(w.spec.get("work", {}).get("watering", 0)))
-			# dark pals ARE the night shift — a little faster after dusk
+			# dark kin ARE the night shift — a little faster after dusk
 			var dusk := 1.15 if night and "dark" in w.spec.get("elements", []) else 1.0
-			# wet skies are a water pal's home turf — a storm doubly so
+			# wet skies are a water kin's home turf — a storm doubly so
 			var dew := 1.0
 			if "water" in w.spec.get("elements", []):
 				dew = 1.15 if weather == "rain" else (1.25 if weather == "storm" else 1.0)
@@ -2446,9 +2446,9 @@ func tick_production(dt: float) -> void:
 				dew = 1.15 # thunder pals work harder in the storm too
 			elif "fire" in w.spec.get("elements", []) and weather == "drought":
 				dew = 1.15 # the dry sky is a fire pal's home turf
-			# talent shows in the palbox — make it earn its keep on the crew too
+			# talent shows in the kinbox — make it earn its keep on the crew too
 			var iv: float = 0.9 + w.talent * 0.004 # T0 → 0.9, T100 → 1.3
-			var cond: float = 1.0 + w.star * 0.1 # Palworld: a condensed pal outworks its kin
+			var cond: float = 1.0 + w.star * 0.1 # the island: a condensed pal outworks its kin
 			var rally := 1.15 if near_banner(w.pos) else 1.0 # a war banner lifts the crew's pace
 			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond * rally
 		var wet := 1.25 if s.get("farmField", false) and (weather in ["rain", "storm"] or near_well(Vector2(key.x + s.get("w", 2) * 0.5, key.y + s.get("h", 2) * 0.5))) else (0.8 if s.get("farmField", false) and weather == "drought" else 1.0) # rain, storm or a well waters; a drought starves every field a well can't reach
@@ -2469,7 +2469,7 @@ func tick_production(dt: float) -> void:
 						if sc["store"][cn[0]] <= 0:
 							sc["store"].erase(cn[0])
 						need -= take
-			for w in active: # Palworld: base workers level from honest work
+			for w in active: # the island: base workers level from honest work
 				pal_gain_xp(w, 3)
 			for pr in prod: # goods pile up at the site; haulers move them
 				st["store"][pr[0]] = st["store"].get(pr[0], 0) + pr[1]
@@ -2482,12 +2482,12 @@ func return_expedition(p: Pal, st: Dictionary, key: Vector2i) -> void:
 	p.mode = "base"
 	p.visible = true
 	p.pos = Vector2(key.x + 0.5, key.y + 1.4) # lands just south of the post
-	# Palworld expeditions tire the crew — the haul costs SAN and a meal
+	# the island expeditions tire the crew — the haul costs SAN and a meal
 	p.san = maxf(0.0, p.san - 15.0)
 	p.hunger = minf(100.0, p.hunger + 25.0)
 	var rolls: int = 2 + p.level / 10 + (2 if p.lucky else 0)
 	var table := [["wood", 40], ["stone", 40], ["ore", 25], ["fiber", 25],
-		["paldium", 15], ["gold_coin", 8]]
+		["lumenite", 15], ["gold_coin", 8]]
 	var oe: String = p.elem()[0] if not p.elem().is_empty() else "neutral"
 	if oe != "neutral" and ItemData.ITEMS.has("%s_organ" % oe):
 		table.append(["%s_organ" % oe, 12]) # haul matches the pal's element
@@ -2561,7 +2561,7 @@ func has_structure(sid: String) -> bool:
 const HEAT_IDS := ["campfire", "torch", "furnace", "hot_spring"]
 func nearest_heat(at: Vector2) -> float:
 	# distance to the closest warmth source — the night chill threshold.
-	# Palworld: a fire pal at your side keeps you warm too.
+	# the island: a fire kin at your side keeps you warm too.
 	var bd := 1e9
 	for k in structures:
 		if structures[k]["id"] in HEAT_IDS:
@@ -2576,12 +2576,12 @@ func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 
 func nearest_bed_cell(at: Vector2) -> Vector2i:
-	# where a sleepy pal should pad off to — the closest pal bed or spring
+	# where a sleepy kin should pad off to — the closest kin bed or spring
 	var bd := 1e9
 	var best := Vector2i(-1, -1)
 	for k in structures:
 		var sid: String = structures[k]["id"]
-		if sid != "pal_bed" and sid != "hot_spring":
+		if sid != "kin_bed" and sid != "hot_spring":
 			continue
 		var d := at.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
 		if d < bd:
@@ -2592,8 +2592,8 @@ func fish_bite_p() -> float:
 	return 0.55 if weather in ["rain", "storm"] else 0.4 # wet skies feed the bite; dry ones don't
 
 func cast_line() -> bool:
-	# Palworld fishing: stand at the water's edge, wait for a bite — mostly
-	# loot, sometimes a live aquatic pal surfaces to fight or catch
+	# the island fishing: stand at the water's edge, wait for a bite — mostly
+	# loot, sometimes a live aquatic kin surfaces to fight or catch
 	var c := Vector2i(int(player.pos.x), int(player.pos.y))
 	var wc := Vector2i(-1, -1)
 	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
@@ -2607,7 +2607,7 @@ func cast_line() -> bool:
 	var roll := rng.next()
 	var bite := fish_bite_p() # fish feed in the rain
 	if roll < bite and pals.size() < MAX_PALS:
-		# a live catch: an aquatic pal from this zone's pool surfaces
+		# a live catch: an aquatic kin from this zone's pool surfaces
 		var zone := world.zone_at(wc.x, wc.y)
 		var pool: Array = (ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
 			func(s): return "water" in SpeciesData.species_of(str(s)).get("elements", []))
@@ -2617,7 +2617,7 @@ func cast_line() -> bool:
 		if pool.is_empty():
 			return false
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
-		var fp := preload("res://src/pal.gd").new()
+		var fp := preload("res://src/kin.gd").new()
 		entity_layer.add_child(fp)
 		fp.setup(self, sid, rng.int_range(1 + zone * 3, 4 + zone * 5), Vector2(wc.x + 0.5, wc.y + 0.5))
 		fp.home = fp.pos
@@ -2627,7 +2627,7 @@ func cast_line() -> bool:
 	elif roll < 0.7:
 		var n := rng.int_range(1, 2)
 		add_item("pal_fluid", n)
-		log_msg("Caught pal fluids x%d" % n)
+		log_msg("Caught kin fluids x%d" % n)
 	elif roll < 0.9:
 		add_item("gold_coin", rng.int_range(4, 12))
 		log_msg("A soggy coin purse!")
@@ -2641,7 +2641,7 @@ func cast_line() -> bool:
 	return true
 
 func anger_nesters(at: Vector2) -> void:
-	# wild pals near a looted nest turn hostile — egg theft has a price
+	# wild kin near a looted nest turn hostile — egg theft has a price
 	for q in pals:
 		if q.mode == "wild" and q.hp > 0 and q.aggro < 0 \
 				and q.pos.distance_to(at) < 9.0:
@@ -2649,7 +2649,7 @@ func anger_nesters(at: Vector2) -> void:
 			q.statuses.erase("sleep")
 
 func make_active(uid: int) -> void:
-	# Palworld "send out": one ball on the field — picking a lead swaps it in
+	# the island "send out": one ball on the field — picking a lead swaps it in
 	var cur := party_pal()
 	if cur != null and cur.uid == uid:
 		retract_out() # tapping the field pal calls it back
@@ -2658,17 +2658,17 @@ func make_active(uid: int) -> void:
 
 const STANCES := ["auto", "aggressive", "passive"]
 
-# Palworld partner passives: a fielded species quietly buffs its handler
+# the island partner passives: a fielded species quietly buffs its handler
 const PARTNER_AURAS := {
-	"direhowl": {"speed": 0.08},   # pack-runner keeps your legs quick
-	"eikthyrdeer": {"speed": 0.06},
-	"lifmunk": {"atk": 0.10},      # gun-happy spotter sharpens your aim
-	"foxparks": {"atk": 0.08},
-	"tanzee": {"atk": 0.06},
-	"dumud": {"def": 4.0},         # thick hide lessons rub off
-	"pengullet": {"def": 3.0},
-	"cattiva": {"carry": 120.0},   # Palworld's iconic pack mule
-	"lamball": {"carry": 50.0},
+	"tammane": {"speed": 0.08},   # pack-runner keeps your legs quick
+	"dozantler": {"speed": 0.06},
+	"sprigmelt": {"atk": 0.10},      # gun-happy spotter sharpens your aim
+	"cindlump": {"atk": 0.08},
+	"briargoo": {"atk": 0.06},
+	"loammelt": {"def": 4.0},         # thick hide lessons rub off
+	"corlmite": {"def": 3.0},
+	"puffmite": {"carry": 120.0},   # iconic pack mule
+	"fenjelly": {"carry": 50.0},
 }
 
 func partner_aura(stat: String) -> float:
@@ -2677,7 +2677,7 @@ func partner_aura(stat: String) -> float:
 		return 0.0
 	return float(PARTNER_AURAS.get(p.species_id, {}).get(stat, 0.0))
 
-# Palworld suit icons, text-style: top work types as two-letter codes
+# the island suit icons, text-style: top work types as two-letter codes
 const WORK_ABBR := {
 	"kindling": "KI", "watering": "WA", "planting": "PL", "handiwork": "HA",
 	"lumbering": "LU", "mining": "MI", "transporting": "TR", "gathering": "GA",
@@ -2694,7 +2694,7 @@ func work_str(spec: Dictionary) -> String:
 	return out.strip_edges()
 
 func cycle_stance(uid: int) -> void:
-	# Palworld pal commands: the field pal obeys a standing order
+	# the island kin commands: the field kin obeys a standing order
 	var p: Pal = find_pal(uid)
 	if p == null:
 		p = bench_pal_of(uid)
@@ -2710,7 +2710,7 @@ func bench_pal_of(uid: int) -> Pal:
 	return null
 
 func retract_out() -> void:
-	# Palworld: your field pal returns to its sphere — one ball out at a time
+	# the island: your field kin returns to its sphere — one ball out at a time
 	var cur := party_pal()
 	if cur == null:
 		return
@@ -2722,7 +2722,7 @@ func retract_out() -> void:
 	log_msg("%s recalled" % cur.spec["name"])
 
 func send_out(uid: int) -> void:
-	# Palworld send-out: the chosen party member takes the field; whoever was
+	# the island send-out: the chosen party member takes the field; whoever was
 	# out goes back into their ball. Lead slot tracks who's out.
 	var cur := party_pal()
 	if cur != null and cur.uid == uid: # tapping the out pal recalls it
@@ -2751,7 +2751,7 @@ func box_to_party(bp: Pal) -> void:
 	box.erase(bp)
 	party.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	party.append(bp.uid)
-	bp.mode = "bench" # Palworld: new members wait in their ball until sent out
+	bp.mode = "bench" # the island: new members wait in their ball until sent out
 	bench.append(bp)
 	log_msg("%s joined the bench (%d/5)" % [bp.spec["name"], party.size()])
 	if party_pal() == null:
@@ -2760,12 +2760,12 @@ func box_to_party(bp: Pal) -> void:
 const MAX_BASE_PALS := 20 # absolute workforce cap — more mouths than this starve the loop anyway
 
 # ---------- base level missions ----------
-# Palworld palbox levels: the terminal grades your base and pays slots
+# the island kinbox levels: the terminal grades your base and pays slots
 var base_level := 1
 const BASE_LEVEL_MAX := 5
 const BASE_MISSION_TEXT := {
-	1: "deploy 2 pals", 2: "build 8 structures + deploy 4 pals",
-	3: "catch 12 pals + build 14 structures", 4: "deploy 8 pals + reach day 5",
+	1: "deploy 2 kin", 2: "build 8 structures + deploy 4 kin",
+	3: "catch 12 kin + build 14 structures", 4: "deploy 8 kin + reach day 5",
 }
 func base_mission_done(lv: int) -> bool:
 	match lv:
@@ -2787,20 +2787,20 @@ func upgrade_base() -> void:
 	log_msg("Base level %d! +2 workforce slots" % base_level)
 
 func max_base_pals() -> int:
-	# Palworld palbox growth: workforce slots scale with the player's level
+	# the island kinbox growth: workforce slots scale with the player's level
 	# (8+lvl, hard-capped by MAX_BASE_PALS) plus base-level mission bonus
 	return mini(8 + player.level + (base_level - 1) * 2, MAX_BASE_PALS)
 
 func deploy_to_base(p: Pal) -> void:
-	# Palworld: drop a pal at the palbox and it joins the base workforce
+	# the island: drop a kin at the kinbox and it joins the base workforce
 	if p.hp <= 0:
 		log_msg("%s is KO'd - wait for it to recover" % p.spec["name"])
 		return
-	if palbox_pos.x < 0:
-		log_msg("Need a palbox to deploy pals")
+	if kinbox_pos.x < 0:
+		log_msg("Need a kinbox to deploy kin")
 		return
 	if base_pals().size() >= max_base_pals() and p.mode != "base":
-		log_msg("Base is full (%d pals — level up for more slots)" % max_base_pals())
+		log_msg("Base is full (%d kin — level up for more slots)" % max_base_pals())
 		return
 	player.dismount_if(p)
 	party.erase(p.uid)
@@ -2814,7 +2814,7 @@ func deploy_to_base(p: Pal) -> void:
 		pals.append(p)
 	p.mode = "base"
 	p.job_site = null
-	var db := nearest_palbox(p.pos)
+	var db := nearest_kinbox(p.pos)
 	p.pos = nearest_free(db.x + 2.0, db.y + 2.5)
 	log_msg("%s deployed at base" % p.spec["name"])
 
@@ -2857,7 +2857,7 @@ func party_to_box(uid: int) -> void:
 	log_msg("%s -> box" % p.spec["name"])
 
 func assign_worker() -> void:
-	# toggle nearest base pal between wander and assigned to nearest workplace
+	# toggle nearest base kin between wander and assigned to nearest workplace
 	var best: Pal = null
 	var bd := 3.0
 	for p in base_pals():
@@ -2868,7 +2868,7 @@ func assign_worker() -> void:
 			bd = d
 			best = p
 	if not best:
-		log_msg("No base pal nearby")
+		log_msg("No base kin nearby")
 		return
 	if best.job_site != null:
 		best.job_site["workers"].erase(best)
@@ -2884,9 +2884,9 @@ func assign_worker() -> void:
 	else:
 		log_msg("No workplace nearby")
 
-var skill_target: Pal = null # palbox move-loadout panel's subject
+var skill_target: Pal = null # kinbox move-loadout panel's subject
 func toggle_skill(p: Pal, sid: String) -> void:
-	# Palworld's move loadout: slot up to 3 of the pal's learned moves
+	# move loadout: slot up to 3 of the kin's learned moves
 	if p == null or sid not in p.learned_skills():
 		return
 	if sid in p.equipped:
@@ -2905,7 +2905,7 @@ func tick_death_marks() -> void:
 			death_marks.remove_at(i)
 
 func pet_pal(p: Pal) -> bool:
-	# Palworld's pet: a little affection tops up SAN on a per-pal cooldown
+	# pet: a little affection tops up SAN on a per-kin cooldown
 	if p == null or p.hp <= 0 or p.mode not in ["partner", "base"]:
 		return false
 	if p.petted_t > t:
@@ -2919,7 +2919,7 @@ func pet_pal(p: Pal) -> bool:
 func find_work_site(p: Pal, reach: float) -> Variant:
 	# nearest suitable post within reach — shared suitability rules for the
 	# manual assign tap and the idle auto-assign sweep (farm fields take
-	# waterers too, Palworld-style)
+	# waterers too, the island-style)
 	var site = null
 	var sd := reach
 	for k in structures:
@@ -2930,7 +2930,7 @@ func find_work_site(p: Pal, reach: float) -> Variant:
 		var need: String = jb.get("workType", "")
 		if need != "" and p.spec.get("work", {}).get(need, 0) == 0 \
 				and not (s.get("farmField", false) and p.spec.get("work", {}).get("watering", 0) > 0):
-			continue  # can't work this site — farm fields also take waterers (Palworld)
+			continue  # can't work this site — farm fields also take waterers (the island)
 		if structures[k]["workers"].size() >= 4:
 			continue # site is fully crewed — piling more pals on one site scales unbounded
 		var d := p.pos.distance_to(Vector2(k.x, k.y))
@@ -2941,7 +2941,7 @@ func find_work_site(p: Pal, reach: float) -> Variant:
 
 var assign_t := 0.0
 func tick_assign(dt: float) -> void:
-	# Palworld: idle base pals drift into open posts on their own — the palbox
+	# the island: idle base kin drift into open posts on their own — the kinbox
 	# crew staffs itself instead of waiting for a manual tap every time.
 	# Transporters are exempt: hauling IS their job and a pinned site would
 	# freeze the logistics loop.
@@ -3035,7 +3035,7 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 	else:
 		var tp: Pal = target_ent
 		var mult := Combat.effectiveness(elem, tp.elem())
-		# STAB (Palworld): a pal fighting in its own element hits harder
+		# STAB (the island): a kin fighting in its own element hits harder
 		if elem in caster.spec.get("elements", []):
 			mult *= 1.2
 		if weather == "rain" or weather == "storm": # wet skies favor water, dampen fire
@@ -3055,7 +3055,7 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 			tp.statuses.erase("freeze")
 			floater(tp.pos, "SHATTERED", "#7fc8f8")
 		if tp.has_status("soak"):
-			# Palworld element combos: a wet target takes the hit differently —
+			# the island element combos: a wet target takes the hit differently —
 			# electricity arcs through, ice locks solid, fire just boils off
 			if elem == "electric":
 				mult *= 1.5
@@ -3206,7 +3206,7 @@ func save_game() -> void:
 			"exp": ({"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t), "cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)} if st["id"] == "expedition_post" else null),
 			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
 			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null,
-			"cap": st.get("captive") if st["id"] == "pal_cage" else null,
+			"cap": st.get("captive") if st["id"] == "kin_cage" else null,
 			"mimic": st.get("mimic") if st["id"] == "chest" else null}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
@@ -3227,7 +3227,7 @@ func save_game() -> void:
 			return pals.size() + box.size() + bench.find(pp)),
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
 		"wear": player.weapon_wear, "awear": player.armor_wear,
-		"pals": pals_data, "structures": structs, "catches": catch_counts,
+		"kin": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
 		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
 			func(cq): return {"out": cq["out"], "n": cq["n"], "left": cq["left"]}),
@@ -3236,7 +3236,7 @@ func save_game() -> void:
 				var r: Dictionary = br.duplicate()
 				r["at"] = maxf(0.0, br["at"] - t) # store remaining time — t restarts on load
 				return r),
-		"pbx": [palbox_pos.x, palbox_pos.y], # which palbox is primary
+		"pbx": [kinbox_pos.x, kinbox_pos.y], # which kinbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
@@ -3266,12 +3266,12 @@ func load_game() -> bool:
 	if dv is not Dictionary or not dv.has("seed"):
 		log_msg("Save file corrupt - starting fresh")
 		return false
-	var d: Dictionary = dv
-	for req in ["day", "tod", "tech_points", "unlocked", "items", "party", "player", "pals", "structures"]:
+	var d: Dictionary = Migrate.save_dict(dv) # pre-rename saves keep working under new ids
+	for req in ["day", "tod", "tech_points", "unlocked", "items", "party", "player", "kin", "structures"]:
 		if not d.has(req):
 			log_msg("Save missing field '%s' - starting fresh" % req)
 			return false # below this point every field is assumed present
-	if d["player"] is not Dictionary or d["pals"] is not Array or d["structures"] is not Dictionary \
+	if d["player"] is not Dictionary or d["kin"] is not Array or d["structures"] is not Dictionary \
 			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array:
 		log_msg("Save has wrong field types - starting fresh")
 		return false
@@ -3400,7 +3400,7 @@ func load_game() -> bool:
 	player.hp = minf(player.hp, player.max_hp)
 	var pending_jobs := []
 	var loaded := []
-	for pd in d["pals"]:
+	for pd in d["kin"]:
 		if pd is not Dictionary:
 			continue # corrupt entry — keep loading the rest
 		if SpeciesData.species_of(pd.get("sp", "")).is_empty():
@@ -3414,7 +3414,7 @@ func load_game() -> bool:
 				ppos2 = [player.pos.x, player.pos.y] # box pals are never in the world — pos is a placeholder anyway
 			else:
 				ppos2 = [world.spawn.x, world.spawn.y] # OOB pal could never move again — re-anchor at spawn, don't delete it
-		var np := preload("res://src/pal.gd").new()
+		var np := preload("res://src/kin.gd").new()
 		np.setup(self, pd["sp"], clampi(int(pd.get("lv", 1)), 1, 60), Vector2(float(ppos2[0]), float(ppos2[1]))) # lv<=0 makes stat_at return negative max_hp — an instant corpse
 		np.home = np.pos # loaded pals re-anchor at their saved spot
 		var hm = pd.get("home")
@@ -3502,11 +3502,11 @@ func load_game() -> bool:
 					arr.append(loaded[int(pi2)].uid)
 			if not arr.is_empty():
 				remote_parties[str(tag).substr(0, 24)] = arr.slice(0, 5)
-	var pbx_sv := Vector2i(-9999, -9999) # saved primary palbox, if the save is new enough
+	var pbx_sv := Vector2i(-9999, -9999) # saved primary kinbox, if the save is new enough
 	var pv = d.get("pbx", [])
 	if pv is Array and pv.size() >= 2:
 		pbx_sv = Vector2i(int(pv[0]), int(pv[1]))
-	palbox_pos = Vector2i(-1, -1) # rebuilt below — stale state must not skip the first palbox
+	kinbox_pos = Vector2i(-1, -1) # rebuilt below — stale state must not skip the first kinbox
 	extra_boxes.clear()
 	for ks in d["structures"]:
 		var parts: PackedStringArray = ks.split(",")
@@ -3540,7 +3540,7 @@ func load_game() -> bool:
 		if sv is Dictionary:
 			if sv.get("mimic") is String and str(sv["mimic"]) != "" and sid == "chest":
 				st["mimic"] = str(sv["mimic"]) # a saved hunger survives the save
-			if sv.get("cap") is Dictionary and sid == "pal_cage":
+			if sv.get("cap") is Dictionary and sid == "kin_cage":
 				var cap_d: Dictionary = sv["cap"]
 				st["captive"] = {"sp": str(cap_d.get("sp", "")), "lv": clampi(int(cap_d.get("lv", 5)), 1, 60)}
 			if sv.get("store") is Dictionary:
@@ -3567,15 +3567,15 @@ func load_game() -> bool:
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
 				world.structures[world.idx(tx + dx, ty + dy)] = st
-		if sid == "palbox":
+		if sid == "kinbox":
 			var o := Vector2i(tx, ty)
 			if o == pbx_sv:
-				if palbox_pos.x >= 0 and palbox_pos != o and palbox_pos not in extra_boxes:
-					extra_boxes.append(palbox_pos) # earlier guess demoted
-				palbox_pos = o
-			elif palbox_pos.x < 0:
-				palbox_pos = o
-			elif o != palbox_pos and o not in extra_boxes and extra_boxes.size() < MAX_EXTRA_BOXES:
+				if kinbox_pos.x >= 0 and kinbox_pos != o and kinbox_pos not in extra_boxes:
+					extra_boxes.append(kinbox_pos) # earlier guess demoted
+				kinbox_pos = o
+			elif kinbox_pos.x < 0:
+				kinbox_pos = o
+			elif o != kinbox_pos and o not in extra_boxes and extra_boxes.size() < MAX_EXTRA_BOXES:
 				extra_boxes.append(o)
 	for pj in pending_jobs:
 		var parts2: PackedStringArray = pj[1].split(",")
@@ -3603,7 +3603,7 @@ func load_game() -> bool:
 	log_msg("Loaded.")
 	return true
 
-# monitoring stand work pace (Palworld: normal/hard/super-hard). Needs the
+# monitoring stand work pace (the island: normal/hard/super-hard). Needs the
 # stand built to mean anything; default 1 preserves the classic x1.4 boost.
 var work_mode := 1
 var cur_san_mult := 1.0 # written each production tick; pals read it when working
@@ -3622,7 +3622,7 @@ func cycle_work_mode() -> void:
 	log_msg("Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)"
 		% [wm["name"], wm["prod"], wm["san"]])
 
-var supply_t := 300.0 # Palworld's wandering care package — lands near the player
+var supply_t := 300.0 # wandering care package — lands near the player
 func tick_supply(dt: float) -> void:
 	supply_t -= dt
 	if supply_t > 0.0:
@@ -3636,7 +3636,7 @@ func tick_supply(dt: float) -> void:
 		if not world.in_bounds(tx, ty) or world.blocked(tx, ty):
 			continue
 		var loot := [["ancient_part", 2]]
-		loot.append([["mega_sphere", "giga_sphere"][mini(day / 6, 1)], rng.int_range(2, 4)])
+		loot.append([["mega_orb", "giga_orb"][mini(day / 6, 1)], rng.int_range(2, 4)])
 		loot.append([["baked_berries", "jam_bun", "bread"][rng.int_range(0, 2)], rng.int_range(2, 4)])
 		loot.append(["gold_coin", rng.int_range(10, 25)])
 		for i in loot.size():
@@ -3647,14 +3647,14 @@ func tick_supply(dt: float) -> void:
 		log_msg("A supply crate lands nearby — grab it before the locals do")
 		return
 
-var mig_t := 300.0 # Palworld's passing herds — a deeper zone's species crosses the map
+var mig_t := 300.0 # passing herds — a deeper zone's species crosses the map
 func tick_migration(dt: float) -> void:
 	mig_t -= dt
 	if mig_t > 0.0:
 		return
 	mig_t = 420.0 + rng.next() * 420.0 # a herd drifts through every 7-14 minutes
 	# migrants come from a deeper band — a taste of what lives one zone over,
-	# catchable without walking there. Wild pals are locally authoritative
+	# catchable without walking there. Wild kin are locally authoritative
 	# (same contract as spawn_wild), so this ticks on every client too.
 	var zone := rng.int_range(1, 3)
 	var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
@@ -3684,7 +3684,7 @@ func tick_migration(dt: float) -> void:
 			var m_in_water: bool = world.tiles[world.idx(mx, my)] == World.Tile.WATER
 			if m_in_water != in_water or (not m_in_water and world.blocked(mx, my)):
 				continue
-			var mp := preload("res://src/pal.gd").new()
+			var mp := preload("res://src/kin.gd").new()
 			mp.alpha = zone >= 2 and rng.chance(0.08)
 			mp.lucky = not mp.alpha and rng.chance(0.015)
 			entity_layer.add_child(mp)
@@ -3704,22 +3704,22 @@ func tick_migration(dt: float) -> void:
 			% [sp.get("name", sid), "ashore" if in_water else "inland", made.size()])
 		return
 
-var raid_warned := false # 30s heads-up — Palworld flashes the raid horn early
+var raid_warned := false # 30s heads-up — the island flashes the raid horn early
 var raid_theme := ""     # element pack for the incoming wave; "" = mixed
 func tick_raid(dt: float) -> void:
-	if palbox_pos.x < 0:
+	if kinbox_pos.x < 0:
 		return
 	raid_t -= dt
 	if raid_t < 30.0 and not raid_warned:
 		raid_warned = true
-		# Palworld raids read as packs — mostly one element, sometimes a mob
+		# the island raids read as packs — mostly one element, sometimes a mob
 		var themes := ["fire", "water", "electric", "grass", "dark", "ice", "ground", "dragon"]
-		# Palworld's signature raid: the Rayne Syndicate sends humans, not pals
-		raid_theme = "syndicate" if rng.chance(0.15) else \
+		# signature raid: the Iron Pact Iron Pact sends humans, not kin
+		raid_theme = "Iron Pact" if rng.chance(0.15) else \
 			("" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)])
-		var howl := "Syndicate squad" if raid_theme == "syndicate" else \
+		var howl := "Iron Pact squad" if raid_theme == "Iron Pact" else \
 			(("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob")
-		log_msg("Raid party spotted — a %s is coming for the palbox!" % howl)
+		log_msg("Raid party spotted — a %s is coming for the kinbox!" % howl)
 		sfx_play("horn")
 		floater(player.pos, "RAID INCOMING", "#e8452f")
 	if raid_t <= 0:
@@ -3728,8 +3728,8 @@ func tick_raid(dt: float) -> void:
 		start_raid()
 
 func start_raid() -> void:
-	var c := Vector2(palbox_pos.x + 0.5, palbox_pos.y + 0.5)
-	# Palworld escalation: raids grow with the campaign — the curve squares
+	var c := Vector2(kinbox_pos.x + 0.5, kinbox_pos.y + 0.5)
+	# the island escalation: raids grow with the campaign — the curve squares
 	# with day so a day-one wave is survivable on a wooden club and a lamb,
 	# while deep-campaign raids still out-level a complacent base
 	var day_bonus := mini(day * day / 20, 25)
@@ -3749,18 +3749,18 @@ func start_raid() -> void:
 			if hostile_pool.is_empty():
 				hostile_pool = pool
 			var pick_pool: Array
-			if raid_theme == "syndicate":
-				pick_pool = ["syndicate_grunt", "syndicate_sweeper"] # humans ignore zone tables
+			if raid_theme == "Iron Pact":
+				pick_pool = ["ironpact_grunt", "ironpact_sweeper"] # humans ignore zone tables
 			else:
 				var themed := hostile_pool.filter(func(s): return raid_theme != "" and raid_theme in SpeciesData.species_of(s).get("elements", []))
 				pick_pool = themed if not themed.is_empty() else hostile_pool
 			var sid: String = pick_pool[rng.int_range(0, pick_pool.size() - 1)]
-			var rp := preload("res://src/pal.gd").new()
+			var rp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(rp)
 			rp.setup(self, sid, rng.int_range(3 + zone * 3 + day_bonus, 6 + zone * 5 + day_bonus), Vector2(tx + 0.5, ty + 0.5))
-			if sid.begins_with("syndicate") and rng.chance(0.3):
+			if sid.begins_with("Iron Pact") and rng.chance(0.3):
 				rp.bounty = rng.int_range(8, 18) # wanted criminals pay cash on the spot
-			# raider picks nearest non-wild pal; falls back to the player
+			# raider picks nearest non-wild kin; falls back to the player
 			rp.aggro = 0
 			rp.raid = true
 			rp.set_meta("raid_t0", t)
@@ -3778,11 +3778,11 @@ func start_raid() -> void:
 			placed = true
 			break
 	if spawned > 0:
-		log_msg("!! RAID: %d hostile pals approach your base !!" % spawned)
+		log_msg("!! RAID: %d hostile kin approach your base !!" % spawned)
 
 # ---------- breeding ----------
 func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
-	# grazing produce (Palworld): every ranch pal drops its species good on its
+	# grazing produce (the island): every ranch kin drops its species good on its
 	# own timer — wool, eggs, milk, gold — independent of the breeding pair.
 	var ft: Dictionary = st.get("farm_t", {})
 	st["farm_t"] = ft
@@ -3817,7 +3817,7 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if not (has_m and has_f):
 		st["timer"] = 0.0
 		return
-	# Palworld rule: breeding burns a cake per egg, pulled from base storage
+	# the island rule: breeding burns a cake per egg, pulled from base storage
 	if not consume_ready([["cake", 1]]):
 		if not st.get("cake_warned", false):
 			st["cake_warned"] = true
@@ -3847,16 +3847,16 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if st["egg_parents"].size() >= MAX_EGG_QUEUE:
 		st["egg_parents"].pop_front() # eggs get sold/eaten/destroyed — oldest parentage is expendable
 	# parentage carries species, talent, passives AND the move pool
-	# (Palworld: offspring can hatch knowing a parent's skill)
+	# (the island: offspring can hatch knowing a parent's skill)
 	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent,
 		a.passives.duplicate(), b.passives.duplicate(),
 		a.learned_skills(), b.learned_skills()])
-	st["store"]["pal_egg"] = st["store"].get("pal_egg", 0) + 1 # lays AT the ranch; haulers collect
+	st["store"]["kin_egg"] = st["store"].get("kin_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
 
 func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> void:
-	# Palworld's palbox lesson: a posted veteran drills one pupil per bell —
+	# kinbox lesson: a posted veteran drills one pupil per bell —
 	# youngsters pick up a move the teacher already carries, fruits stay the
 	# only way past three taught tricks
 	var teacher: Pal = null
@@ -3899,7 +3899,7 @@ func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 		pupil.spec.get("name", pupil.species_id), sname])
 
 func tick_spar(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> void:
-	# paired drills, not solo reps — two posted pals spar on the bell: the
+	# paired drills, not solo reps — two posted kin spar on the bell: the
 	# winner banks more experience and both walk out a little wearier
 	var pair := []
 	for w in st["workers"]:
@@ -3941,13 +3941,13 @@ func pull_from_storage(id: String, need: int) -> int:
 	return need - left
 
 func deposit_egg() -> void:
-	# Palworld: eggs go into an incubator; hatching takes real time.
+	# the island: eggs go into an incubator; hatching takes real time.
 	# Huge eggs take the slot first — a guaranteed Lucky is worth it.
 	var egg_id := ""
-	if item_count("huge_pal_egg") > 0:
-		egg_id = "huge_pal_egg"
-	elif item_count("pal_egg") > 0:
-		egg_id = "pal_egg"
+	if item_count("huge_kin_egg") > 0:
+		egg_id = "huge_kin_egg"
+	elif item_count("kin_egg") > 0:
+		egg_id = "kin_egg"
 	else:
 		return
 	var site = null; var bd := 20.0
@@ -3975,15 +3975,15 @@ func deposit_egg() -> void:
 			warm_hint = true
 			break
 	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
-		"huge": egg_id == "huge_pal_egg"}
+		"huge": egg_id == "huge_kin_egg"}
 	var hint := egg_hint(pair)
 	log_msg("%s incubating - ready in 90s%s%s"
-		% ["Huge egg" if egg_id == "huge_pal_egg" else "Egg",
+		% ["Huge egg" if egg_id == "huge_kin_egg" else "Egg",
 			"" if warm_hint else " (a campfire would hurry it)",
 			" — " + hint if hint != "" else ""])
 
 func egg_hint(pair) -> String:
-	# Palworld tells you what's inside: named pairings show their species,
+	# the island tells you what's inside: named pairings show their species,
 	# anything else just says which bloodline it takes after
 	if pair is Array and pair.size() >= 2:
 		var combo: String = BREED_COMBOS.get("%s+%s" % [pair[0], pair[1]],
@@ -4003,14 +4003,14 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	var talent_v: int
 	var inherited := []
 	if pair is Array and pair.size() >= 4:
-		# Palworld breeding: signature pairings produce a fixed third species;
+		# the island breeding: signature pairings produce a fixed third species;
 		# everything else inherits one of the two parents.
 		var combo: String = BREED_COMBOS.get("%s+%s" % [pair[0], pair[1]],
 			BREED_COMBOS.get("%s+%s" % [pair[1], pair[0]], ""))
 		sp_id = combo if combo != "" else pair[rng.int_range(0, 1)]
 		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
 		if pair.size() >= 6 and pair[4] is Array and pair[5] is Array:
-			for pk in pair[4] + pair[5]: # Palworld: passives run in the bloodline
+			for pk in pair[4] + pair[5]: # the island: passives run in the bloodline
 				if pk not in inherited:
 					inherited.append(pk)
 	else: # found egg with no recorded parentage — wild genetics
@@ -4021,7 +4021,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		var keys2: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
 		sp_id = keys2[rng.int_range(0, keys2.size() - 1)]
 	var at: Vector2 = nearest_free(key.x + 1.0, key.y + 2.5) # don't hatch into a wall
-	var np := preload("res://src/pal.gd").new()
+	var np := preload("res://src/kin.gd").new()
 	entity_layer.add_child(np)
 	np.setup(self, sp_id, 1, at)
 	np.talent = talent_v # setup() rolls a fresh talent — overwrite then re-derive stats
@@ -4034,7 +4034,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		var npk: String = keys_p[rng.int_range(0, keys_p.size() - 1)]
 		if npk not in np.passives:
 			np.passives.append(npk)
-	while np.passives.size() > 4: # Palworld's 4-trait cap binds bloodlines too
+	while np.passives.size() > 4: # 4-trait cap binds bloodlines too
 		np.passives.pop_back()
 	np.apply_bonuses()
 	np.hp = np.max_hp
@@ -4043,7 +4043,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		pool_s = pool_s.filter(func(k): return SkillData.SKILLS.has(k) and k not in np.learned_skills())
 		if not pool_s.is_empty():
 			np.extra_skills.append(pool_s[rng.int_range(0, pool_s.size() - 1)])
-	if huge: # Palworld's huge eggs: a guaranteed golden Lucky hatches out
+	if huge: # huge eggs: a guaranteed golden Lucky hatches out
 		np.lucky = true
 		sfx_play("lucky")
 		if "lucky" not in np.passives:
@@ -4054,7 +4054,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		np.hp = np.max_hp
 		np.sprite.scale = Vector2(1.5, 1.5)
 		np.sprite.position.y = -48.0
-	if palbox_pos.x >= 0:
+	if kinbox_pos.x >= 0:
 		np.mode = "base"
 		pals.append(np)
 	else: # no base: it goes straight to the box like any caught pal
@@ -4068,7 +4068,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		np.spec["name"], talent_v])
 
 func spawn_camps() -> void:
-	# Syndicate poacher camps (Palworld POI): a caged pal under armed guard.
+	# Iron Pact poacher camps (the island POI): a caged kin under armed guard.
 	# The captive exists only as cage data until someone breaks the lock —
 	# no entity, no timer, nothing to leak.
 	var placed := 0
@@ -4087,15 +4087,15 @@ func spawn_camps() -> void:
 					ok = false
 		if not ok:
 			continue
-		if not place_free("pal_cage", tx, ty):
+		if not place_free("kin_cage", tx, ty):
 			continue
 		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
 		var cst: Dictionary = structures[Vector2i(tx, ty)]
 		cst["captive"] = {"sp": pick_wild_species(pool), "lv": rng.int_range(8 + zone * 4, 14 + zone * 6)}
 		var gn := 2 + int(rng.chance(0.5))
 		for i in gn:
-			var gid: String = "syndicate_grunt" if i % 2 == 0 else "syndicate_sweeper"
-			var gp := preload("res://src/pal.gd").new()
+			var gid: String = "ironpact_grunt" if i % 2 == 0 else "ironpact_sweeper"
+			var gp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(gp)
 			gp.setup(self, gid, rng.int_range(12 + zone * 4, 18 + zone * 5),
 				Vector2(tx + [0.5, 1.5, -0.5][i % 3], ty + [1.5, -0.5, 1.5][i % 3]))
@@ -4104,13 +4104,13 @@ func spawn_camps() -> void:
 		placed += 1
 
 func free_captive(st: Dictionary) -> void:
-	# prize the lock — the caged pal joins your box like any catch
+	# prize the lock — the caged kin joins your box like any catch
 	var cap = st.get("captive")
 	if not (cap is Dictionary) or str(cap.get("sp", "")) == "":
 		log_msg("The cage is empty")
 		return
 	if box.size() >= MAX_BOX:
-		log_msg("Palbox is full — the captive won't leave its cage")
+		log_msg("Kinbox is full — the captive won't leave its cage")
 		return
 	var bp := gen_pal(str(cap["sp"]), int(cap["lv"]), player.pos)
 	bp.mode = "box"
@@ -4118,7 +4118,7 @@ func free_captive(st: Dictionary) -> void:
 	box_pal(bp)
 	gain_xp(15)
 	floater(player.pos, "FREED!", "#8ef0a8")
-	log_msg("Freed %s Lv%d — it scurries into your palbox" % [bp.spec["name"], bp.level])
+	log_msg("Freed %s Lv%d — it scurries into your kinbox" % [bp.spec["name"], bp.level])
 	net_remove_structure(st)
 
 func spawn_fossils() -> void:
@@ -4144,9 +4144,9 @@ func dig_fossil(st: Dictionary) -> void:
 	add_item("stone", 4)
 	var shard := rng.chance(0.25)
 	if shard:
-		add_item("paldium", 1)
+		add_item("lumenite", 1)
 	floater(pos, "+%d ancient parts" % n, "#ffd76e")
-	log_msg("Fossil dug: %d ancient parts%s" % [n, " and a paldium shard" if shard else ""])
+	log_msg("Fossil dug: %d ancient parts%s" % [n, " and a lumenite shard" if shard else ""])
 	sfx_play("catch")
 
 func open_mimic(st: Dictionary) -> void:
@@ -4190,7 +4190,7 @@ func spawn_lairs() -> void:
 		if pool.is_empty():
 			pool = SpeciesGen.zone_pool(2)
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
-		var bp := preload("res://src/pal.gd").new()
+		var bp := preload("res://src/kin.gd").new()
 		entity_layer.add_child(bp)
 		bp.alpha = true # before setup: apply_bonuses folds the 4x into max_hp
 		bp.setup(self, sid, rng.int_range(30, 40), Vector2(tx + 0.5, ty + 0.5))
@@ -4198,18 +4198,18 @@ func spawn_lairs() -> void:
 		# 2 elite guards
 		for i in 2:
 			var gsid: String = pool[rng.int_range(0, pool.size() - 1)]
-			var gp := preload("res://src/pal.gd").new()
+			var gp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(gp)
 			gp.setup(self, gsid, rng.int_range(18, 26), Vector2(tx + 0.5 + (1 if i == 0 else -1), ty + 0.5))
 			pals.append(gp)
-		# Palworld den treasure: a stocked chest sits behind the boss —
+		# the island den treasure: a stocked chest sits behind the boss —
 		# flagged "loot" so base haulers never trek out to rob their own prize
 		var ck := Vector2i(tx, ty + 1)
 		if place_free("chest", ck.x, ck.y):
 			var chst: Dictionary = structures.get(ck)
 			if chst != null:
 				chst["loot"] = true
-				var loot := {"gold_coin": rng.int_range(30, 80), "paldium": rng.int_range(2, 5)}
+				var loot := {"gold_coin": rng.int_range(30, 80), "lumenite": rng.int_range(2, 5)}
 				if rng.chance(0.5):
 					loot["ancient_part"] = 1
 				if rng.chance(0.4):
@@ -4226,8 +4226,8 @@ func spawn_lairs() -> void:
 	log_msg("%d boss lairs marked deep in the world" % placed)
 
 func spawn_waypoints() -> void:
-	# Palworld fast-travel stones: a few fixed waypoints out in the world,
-	# each a one-way blink back to your palbox once you've walked out
+	# the island fast-travel stones: a few fixed waypoints out in the world,
+	# each a one-way blink back to your kinbox once you've walked out
 	var placed := 0
 	var tries := 0
 	while placed < 4 and tries < 4000:
@@ -4249,7 +4249,7 @@ func spawn_waypoints() -> void:
 		log_msg("%d waypoints hum out in the wilds" % placed)
 
 func spawn_nests() -> void:
-	# Wild egg nests (Palworld): stealable pal_egg drops scattered past zone 1
+	# Wild egg nests (the island): stealable kin_egg drops scattered past zone 1
 	var placed := 0
 	var tries := 0
 	while placed < 7 and tries < 4000:
@@ -4261,15 +4261,15 @@ func spawn_nests() -> void:
 		if zone < 1 or world.blocked(tx, ty) \
 				or at.distance_to(player.pos) < 15.0:
 			continue
-		# deeper nests hide the odd huge egg — Palworld's golden goose chase
-		spawn_drop("huge_pal_egg" if rng.chance(0.05 + zone * 0.05) else "pal_egg", 1, at)
+		# deeper nests hide the odd huge egg — golden goose chase
+		spawn_drop("huge_kin_egg" if rng.chance(0.05 + zone * 0.05) else "kin_egg", 1, at)
 		placed += 1
 
 var grotto_pos := Vector2i(-1, -1) # sealed dungeon marker (set at worldgen)
 var grotto_room2 := Vector2i(-1, -1) # second chamber center, if the terrain fit it
 
 func spawn_grotto() -> void:
-	# Palworld dungeon flavour: a rock-sealed chamber in deep zone 3 — the only
+	# the island dungeon flavour: a rock-sealed chamber in deep zone 3 — the only
 	# way in is to break the wall (or fly a bird over it). Boss + loot inside.
 	var tries := 0
 	while tries < 6000:
@@ -4296,7 +4296,7 @@ func spawn_grotto() -> void:
 		var pool := SpeciesGen.zone_pool(3)
 		if pool.is_empty():
 			return
-		var bp := preload("res://src/pal.gd").new()
+		var bp := preload("res://src/kin.gd").new()
 		bp.alpha = true
 		bp.boss = true
 		entity_layer.add_child(bp)
@@ -4308,14 +4308,14 @@ func spawn_grotto() -> void:
 			var st: Dictionary = structures[Vector2i(tx + 1, ty + 1)]
 			st["loot"] = true # dungeon treasure — off the base logistics net
 			if rng.chance(0.12): # some chests are only chest-shaped
-				st["mimic"] = ["daedream", "mau", "depresso"][rng.int_range(0, 2)]
+				st["mimic"] = ["shadelump", "shademelt", "shademite"][rng.int_range(0, 2)]
 			else:
-				st["store"] = {"gold_coin": rng.int_range(20, 40), "mega_sphere": 3,
-					"pal_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
+				st["store"] = {"gold_coin": rng.int_range(20, 40), "mega_orb": 3,
+					"kin_egg": 1, "skill_fruit_" + ["neutral", "fire", "water", "grass",
 					"electric", "ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
 		grotto_pos = Vector2i(tx, ty)
 		grotto_room2 = Vector2i(-1, -1)
-		# second chamber (Palworld multi-room dungeon): a 5x5 treasure room in
+		# second chamber (the island multi-room dungeon): a 5x5 treasure room in
 		# any cardinal direction, joined by a 1-wide rock doorway. Meaner
 		# warden, richer chest — optional when the terrain won't fit one.
 		var bx := -1
@@ -4353,7 +4353,7 @@ func spawn_grotto() -> void:
 			var k2 := world.idx(dc.x, dc.y)
 			world.decor[k2] = World.Decor.ROCK
 			world.hp[k2] = 60
-		var bp2 := preload("res://src/pal.gd").new()
+		var bp2 := preload("res://src/kin.gd").new()
 		bp2.alpha = true
 		bp2.boss = true
 		entity_layer.add_child(bp2)
@@ -4364,12 +4364,12 @@ func spawn_grotto() -> void:
 			var st2: Dictionary = structures[Vector2i(bx - 1, by - 1)]
 			st2["loot"] = true
 			if rng.chance(0.15): # deeper rooms hold deeper appetites
-				st2["mimic"] = ["daedream", "loupmoon"][rng.int_range(0, 1)]
+				st2["mimic"] = ["shadelump", "noctmane"][rng.int_range(0, 1)]
 			else:
-				st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_sphere": 2,
-					"lifmunk_effigy": 3, "pal_egg": 2, "huge_pal_egg": 1}
+				st2["store"] = {"gold_coin": rng.int_range(40, 80), "legendary_orb": 2,
+					"sprigmelt_effigy": 3, "kin_egg": 2, "huge_kin_egg": 1}
 		grotto_room2 = Vector2i(bx, by)
-		# third chamber (Palworld's deepest boss room): chains off room 2 in any
+		# third chamber (deepest boss room): chains off room 2 in any
 		# cardinal direction that won't double back onto the first chamber.
 		var cx3 := -1
 		var cy3 := -1
@@ -4403,7 +4403,7 @@ func spawn_grotto() -> void:
 				var k3 := world.idx(dc3.x, dc3.y)
 				world.decor[k3] = World.Decor.ROCK
 				world.hp[k3] = 60
-			var bp3 := preload("res://src/pal.gd").new()
+			var bp3 := preload("res://src/kin.gd").new()
 			bp3.alpha = true
 			bp3.boss = true
 			entity_layer.add_child(bp3)
@@ -4416,10 +4416,10 @@ func spawn_grotto() -> void:
 				var st3: Dictionary = structures[Vector2i(cx3 + 1, cy3 - 1)]
 				st3["loot"] = true
 				if rng.chance(0.15):
-					st3["mimic"] = ["loupmoon", "mau", "daedream"][rng.int_range(0, 2)]
+					st3["mimic"] = ["noctmane", "shademelt", "shadelump"][rng.int_range(0, 2)]
 				else:
-					st3["store"] = {"gold_coin": rng.int_range(60, 120), "legendary_sphere": 3,
-						"ancient_part": 2, "huge_pal_egg": 1, "lifmunk_effigy": 4,
+					st3["store"] = {"gold_coin": rng.int_range(60, 120), "legendary_orb": 3,
+						"ancient_part": 2, "huge_kin_egg": 1, "sprigmelt_effigy": 4,
 						"boss_sigil": 1,
 						"skill_fruit_" + ["neutral", "fire", "water", "grass", "electric",
 						"ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
@@ -4428,9 +4428,9 @@ func spawn_grotto() -> void:
 		log_msg("A sealed grotto echoes in the deep wilds — it sounds deep")
 		return
 
-# World bosses that only appear as den guardians — Palworld's legendary tier.
-const LEGENDARY_DEN := ["jetragon", "frostallion", "paladius", "necromus",
-	"astegon", "blazamut", "suzaku", "jormuntide", "quivern", "elphidran"]
+# World bosses that only appear as den guardians — legendary tier.
+const LEGENDARY_DEN := ["scalbeak", "snovstride", "nibhand", "shadekin",
+	"wyrmhoof", "cindchew", "flarbeak", "tidscale", "scalcrest", "vermtrot"]
 
 func spawn_legendary_den() -> void:
 	# one per world: bigger ring, an uncapturable giant, elite honour guard
@@ -4455,7 +4455,7 @@ func spawn_legendary_den() -> void:
 		if pool.is_empty():
 			return # species data trimmed — skip the den rather than spawn a ghost
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
-		var bp := preload("res://src/pal.gd").new()
+		var bp := preload("res://src/kin.gd").new()
 		bp.alpha = true
 		bp.boss = true # IMMUNE to spheres — legendaries are earned, not caught
 		entity_layer.add_child(bp)
@@ -4466,7 +4466,7 @@ func spawn_legendary_den() -> void:
 		pals.append(bp)
 		var guard_pool := SpeciesGen.zone_pool(3)
 		for i in mini(3, guard_pool.size()):
-			var gp := preload("res://src/pal.gd").new()
+			var gp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(gp)
 			gp.setup(self, guard_pool[rng.int_range(0, guard_pool.size() - 1)],
 				rng.int_range(24, 32), Vector2(tx + 1.5 - i, ty + 1.5))
@@ -4504,7 +4504,7 @@ func regenerate(s: int) -> void:
 		if is_instance_valid(sp0["node"]):
 			sp0["node"].queue_free()
 	spheres_flying.clear()
-	palbox_pos = Vector2i(-1, -1)
+	kinbox_pos = Vector2i(-1, -1)
 	extra_boxes.clear() # outpost network dies with the world
 	grotto_pos = Vector2i(-1, -1)
 	grotto_room2 = Vector2i(-1, -1)
@@ -4532,7 +4532,7 @@ func regenerate(s: int) -> void:
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
 	spawn_lairs() # joining clients need their own lair bosses (pals are locally authoritative)
-	spawn_camps() # syndicate poacher camps — guards spawn locally like lair bosses
+	spawn_camps() # Iron Pact poacher camps — guards spawn locally like lair bosses
 	spawn_fossils() # old bones re-spawned with the world
 	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
 
@@ -4547,10 +4547,10 @@ func upgrade_perk(k: String) -> void:
 	var cost := PERK_COST + lvl * 2
 	if stat_pts > 0:
 		stat_pts -= 1
-	elif item_count("lifmunk_effigy") >= cost:
-		add_item("lifmunk_effigy", -cost)
+	elif item_count("sprigmelt_effigy") >= cost:
+		add_item("sprigmelt_effigy", -cost)
 	else:
-		log_msg("Need %d effigies or a stat point (have %d)" % [cost, item_count("lifmunk_effigy")])
+		log_msg("Need %d effigies or a stat point (have %d)" % [cost, item_count("sprigmelt_effigy")])
 		return
 	perks[k] = lvl + 1
 	if k == "capture":
@@ -4561,7 +4561,7 @@ func upgrade_perk(k: String) -> void:
 	log_msg("Statue upgraded: %s Lv%d" % [k, perks[k]])
 
 func respec() -> bool:
-	# Palworld's memory-wiping medicine: every perk rank folds back into
+	# memory-wiping medicine: every perk rank folds back into
 	# stat points — spend them fresh, no effigies refunded
 	var total := 0
 	for k in perks:
@@ -4579,7 +4579,7 @@ func respec() -> bool:
 	return true
 
 func soul_infuse(uid: int) -> void:
-	# Palworld statue-of-power for pals: feed effigies into one pal's soul
+	# the island statue-of-power for kin: feed effigies into one kin's soul
 	var target: Pal = null
 	for q in pals:
 		if q.uid == uid and q.mode in ["partner", "base"]:
@@ -4593,33 +4593,33 @@ func soul_infuse(uid: int) -> void:
 	if target == null or target.soul_boost >= 10:
 		return
 	var cost := 1 + target.soul_boost
-	if item_count("lifmunk_effigy") < cost:
+	if item_count("sprigmelt_effigy") < cost:
 		log_msg("Need %d effigies to infuse %s" % [cost, target.spec["name"]])
 		return
-	add_item("lifmunk_effigy", -cost)
+	add_item("sprigmelt_effigy", -cost)
 	target.soul_boost += 1
 	target.apply_bonuses()
 	log_msg("%s's soul burns brighter (+%d)" % [target.spec["name"], target.soul_boost])
 
-# Palworld signature partner skills: a few species get bespoke actives
+# the island signature partner skills: a few species get bespoke actives
 # instead of "cast your best learned skill at the cursor"
 const PARTNER_SKILLS := {
-	"foxparks": {"cd": 6.0, "range": 4.5, "name": "Flamethrower"},
-	"lifmunk": {"cd": 5.0, "range": 7.0, "name": "SMG Burst"},
-	"tanzee":  {"cd": 5.0, "range": 8.0, "name": "Rifle Shot"},
-	# Palworld ranch-in-the-field supports — no gear, just produce on tap
-	"cremis":   {"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
-	"mozzarina":{"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
-	"chikipi":  {"cd": 25.0, "range": 0.0, "name": "Egg-cellent Lay"},
-	"pengullet":{"cd": 8.0, "range": 9.0, "name": "Penguin Cannon"},
-	"lamball":  {"cd": 20.0, "range": 0.0, "name": "Roly Poly"},
+	"cindlump": {"cd": 6.0, "range": 4.5, "name": "Flamethrower"},
+	"sprigmelt": {"cd": 5.0, "range": 7.0, "name": "SMG Burst"},
+	"briargoo":  {"cd": 5.0, "range": 8.0, "name": "Rifle Shot"},
+	# the island ranch-in-the-field supports — no gear, just produce on tap
+	"nibjelly":   {"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
+	"piplump":{"cd": 30.0, "range": 0.0, "name": "Milk Maker"},
+	"fenlump":  {"cd": 25.0, "range": 0.0, "name": "Egg-cellent Lay"},
+	"corlmite":{"cd": 8.0, "range": 9.0, "name": "Penguin Cannon"},
+	"fenjelly":  {"cd": 20.0, "range": 0.0, "name": "Roly Poly"},
 }
 
-# Palworld pal gear: a bespoke active needs its species item crafted in the
-# pack — the harness/SMG/rifle are what make the skill real, not the pal.
+# the island kin gear: a bespoke active needs its species item crafted in the
+# pack — the harness/SMG/rifle are what make the skill real, not the kin.
 const PARTNER_GEAR := {
-	"foxparks": "foxparks_harness", "lifmunk": "lifmunk_smg", "tanzee": "tanzee_rifle",
-	"pengullet": "pengullet_launcher",
+	"cindlump": "cindlump_harness", "sprigmelt": "sprigmelt_smg", "briargoo": "briargoo_rifle",
+	"corlmite": "corlmite_launcher",
 }
 func partner_gear_ok(sid: String) -> bool:
 	var gid: String = PARTNER_GEAR.get(sid, "")
@@ -4627,17 +4627,17 @@ func partner_gear_ok(sid: String) -> bool:
 
 func partner_skill() -> void:
 	if party.is_empty():
-		log_msg("No party pal")
+		log_msg("No party kin")
 		return
 	var p := party_pal()
 	if p == null or p.hp <= 0:
-		log_msg("Send out a pal first")
+		log_msg("Send out a kin first")
 		return
 	var m := player.get_global_mouse_position()
 	var tw0: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
 	var psk = PARTNER_SKILLS.get(p.species_id)
 	if psk != null and not partner_gear_ok(p.species_id):
-		log_msg("%s's %s needs its pal gear — unlock %s in the tech tree"
+		log_msg("%s's %s needs its kin gear — unlock %s in the tech tree"
 			% [p.spec["name"], psk["name"], PARTNER_GEAR[p.species_id]])
 		psk = null # the pal falls back to its strongest learned move instead
 	if psk != null:
@@ -4675,7 +4675,7 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 	var reach: float = psk["range"]
 	var p_atk := Combat.stat_at(p.spec["atk"], p.level, p.talent) * p.atk_bonus * p.atk_mult()
 	match p.species_id:
-		"foxparks": # flamethrower: burn everything in the aim cone
+		"cindlump": # flamethrower: burn everything in the aim cone
 			var hit_any := false
 			for q in pals:
 				if q.mode != "wild" or q.hp <= 0 or q == p:
@@ -4687,7 +4687,7 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 						q.add_status("burn", 3.0)
 					hit_any = true
 			return hit_any
-		"lifmunk": # SMG burst: three quick hits on the nearest wild pal to the aim
+		"sprigmelt": # SMG burst: three quick hits on the nearest wild pal to the aim
 			var tgt := nearest_wild(tw, reach)
 			if tgt == null:
 				return false
@@ -4697,14 +4697,14 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 					break
 				tgt.hit(Combat.damage(p_atk, 15, tdef, 1.0, rng), 1.0, true)
 			return true
-		"tanzee": # rifle shot: one heavy hit
+		"briargoo": # rifle shot: one heavy hit
 			var tgt2 := nearest_wild(tw, reach)
 			if tgt2 == null:
 				return false
 			tgt2.hit(Combat.damage(p_atk, 80, Combat.stat_at(tgt2.spec["def"],
 				tgt2.level, tgt2.talent) * tgt2.def_bonus * tgt2.def_mult(), 1.0, rng), 1.0, true)
 			return true
-		"pengullet": # Penguin Cannon: the bird IS the payload — icy splash at the aim
+		"corlmite": # Penguin Cannon: the bird IS the payload — icy splash at the aim
 			var boom := false
 			for q in pals:
 				if q.mode != "wild" or q.hp <= 0 or q == p:
@@ -4718,20 +4718,20 @@ func run_partner_skill(p: Pal, tw: Vector2, psk) -> bool:
 			if boom:
 				floater(tw, "PENGUIN CANNON!", "#7ec8e3")
 			return boom
-		"cremis": # a squeeze of cream, straight into the bag
+		"nibjelly": # a squeeze of cream, straight into the bag
 			add_item("milk", 1)
 			floater(p.pos, "milk!", "#f8f4f0")
 			return true
-		"mozzarina": # the big jersey — two bottles per squeeze
+		"piplump": # the big jersey — two bottles per squeeze
 			add_item("milk", 2)
 			floater(p.pos, "milk x2!", "#f8f4f0")
 			return true
-		"lamball": # Roly Poly: the plush ball rolls under you — an 8s absorb bubble
+		"fenjelly": # Roly Poly: the plush ball rolls under you — an 8s absorb bubble
 			player.shield_t = t + 8.0
 			player.shield_n = 40.0 + p.level * 2.0
 			floater(player.pos, "ROLY POLY!", "#a8d8ff")
 			return true
-		"chikipi": # it lays, you pocket
+		"fenlump": # it lays, you pocket
 			add_item("egg", 1)
 			floater(p.pos, "an egg!", "#f0e0a8")
 			return true
@@ -4809,13 +4809,13 @@ func net_remove_structure(st: Dictionary) -> void:
 		st["node"].queue_free()
 	if chest_ref == st:
 		chest_ref = null
-	if st["id"] == "palbox" and not cells.is_empty():
+	if st["id"] == "kinbox" and not cells.is_empty():
 		var origin: Vector2i = cells[0]
 		for cc in cells:
 			if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
 				origin = cc
-		if origin == palbox_pos:
-			palbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
+		if origin == kinbox_pos:
+			kinbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
 		else:
 			extra_boxes.erase(origin)
 
@@ -4885,7 +4885,7 @@ func equip(k: String) -> void:
 	elif it.get("kind") == "armor" or it.has("armor"):
 		slot = "armor"
 	elif it.has("acc"):
-		# Palworld's twin trinket slots: re-click frees the slot it sits in,
+		# twin trinket slots: re-click frees the slot it sits in,
 		# a fresh trinket fills the first hole or bumps acc2
 		if player.equipment["acc1"] == k:
 			slot = "acc1"
@@ -4927,13 +4927,13 @@ func break_armor(id: String) -> void:
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func teach_skill_fruit(item_id: String) -> void:
-	# Skill fruit (Palworld): teaches the active pal a move of that element
+	# Skill fruit (the island): teaches the active kin a move of that element
 	if party.is_empty():
-		log_msg("No active pal to teach")
+		log_msg("No active kin to teach")
 		return
 	var p := lead_pal() # a benched lead can still study a fruit
 	if p == null or p.hp <= 0:
-		log_msg("Lead pal is down")
+		log_msg("Lead kin is down")
 		return
 	var elem: String = ItemData.ITEMS.get(item_id, {}).get("elem", "")
 	var pool := []
@@ -4968,9 +4968,9 @@ const BOARD_POOL := [["wood", 10], ["stone", 8], ["fiber", 8], ["red_berries", 8
 	["mushroom", 5], ["wool", 3], ["raw_fish", 3], ["honey", 2], ["milk", 3]]
 var board_quest := {} # supply:{kind,id,n,day} hunt:{kind,sp,n,got,day} — one per dawn
 
-const HUNT_POOL := ["lamball", "chikipi", "lifmunk", "cattiva", "tanzee",
-	"foxparks", "jolthog", "fuack", "pengullet", "cremis", "sparkit", "mau",
-	"rushoar", "eikthyrdeer", "mozzarina", "depresso", "daedream", "dumud", "penking"]
+const HUNT_POOL := ["fenjelly", "fenlump", "sprigmelt", "puffmite", "briargoo",
+	"cindlump", "faradlump", "quackbill", "corlmite", "nibjelly", "voltgoo", "shademelt",
+	"loampuff", "dozantler", "piplump", "shademite", "shadelump", "loammelt", "marlump"]
 
 func notice_board_action() -> void:
 	if int(board_quest.get("day", -1)) != day:
@@ -5007,18 +5007,18 @@ func gacha_pull() -> void:
 	# feed the brass mouth 30 gold — the brass takes its cut: eggs resold
 	# don't cover the pull, so the machine stays a sink not a mint
 	if item_count("gold_coin") < 30:
-		log_msg("Pal gacha: it wants 30 gold in the slot")
+		log_msg("Kin gacha: it wants 30 gold in the slot")
 		return
 	add_item("gold_coin", -30)
-	var eid: String = "huge_pal_egg" if rng.chance(0.1) else "pal_egg"
+	var eid: String = "huge_kin_egg" if rng.chance(0.1) else "kin_egg"
 	add_item(eid, 1)
 	floater(player.pos, "★ %s!" % ItemData.ITEMS[eid]["name"],
-		"#ffd76e" if eid == "huge_pal_egg" else "#e8f0f2")
+		"#ffd76e" if eid == "huge_kin_egg" else "#e8f0f2")
 	log_msg("The gacha rattles — out rolls a %s" % ItemData.ITEMS[eid]["name"])
 	sfx_play("catch")
 
 func board_hunt_credit(sp: String) -> void:
-	# the guild pays for thinning whether the pal leaves in a bag or a box
+	# the guild pays for thinning whether the kin leaves in a bag or a box
 	if str(board_quest.get("kind", "")) != "hunt" \
 			or str(board_quest.get("sp", "")) != sp \
 			or int(board_quest.get("day", -1)) != day:
@@ -5036,11 +5036,11 @@ func board_hunt_credit(sp: String) -> void:
 	else:
 		log_msg("Hunt: %s %d/%d" % [sname, int(board_quest["got"]), need])
 
-const MERCH_POOL := ["pal_sphere", "mega_sphere", "low_medical", "medical_supplies",
+const MERCH_POOL := ["kin_orb", "mega_orb", "low_medical", "medical_supplies",
 	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",
 	"skill_fruit_neutral", "skill_fruit_fire", "skill_fruit_water", "skill_fruit_grass",
 	"skill_fruit_electric", "skill_fruit_ice", "skill_fruit_ground", "skill_fruit_dark",
-	"skill_fruit_dragon", "cake", "pal_egg", "memory_wipe", "treasure_map"]
+	"skill_fruit_dragon", "cake", "kin_egg", "memory_wipe", "treasure_map"]
 
 func gen_merchant_stock() -> void:
 	merchant_stock.clear()
@@ -5056,12 +5056,12 @@ func gen_merchant_stock() -> void:
 		merchant_stock.append({"id": id, "n": rng.int_range(1, 4), "price": price})
 	# black-market rarity: the odd huge egg slips into the briefcase, marked up
 	if rng.chance(0.2):
-		var hp_price: int = ItemData.ITEMS.get("huge_pal_egg", {}).get("price", 200)
-		merchant_stock.append({"id": "huge_pal_egg", "n": 1, "price": int(hp_price * 1.5)})
+		var hp_price: int = ItemData.ITEMS.get("huge_kin_egg", {}).get("price", 200)
+		merchant_stock.append({"id": "huge_kin_egg", "n": 1, "price": int(hp_price * 1.5)})
 	# and sometimes a dare: a boss sigil under the counter, priced to hesitate
 	if rng.chance(0.15):
 		merchant_stock.append({"id": "boss_sigil", "n": 1, "price": 150})
-	# black-market pals (Palworld): a few capturable-free specimens, priced by
+	# black-market kin (the island): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):
 		var z := rng.int_range(0, 2) if rng.chance(0.85) else 3
@@ -5070,7 +5070,7 @@ func gen_merchant_stock() -> void:
 			continue
 		var sid: String = ppool[rng.int_range(0, ppool.size() - 1)]
 		var plv := rng.int_range(5 + z * 6, 14 + z * 8)
-		merchant_stock.append({"pal": sid, "lv": plv, "n": 1,
+		merchant_stock.append({"kin": sid, "lv": plv, "n": 1,
 			"price": 90 + plv * 12 + z * 80})
 
 func spawn_merchant() -> void:
@@ -5083,7 +5083,7 @@ func spawn_merchant() -> void:
 	merchant.pos = at
 	merchant.speed = 1.6
 	entity_layer.add_child(merchant)
-	merchant.setup_visuals("res://assets/pals/player_f0.png", "res://assets/pals/player_f1.png")
+	merchant.setup_visuals("res://assets/kin/player_f0.png", "res://assets/kin/player_f1.png")
 	merchant.sprite.modulate = Color(1.5, 1.0, 0.45) # a warmly-dressed stranger
 	merchant_home = at
 	gen_merchant_stock()
@@ -5102,7 +5102,7 @@ func despawn_merchant() -> void:
 	merchant_wanted = false
 	log_msg("The merchant moved on")
 
-var merchant_wanted := false # one hit squad per visit — Palworld's wanted loop
+var merchant_wanted := false # one hit squad per visit — wanted loop
 var merchant_hp := 60          # Entity has no hp field — Pal/Player shadow it
 
 func hit_merchant(dmg: float) -> void:
@@ -5113,24 +5113,24 @@ func hit_merchant(dmg: float) -> void:
 	sfx_play("hit")
 	if not merchant_wanted:
 		merchant_wanted = true
-		# Palworld's crime loop: raise a hand at a peaceful NPC and a syndicate
+		# crime loop: raise a hand at a peaceful NPC and a Iron Pact
 		# hit squad materializes to collect — once per visit, killable like any foe
 		var squad := mini(2 + int(day / 6.0), 4)
 		for i in squad:
 			var a := rng.next() * TAU
 			var at := nearest_free(player.pos.x + cos(a) * 5.0, player.pos.y + sin(a) * 5.0)
-			var thug := gen_pal("syndicate_grunt" if i % 2 == 0 else "syndicate_sweeper",
+			var thug := gen_pal("ironpact_grunt" if i % 2 == 0 else "ironpact_sweeper",
 				maxi(3, player.level + rng.int_range(-1, 2)), at)
 			thug.mode = "wild"; thug.aggro = 0; thug.home = player.pos
 			pals.append(thug)
 		merchant_tgt = merchant.pos + (merchant.pos - player.pos).normalized() * 20.0
-		log_msg("WANTED! The syndicate answers violence with violence")
+		log_msg("WANTED! The Iron Pact answers violence with violence")
 		floater(merchant.pos, "GUARDS!", "#ff5544")
 	if merchant_hp <= 0:
 		var drops_n := rng.int_range(30, 60)
 		spawn_drop("gold_coin", drops_n, merchant.pos)
 		floater(merchant.pos, "+%dg" % drops_n, "#ffd76e")
-		log_msg("The merchant is dead. The syndicate remembers")
+		log_msg("The merchant is dead. The Iron Pact remembers")
 		despawn_merchant()
 
 func tick_merchant(dt: float) -> void:
@@ -5162,13 +5162,13 @@ func buy_from_merchant(idx: int) -> void:
 	if item_count("gold_coin") < it["price"]:
 		log_msg("Need %d gold" % it["price"])
 		return
-	if it.has("pal"):
-		var sid := str(it["pal"])
+	if it.has("kin"):
+		var sid := str(it["kin"])
 		if SpeciesData.species_of(sid).is_empty():
 			it["n"] = 0 # corrupted stock — retire the slot, never sell a ghost
 			return
 		if box.size() >= MAX_BOX:
-			log_msg("Palbox full - make room first")
+			log_msg("Kinbox full - make room first")
 			return
 		var np := gen_pal(sid, int(it["lv"]), player.pos)
 		np.mode = "box"
@@ -5205,14 +5205,14 @@ func sell_pal_to_merchant(uid: int) -> void:
 			return
 
 func toggle_fav(uid: int) -> void:
-	# heart-lock a boxed pal — butcher, merchant sale and condense fodder all skip it
+	# heart-lock a boxed kin — butcher, merchant sale and condense fodder all skip it
 	for bp in box:
 		if bp.uid == uid:
 			bp.fav = not bp.fav
 			return
 
 func butcher_pal(uid: int) -> void:
-	# Palworld's meat cleaver: sacrifice a boxed pal, it spills its drops
+	# meat cleaver: sacrifice a boxed kin, it spills its drops
 	if item_count("meat_cleaver") <= 0:
 		log_msg("You need a Meat Cleaver for that")
 		return

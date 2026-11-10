@@ -1,6 +1,6 @@
 class_name Combat
 # Battle formulas ported from the TS prototype (combat.ts), calibrated
-# against Palworld-Win64-Shipping.exe FNames (CalcCaptureRate chain verified).
+# against the island-Win64-Shipping.exe FNames (CalcCaptureRate chain verified).
 
 static func stat_at(base: float, level: int, talent: int = 0) -> float:
 	return base * (1.0 + (level - 1) * 0.08) * (1.0 + talent * 0.002)

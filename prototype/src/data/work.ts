@@ -1,4 +1,4 @@
-// Work suitabilities — Palworld's base-job system.
+// Work suitabilities — base-job system.
 export type Work =
   | "kindling" | "watering" | "planting" | "electricity"
   | "handiwork" | "gathering" | "lumbering" | "mining"

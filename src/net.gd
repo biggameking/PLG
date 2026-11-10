@@ -2,7 +2,7 @@ extends Node
 class_name Net
 
 # LAN co-op scaffold: host shares world seed, peers see each other as ghost
-# players. Pals/combat remain locally authoritative for now (sync them next).
+# players. Kin/combat remain locally authoritative for now (sync them next).
 
 const PORT := 7777
 var game: Game
@@ -59,7 +59,7 @@ func _on_connected_to_server() -> void:
 	game.log_msg("Connected to host")
 
 func my_tag() -> String:
-	# one random token per install — lets a guest's pals find their keeper
+	# one random token per install — lets a guest's kin find their keeper
 	# again across sessions without any account system
 	var cf := ConfigFile.new()
 	var t := ""
@@ -78,7 +78,7 @@ func hello(tag: String) -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	peer_tags[pid] = str(tag).substr(0, 24)
 	game.rebind_owner(pid, peer_tags[pid])
-	# they may already own pals here — hand the roster over immediately
+	# they may already own kin here — hand the roster over immediately
 	rpc_id(pid, "box_sync", box_state_pack(pid), game.rparty_for(pid).duplicate(), party_state_pack(pid))
 
 @rpc("authority", "call_remote", "reliable")
@@ -119,12 +119,12 @@ func state_snapshot() -> Dictionary:
 			seen.append(st)
 			arr.append([st["id"], k.x, k.y])
 	# share the living population too — a joining client should see the same
-	# wild/base pals, not an empty world (capped upstream by MAX_PALS)
+	# wild/base kin, not an empty world (capped upstream by MAX_PALS)
 	var parr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
 			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid])
-	return {"structures": arr, "tod": game.tod, "day": game.day, "pals": parr}
+	return {"structures": arr, "tod": game.tod, "day": game.day, "kin": parr}
 
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
@@ -134,19 +134,19 @@ func state_sync(d: Dictionary) -> void:
 	game.tod = float(d.get("tod", game.tod))
 	game.day = int(d.get("day", game.day))
 	# drop the population our own regenerate() spawned — the host's wild/base
-	# pals replace it, otherwise clients see every pal twice
+	# kin replace it, otherwise clients see every kin twice
 	for p in game.pals.duplicate():
 		if p.mode in ["wild", "base", "partner"]: # partner replicas are host truth too
 			game.pals.erase(p)
 			p.queue_free()
 	var np := 0
-	for e in d.get("pals", []):
+	for e in d.get("kin", []):
 		var n0 := game.pals.size()
 		game.spawn_net_pal(e) # each entry re-validated game-side
 		np += 1 if game.pals.size() > n0 else 0
-	game.log_msg("Synced %d structures, %d pals" % [d.get("structures", []).size(), np])
+	game.log_msg("Synced %d structures, %d kin" % [d.get("structures", []).size(), np])
 
-# Live pal population: host rebroadcasts positions/health at 2Hz so replicas
+# Live kin population: host rebroadcasts positions/health at 2Hz so replicas
 # don't just sit where the join snapshot left them. Replicas are keyed by
 # host uid (net_id); unknown ids spawn, missing ids despawn — one packet is
 # the whole truth, packet loss self-heals on the next tick.
@@ -228,9 +228,9 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 
 @rpc("any_peer", "call_remote", "unreliable")
 func pal_hit(nid: int, dmg: float) -> void:
-	# Client→host combat relay: a client's swing lands on the host's real pal.
+	# Client→host combat relay: a client's swing lands on the host's real kin.
 	# The wire id IS the host uid (clients mirror it into net_id) — find_pal,
-	# not find_net_pal: host-side pals carry net_id=0.
+	# not find_net_pal: host-side kin carry net_id=0.
 	if not is_host:
 		return
 	var p := game.find_pal(int(nid))
@@ -245,7 +245,7 @@ func sphere_catch(nid: int, sid: String, behind: bool, cap_lv: int) -> void:
 	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 10),
 		multiplayer.get_remote_sender_id())
 
-# Ground loot rides the same 2Hz broadcast as pals. A client never owns a
+# Ground loot rides the same 2Hz broadcast as kin. A client never owns a
 # drop: it walks over a replica, asks with take_drop, and the host pays out
 # with got_loot — dids are monotonic so a recycled slot can't be re-looted.
 func drop_state_pack() -> Array:
@@ -342,9 +342,9 @@ func demolish_req(tx: int, ty: int) -> void:
 		return
 	game.net_demolish(int(tx), int(ty), multiplayer.get_remote_sender_id())
 
-# Shared box: the host's palbox is the one real roster. Clients get a
-# lightweight mirror (uid/species/level/vitals, no Pal nodes) and their
-# palbox clicks travel back as box_req ops the host validates + runs.
+# Shared box: the host's kinbox is the one real roster. Clients get a
+# lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
+# kinbox clicks travel back as box_req ops the host validates + runs.
 var box_sig := -1
 var box_resend := 0.0
 
@@ -378,8 +378,8 @@ func box_state_pack(pid: int) -> Array:
 	return arr
 
 func party_state_pack(pid: int) -> Array:
-	# the client's party strip: every party member in order — the out pal and
-	# the benched spheres alike (bench pals have no world replica to read)
+	# the client's party strip: every party member in order — the out kin and
+	# the benched spheres alike (bench kin have no world replica to read)
 	var arr := []
 	var out_pal: Pal = game.party_pal() if pid == 0 else game.r_out_pal(pid)
 	var uids: Array = game.party if pid == 0 else game.rparty_for(pid)
@@ -445,7 +445,7 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 func box_req(op: String, uid: int) -> void:
 	if not is_host:
 		return
-	# every roster is private — the op lands only if the pal answers to the sender
+	# every roster is private — the op lands only if the kin answers to the sender
 	game.box_op_remote(str(op), int(uid), multiplayer.get_remote_sender_id())
 
 @rpc("any_peer", "call_remote", "reliable")

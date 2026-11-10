@@ -26,7 +26,7 @@ func _boot() -> void:
 			break
 	check("join sees host ghost", game.net.ghosts.has(1), "ghosts=%s" % str(game.net.ghosts.keys()))
 	check("world seed synced", game.world.seed == host_seed, "have=%d want=%d" % [game.world.seed, host_seed])
-	check("pals respawned locally", game.pals.size() > 0, "%d" % game.pals.size())
+	check("kin respawned locally", game.pals.size() > 0, "%d" % game.pals.size())
 	var fr2 := FileAccess.open("res://tools/net_host_state.txt", FileAccess.READ)
 	var host_day := -1
 	if fr2:
@@ -36,7 +36,7 @@ func _boot() -> void:
 			host_day = int(l[0])
 		fr2.close()
 	check("day synced", host_day < 0 or game.day == host_day, "day=%d host=%d" % [game.day, host_day])
-	# drop loot so host's state_sync snapshot isn't needed for pals — they spawn locally
+	# drop loot so host's state_sync snapshot isn't needed for kin — they spawn locally
 	var fails := results.filter(func(r): return r.begins_with("FAIL")).size()
 	var fo := FileAccess.open("res://tools/net_join_out.txt", FileAccess.WRITE)
 	for r in results:

@@ -5,13 +5,13 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	var game = main.get_node("Game")
-	# spray one of every placeable structure around the palbox like a built base
-	var bx := int(game.palbox_pos.x); var by := int(game.palbox_pos.y)
+	# spray one of every placeable structure around the kinbox like a built base
+	var bx := int(game.kinbox_pos.x); var by := int(game.kinbox_pos.y)
 	var ids: Array = StructureData.STRUCTURES.keys()
 	var placed := []
 	var r := 3
 	for sid in ids:
-		if sid == "palbox":
+		if sid == "kinbox":
 			continue
 		var done := false
 		var rr := r

@@ -2,9 +2,9 @@
 class_name SpeciesData
 
 const SPECIES = {
- "lamball": {
-  "id": "lamball",
-  "name": "Lamball",
+ "fenjelly": {
+  "id": "fenjelly",
+  "name": "Fenjelly",
   "glyph": "λ",
   "color": "#ede0c8",
   "elements": [
@@ -43,21 +43,21 @@ const SPECIES = {
     2
    ],
    [
-    "lamball_mutton",
+    "fenjelly_mutton",
     1,
     1
    ]
   ],
-  "desc": "Fluffy sheep pal. Produces wool at a ranch.",
+  "desc": "Fluffy sheep kin. Produces wool at a ranch.",
   "farm": {
    "item": "wool",
    "per": 60
   },
   "hostile": 0
  },
- "cattiva": {
-  "id": "cattiva",
-  "name": "Cattiva",
+ "puffmite": {
+  "id": "puffmite",
+  "name": "Puffmite",
   "glyph": "c",
   "color": "#f2a0b5",
   "elements": [
@@ -98,12 +98,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Cat-like pal; a jack of all base trades.",
+  "desc": "Cat-like kin; a jack of all base trades.",
   "hostile": 0
  },
- "chikipi": {
-  "id": "chikipi",
-  "name": "Chikipi",
+ "fenlump": {
+  "id": "fenlump",
+  "name": "Fenlump",
   "glyph": "k",
   "color": "#e8f0f2",
   "elements": [
@@ -133,21 +133,21 @@ const SPECIES = {
     2
    ],
    [
-    "chikipi_poultry",
+    "fenlump_poultry",
     1,
     1
    ]
   ],
-  "desc": "Tiny bird pal. Lays eggs at a ranch.",
+  "desc": "Tiny bird kin. Lays eggs at a ranch.",
   "farm": {
    "item": "egg",
    "per": 45
   },
   "hostile": 0
  },
- "foxparks": {
-  "id": "foxparks",
-  "name": "Foxparks",
+ "cindlump": {
+  "id": "cindlump",
+  "name": "Cindlump",
   "glyph": "f",
   "color": "#e8963c",
   "elements": [
@@ -189,12 +189,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Fire fox pal. Keeps furnaces burning.",
+  "desc": "Fire fox kin. Keeps furnaces burning.",
   "hostile": 1
  },
- "pengullet": {
-  "id": "pengullet",
-  "name": "Pengullet",
+ "corlmite": {
+  "id": "corlmite",
+  "name": "Corlmite",
   "glyph": "p",
   "color": "#4d9de0",
   "elements": [
@@ -240,12 +240,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Penguin pal; waters crops and cools stores.",
+  "desc": "Penguin kin; waters crops and cools stores.",
   "hostile": 1
  },
- "eikthyrdeer": {
-  "id": "eikthyrdeer",
-  "name": "Eikthyrdeer",
+ "dozantler": {
+  "id": "dozantler",
+  "name": "Dozantler",
   "glyph": "e",
   "color": "#d4b96e",
   "elements": [
@@ -287,12 +287,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Stag pal with strong lumbering ability.",
+  "desc": "Stag kin with strong lumbering ability.",
   "hostile": 1
  },
- "lifmunk": {
-  "id": "lifmunk",
-  "name": "Lifmunk",
+ "sprigmelt": {
+  "id": "sprigmelt",
+  "name": "Sprigmelt",
   "glyph": "l",
   "color": "#4caf50",
   "elements": [
@@ -338,12 +338,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Squirrel pal that sows fields.",
+  "desc": "Squirrel kin that sows fields.",
   "hostile": 0
  },
- "tanzee": {
-  "id": "tanzee",
-  "name": "Tanzee",
+ "briargoo": {
+  "id": "briargoo",
+  "name": "Briargoo",
   "glyph": "t",
   "color": "#9acd32",
   "elements": [
@@ -389,12 +389,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Monkey pal; agile farmhand.",
+  "desc": "Monkey kin; agile farmhand.",
   "hostile": 1
  },
- "sparkit": {
-  "id": "sparkit",
-  "name": "Sparkit",
+ "voltgoo": {
+  "id": "voltgoo",
+  "name": "Voltgoo",
   "glyph": "s",
   "color": "#e8d44d",
   "elements": [
@@ -433,12 +433,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Static mouse pal; powers generators.",
+  "desc": "Static mouse kin; powers generators.",
   "hostile": 1
  },
- "jolthog": {
-  "id": "jolthog",
-  "name": "Jolthog",
+ "faradlump": {
+  "id": "faradlump",
+  "name": "Faradlump",
   "glyph": "j",
   "color": "#e8e05c",
   "elements": [
@@ -471,12 +471,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Hedgehog pal that crackles with charge.",
+  "desc": "Hedgehog kin that crackles with charge.",
   "hostile": 1
  },
- "dumud": {
-  "id": "dumud",
-  "name": "Dumud",
+ "loammelt": {
+  "id": "loammelt",
+  "name": "Loammelt",
   "glyph": "d",
   "color": "#b8935f",
   "elements": [
@@ -519,9 +519,9 @@ const SPECIES = {
   "desc": "Mud fish; digs and hauls.",
   "hostile": 1
  },
- "depresso": {
-  "id": "depresso",
-  "name": "Depresso",
+ "shademite": {
+  "id": "shademite",
+  "name": "Shademite",
   "glyph": "D",
   "color": "#6fa8d1",
   "elements": [
@@ -560,13 +560,13 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Gloomy pal that still gets work done.",
+  "desc": "Gloomy kin that still gets work done.",
   "night": true,
   "hostile": 1
  },
- "daedream": {
-  "id": "daedream",
-  "name": "Daedream",
+ "shadelump": {
+  "id": "shadelump",
+  "name": "Shadelump",
   "glyph": "δ",
   "color": "#c678dd",
   "elements": [
@@ -605,13 +605,13 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Dreamy night pal.",
+  "desc": "Dreamy night kin.",
   "night": true,
   "hostile": 1
  },
- "mau": {
-  "id": "mau",
-  "name": "Mau",
+ "shademelt": {
+  "id": "shademelt",
+  "name": "Shademelt",
   "glyph": "m",
   "color": "#a8b5c4",
   "elements": [
@@ -644,7 +644,7 @@ const SPECIES = {
     3
    ]
   ],
-  "desc": "Rare cat pal that digs up gold at a ranch.",
+  "desc": "Rare cat kin that digs up gold at a ranch.",
   "farm": {
    "item": "gold_coin",
    "per": 90
@@ -652,9 +652,9 @@ const SPECIES = {
   "night": true,
   "hostile": 1
  },
- "rushoar": {
-  "id": "rushoar",
-  "name": "Rushoar",
+ "loampuff": {
+  "id": "loampuff",
+  "name": "Loampuff",
   "glyph": "R",
   "color": "#d1813c",
   "elements": [
@@ -696,12 +696,12 @@ const SPECIES = {
     4
    ]
   ],
-  "desc": "Boar pal that charges recklessly.",
+  "desc": "Boar kin that charges recklessly.",
   "hostile": 2
  },
- "cremis": {
-  "id": "cremis",
-  "name": "Cremis",
+ "nibjelly": {
+  "id": "nibjelly",
+  "name": "Nibjelly",
   "glyph": "C",
   "color": "#f5eee0",
   "elements": [
@@ -735,16 +735,16 @@ const SPECIES = {
     2
    ]
   ],
-  "desc": "Fluffier than Lamball; also gives wool.",
+  "desc": "Fluffier than Fenjelly; also gives wool.",
   "farm": {
    "item": "wool",
    "per": 70
   },
   "hostile": 0
  },
- "mozzarina": {
-  "id": "mozzarina",
-  "name": "Mozzarina",
+ "piplump": {
+  "id": "piplump",
+  "name": "Piplump",
   "glyph": "M",
   "color": "#ede0c8",
   "elements": [
@@ -777,16 +777,16 @@ const SPECIES = {
     2
    ]
   ],
-  "desc": "Cow pal producing milk at a ranch.",
+  "desc": "Cow kin producing milk at a ranch.",
   "farm": {
    "item": "milk",
    "per": 60
   },
   "hostile": 0
  },
- "penking": {
-  "id": "penking",
-  "name": "Penking",
+ "marlump": {
+  "id": "marlump",
+  "name": "Marlump",
   "glyph": "P",
   "color": "#4d9de0",
   "elements": [
@@ -840,9 +840,9 @@ const SPECIES = {
   "desc": "Regal penguin; master of base work.",
   "hostile": 2
  },
- "fuack": {
-  "id": "fuack",
-  "name": "Fuack",
+ "quackbill": {
+  "id": "quackbill",
+  "name": "Quackbill",
   "glyph": "F",
   "color": "#4dd0e1",
   "elements": [
@@ -882,12 +882,12 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Duck pal; decent water worker.",
+  "desc": "Duck kin; decent water worker.",
   "hostile": 1
  },
- "syndicate_grunt": {
-  "id": "syndicate_grunt",
-  "name": "Syndicate Grunt",
+ "ironpact_grunt": {
+  "id": "ironpact_grunt",
+  "name": "IronpactGrunt",
   "glyph": "§",
   "color": "#3a3a4a",
   "elements": [
@@ -925,12 +925,12 @@ const SPECIES = {
     5
    ]
   ],
-  "desc": "A poacher for the Rayne Syndicate. Terrible worker, worse intentions.",
+  "desc": "A poacher for the Iron Pact Iron Pact. Terrible worker, worse intentions.",
   "hostile": 2
  },
- "syndicate_sweeper": {
-  "id": "syndicate_sweeper",
-  "name": "Syndicate Sweeper",
+ "ironpact_sweeper": {
+  "id": "ironpact_sweeper",
+  "name": "IronpactGlaclumpper",
   "glyph": "§",
   "color": "#5a2e4a",
   "elements": [
@@ -974,15 +974,15 @@ const SPECIES = {
     2
    ]
   ],
-  "desc": "Syndicate muscle. Their idea of negotiation is a rifle butt.",
+  "desc": "Iron Pact muscle. Their idea of negotiation is a rifle butt.",
   "hostile": 2
  }
 }
 
 const SPECIES_LIST = [
  {
-  "id": "lamball",
-  "name": "Lamball",
+  "id": "fenjelly",
+  "name": "Fenjelly",
   "glyph": "λ",
   "color": "#ede0c8",
   "elements": [
@@ -1021,12 +1021,12 @@ const SPECIES_LIST = [
     2
    ],
    [
-    "lamball_mutton",
+    "fenjelly_mutton",
     1,
     1
    ]
   ],
-  "desc": "Fluffy sheep pal. Produces wool at a ranch.",
+  "desc": "Fluffy sheep kin. Produces wool at a ranch.",
   "farm": {
    "item": "wool",
    "per": 60
@@ -1034,8 +1034,8 @@ const SPECIES_LIST = [
   "hostile": 0
  },
  {
-  "id": "cattiva",
-  "name": "Cattiva",
+  "id": "puffmite",
+  "name": "Puffmite",
   "glyph": "c",
   "color": "#f2a0b5",
   "elements": [
@@ -1076,12 +1076,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Cat-like pal; a jack of all base trades.",
+  "desc": "Cat-like kin; a jack of all base trades.",
   "hostile": 0
  },
  {
-  "id": "chikipi",
-  "name": "Chikipi",
+  "id": "fenlump",
+  "name": "Fenlump",
   "glyph": "k",
   "color": "#e8f0f2",
   "elements": [
@@ -1111,12 +1111,12 @@ const SPECIES_LIST = [
     2
    ],
    [
-    "chikipi_poultry",
+    "fenlump_poultry",
     1,
     1
    ]
   ],
-  "desc": "Tiny bird pal. Lays eggs at a ranch.",
+  "desc": "Tiny bird kin. Lays eggs at a ranch.",
   "farm": {
    "item": "egg",
    "per": 45
@@ -1124,8 +1124,8 @@ const SPECIES_LIST = [
   "hostile": 0
  },
  {
-  "id": "foxparks",
-  "name": "Foxparks",
+  "id": "cindlump",
+  "name": "Cindlump",
   "glyph": "f",
   "color": "#e8963c",
   "elements": [
@@ -1167,12 +1167,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Fire fox pal. Keeps furnaces burning.",
+  "desc": "Fire fox kin. Keeps furnaces burning.",
   "hostile": 1
  },
  {
-  "id": "pengullet",
-  "name": "Pengullet",
+  "id": "corlmite",
+  "name": "Corlmite",
   "glyph": "p",
   "color": "#4d9de0",
   "elements": [
@@ -1218,12 +1218,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Penguin pal; waters crops and cools stores.",
+  "desc": "Penguin kin; waters crops and cools stores.",
   "hostile": 1
  },
  {
-  "id": "eikthyrdeer",
-  "name": "Eikthyrdeer",
+  "id": "dozantler",
+  "name": "Dozantler",
   "glyph": "e",
   "color": "#d4b96e",
   "elements": [
@@ -1265,12 +1265,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Stag pal with strong lumbering ability.",
+  "desc": "Stag kin with strong lumbering ability.",
   "hostile": 1
  },
  {
-  "id": "lifmunk",
-  "name": "Lifmunk",
+  "id": "sprigmelt",
+  "name": "Sprigmelt",
   "glyph": "l",
   "color": "#4caf50",
   "elements": [
@@ -1316,12 +1316,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Squirrel pal that sows fields.",
+  "desc": "Squirrel kin that sows fields.",
   "hostile": 0
  },
  {
-  "id": "tanzee",
-  "name": "Tanzee",
+  "id": "briargoo",
+  "name": "Briargoo",
   "glyph": "t",
   "color": "#9acd32",
   "elements": [
@@ -1367,12 +1367,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Monkey pal; agile farmhand.",
+  "desc": "Monkey kin; agile farmhand.",
   "hostile": 1
  },
  {
-  "id": "sparkit",
-  "name": "Sparkit",
+  "id": "voltgoo",
+  "name": "Voltgoo",
   "glyph": "s",
   "color": "#e8d44d",
   "elements": [
@@ -1411,12 +1411,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Static mouse pal; powers generators.",
+  "desc": "Static mouse kin; powers generators.",
   "hostile": 1
  },
  {
-  "id": "jolthog",
-  "name": "Jolthog",
+  "id": "faradlump",
+  "name": "Faradlump",
   "glyph": "j",
   "color": "#e8e05c",
   "elements": [
@@ -1449,12 +1449,12 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Hedgehog pal that crackles with charge.",
+  "desc": "Hedgehog kin that crackles with charge.",
   "hostile": 1
  },
  {
-  "id": "dumud",
-  "name": "Dumud",
+  "id": "loammelt",
+  "name": "Loammelt",
   "glyph": "d",
   "color": "#b8935f",
   "elements": [
@@ -1498,8 +1498,8 @@ const SPECIES_LIST = [
   "hostile": 1
  },
  {
-  "id": "depresso",
-  "name": "Depresso",
+  "id": "shademite",
+  "name": "Shademite",
   "glyph": "D",
   "color": "#6fa8d1",
   "elements": [
@@ -1538,13 +1538,13 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Gloomy pal that still gets work done.",
+  "desc": "Gloomy kin that still gets work done.",
   "night": true,
   "hostile": 1
  },
  {
-  "id": "daedream",
-  "name": "Daedream",
+  "id": "shadelump",
+  "name": "Shadelump",
   "glyph": "δ",
   "color": "#c678dd",
   "elements": [
@@ -1583,13 +1583,13 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Dreamy night pal.",
+  "desc": "Dreamy night kin.",
   "night": true,
   "hostile": 1
  },
  {
-  "id": "mau",
-  "name": "Mau",
+  "id": "shademelt",
+  "name": "Shademelt",
   "glyph": "m",
   "color": "#a8b5c4",
   "elements": [
@@ -1622,7 +1622,7 @@ const SPECIES_LIST = [
     3
    ]
   ],
-  "desc": "Rare cat pal that digs up gold at a ranch.",
+  "desc": "Rare cat kin that digs up gold at a ranch.",
   "farm": {
    "item": "gold_coin",
    "per": 90
@@ -1631,8 +1631,8 @@ const SPECIES_LIST = [
   "hostile": 1
  },
  {
-  "id": "rushoar",
-  "name": "Rushoar",
+  "id": "loampuff",
+  "name": "Loampuff",
   "glyph": "R",
   "color": "#d1813c",
   "elements": [
@@ -1674,12 +1674,12 @@ const SPECIES_LIST = [
     4
    ]
   ],
-  "desc": "Boar pal that charges recklessly.",
+  "desc": "Boar kin that charges recklessly.",
   "hostile": 2
  },
  {
-  "id": "cremis",
-  "name": "Cremis",
+  "id": "nibjelly",
+  "name": "Nibjelly",
   "glyph": "C",
   "color": "#f5eee0",
   "elements": [
@@ -1713,7 +1713,7 @@ const SPECIES_LIST = [
     2
    ]
   ],
-  "desc": "Fluffier than Lamball; also gives wool.",
+  "desc": "Fluffier than Fenjelly; also gives wool.",
   "farm": {
    "item": "wool",
    "per": 70
@@ -1721,8 +1721,8 @@ const SPECIES_LIST = [
   "hostile": 0
  },
  {
-  "id": "mozzarina",
-  "name": "Mozzarina",
+  "id": "piplump",
+  "name": "Piplump",
   "glyph": "M",
   "color": "#ede0c8",
   "elements": [
@@ -1755,7 +1755,7 @@ const SPECIES_LIST = [
     2
    ]
   ],
-  "desc": "Cow pal producing milk at a ranch.",
+  "desc": "Cow kin producing milk at a ranch.",
   "farm": {
    "item": "milk",
    "per": 60
@@ -1763,8 +1763,8 @@ const SPECIES_LIST = [
   "hostile": 0
  },
  {
-  "id": "penking",
-  "name": "Penking",
+  "id": "marlump",
+  "name": "Marlump",
   "glyph": "P",
   "color": "#4d9de0",
   "elements": [
@@ -1819,8 +1819,8 @@ const SPECIES_LIST = [
   "hostile": 2
  },
  {
-  "id": "fuack",
-  "name": "Fuack",
+  "id": "quackbill",
+  "name": "Quackbill",
   "glyph": "F",
   "color": "#4dd0e1",
   "elements": [
@@ -1860,7 +1860,7 @@ const SPECIES_LIST = [
     1
    ]
   ],
-  "desc": "Duck pal; decent water worker.",
+  "desc": "Duck kin; decent water worker.",
   "hostile": 1
  }
 ]
@@ -1873,12 +1873,12 @@ static func species_of(id: String) -> Dictionary:
 	return r
 
 const BODY := {
- "lamball":"quadruped","cattiva":"kitty","chikipi":"bird","foxparks":"kitty",
- "pengullet":"bird","penking":"bird","eikthyrdeer":"deer","lifmunk":"mouse",
- "tanzee":"monkey","sparkit":"mouse","jolthog":"hedgehog","dumud":"serpent",
- "depresso":"blob","daedream":"ghost","mau":"kitty","rushoar":"boar",
- "cremis":"kitty","mozzarina":"cow","fuack":"bird","player":"human",
- "syndicate_grunt":"human","syndicate_sweeper":"human"
+ "fenjelly":"quadruped","puffmite":"kitty","fenlump":"bird","cindlump":"kitty",
+ "corlmite":"bird","marlump":"bird","dozantler":"deer","sprigmelt":"mouse",
+ "briargoo":"monkey","voltgoo":"mouse","faradlump":"hedgehog","loammelt":"serpent",
+ "shademite":"blob","shadelump":"ghost","shademelt":"kitty","loampuff":"boar",
+ "nibjelly":"kitty","piplump":"cow","quackbill":"bird","player":"human",
+ "ironpact_grunt":"human","ironpact_sweeper":"human"
 }
 const MOUNTABLE := ["quadruped","deer","cow","boar"]
 static func body_of(id: String) -> String:

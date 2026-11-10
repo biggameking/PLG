@@ -62,7 +62,7 @@ export function castSkill(s: GameState, caster: Pal | Player, skill: SkillDef, t
       uid: uid(s), skillId: skill.id,
       x: cx, y: cy,
       vx: dx / d * sp, vy: dy / d * sp,
-      owner: "inv" in caster ? "player" : (caster as Pal).mode === "wild" ? "wild" : "pal",
+      owner: "inv" in caster ? "player" : (caster as Pal).mode === "wild" ? "wild" : "kin",
       ownerUid: "inv" in caster ? 0 : (caster as Pal).uid,
       power: skill.power,
       ttl: skill.range / sp + 0.3,
@@ -141,7 +141,7 @@ export function updateProjectiles(s: GameState, world: World, dt: number): void 
           if (partner && Math.hypot(partner.x - pr.x, partner.y - pr.y) < 0.5) {
             const mult = effectiveness(skill.element, SPECIES[partner.speciesId].elements);
             const ownerPal = s.pals.find(q=>q.uid===pr.ownerUid);
-            const dmg = damage(statAt(SPECIES[ownerPal?.speciesId ?? "lamball"].atk, ownerPal?.level ?? 1, ownerPal?.talent ?? 0), skill.power, statAt(SPECIES[partner.speciesId].def, partner.level, partner.talent ?? 0), mult, rng);
+            const dmg = damage(statAt(SPECIES[ownerPal?.speciesId ?? "fenjelly"].atk, ownerPal?.level ?? 1, ownerPal?.talent ?? 0), skill.power, statAt(SPECIES[partner.speciesId].def, partner.level, partner.talent ?? 0), mult, rng);
             hitPal(s, partner, dmg, mult, true, skill.status);
             dead = true;
           }
@@ -152,7 +152,7 @@ export function updateProjectiles(s: GameState, world: World, dt: number): void 
           if (p.mode !== "wild") continue;
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.55) {
             const ownerPal = s.pals.find(q => q.uid === pr.ownerUid);
-            const ownerAtk = pr.owner === "player" ? 30 + s.player.level * 4 : statAt(SPECIES[ownerPal?.speciesId ?? "lamball"].atk, ownerPal?.level ?? 1, ownerPal?.talent ?? 0);
+            const ownerAtk = pr.owner === "player" ? 30 + s.player.level * 4 : statAt(SPECIES[ownerPal?.speciesId ?? "fenjelly"].atk, ownerPal?.level ?? 1, ownerPal?.talent ?? 0);
             const mult = effectiveness(skill.element, SPECIES[p.speciesId].elements);
             const dmg = damage(ownerAtk, skill.power, statAt(SPECIES[p.speciesId].def, p.level, p.talent ?? 0), mult, rng);
             hitPal(s, p, dmg, mult, true, skill.status);
@@ -256,7 +256,7 @@ function resolveCapture(s: GameState, target: Pal, chance: number): void {
     } else {
       target.mode = "box";
       s.box.push(target);
-      log(s, `Caught ${sp.name} Lv${target.level}! Sent to Palbox.`);
+      log(s, `Caught ${sp.name} Lv${target.level}! Sent to Kinbox.`);
     }
     const xp = Math.floor((8 + target.level * 4) * 1.5);
     grantXp(s, xp);

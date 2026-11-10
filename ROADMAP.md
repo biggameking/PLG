@@ -1,0 +1,44 @@
+# PLG → Kinbound — staged production plan
+
+Audit baseline (2026-11-10): feature-rich the island demake, 391-check smoke suite
+green, but commercially blocked by IP reuse, placeholder art/audio, no product
+shell, no localization/input options, unverified tuning.
+
+## Stage gates — every stage MUST satisfy all of
+
+- `godot --headless --path . -s tools/smoke_test.gd` → `==== N checks, 0 failures ====`
+- Leak banner `ObjectDB instances were leaked` ≤ baseline (13).
+- `python3 tools/audit_data.py` → `ALL CLEAN`.
+- Real behavior change, not doc-only claims; new mechanics get smoke coverage.
+- `git commit` + `git push` to origin/main before stage closes.
+- After push: a context-free reviewer subagent audits the stage's diff AND the
+  workflow; findings → `docs/reviews/` + fixes applied next stage.
+
+## Stages
+
+| # | Name | Deliverable | Acceptance |
+|---|------|-------------|------------|
+| S1 | IP de-risk | All 116 species renamed (id+name+sprites), pal-lexicon replaced (kin/kinbox/kindex/orbs/lumenite), the Wildmere→Wildmere, Iron Pact→Iron Pact, save-migration for old ids, export metadata updated | `grep -iE "palworld|palapagos|fenjelly|scalbeak|kindex|kin sphere|lumenite"` clean in shipped strings; smoke 0-fail; old save loads via migration |
+| S2 | Product shell | Title screen (New/Continue/Quit), Esc pause (Resume/Save/Settings/Quit), settings (master+music+sfx volume, fullscreen), save version field + autosave on quit + quit-confirm | Boot lands on title; Esc pauses sim (single-player); settings persist to user://; F5 save + title continue round-trip |
+| S3 | Balance & endgame holes | Legendary species excluded from wild/gacha egg pool (or behind legendary-egg item), raid intensity option (off/normal in settings), boss immunity surfaced in UI pre-throw | New smoke checks: wild egg never yields legendary; peaceful mode spawns no raid |
+| S4 | Onboarding | Contextual hints (first-catch aim/throw prompt, first-build ghost hint, hungry warning, raid countdown explainer) + mission tracker stays | New game shows ≤3 concurrent contextual hints; hints retire on action; smoke unaffected |
+| S5 | Audio layer | Audio buses (Master/Music/SFX) + volume wired to settings, ambient pad loop (day/night/weather variants), UI click + ~8 more event SFX | Volume sliders audibly change mix (manual check); no crash headless; buses exist in default_bus_layout |
+| S6 | Gamepad | InputMap joy bindings for all gameplay actions + UI focus nav on panels | InputMap shows joy events; panels navigable via ui_* actions |
+
+## Out of scope this run (documented, not silently dropped)
+
+Real creature art pass, boss phase design, NPC settlements, localization files,
+store page/assets, Steam Deck certification, mobile touch controls, dedicated
+net servers.
+
+## Process rules
+
+- One stage at a time; no speculative work outside the stage's checklist.
+- Evidence = commands actually run; paste tails, not claims.
+- If a check fails twice, stop and re-plan the approach instead of retry loops.
+- Lessons from each stage review → appended below AND to AGENTS.md if they are
+  durable rules.
+
+## Process lessons ledger
+
+_(appended per stage by the external review)_

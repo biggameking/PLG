@@ -1,6 +1,6 @@
 extends Control
 # HUD + panels: HP/XP, spheres, log, time, party; B build / I inv / T tech /
-# E interact (craft near workbench, palbox mgmt near palbox); ESC closes.
+# E interact (craft near workbench, kinbox mgmt near kinbox); ESC closes.
 
 var game: Game
 var font := ThemeDB.fallback_font
@@ -14,7 +14,7 @@ var join_buf := ""
 
 var map_img: Image = null
 var map_tex: ImageTexture = null # cached — was rebuilt every frame the map was open
-var fog_img: Image = null        # Palworld fog of war — dark where unexplored
+var fog_img: Image = null        # the island fog of war — dark where unexplored
 var fog_tex: ImageTexture = null
 var fog_t := 0.0                 # rebake throttle while the map is open
 var map_show := false
@@ -39,7 +39,7 @@ func bake_minimap() -> void:
 	bake_fog()
 
 func bake_fog() -> void:
-	# Palworld fog: one alpha layer over the baked terrain — dark until walked
+	# the island fog: one alpha layer over the baked terrain — dark until walked
 	var W := game.world
 	if fog_img == null or fog_img.get_width() != W.WORLD_W:
 		fog_img = Image.create(W.WORLD_W, W.WORLD_H, false, Image.FORMAT_RGBA8)
@@ -118,10 +118,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "tech" else "tech"
 		return
 	if event.is_action_pressed("statues"):
-		game.panel = "" if game.panel == "statues" else "statues" # U: lifmunk effigy upgrades
+		game.panel = "" if game.panel == "statues" else "statues" # U: sprigmelt effigy upgrades
 		return
 	if event.is_action_pressed("dex"):
-		game.panel = "" if game.panel == "dex" else "dex" # P: paldeck
+		game.panel = "" if game.panel == "dex" else "dex" # P: kindex
 		dex_scroll = 0
 		return
 	if game.panel == "dex" and event is InputEventMouseButton and event.pressed:
@@ -140,7 +140,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			game.assign_worker()
 		return
 	if event.is_action_pressed("pal_stance"):
-		# Palworld pal command: cycle the field pal's standing order
+		# the island kin command: cycle the field kin's standing order
 		if game.net != null and game.net.is_client():
 			for d in game.net_party:
 				if d.get("out", false):
@@ -174,7 +174,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			game.panel = "join"; join_buf = "" # K: type the host's IP, Enter to join
 		return
 	if event is InputEventKey and event.pressed and game.panel == "":
-		# Palworld party hotbar: 1-5 sends that slot's pal out (again recalls)
+		# the island party hotbar: 1-5 sends that slot's kin out (again recalls)
 		var k2: int = event.keycode
 		if k2 >= KEY_1 and k2 <= KEY_5:
 			var si2 := k2 - KEY_1
@@ -203,21 +203,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = ""
 
 func run_click(cr: Dictionary) -> void:
-	# client palbox ops are host business: the host owns the one real box.
-	# Replica pals carry their wire id in net_id — a replica's own uid is a
+	# client kinbox ops are host business: the host owns the one real box.
+	# Replica kin carry their wire id in net_id — a replica's own uid is a
 	# local number the host has never heard of.
-	const PALBOX_OPS := {
+	const KINBOX_OPS := {
 		"box_out": "box_to_party", "party_in": "party_to_box",
 		"lead": "make_active", "deploy": "deploy_to_base",
 		"base_in": "base_to_box", "fav": "toggle_fav",
 		"butcher": "butcher_pal", "sell_pal": "sell_pal"}
-	if game.net != null and game.net.is_client() and PALBOX_OPS.has(cr["act"]):
+	if game.net != null and game.net.is_client() and KINBOX_OPS.has(cr["act"]):
 		var uid := 0
 		if cr["arg"] is Pal:
 			uid = cr["arg"].net_id if cr["arg"].net_id > 0 else cr["arg"].uid
 		else:
 			uid = int(cr["arg"])
-		game.net.rpc("box_req", PALBOX_OPS[cr["act"]], uid)
+		game.net.rpc("box_req", KINBOX_OPS[cr["act"]], uid)
 		return
 	match cr["act"]:
 		"craft":
@@ -281,7 +281,7 @@ func interact() -> void:
 	if game.merchant != null and game.player.pos.distance_to(game.merchant.pos) < 2.4:
 		game.panel = "shop"
 		return
-	# Palworld's pet: a friendly pal in arm's reach takes the E tap first —
+	# pet: a friendly kin in arm's reach takes the E tap first —
 	# deliberate affection shouldn't lose to a structure probe
 	var pet: Pal = null
 	var pd2 := 1.4
@@ -313,7 +313,7 @@ func interact() -> void:
 			"furnace", "mill", "crusher", "logging_site", "stone_pit", "gathering_site", "ore_mine", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy", "generator", "ranch", "cooler":
 				# automated sites: E reports the stockpile, no crafting here
 				var sdef: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
-				var eggs: String = "  %d egg(s)" % st["store"].get("pal_egg", 0) if st["id"] == "ranch" and st.get("store", {}).get("pal_egg", 0) > 0 else ""
+				var eggs: String = "  %d egg(s)" % st["store"].get("kin_egg", 0) if st["id"] == "ranch" and st.get("store", {}).get("kin_egg", 0) > 0 else ""
 				if st.get("store", {}).is_empty():
 					game.log_msg("%s: %d workers, nothing stored" % [sdef.get("name", st["id"]), st["workers"].size()])
 				else:
@@ -323,11 +323,11 @@ func interact() -> void:
 				game.chest_ref = st # pals eat out of it; it's still a container
 				game.panel = "chest"
 				return
-			"pal_bed":
-				game.log_msg("Pal bed: base pals resting here recover SAN")
+			"kin_bed":
+				game.log_msg("Kin bed: base kin resting here recover SAN")
 				return
-			"palbox":
-				game.panel = "palbox"
+			"kinbox":
+				game.panel = "kinbox"
 				return
 			"straw_bed":
 				game.sleep_to_morning()
@@ -351,16 +351,16 @@ func interact() -> void:
 			"notice_board":
 				game.notice_board_action()
 				return
-			"pal_gacha":
+			"kin_gacha":
 				game.gacha_pull()
 				return
 			"fossil_bed":
 				game.dig_fossil(st)
 				return
-			"pal_cage":
+			"kin_cage":
 				game.free_captive(st)
 				return
-			"pal_condenser":
+			"kin_condenser":
 				game.condense_active()
 				return
 			"incubator":
@@ -369,16 +369,16 @@ func interact() -> void:
 					var hint: String = game.egg_hint(inc.get("pair"))
 					game.log_msg("Incubating %s: %ds left" % [hint if hint != "" else "egg",
 						int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t))])
-				elif game.item_count("pal_egg") > 0:
+				elif game.item_count("kin_egg") > 0:
 					game.deposit_egg()
 				else:
-					game.log_msg("Incubator empty - bring a pal egg")
+					game.log_msg("Incubator empty - bring a kin egg")
 				return
 			"wooden_wall", "spikes":
 				game.log_msg("%s (HP %d)" % [StructureData.STRUCTURES[st["id"]]["name"], int(st.get("hp", 0))])
 				return
-	if game.has_structure("palbox"):
-		game.panel = "palbox"
+	if game.has_structure("kinbox"):
+		game.panel = "kinbox"
 		return
 	game.log_msg("Nothing to interact with")
 
@@ -411,7 +411,7 @@ func _draw() -> void:
 	draw_rect(Rect2(12, 30, 224, 6), Color(0, 0, 0, 0.55))
 	var hc: Color = Color("#e6a23c") if pl.hunger >= 25 else Color("#e0503c")
 	draw_rect(Rect2(14, 31, int(220 * clampf(pl.hunger / 100.0, 0, 1)), 4), hc)
-	# Palworld SP bar under the hunger sliver — sprints and swims burn it
+	# the island SP bar under the hunger sliver — sprints and swims burn it
 	draw_rect(Rect2(12, 37, 224, 5), Color(0, 0, 0, 0.55))
 	var spc: Color = Color("#3cb7e0") if pl.stamina > 15.0 else Color("#e0503c")
 	draw_rect(Rect2(14, 38, int(220 * clampf(pl.stamina / 100.0, 0, 1)), 3), spc)
@@ -419,7 +419,7 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	var tiers := game.sphere_tiers()
 	var sx := 12
-	for id in ["pal_sphere", "mega_sphere", "giga_sphere", "ultra_sphere", "legendary_sphere"]:
+	for id in ["kin_orb", "mega_orb", "giga_orb", "ultra_orb", "legendary_orb"]:
 		var n := game.item_count(id)
 		if n <= 0:
 			continue
@@ -431,7 +431,7 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
 		sx += 74
 	draw_equipment_line() # was never called — gear row under the sphere chips
-	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # Palworld meal timer chip
+	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # the island meal timer chip
 		var btxt := ""
 		for bk in pl.meal_buff:
 			btxt += "%s+%d%% " % [bk.to_upper(), int(float(pl.meal_buff[bk]) * 100)]
@@ -439,9 +439,9 @@ func _draw() -> void:
 		draw_string(font, Vector2(244, 36), "%s %d:%02d" % [btxt.strip_edges(), int(pl.meal_t) / 60, int(pl.meal_t) % 60],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8b95f"))
 	if pl.aiming:
-		draw_string(font, Vector2(12, 96), "AIM — click a pal to throw (Q cancel)",
+		draw_string(font, Vector2(12, 96), "AIM — click a kin to throw (Q cancel)",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#4dd0e1"))
-		# Palworld throw preview: hovering a wild pal shows the catch odds
+		# the island throw preview: hovering a wild kin shows the catch odds
 		var tiers2 := game.sphere_tiers()
 		if not tiers2.is_empty():
 			var sid2: String = tiers2[clampi(pl.sphere_sel, 0, tiers2.size() - 1)]
@@ -468,7 +468,7 @@ func _draw() -> void:
 	var wcol := Color("#b48ef0") if game.weather == "storm" else (Color("#7fb8e8") if game.weather == "rain" else (Color("#e8b45c") if game.weather == "drought" else Color("#e8f0f2")))
 	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00%s" % [game.day, int(game.tod), wicon],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, wcol)
-	if game.raid_t < 30.0 and game.palbox_pos.x >= 0: # Palworld raid horn
+	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0: # the island raid horn
 		draw_rect(Rect2(r.x / 2 - 80, 8, 160, 22), Color(0.5, 0.06, 0.06, 0.7))
 		draw_string(font, Vector2(r.x / 2 - 62, 24), "RAID IN %ds" % int(ceilf(game.raid_t)),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ff8d7e"))
@@ -493,7 +493,7 @@ func _draw() -> void:
 			"%s %s Lv%d%s" % ["BOSS" if boss.boss else "α", boss.spec["name"], boss.level,
 				" ☠%dg" % boss.bounty if boss.bounty > 0 else ""],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
-	if game.mission_idx < game.MISSIONS.size(): # Palworld guide rope
+	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
 		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
 		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff"))
@@ -502,13 +502,13 @@ func _draw() -> void:
 		var m: String = game.messages[game.messages.size() - 1 - i]
 		draw_string(font, Vector2(14, my - i * 18), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.85))
 	var py := 38
-	for pr in party_rows(): # ● out / ○ in its ball — Palworld fields one
+	for pr in party_rows(): # ● out / ○ in its ball — the island fields one
 		draw_rect(Rect2(r.x - 150, py, 138, 16), Color(0, 0, 0, 0.5))
 		var tag := "!" if pr["stance"] == "aggressive" else ("." if pr["stance"] == "passive" else "")
 		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s%s" % [pr["name"], pr["lv"],
 			"●" if pr["out"] else "○", tag], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
 		py += 18
-	# Palworld partner-skill readout: name + cooldown under the party strip
+	# the island partner-skill readout: name + cooldown under the party strip
 	var psk_p := game.party_pal()
 	if psk_p != null and game.PARTNER_SKILLS.has(psk_p.species_id):
 		var cd_left: float = float(psk_p.skill_cd.get("partner", 0.0)) - game.t
@@ -546,8 +546,8 @@ func _draw() -> void:
 			draw_chest(r)
 		"inv":
 			draw_inv(r)
-		"palbox":
-			draw_palbox(r)
+		"kinbox":
+			draw_kinbox(r)
 		"shop":
 			draw_shop(r)
 		"dex":
@@ -567,18 +567,18 @@ func _draw() -> void:
 			"MOVE wasd/arrows  SPRINT shift  DODGE space",
 			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
-			"INTERACT e (workbench=craft, palbox=manage)  ASSIGN f  HELP h",
-			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  PALDECK p  CHAT enter",
-			"1-5 sends that party pal out (press again to recall) — one ball on the field",
-			"v cycles the field pal's orders: auto / aggressive / passive",
+			"INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h",
+			"MAP m    DEMOLISH x (under cursor)  RIDE r  PAL-SKILL g  STATUES u  KINDEX p  CHAT enter",
+			"1-5 sends that party kin out (press again to recall) — one ball on the field",
+			"v cycles the field kin's orders: auto / aggressive / passive",
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
-			"Glider descends cliffs. Sick pals need medicine in feed box/bag.",
+			"Glider descends cliffs. Sick kin need medicine in feed box/bag.",
 		]
 		draw_rect(Rect2(10, r.y - 136, 580, 96), Color(0, 0, 0, 0.7))
 		for i in range(lines.size()):
 			draw_string(font, Vector2(20, r.y - 116 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#dfe8ea"))
 
-	# minimap (M): baked world image + live player/palbox markers
+	# minimap (M): baked world image + live player/kinbox markers
 
 	if map_show and map_img != null:
 		var vw := get_viewport_rect().size.x
@@ -596,10 +596,10 @@ func _draw() -> void:
 		var plp := game.player.pos
 		var pp := mr.position + Vector2(plp.x / game.world.WORLD_W * ms, plp.y / game.world.WORLD_H * ms)
 		draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), Color.WHITE)
-		if game.palbox_pos.x >= 0:
-			var pb := mr.position + Vector2(game.palbox_pos.x / float(game.world.WORLD_W) * ms, game.palbox_pos.y / float(game.world.WORLD_H) * ms)
+		if game.kinbox_pos.x >= 0:
+			var pb := mr.position + Vector2(game.kinbox_pos.x / float(game.world.WORLD_W) * ms, game.kinbox_pos.y / float(game.world.WORLD_H) * ms)
 			draw_rect(Rect2(pb - Vector2(2, 2), Vector2(4, 4)), Color(1, 0.55, 0.1))
-		for dm in game.death_marks: # Palworld tombstones — guide the corpse run
+		for dm in game.death_marks: # the island tombstones — guide the corpse run
 			var dp := mr.position + Vector2(dm.x / game.world.WORLD_W * ms, dm.y / game.world.WORLD_H * ms)
 			draw_rect(Rect2(dp - Vector2(2, 2), Vector2(4, 4)), Color(0.95, 0.2, 0.2))
 		if game.treasure: # the surveyor's X — follow it and dig
@@ -676,7 +676,7 @@ func draw_craft(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8963c"))
 	var y := rr.position.y + 48
-	# Palworld repair: a worn weapon mends at the bench for half its recipe
+	# the island repair: a worn weapon mends at the bench for half its recipe
 	var rep := game.repair_quote()
 	if not rep.is_empty():
 		var rrect := Rect2(rr.position.x + 16, y - 12, 440, 18)
@@ -723,7 +723,7 @@ func draw_craft(r: Vector2) -> void:
 		y += 20
 		if y > rr.end.y - 16:
 			break
-	if not game.craft_queue.is_empty(): # Palworld bench queue: builds tick down live
+	if not game.craft_queue.is_empty(): # the island bench queue: builds tick down live
 		y += 8
 		draw_string(font, Vector2(rr.position.x + 16, y), "QUEUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
 		y += 16
@@ -739,7 +739,7 @@ func draw_inv(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 230, 60, 460, 500)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a8e6a1"))
-	# Palworld carry weight: the bag drags once it tops capacity
+	# the island carry weight: the bag drags once it tops capacity
 	var pl := game.player
 	var over: bool = pl.carry_wt() > pl.carry_cap()
 	draw_string(font, Vector2(rr.position + Vector2(330, 24)), "Wt %d/%d" % [int(pl.carry_wt()), int(pl.carry_cap())],
@@ -770,12 +770,12 @@ func draw_inv(r: Vector2) -> void:
 		draw_string(font, Vector2(cx0, y0), "%s x%d" % [nm.left(16), game.items[k]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e") if usable else Color.WHITE)
 
-func draw_palbox(r: Vector2) -> void:
+func draw_kinbox(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 540)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "PALBOX — click to swap party/base",
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "KINBOX — click to swap party/base",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#4dd0e1"))
-	# Palworld base level: the terminal grades your base and pays slots
+	# the island base level: the terminal grades your base and pays slots
 	var blv_txt := "BASE LV%d" % game.base_level
 	if game.base_level < game.BASE_LEVEL_MAX:
 		var bmet: bool = game.base_mission_done(game.base_level)
@@ -811,7 +811,7 @@ func draw_palbox(r: Vector2) -> void:
 			(pr["ailment"] + "! ") if pr["ailment"] != "" else pr["sub"], pr["hp"], pr["max_hp"]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if pr["ailment"] != "" else Color.WHITE)
 		y += 17
-	# deployed workforce (Palworld: pals working the base live in the world)
+	# deployed workforce (the island: kin working the base live in the world)
 	var workers := game.base_pals()
 	if game.net == null or not game.net.is_client():
 		workers = workers.filter(func(wp): return wp.owner_id == 0) # a guest's hands aren't yours to recall
@@ -865,8 +865,8 @@ func draw_palbox(r: Vector2) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if rd["ko"] or rd["ailment"] != "" else Color("#c8d3d5"))
 
 func party_rows() -> Array:
-	# normalized party rows: ● marks the one pal out of its ball. Host reads
-	# Pal objects (world + bench store), a client reads the net_party mirror.
+	# normalized party rows: ● marks the one kin out of its ball. Host reads
+	# Kin objects (world + bench store), a client reads the net_party mirror.
 	var out := []
 	if game.net != null and game.net.is_client():
 		for d in game.net_party:
@@ -897,7 +897,7 @@ func party_rows() -> Array:
 	return out
 
 func box_rows() -> Array:
-	# normalized palbox rows: host reads live Pal objects, a client reads the
+	# normalized kinbox rows: host reads live Kin objects, a client reads the
 	# synced net_box roster. Same dict shape either way so the panel forks once.
 	var out := []
 	if game.net != null and game.net.is_client():
@@ -944,9 +944,9 @@ func draw_shop(r: Vector2) -> void:
 	for i in range(game.merchant_stock.size()):
 		var it: Dictionary = game.merchant_stock[i]
 		var nm: String
-		if it.has("pal"):
-			var sp: Dictionary = SpeciesData.species_of(str(it["pal"]))
-			nm = "Lv%d %s" % [it["lv"], sp.get("name", it["pal"])]
+		if it.has("kin"):
+			var sp: Dictionary = SpeciesData.species_of(str(it["kin"]))
+			nm = "Lv%d %s" % [it["lv"], sp.get("name", it["kin"])]
 		else:
 			nm = ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])
 		var rect := Rect2(rr.position.x + 16, y - 12, 270, 16)
@@ -992,7 +992,7 @@ func use_item(k: String) -> void:
 		"gauntlet_sigil":
 			if game.start_gauntlet():
 				game.add_item(k, -1)
-		"pal_egg", "huge_pal_egg":
+		"kin_egg", "huge_kin_egg":
 			game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
 		"fishing_rod":
 			game.cast_line() # reusable — the rod never leaves the pack
@@ -1025,7 +1025,7 @@ func use_item(k: String) -> void:
 				game.add_item(k, -1)
 				game.log_msg("+%d food" % it["food"])
 				var bf: Dictionary = it.get("buff", {})
-				if not bf.is_empty(): # Palworld meal bonus: one timed buff at a time
+				if not bf.is_empty(): # the island meal bonus: one timed buff at a time
 					game.player.eat_buff(bf)
 					var bstr := ""
 					for bk in bf:
@@ -1051,7 +1051,7 @@ func draw_travel(r: Vector2) -> void:
 	var me := Vector2i(game.player.pos)
 	for n in nodes:
 		var k: Vector2i = n["key"]
-		var nm := "Palbox" if n["id"] == "palbox" else "Waypoint"
+		var nm := "Kinbox" if n["id"] == "kinbox" else "Waypoint"
 		var here := (k - me).length() < 3.0
 		var rect := Rect2(rr.position.x + 16, y - 12, 360, 18)
 		if not here:
@@ -1083,7 +1083,7 @@ func draw_dex(r: Vector2) -> void:
 	var caught := game.catch_counts.size()
 	var seen_n: int = game.dex_seen.size()
 	draw_string(font, rr.position + Vector2(16, 24),
-		"PALDECK   %d/%d caught · %d seen" % [caught, ids.size(), seen_n],
+		"KINDEX   %d/%d caught · %d seen" % [caught, ids.size(), seen_n],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#c08cff"))
 	var rows := 32
 	dex_scroll = clampi(dex_scroll, 0, maxi(0, ids.size() - rows))
@@ -1096,11 +1096,11 @@ func draw_dex(r: Vector2) -> void:
 			var els: String = "/".join(sp.get("elements", []))
 			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
-			var hz := SpeciesGen.habitat(sid) # Paldeck habitat: where to hunt it
+			var hz := SpeciesGen.habitat(sid) # Kindex habitat: where to hunt it
 			draw_string(font, Vector2(rr.position.x + 320, y), "%s %s×%d" % [els.left(11),
 				"z%d  " % hz if hz >= 0 else "", cc],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#9fd8a0"))
-			# Palworld's field guide: a caught species tells you what it drops
+			# field guide: a caught species tells you what it drops
 			var dnames := []
 			for dr in sp.get("drops", []):
 				dnames.append(str(ItemData.ITEMS.get(dr[0], {}).get("name", dr[0])).left(9))
@@ -1159,7 +1159,7 @@ func _eq_line() -> String:
 
 func draw_statues(r: Vector2) -> void:
 	var y := r.y + 40.0
-	draw_string(font, Vector2(r.x + 16, y - 16), "Stat points: %d   Lifmunk Effigies: %d" % [game.stat_pts, game.item_count("lifmunk_effigy")],
+	draw_string(font, Vector2(r.x + 16, y - 16), "Stat points: %d   Sprigmelt Effigies: %d" % [game.stat_pts, game.item_count("sprigmelt_effigy")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9be8a0"))
 	for k in game.perks:
 		var lvl: int = game.perks[k]
@@ -1171,7 +1171,7 @@ func draw_statues(r: Vector2) -> void:
 			click_rects.append({"rect": rect, "act": "perk", "arg": k})
 		draw_string(font, Vector2(rect.position.x, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 		y += 24
-	# soul infusion: the same effigies harden a pal you own
+	# soul infusion: the same effigies harden a kin you own
 	y += 10
 	draw_string(font, Vector2(r.x + 16, y - 16), "SOUL INFUSION (+4%/soul)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c08cff"))
 	var infused := []
@@ -1199,13 +1199,13 @@ func draw_equipment_line() -> void:
 	draw_string(font, Vector2(14, 80), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))
 
 func draw_skills(r: Vector2) -> void:
-	# Palworld move loadout: slot up to 3 of the pal's learned moves —
+	# the island move loadout: slot up to 3 of the kin's learned moves —
 	# an empty loadout means "use everything learned" (the old default)
 	var rr := Rect2(r.x / 2 - 220, 140, 440, 300)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
 	var tp := game.skill_target
 	if tp == null or not is_instance_valid(tp):
-		draw_string(font, rr.position + Vector2(16, 24), "No pal selected",
+		draw_string(font, rr.position + Vector2(16, 24), "No kin selected",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 		return
 	draw_string(font, rr.position + Vector2(16, 24),

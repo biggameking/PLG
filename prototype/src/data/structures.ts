@@ -27,79 +27,79 @@ export interface StructureDef {
   bed?: number;           // rest slots for pals
   feedBox?: boolean;
   light?: number;         // light radius
-  anchor?: boolean;       // palbox
+  anchor?: boolean;       // kinbox
   hp?: number;            // structural HP — raiders chew through buildings
   walkable?: boolean;     // entities may cross (spikes still hurt hostiles)
   spike?: number;         // damage per tick to hostiles standing on it
   turret?: number;        // damage per shot at the nearest hostile in range
   incubator?: boolean;    // hatches deposited pal eggs on a timer
-  spring?: number;        // SAN recovery strength (Palworld hot spring)
+  spring?: number;        // SAN recovery strength (the island hot spring)
   stand?: boolean;        // monitoring stand: faster work, faster SAN drain
   playerBed?: boolean;
   desc: string;
 }
 
 export const STRUCTURES: Record<string, StructureDef> = {
-  palbox: {
-    id: "palbox", name: "Palbox", glyph: "☼", color: "#4dd0e1", w: 2, h: 2,
-    cost: [["paldium", 4], ["wood", 6], ["stone", 6]],
+  kinbox: {
+    id: "kinbox", name: "Kinbox", glyph: "☼", color: "#4dd0e1", w: 2, h: 2,
+    cost: [["lumenite", 4], ["wood", 6], ["stone", 6]],
     anchor: true, light: 4,
-    desc: "Base anchor. Deploy stored pals; manage party.",
+    desc: "Base anchor. Deploy stored kin; manage party.",
   },
-  pal_bed: {
-    id: "pal_bed", name: "Pal Bed", glyph: "▭", color: "#ede0c8", w: 2, h: 1,
+  kin_bed: {
+    id: "kin_bed", name: "Kin Bed", glyph: "▭", color: "#ede0c8", w: 2, h: 1,
     cost: [["wood", 8], ["fiber", 4]],
     bed: 1,
-    desc: "A bed for a pal to sleep and restore SAN.",
+    desc: "A bed for a kin to sleep and restore SAN.",
   },
   feed_box: {
     id: "feed_box", name: "Feed Box", glyph: "π", color: "#b8a468", w: 1, h: 1,
     cost: [["wood", 6]],
     feedBox: true, storage: 8,
-    desc: "Pals eat from it automatically.",
+    desc: "Kin eat from it automatically.",
   },
   campfire: {
     id: "campfire", name: "Campfire", glyph: "♦", color: "#e8963c", w: 1, h: 1,
     cost: [["wood", 6], ["stone", 3]],
     light: 5, job: { kind: "workbench", workType: "kindling", amount: 30, produces: [], consumes: [] },
-    desc: "Cooks food, gives light. Needs no pal for cooking.",
+    desc: "Cooks food, gives light. Needs no kin for cooking.",
   },
   workbench: {
     id: "workbench", name: "Primitive Workbench", glyph: "⚒", color: "#7f8c8d", w: 2, h: 1,
     cost: [["wood", 10], ["stone", 4]],
     job: { kind: "workbench", workType: "handiwork", amount: 0 },
-    desc: "Queue items; handiwork pals or you build them.",
+    desc: "Queue items; handiwork kin or you build them.",
   },
   logging_site: {
     id: "logging_site", name: "Logging Site", glyph: "↑", color: "#4d7d47", w: 2, h: 2,
     cost: [["wood", 12], ["stone", 4], ["fiber", 4]],
     job: { kind: "lumber", workType: "lumbering", amount: 60, produces: [["wood", 2]] },
-    desc: "A lumbering pal produces wood here.",
+    desc: "A lumbering kin produces wood here.",
   },
   stone_pit: {
     id: "stone_pit", name: "Stone Pit", glyph: "◙", color: "#6b6f72", w: 2, h: 2,
     cost: [["wood", 8], ["stone", 12]],
     job: { kind: "mine", workType: "mining", amount: 60, produces: [["stone", 2]] },
-    desc: "A mining pal produces stone here.",
+    desc: "A mining kin produces stone here.",
   },
   ore_mine: {
     id: "ore_mine", name: "Ore Excavation Site", glyph: "▓", color: "#a0622d", w: 2, h: 2,
     cost: [["wood", 10], ["stone", 15], ["nails", 4]],
     job: { kind: "mine", workType: "mining", amount: 90, produces: [["ore", 1]] },
-    desc: "A mining pal digs ore here.",
+    desc: "A mining kin digs ore here.",
   },
   crusher: {
     id: "crusher", name: "Crusher", glyph: "▲", color: "#4d9de0", w: 2, h: 2,
     cost: [["wood", 15], ["stone", 10]],
-    job: { kind: "crush", workType: "watering", amount: 50, produces: [["paldium", 1]], consumes: [["stone", 5]] },
-    desc: "Water-powered crusher: 5 stone → 1 paldium.",
+    job: { kind: "crush", workType: "watering", amount: 50, produces: [["lumenite", 1]], consumes: [["stone", 5]] },
+    desc: "Water-powered crusher: 5 stone → 1 lumenite.",
   },
   furnace: {
     id: "furnace", name: "Primitive Furnace", glyph: "▲", color: "#e8963c", w: 2, h: 2,
     cost: [["stone", 15], ["wood", 10], ["flame_organ", 2]],
     light: 3,
     job: { kind: "smelt", workType: "kindling", amount: 80, produces: [["ingot", 1]], consumes: [["ore", 2]] },
-    desc: "Kindling pal smelts 2 ore → 1 ingot.",
+    desc: "Kindling kin smelts 2 ore → 1 ingot.",
   },
   mill: {
     id: "mill", name: "Mill", glyph: "Ω", color: "#7f8c8d", w: 2, h: 2,
@@ -123,19 +123,19 @@ export const STRUCTURES: Record<string, StructureDef> = {
     id: "ranch", name: "Ranch", glyph: "⌂", color: "#8a6d4d", w: 4, h: 3,
     cost: [["wood", 20], ["stone", 10], ["fiber", 8]],
     ranch: true,
-    desc: "Assign farming pals; they produce goods.",
+    desc: "Assign farming kin; they produce goods.",
   },
   chest: {
     id: "chest", name: "Wooden Chest", glyph: "□", color: "#8a6d4d", w: 1, h: 1,
     cost: [["wood", 8]],
     storage: 12,
-    desc: "Pals transport produce here.",
+    desc: "Kin transport produce here.",
   },
   generator: {
     id: "generator", name: "Power Generator", glyph: "ϟ", color: "#e8d44d", w: 2, h: 2,
     cost: [["ingot", 10], ["electric_organ", 5]],
     job: { kind: "power", workType: "electricity", amount: 40 },
-    desc: "An electric pal charges it; powered stations work 50% faster.",
+    desc: "An electric kin charges it; powered stations work 50% faster.",
   },
   torch: {
     id: "torch", name: "Torch", glyph: "†", color: "#e8963c", w: 1, h: 1,
@@ -145,9 +145,9 @@ export const STRUCTURES: Record<string, StructureDef> = {
   },
   waypoint: {
     id: "waypoint", name: "Waypoint", glyph: "◇", color: "#7fc8f8", w: 1, h: 1,
-    cost: [["stone", 20], ["paldium", 5]],
+    cost: [["stone", 20], ["lumenite", 5]],
     light: 5, hp: 400,
-    desc: "Palworld fast-travel stone: touch it to blink back to your palbox.",
+    desc: "the island fast-travel stone: touch it to blink back to your kinbox.",
   },
   straw_bed: {
     id: "straw_bed", name: "Straw Bed", glyph: "▭", color: "#b8a468", w: 2, h: 1,
@@ -157,9 +157,9 @@ export const STRUCTURES: Record<string, StructureDef> = {
   },
   incubator: {
     id: "incubator", name: "Egg Incubator", glyph: "◍", color: "#f2a0b5", w: 2, h: 2,
-    cost: [["paldium", 2], ["stone", 10], ["cloth", 2]],
+    cost: [["lumenite", 2], ["stone", 10], ["cloth", 2]],
     incubator: true, hp: 200, light: 2,
-    desc: "Hatches pal eggs over time. A nearby campfire speeds it up.",
+    desc: "Hatches kin eggs over time. A nearby campfire speeds it up.",
   },
   wooden_wall: {
     id: "wooden_wall", name: "Wooden Wall", glyph: "┃", color: "#8a6d4d", w: 1, h: 1,
@@ -173,9 +173,9 @@ export const STRUCTURES: Record<string, StructureDef> = {
   },
   hot_spring: {
     id: "hot_spring", name: "Hot Spring", glyph: "♨", color: "#7ec8e3", w: 2, h: 2,
-    cost: [["stone", 20], ["wood", 10], ["paldium", 3]],
+    cost: [["stone", 20], ["wood", 10], ["lumenite", 3]],
     spring: 1, hp: 250, light: 1,
-    desc: "Steam does wonders. Base pals recover SAN faster than any bed.",
+    desc: "Steam does wonders. Base kin recover SAN faster than any bed.",
   },
   monitoring_stand: {
     id: "monitoring_stand", name: "Monitoring Stand", glyph: "⚑", color: "#d06a6a", w: 1, h: 1,
@@ -185,11 +185,11 @@ export const STRUCTURES: Record<string, StructureDef> = {
   },
   sphere_factory: {
     id: "sphere_factory", name: "Sphere Works", glyph: "◉", color: "#4dd0e1", w: 2, h: 1,
-    cost: [["wood", 20], ["stone", 15], ["paldium", 5], ["ingot", 4]],
+    cost: [["wood", 20], ["stone", 15], ["lumenite", 5], ["ingot", 4]],
     job: { kind: "assemble", workType: "handiwork", amount: 200,
-      consumes: [["paldium", 1], ["wood", 1], ["stone", 1]],
-      produces: [["pal_sphere", 1]] },
-    desc: "Palworld's assembly line — a handy pal rolls a sphere off the belt.",
+      consumes: [["lumenite", 1], ["wood", 1], ["stone", 1]],
+      produces: [["kin_orb", 1]] },
+    desc: "assembly line — a handy kin rolls a sphere off the belt.",
   },
   expedition_post: {
     id: "expedition_post", name: "Expedition Post", glyph: "⚑", color: "#c9a15a", w: 2, h: 1,
@@ -199,36 +199,36 @@ export const STRUCTURES: Record<string, StructureDef> = {
   },
   sphere_factory_2: {
     id: "sphere_factory_2", name: "Giga Works", glyph: "◉", color: "#4dd0e1", w: 2, h: 1,
-    cost: [["stone", 20], ["ingot", 8], ["paldium", 10], ["electric_organ", 4]],
+    cost: [["stone", 20], ["ingot", 8], ["lumenite", 10], ["electric_organ", 4]],
     job: { kind: "assemble", workType: "handiwork", amount: 300,
-      consumes: [["paldium", 3], ["ingot", 2], ["electric_organ", 1]],
-      produces: [["giga_sphere", 1]] },
-    desc: "Palworld assembly line II — the organ-fed belt rolls giga spheres.",
+      consumes: [["lumenite", 3], ["ingot", 2], ["electric_organ", 1]],
+      produces: [["giga_orb", 1]] },
+    desc: "the island assembly line II — the organ-fed belt rolls giga spheres.",
   },
   compost_bin: {
     id: "compost_bin", name: "Compost Bin", glyph: "♻", color: "#7a9a4a", w: 1, h: 1,
     cost: [["wood", 10], ["stone", 4]],
     job: { kind: "work", workType: "farming", amount: 90,
       consumes: [["spoiled_food", 2], ["fiber", 1]], produces: [["fertilizer", 1]] },
-    desc: "A farming pal turns rot and straw into rich fertilizer — every scrap earns its keep.",
+    desc: "A farming kin turns rot and straw into rich fertilizer — every scrap earns its keep.",
   },
   training_dummy: {
     id: "training_dummy", name: "Training Dummy", glyph: "‡", color: "#a08050", w: 1, h: 1,
     hp: 200,
     cost: [["wood", 15], ["fiber", 6]],
-    desc: "A straw sparring partner — idle pals swing on it and grow a little stronger.",
+    desc: "A straw sparring partner — idle kin swing on it and grow a little stronger.",
   },
   guard_post: {
     id: "guard_post", name: "Guard Post", glyph: "⚑", color: "#b06a50", w: 1, h: 1,
     hp: 150,
     cost: [["wood", 12], ["stone", 6]],
     job: { kind: "guard", workType: "", amount: 0 },
-    desc: "A watch platform — post a pal here and it patrols a wider beat.",
+    desc: "A watch platform — post a kin here and it patrols a wider beat.",
   },
   training_hall: {
     id: "training_hall", name: "Training Hall", glyph: "⚔", color: "#8a6a4a", w: 2, h: 2,
     hp: 220,
-    cost: [["wood", 20], ["stone", 15], ["paldium", 4]],
+    cost: [["wood", 20], ["stone", 15], ["lumenite", 4]],
     job: { kind: "mentor", workType: "", amount: 90 },
     desc: "A drill hall — post a veteran and it passes its moves to the yard's youngsters.",
   },
@@ -237,7 +237,7 @@ export const STRUCTURES: Record<string, StructureDef> = {
     hp: 180,
     cost: [["wood", 15], ["cloth", 4]],
     job: { kind: "spar", workType: "", amount: 60 },
-    desc: "A roped pit — pair two pals here and they spar on the bell: the winner learns more, both spend spirit.",
+    desc: "A roped pit — pair two kin here and they spar on the bell: the winner learns more, both spend spirit.",
   },
   notice_board: {
     id: "notice_board", name: "Notice Board", glyph: "▤", color: "#c9a15a", w: 1, h: 1,
@@ -251,23 +251,23 @@ export const STRUCTURES: Record<string, StructureDef> = {
     cost: [],
     desc: "Old bones heaped in the dirt — dig here and the deep past pays out in parts.",
   },
-  pal_gacha: {
-    id: "pal_gacha", name: "Pal Gacha", glyph: "◉", color: "#e8b830", w: 1, h: 1,
+  kin_gacha: {
+    id: "kin_gacha", name: "Kin Gacha", glyph: "◉", color: "#e8b830", w: 1, h: 1,
     hp: 120,
-    cost: [["wood", 10], ["ingot", 6], ["paldium", 4]],
+    cost: [["wood", 10], ["ingot", 6], ["lumenite", 4]],
     desc: "A brass capsule machine — feed it 20 gold and it rattles out an egg. Mostly ordinary; once in a while it coughs up something huge.",
   },
   snare_trap: {
     id: "snare_trap", name: "Snare Trap", glyph: "⋔", color: "#8a7a5a", w: 1, h: 1,
     hp: 40, walkable: true, snare: true,
     cost: [["wood", 5], ["fiber", 2]],
-    desc: "A leaf-litter snare — the first wild pal to step on it is held fast a few seconds. One bite and it's spent.",
+    desc: "A leaf-litter snare — the first wild kin to step on it is held fast a few seconds. One bite and it's spent.",
   },
   war_banner: {
     id: "war_banner", name: "War Banner", glyph: "⚑", color: "#b84a3a", w: 1, h: 1,
     hp: 100,
     cost: [["wood", 10], ["cloth", 6]],
-    desc: "A dyed banner on a tall pole — pals working within sight of its colors put on a little more pace.",
+    desc: "A dyed banner on a tall pole — kin working within sight of its colors put on a little more pace.",
   },
   spyglass: {
     id: "spyglass", name: "Spyglass Tower", glyph: "◎", color: "#7a9ab8", w: 1, h: 1,
@@ -284,37 +284,37 @@ export const STRUCTURES: Record<string, StructureDef> = {
   lightning_rod: {
     id: "lightning_rod", name: "Lightning Rod", glyph: "↯", color: "#d8c04a", w: 1, h: 1,
     hp: 110,
-    cost: [["ingot", 8], ["paldium", 4]],
+    cost: [["ingot", 8], ["lumenite", 4]],
     desc: "A copper finger raised at the sky — in a storm it drinks the lightning and banks the charge as organs.",
   },
-  pal_cage: {
-    id: "pal_cage", name: "Pal Cage", glyph: "▦", color: "#6a7a8a", w: 1, h: 1,
+  kin_cage: {
+    id: "kin_cage", name: "Kin Cage", glyph: "▦", color: "#6a7a8a", w: 1, h: 1,
     hp: 150,
     cost: [],
     desc: "Iron bars and a padlock — someone inside is having a very bad day.",
   },
   weather_shrine: {
     id: "weather_shrine", name: "Weather Shrine", glyph: "☂", color: "#7fb8d8", w: 1, h: 1,
-    cost: [["stone", 20], ["paldium", 10]],
-    desc: "A sky-touched altar — offer paldium and the heavens take requests.",
+    cost: [["stone", 20], ["lumenite", 10]],
+    desc: "A sky-touched altar — offer lumenite and the heavens take requests.",
   },
   apiary: {
     id: "apiary", name: "Apiary", glyph: "◍", color: "#d8b830", w: 1, h: 1,
     cost: [["wood", 12], ["fiber", 8]],
     job: { kind: "work", workType: "planting", amount: 120, produces: [["honey", 1]] },
-    desc: "A skep of tame bees — a planting pal keeps the comb full.",
+    desc: "A skep of tame bees — a planting kin keeps the comb full.",
   },
   fish_trap: {
     id: "fish_trap", name: "Fish Trap", glyph: "≋", color: "#5a8ac0", w: 1, h: 1,
     needsWater: true,
     cost: [["wood", 15], ["fiber", 6]],
     job: { kind: "work", workType: "watering", amount: 150, produces: [["raw_fish", 1]] },
-    desc: "A woven weir at the water's edge — a watering pal works the catch. Build beside water.",
+    desc: "A woven weir at the water's edge — a watering kin works the catch. Build beside water.",
   },
   watch_tower: {
     id: "watch_tower", name: "Watch Tower", glyph: "♜", color: "#c9a86a", w: 1, h: 1,
     cost: [["wood", 20], ["stone", 10], ["ingot", 2]], turret: 14, hp: 300, light: 1,
-    desc: "Looses an arrow at the nearest raider or riled wild pal every few seconds.",
+    desc: "Looses an arrow at the nearest raider or riled wild kin every few seconds.",
   },
 };
 
@@ -329,7 +329,7 @@ export interface TechNode {
 export const TECH: TechNode[] = [
   { id: "workbench", name: "Primitive Workbench", tier: 1, cost: 1 },
   { id: "spear", name: "Stone Spear", tier: 1, cost: 1 },
-  { id: "pal_bed", name: "Pal Bed", tier: 1, cost: 1 },
+  { id: "kin_bed", name: "Kin Bed", tier: 1, cost: 1 },
   { id: "feed_box", name: "Feed Box", tier: 1, cost: 1 },
   { id: "campfire", name: "Campfire", tier: 1, cost: 1 },
   { id: "logging_site", name: "Logging Site", tier: 2, cost: 2 },
@@ -345,29 +345,29 @@ export const TECH: TechNode[] = [
   { id: "straw_bed", name: "Straw Bed", tier: 3, cost: 1 },
   { id: "furnace", name: "Primitive Furnace", tier: 4, cost: 3 },
   { id: "mill", name: "Mill", tier: 4, cost: 2 },
-  { id: "mega_sphere", name: "Mega Sphere", tier: 4, cost: 2 },
+  { id: "mega_orb", name: "Mega Orb", tier: 4, cost: 2 },
   { id: "axe", name: "Metal Axe", tier: 4, cost: 2 },
   { id: "pick", name: "Metal Pickaxe", tier: 4, cost: 2 },
   { id: "ore_mine", name: "Ore Excavation Site", tier: 5, cost: 3 },
   { id: "generator", name: "Power Generator", tier: 5, cost: 3 },
-  { id: "giga_sphere", name: "Giga Sphere", tier: 5, cost: 3 },
+  { id: "giga_orb", name: "Giga Orb", tier: 5, cost: 3 },
   { id: "musket", name: "Musket", tier: 6, cost: 3, parts: 3 },
   { id: "tranq_gun", name: "Tranquilizer Gun", tier: 5, cost: 2, parts: 1 },
   { id: "musket_ball", name: "Musket Ball", tier: 6, cost: 1 },
-  { id: "ultra_sphere", name: "Ultra Sphere", tier: 7, cost: 4 },
-  { id: "legendary_sphere", name: "Legendary Sphere", tier: 8, cost: 5 },
+  { id: "ultra_orb", name: "Ultra Orb", tier: 7, cost: 4 },
+  { id: "legendary_orb", name: "Legendary Orb", tier: 8, cost: 5 },
   { id: "wooden_wall", name: "Wooden Wall", tier: 2, cost: 1 },
   { id: "spikes", name: "Wooden Spikes", tier: 3, cost: 1 },
   { id: "incubator", name: "Egg Incubator", tier: 4, cost: 2, parts: 2 },
   { id: "glider", name: "Glider", tier: 4, cost: 2 },
   { id: "grappling_hook", name: "Grappling Hook", tier: 5, cost: 2 },
-  { id: "saddle", name: "Pal Saddle", tier: 3, cost: 1 },
+  { id: "saddle", name: "Kin Saddle", tier: 3, cost: 1 },
   { id: "wave_saddle", name: "Wave Saddle", tier: 3, cost: 1 },
   { id: "sky_saddle", name: "Sky Saddle", tier: 4, cost: 2 },
-  { id: "foxparks_harness", name: "Foxparks Harness", tier: 4, cost: 2 },
-  { id: "lifmunk_smg", name: "Lifmunk SMG", tier: 4, cost: 2 },
-  { id: "tanzee_rifle", name: "Tanzee Assault Rifle", tier: 5, cost: 2 },
-  { id: "pengullet_launcher", name: "Pengullet Launcher", tier: 6, cost: 2, parts: 1 },
+  { id: "cindlump_harness", name: "Cindlump Harness", tier: 4, cost: 2 },
+  { id: "sprigmelt_smg", name: "Sprigmelt SMG", tier: 4, cost: 2 },
+  { id: "briargoo_rifle", name: "Briargoo Assault Rifle", tier: 5, cost: 2 },
+  { id: "corlmite_launcher", name: "Corlmite Launcher", tier: 6, cost: 2, parts: 1 },
   { id: "meat_cleaver", name: "Meat Cleaver", tier: 3, cost: 1 },
   { id: "waypoint", name: "Waypoint", tier: 4, cost: 2 },
   { id: "hot_spring", name: "Hot Spring", tier: 5, cost: 3 },
@@ -386,7 +386,7 @@ export const TECH: TechNode[] = [
   { id: "sparring_ring", name: "Sparring Ring", tier: 4, cost: 1 },
   { id: "notice_board", name: "Notice Board", tier: 2, cost: 1 },
   { id: "snare_trap", name: "Snare Trap", tier: 2, cost: 1 },
-  { id: "pal_gacha", name: "Pal Gacha", tier: 4, cost: 1 },
+  { id: "kin_gacha", name: "Kin Gacha", tier: 4, cost: 1 },
   { id: "war_banner", name: "War Banner", tier: 4, cost: 1 },
   { id: "spyglass", name: "Spyglass Tower", tier: 5, cost: 2 },
   { id: "well", name: "Well", tier: 3, cost: 1 },

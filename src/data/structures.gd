@@ -2,16 +2,16 @@
 class_name StructureData
 
 const STRUCTURES = {
- "palbox": {
-  "id": "palbox",
-  "name": "Palbox",
+ "kinbox": {
+  "id": "kinbox",
+  "name": "Kinbox",
   "glyph": "☼",
   "color": "#4dd0e1",
   "w": 2,
   "h": 2,
   "cost": [
    [
-    "paldium",
+    "lumenite",
     4
    ],
    [
@@ -25,11 +25,11 @@ const STRUCTURES = {
   ],
   "anchor": true,
   "light": 4,
-  "desc": "Base anchor. Deploy stored pals; manage party."
+  "desc": "Base anchor. Deploy stored kin; manage party."
  },
- "pal_bed": {
-  "id": "pal_bed",
-  "name": "Pal Bed",
+ "kin_bed": {
+  "id": "kin_bed",
+  "name": "Kin Bed",
   "glyph": "▭",
   "color": "#ede0c8",
   "w": 2,
@@ -45,7 +45,7 @@ const STRUCTURES = {
    ]
   ],
   "bed": 1,
-  "desc": "A bed for a pal to sleep and restore SAN."
+  "desc": "A bed for a kin to sleep and restore SAN."
  },
  "feed_box": {
   "id": "feed_box",
@@ -62,7 +62,7 @@ const STRUCTURES = {
   ],
   "feedBox": true,
   "storage": 8,
-  "desc": "Pals eat from it automatically."
+  "desc": "Kin eat from it automatically."
  },
  "campfire": {
   "id": "campfire",
@@ -89,7 +89,7 @@ const STRUCTURES = {
    "produces": [],
    "consumes": []
   },
-  "desc": "Cooks food, gives light. Needs no pal for cooking."
+  "desc": "Cooks food, gives light. Needs no kin for cooking."
  },
  "workbench": {
   "id": "workbench",
@@ -113,7 +113,7 @@ const STRUCTURES = {
    "workType": "handiwork",
    "amount": 0
   },
-  "desc": "Queue items; handiwork pals or you build them."
+  "desc": "Queue items; handiwork kin or you build them."
  },
  "logging_site": {
   "id": "logging_site",
@@ -147,7 +147,7 @@ const STRUCTURES = {
     ]
    ]
   },
-  "desc": "A lumbering pal produces wood here."
+  "desc": "A lumbering kin produces wood here."
  },
  "stone_pit": {
   "id": "stone_pit",
@@ -177,7 +177,7 @@ const STRUCTURES = {
     ]
    ]
   },
-  "desc": "A mining pal produces stone here."
+  "desc": "A mining kin produces stone here."
  },
  "ore_mine": {
   "id": "ore_mine",
@@ -211,7 +211,7 @@ const STRUCTURES = {
     ]
    ]
   },
-  "desc": "A mining pal digs ore here."
+  "desc": "A mining kin digs ore here."
  },
  "crusher": {
   "id": "crusher",
@@ -236,7 +236,7 @@ const STRUCTURES = {
    "amount": 50,
    "produces": [
     [
-     "paldium",
+     "lumenite",
      1
     ]
    ],
@@ -247,7 +247,7 @@ const STRUCTURES = {
     ]
    ]
   },
-  "desc": "Water-powered crusher: 5 stone → 1 paldium."
+  "desc": "Water-powered crusher: 5 stone → 1 lumenite."
  },
  "furnace": {
   "id": "furnace",
@@ -288,7 +288,7 @@ const STRUCTURES = {
     ]
    ]
   },
-  "desc": "Kindling pal smelts 2 ore → 1 ingot."
+  "desc": "Kindling kin smelts 2 ore → 1 ingot."
  },
  "mill": {
   "id": "mill",
@@ -398,7 +398,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "gather", "workType": "gathering", "amount": 80, "produces": [["mushroom", 1]]},
-  "desc": "A gathering pal forages mushrooms here."
+  "desc": "A gathering kin forages mushrooms here."
  },
  "pharmacy": {
   "id": "pharmacy",
@@ -413,12 +413,12 @@ const STRUCTURES = {
     12
    ],
    [
-    "paldium",
+    "lumenite",
     2
    ]
   ],
   "job": {"kind": "brew", "workType": "medicine", "amount": 150, "produces": [["low_medical", 1]]},
-  "desc": "A medicine pal brews basic remedies here."
+  "desc": "A medicine kin brews basic remedies here."
  },
  "cooler": {
   "id": "cooler",
@@ -438,7 +438,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "chill", "workType": "cooling", "amount": 120, "produces": [["ice_organ", 1]]},
-  "desc": "A cooling pal condenses ice organs here."
+  "desc": "A cooling kin condenses ice organs here."
  },
  "training_dummy": {
   "id": "training_dummy",
@@ -458,7 +458,7 @@ const STRUCTURES = {
     6
    ]
   ],
-  "desc": "A straw sparring partner — idle pals swing on it and grow a little stronger."
+  "desc": "A straw sparring partner — idle kin swing on it and grow a little stronger."
  },
 "guard_post": {
   "id": "guard_post",
@@ -479,7 +479,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "guard", "workType": "", "amount": 0},
-  "desc": "A watch platform — post a pal here and it patrols a wider beat."
+  "desc": "A watch platform — post a kin here and it patrols a wider beat."
  },
 "training_hall": {
   "id": "training_hall",
@@ -499,7 +499,7 @@ const STRUCTURES = {
     15
    ],
    [
-    "paldium",
+    "lumenite",
     4
    ]
   ],
@@ -525,7 +525,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "spar", "workType": "", "amount": 60},
-  "desc": "A roped pit — pair two pals here and they spar on the bell: the winner learns more, both spend spirit."
+  "desc": "A roped pit — pair two kin here and they spar on the bell: the winner learns more, both spend spirit."
  },
 "notice_board": {
   "id": "notice_board",
@@ -547,9 +547,9 @@ const STRUCTURES = {
   ],
   "desc": "A pitch-pine board — each dawn a fresh request goes up: fill it for coin and credit."
  },
-"pal_gacha": {
-  "id": "pal_gacha",
-  "name": "Pal Gacha",
+"kin_gacha": {
+  "id": "kin_gacha",
+  "name": "Kin Gacha",
   "glyph": "◉",
   "color": "#e8b830",
   "w": 1,
@@ -565,7 +565,7 @@ const STRUCTURES = {
     6
    ],
    [
-    "paldium",
+    "lumenite",
     4
    ]
   ],
@@ -602,7 +602,7 @@ const STRUCTURES = {
     2
    ]
   ],
-  "desc": "A leaf-litter snare — the first wild pal to step on it is held fast a few seconds. One bite and it's spent."
+  "desc": "A leaf-litter snare — the first wild kin to step on it is held fast a few seconds. One bite and it's spent."
  },
 "war_banner": {
   "id": "war_banner",
@@ -622,7 +622,7 @@ const STRUCTURES = {
     6
    ]
   ],
-  "desc": "A dyed banner on a tall pole — pals working within sight of its colors put on a little more pace."
+  "desc": "A dyed banner on a tall pole — kin working within sight of its colors put on a little more pace."
  },
 "spyglass": {
   "id": "spyglass",
@@ -678,15 +678,15 @@ const STRUCTURES = {
     8
    ],
    [
-    "paldium",
+    "lumenite",
     4
    ]
   ],
   "desc": "A copper finger raised at the sky — in a storm it drinks the lightning and banks the charge as organs."
  },
-"pal_cage": {
-  "id": "pal_cage",
-  "name": "Pal Cage",
+"kin_cage": {
+  "id": "kin_cage",
+  "name": "Kin Cage",
   "glyph": "▦",
   "color": "#6a7a8a",
   "w": 1,
@@ -708,11 +708,11 @@ const STRUCTURES = {
     20
    ],
    [
-    "paldium",
+    "lumenite",
     10
    ]
   ],
-  "desc": "A sky-touched altar — offer paldium and the heavens take requests."
+  "desc": "A sky-touched altar — offer lumenite and the heavens take requests."
  },
 "apiary": {
   "id": "apiary",
@@ -732,7 +732,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "work", "workType": "planting", "amount": 120, "produces": [["honey", 1]]},
-  "desc": "A skep of tame bees — a planting pal keeps the comb full."
+  "desc": "A skep of tame bees — a planting kin keeps the comb full."
  },
 "fish_trap": {
   "id": "fish_trap",
@@ -753,7 +753,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "work", "workType": "watering", "amount": 150, "produces": [["raw_fish", 1]]},
-  "desc": "A woven weir set at the water's edge — a watering pal works the catch. Build beside water."
+  "desc": "A woven weir set at the water's edge — a watering kin works the catch. Build beside water."
  },
 "oil_extractor": {
   "id": "oil_extractor",
@@ -773,7 +773,7 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "pump", "workType": "oilExtraction", "amount": 240, "produces": [["polymer", 1]]},
-  "desc": "An oil-extracting pal refines polymer here."
+  "desc": "An oil-extracting kin refines polymer here."
  },
  "sphere_factory": {
   "id": "sphere_factory",
@@ -792,7 +792,7 @@ const STRUCTURES = {
     15
    ],
    [
-    "paldium",
+    "lumenite",
     5
    ],
    [
@@ -801,9 +801,9 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "assemble", "workType": "handiwork", "amount": 200,
-   "consumes": [["paldium", 1], ["wood", 1], ["stone", 1]],
-   "produces": [["pal_sphere", 1]]},
-  "desc": "Palworld's assembly line — a handy pal rolls a sphere off the belt."
+   "consumes": [["lumenite", 1], ["wood", 1], ["stone", 1]],
+   "produces": [["kin_orb", 1]]},
+  "desc": "assembly line — a handy kin rolls a sphere off the belt."
  },
  "expedition_post": {
   "id": "expedition_post",
@@ -850,7 +850,7 @@ const STRUCTURES = {
     8
    ],
    [
-    "paldium",
+    "lumenite",
     10
    ],
    [
@@ -859,9 +859,9 @@ const STRUCTURES = {
    ]
   ],
   "job": {"kind": "assemble", "workType": "handiwork", "amount": 300,
-   "consumes": [["paldium", 3], ["ingot", 2], ["electric_organ", 1]],
-   "produces": [["giga_sphere", 1]]},
-  "desc": "Palworld assembly line II — the organ-fed belt rolls giga spheres."
+   "consumes": [["lumenite", 3], ["ingot", 2], ["electric_organ", 1]],
+   "produces": [["giga_orb", 1]]},
+  "desc": "the island assembly line II — the organ-fed belt rolls giga spheres."
  },
  "compost_bin": {
   "id": "compost_bin",
@@ -874,18 +874,18 @@ const STRUCTURES = {
   "job": {"kind": "work", "workType": "farming", "amount": 90,
    "consumes": [["spoiled_food", 2], ["fiber", 1]],
    "produces": [["fertilizer", 1]]},
-  "desc": "A farming pal turns rot and straw into rich fertilizer — every scrap earns its keep."
+  "desc": "A farming kin turns rot and straw into rich fertilizer — every scrap earns its keep."
  },
- "pal_condenser": {
-  "id": "pal_condenser",
-  "name": "Pal Condenser",
+ "kin_condenser": {
+  "id": "kin_condenser",
+  "name": "Kin Condenser",
   "glyph": "★",
   "color": "#7a5ac9",
   "w": 2,
   "h": 1,
   "cost": [
    [
-    "paldium",
+    "lumenite",
     4
    ],
    [
@@ -893,7 +893,7 @@ const STRUCTURES = {
     6
    ]
   ],
-  "desc": "Fuse same-species pals into the active pal's star rank."
+  "desc": "Fuse same-species kin into the active kin's star rank."
  },
  "ranch": {
   "id": "ranch",
@@ -917,7 +917,7 @@ const STRUCTURES = {
    ]
   ],
   "ranch": true,
-  "desc": "Assign farming pals; they produce goods."
+  "desc": "Assign farming kin; they produce goods."
  },
  "chest": {
   "id": "chest",
@@ -933,7 +933,7 @@ const STRUCTURES = {
    ]
   ],
   "storage": 12,
-  "desc": "Pals transport produce here."
+  "desc": "Kin transport produce here."
  },
  "generator": {
   "id": "generator",
@@ -957,7 +957,7 @@ const STRUCTURES = {
    "workType": "electricity",
    "amount": 40
   },
-  "desc": "An electric pal charges it; powered stations work 50% faster."
+  "desc": "An electric kin charges it; powered stations work 50% faster."
  },
  "torch": {
   "id": "torch",
@@ -992,13 +992,13 @@ const STRUCTURES = {
     20
    ],
    [
-    "paldium",
+    "lumenite",
     5
    ]
   ],
   "light": 5,
   "hp": 400,
-  "desc": "Palworld fast-travel stone: touch it to blink back to your palbox."
+  "desc": "the island fast-travel stone: touch it to blink back to your kinbox."
  },
  "straw_bed": {
   "id": "straw_bed",
@@ -1029,7 +1029,7 @@ const STRUCTURES = {
   "h": 2,
   "cost": [
    [
-    "paldium",
+    "lumenite",
     2
    ],
    [
@@ -1044,7 +1044,7 @@ const STRUCTURES = {
   "incubator": true,
   "hp": 200,
   "light": 2,
-  "desc": "Hatches pal eggs over time. A nearby campfire speeds it up."
+  "desc": "Hatches kin eggs over time. A nearby campfire speeds it up."
  },
  "wooden_wall": {
   "id": "wooden_wall",
@@ -1101,14 +1101,14 @@ const STRUCTURES = {
     10
    ],
    [
-    "paldium",
+    "lumenite",
     3
    ]
   ],
   "spring": 1,
   "hp": 250,
   "light": 1,
-  "desc": "Steam does wonders. Base pals recover SAN faster than any bed."
+  "desc": "Steam does wonders. Base kin recover SAN faster than any bed."
  },
  "monitoring_stand": {
   "id": "monitoring_stand",
@@ -1159,7 +1159,7 @@ const STRUCTURES = {
   "turret": 14,
   "hp": 300,
   "light": 1,
-  "desc": "Looses an arrow at the nearest raider or riled wild pal every few seconds."
+  "desc": "Looses an arrow at the nearest raider or riled wild kin every few seconds."
  }
 }
 
@@ -1177,8 +1177,8 @@ const TECH = [
   "cost": 1
  },
  {
-  "id": "pal_bed",
-  "name": "Pal Bed",
+  "id": "kin_bed",
+  "name": "Kin Bed",
   "tier": 1,
   "cost": 1
  },
@@ -1311,7 +1311,7 @@ const TECH = [
  },
  {
   "id": "saddle",
-  "name": "Pal Saddle",
+  "name": "Kin Saddle",
   "tier": 3,
   "cost": 1
  },
@@ -1353,8 +1353,8 @@ const TECH = [
   "parts": 2
  },
  {
-  "id": "mega_sphere",
-  "name": "Mega Sphere",
+  "id": "mega_orb",
+  "name": "Mega Orb",
   "tier": 4,
   "cost": 2
  },
@@ -1383,8 +1383,8 @@ const TECH = [
   "cost": 3
  },
  {
-  "id": "giga_sphere",
-  "name": "Giga Sphere",
+  "id": "giga_orb",
+  "name": "Giga Orb",
   "tier": 5,
   "cost": 3
  },
@@ -1428,21 +1428,21 @@ const TECH = [
   "cost": 1
  },
  {
-  "id": "pal_condenser",
-  "name": "Pal Condenser",
+  "id": "kin_condenser",
+  "name": "Kin Condenser",
   "tier": 6,
   "cost": 3,
   "parts": 3
  },
  {
-  "id": "ultra_sphere",
-  "name": "Ultra Sphere",
+  "id": "ultra_orb",
+  "name": "Ultra Orb",
   "tier": 7,
   "cost": 4
  },
  {
-  "id": "legendary_sphere",
-  "name": "Legendary Sphere",
+  "id": "legendary_orb",
+  "name": "Legendary Orb",
   "tier": 8,
   "cost": 5
  },
@@ -1454,33 +1454,33 @@ const TECH = [
   "parts": 1
  },
  {
-  "id": "foxparks_harness",
-  "name": "Foxparks Harness",
+  "id": "cindlump_harness",
+  "name": "Cindlump Harness",
   "tier": 4,
   "cost": 2
  },
  {
-  "id": "lifmunk_smg",
-  "name": "Lifmunk SMG",
+  "id": "sprigmelt_smg",
+  "name": "Sprigmelt SMG",
   "tier": 4,
   "cost": 2
  },
  {
-  "id": "tanzee_rifle",
-  "name": "Tanzee Assault Rifle",
+  "id": "briargoo_rifle",
+  "name": "Briargoo Assault Rifle",
   "tier": 5,
   "cost": 2
  },
  {
-  "id": "pengullet_launcher",
-  "name": "Pengullet Launcher",
+  "id": "corlmite_launcher",
+  "name": "Corlmite Launcher",
   "tier": 6,
   "cost": 2,
   "parts": 1
  },
  {
-  "id": "sphere_launcher",
-  "name": "Sphere Launcher",
+  "id": "orb_launcher",
+  "name": "Orb Launcher",
   "tier": 5,
   "cost": 2,
   "parts": 2
@@ -1567,8 +1567,8 @@ const TECH = [
   "cost": 1
  },
  {
-  "id": "pal_gacha",
-  "name": "Pal Gacha",
+  "id": "kin_gacha",
+  "name": "Kin Gacha",
   "tier": 4,
   "cost": 1
  },

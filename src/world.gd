@@ -38,7 +38,7 @@ func tile_at(x: int, y: int) -> int:
 	return tiles[idx(x, y)] if in_bounds(x, y) else Tile.WATER
 
 func climate_at(p: Vector2) -> String:
-	# Palworld's latitude bands: the far north freezes around the clock, the
+	# latitude bands: the far north freezes around the clock, the
 	# far south scorches under the sun — the midlands keep their mild nights
 	if p.y < 30.0:
 		return "cold"
@@ -60,7 +60,7 @@ func solid_structure(i: int) -> bool:
 	return structures.has(i) and not structures[i].get("walkable", false)
 
 func blocked_swim(x: int, y: int, from_x: float, from_y: float) -> bool:
-	# aquatic pals: water is open, everything else still blocks
+	# aquatic kin: water is open, everything else still blocks
 	if not in_bounds(x, y):
 		return true
 	var i := idx(x, y)

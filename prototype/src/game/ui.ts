@@ -1,4 +1,4 @@
-// All UI: HUD, inventory, palbox management, build menu, tech tree, craft, help, death.
+// All UI: HUD, inventory, kinbox management, build menu, tech tree, craft, help, death.
 import { GameState, Pal, WORLD_W, WORLD_H, XP_FOR_LEVEL } from "./types.ts";
 import { ITEMS, RECIPES } from "../data/items.ts";
 import { SPECIES } from "../data/species.ts";
@@ -11,7 +11,7 @@ import { C } from "../engine/palette.ts";
 import { Input } from "../engine/input.ts";
 import { itemCount, addItem, takeItem, ownedSpheres, log, isNight } from "./state.ts";
 import { catchChance, activePartner } from "./combat.ts";
-import { deployedPals, toBox, toParty, deployToBase, palLabel } from "./palbox.ts";
+import { deployedPals, toBox, toParty, deployToBase, palLabel } from "./kinbox.ts";
 import { queueCraft, feedStock } from "./structures.ts";
 import { wildPals } from "./entities.ts";
 
@@ -146,7 +146,7 @@ export function drawInventory(r: Renderer, s: GameState, input: Input): void {
       } else if (it.kind === "sphere") {
         s.aimSphere = true;
         s.mode = "play";
-        log(s, "Aim and click a pal to throw.");
+        log(s, "Aim and click a kin to throw.");
       }
     }
     i++;
@@ -154,10 +154,10 @@ export function drawInventory(r: Renderer, s: GameState, input: Input): void {
   r.text(x + 2, y + h - 1, `gold: ${itemCount(s, "gold_coin")}   [I/Esc close]`, C.dkyellow);
 }
 
-// ---------- palbox ----------
-export function drawPalbox(r: Renderer, s: GameState, input: Input): void {
+// ---------- kinbox ----------
+export function drawKinbox(r: Renderer, s: GameState, input: Input): void {
   const w = Math.min(86, r.cols - 6), h = Math.min(r.rows - 4, 26), x = Math.floor((r.cols - w) / 2), y = 2;
-  r.panel(x, y, w, h, "PALBOX MANAGEMENT");
+  r.panel(x, y, w, h, "KINBOX MANAGEMENT");
   const partyPals = s.party.map((u) => s.palparty.find((o) => o.uid === u) ?? s.pals.find((o) => o.uid === u)).filter(Boolean) as Pal[];
   const base = deployedPals(s);
   const colW = Math.floor((w - 6) / 3);
@@ -187,7 +187,7 @@ export function drawPalbox(r: Renderer, s: GameState, input: Input): void {
 
   // action row
   const ay = y + h - 3;
-  r.text(x + 2, ay, "click a pal, then:", C.fgDim);
+  r.text(x + 2, ay, "click a kin, then:", C.fgDim);
   if (sel.pal && sel.mode) {
     const p = sel.pal;
     r.text(x + 2, ay - 1, `▸ ${palLabel(p)} (${sel.mode})`, C.yellow);
@@ -288,7 +288,7 @@ export function drawCraft(r: Renderer, s: GameState, input: Input): void {
     r.text(x + 2, y + h - 3, `queue: ${st.craftQueue.map((q) => ITEMS[RECIPES.find(rr => rr.id === q)!.out[0]].name).join(" → ")}`, C.cyan);
     r.bar(x + 2, y + h - 2, w - 6, st.craftProgress / Math.max(1, RECIPES.find(rr => rr.id === st.craftQueue[0])?.work ?? 1), "cyan" as never);
   }
-  r.text(x + 2, y + h - 1, "pals work the queue (or hold E at station)   [Esc close]", C.fgDim);
+  r.text(x + 2, y + h - 1, "kin work the queue (or hold E at station)   [Esc close]", C.fgDim);
 }
 
 // ---------- help ----------
@@ -298,23 +298,23 @@ export function drawHelp(r: Renderer, s: GameState, input: Input): void {
   const lines = [
     "WASD/arrows  move        SHIFT sprint      SPACE dodge roll",
     "LMB          attack / harvest tree·rock·ore",
-    "Q            toggle sphere-aim   → click a pal to throw",
+    "Q            toggle sphere-aim   → click a kin to throw",
     "R            cycle sphere type (when aiming)",
-    "1-5          swap active party pal",
+    "1-5          swap active party kin",
     "E            interact / pick up / hold to work a station",
-    "I            inventory     B build     T tech     P palbox",
+    "I            inventory     B build     T tech     P kinbox",
     "Esc          close menus / cancel build",
     "",
-    "Goal: catch pals, build a base, put pals to work.",
-    "Weaken a pal (low HP) to raise catch chance.",
-    "Pals work stations matching their suitabilities:",
+    "Goal: catch kin, build a base, put kin to work.",
+    "Weaken a kin (low HP) to raise catch chance.",
+    "Kin work stations matching their suitabilities:",
     "  kindling→furnace watering→crusher planting→farm",
     "  lumbering→logging mining→pit handiwork→bench",
     "  gathering→harvest transporting→haul farming→ranch",
     "  electricity→generator cooling·medicine→future",
     "",
-    "Pals eat from a Feed Box and sleep in Pal Beds.",
-    "Low SAN → pals slack off. Keep them fed and rested.",
+    "Kin eat from a Feed Box and sleep in Kin Beds.",
+    "Low SAN → kin slack off. Keep them fed and rested.",
     "",
     "Press H or Esc to close.",
   ];
@@ -325,7 +325,7 @@ export function drawHelp(r: Renderer, s: GameState, input: Input): void {
 export function drawDead(r: Renderer, s: GameState, input: Input): void {
   const w = 40, h = 7, x = Math.floor((r.cols - w) / 2), y = Math.floor(r.rows / 2) - 3;
   r.panel(x, y, w, h, "KNOCKED OUT");
-  r.text(x + 2, y + 2, "You wake up at your Palbox, bruised.", C.fg);
+  r.text(x + 2, y + 2, "You wake up at your Kinbox, bruised.", C.fg);
   if (button(r, input, x + 2, y + 4, 16, "Respawn", false) || input.hit("return") || input.hit("enter")) {
     s.mode = "play";
     s.player.hp = Math.floor(s.player.maxHp * 0.5);

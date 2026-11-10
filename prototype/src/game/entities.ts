@@ -12,10 +12,10 @@ const DESPAWN_R = 95;
 const SPAWN_R_MIN = 45, SPAWN_R_MAX = 80;
 
 const ZONE_SPECIES: string[][] = [
-  ["lamball", "cattiva", "chikipi", "lifmunk", "foxparks", "cremis", "chikipi"],
-  ["tanzee", "sparkit", "jolthog", "dumud", "fuack", "lamball", "eikthyrdeer", "depresso"],
-  ["rushoar", "depresso", "daedream", "dumud", "eikthyrdeer", "mozzarina", "mau"],
-  ["penking", "rushoar", "mau", "mozzarina", "daedream", "dumud"],
+  ["fenjelly", "puffmite", "fenlump", "sprigmelt", "cindlump", "nibjelly", "fenlump"],
+  ["briargoo", "voltgoo", "faradlump", "loammelt", "quackbill", "fenjelly", "dozantler", "shademite"],
+  ["loampuff", "shademite", "shadelump", "loammelt", "dozantler", "piplump", "shademelt"],
+  ["marlump", "loampuff", "shademelt", "piplump", "shadelump", "loammelt"],
 ];
 
 export function wildPals(s: GameState): Pal[] {

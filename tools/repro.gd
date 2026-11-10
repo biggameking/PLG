@@ -8,14 +8,14 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	game = main.get_node("Game")
-	for m in ["wood","stone","fiber","paldium","ingot","berry_seeds"]:
+	for m in ["wood","stone","fiber","lumenite","ingot","berry_seeds"]:
 		game.add_item(m, 300)
 	var pb := false
 	var k0 := Vector2i(int(game.player.pos.x) + 3, int(game.player.pos.y) + 3)
 	for tries in 300:
-		if game.place_structure("palbox", k0.x + tries % 8, k0.y + tries / 8):
+		if game.place_structure("kinbox", k0.x + tries % 8, k0.y + tries / 8):
 			pb = true; break
-	var bx := int(game.palbox_pos.x); var by := int(game.palbox_pos.y)
+	var bx := int(game.kinbox_pos.x); var by := int(game.kinbox_pos.y)
 	var placed := false; var fx := -1; var fy := -1
 	for r0 in range(2, 30):
 		var cells := []
@@ -27,22 +27,22 @@ func _boot() -> void:
 			if game.place_structure("berry_farm", c0.x, c0.y):
 				fx = c0.x; fy = c0.y; placed = true; break
 		if placed: break
-	print("palbox=", pb, " farm=", placed, " at=", fx, ",", fy)
+	print("kinbox=", pb, " farm=", placed, " at=", fx, ",", fy)
 	if not placed:
 		quit(); return
 	var st = null
 	for k in game.structures:
 		if game.structures[k].get("id") == "berry_farm":
 			st = game.structures[k]; break
-	var p = load("res://src/pal.gd").new()
+	var p = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(p)
-	p.setup(game, "lamball", 3, Vector2(fx + 3, fy))
+	p.setup(game, "fenjelly", 3, Vector2(fx + 3, fy))
 	p.mode = "base"; game.pals.append(p)
 	st["workers"].append(p); p.job_site = st
-	print("pal job=", p.job_site["s"].id if p.job_site else "none", " in_workers=", p in st["workers"])
-	var p2 = load("res://src/pal.gd").new()
+	print("kin job=", p.job_site["s"].id if p.job_site else "none", " in_workers=", p in st["workers"])
+	var p2 = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(p2)
-	p2.setup(game, "eikthyrdeer", 4, Vector2(fx + 4, fy))
+	p2.setup(game, "dozantler", 4, Vector2(fx + 4, fy))
 	p2.mode = "base"; game.pals.append(p2)
 	st["workers"].append(p2); p2.job_site = st
 	print("2 workers on farm")

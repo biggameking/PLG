@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 A = os.path.join(ROOT, "assets")
-for d in ["", "pals", "decor", "structures", "ui"]:
+for d in ["", "kin", "decor", "structures", "ui"]:
     os.makedirs(os.path.join(A, d), exist_ok=True)
 
 # ---------- deterministic hash (same as engine) ----------
@@ -273,28 +273,28 @@ PLANS = {"quadruped": quadruped, "kitty": kitty, "bird": bird, "mouse": mouse,
          "monkey": monkey, "blob": blob, "serpent": serpent, "human": human, "ghost": ghost}
 
 SPRITES = {
-    "lamball":     ("quadruped", ["#ede0c8", "#d8c9ab", "#f2a0b5"], 0.55),
-    "cattiva":     ("kitty",     ["#f2a0b5", "#e085a0", "#ffffff"], 0.3),
-    "chikipi":     ("bird",      ["#f5f2ea", "#e8e0cc", "#e64533"], 0.25),
-    "foxparks":    ("kitty",     ["#e8963c", "#c97e2a", "#ffd54f"], 0.3),
-    "pengullet":   ("bird",      ["#4d9de0", "#2b5d8a", "#e8d44d"], 0),
-    "penking":     ("bird",      ["#3f94c8", "#2b5d8a", "#ffd54f"], 0.15),
-    "eikthyrdeer": ("deer",      ["#d4b96e", "#b8945a", "#8a6d4d"], 0),
-    "lifmunk":     ("mouse",     ["#4caf50", "#3d9143", "#9acd32"], 0),
-    "tanzee":      ("monkey",    ["#9acd32", "#7a9d2a", "#d4b96e"], 0.2),
-    "sparkit":     ("mouse",     ["#e8d44d", "#c9b23a", "#ff9a3c"], 0.2),
-    "jolthog":     ("hedgehog",  ["#e8e05c", "#c9bf45", "#8a6d4d"], 0.4),
-    "dumud":       ("serpent",   ["#b8935f", "#96794d", "#8fd1a0"], 0),
-    "depresso":    ("blob",      ["#6fa8d1", "#5a8db0", "#4d6f8a"], 0),
-    "daedream":    ("ghost",     ["#c678dd", "#a45ec0", "#e08ee8"], 0.25),
-    "mau":         ("kitty",     ["#a8b5c4", "#8a98a8", "#e8d44d"], 0),
-    "rushoar":     ("boar",      ["#d1813c", "#a96a2f", "#f5eee0"], 0.3),
-    "cremis":      ("kitty",     ["#f5eee0", "#d8d0be", "#e8963c"], 0.45),
-    "mozzarina":   ("cow",       ["#ede0c8", "#c9b89e", "#e8d44d"], 0.2),
-    "fuack":       ("bird",      ["#4dd0e1", "#35a8b8", "#e8d44d"], 0.2),
+    "fenjelly":     ("quadruped", ["#ede0c8", "#d8c9ab", "#f2a0b5"], 0.55),
+    "puffmite":     ("kitty",     ["#f2a0b5", "#e085a0", "#ffffff"], 0.3),
+    "fenlump":     ("bird",      ["#f5f2ea", "#e8e0cc", "#e64533"], 0.25),
+    "cindlump":    ("kitty",     ["#e8963c", "#c97e2a", "#ffd54f"], 0.3),
+    "corlmite":   ("bird",      ["#4d9de0", "#2b5d8a", "#e8d44d"], 0),
+    "marlump":     ("bird",      ["#3f94c8", "#2b5d8a", "#ffd54f"], 0.15),
+    "dozantler": ("deer",      ["#d4b96e", "#b8945a", "#8a6d4d"], 0),
+    "sprigmelt":     ("mouse",     ["#4caf50", "#3d9143", "#9acd32"], 0),
+    "briargoo":      ("monkey",    ["#9acd32", "#7a9d2a", "#d4b96e"], 0.2),
+    "voltgoo":     ("mouse",     ["#e8d44d", "#c9b23a", "#ff9a3c"], 0.2),
+    "faradlump":     ("hedgehog",  ["#e8e05c", "#c9bf45", "#8a6d4d"], 0.4),
+    "loammelt":       ("serpent",   ["#b8935f", "#96794d", "#8fd1a0"], 0),
+    "shademite":    ("blob",      ["#6fa8d1", "#5a8db0", "#4d6f8a"], 0),
+    "shadelump":    ("ghost",     ["#c678dd", "#a45ec0", "#e08ee8"], 0.25),
+    "shademelt":         ("kitty",     ["#a8b5c4", "#8a98a8", "#e8d44d"], 0),
+    "loampuff":     ("boar",      ["#d1813c", "#a96a2f", "#f5eee0"], 0.3),
+    "nibjelly":      ("kitty",     ["#f5eee0", "#d8d0be", "#e8963c"], 0.45),
+    "piplump":   ("cow",       ["#ede0c8", "#c9b89e", "#e8d44d"], 0.2),
+    "quackbill":       ("bird",      ["#4dd0e1", "#35a8b8", "#e8d44d"], 0.2),
     "player":      ("human",     ["#d17b3c", "#4d9de0", "#e8c9a0"], 0),
-    "syndicate_grunt":   ("human", ["#3a3a4a", "#2a2a35", "#e8c9a0"], 0),
-    "syndicate_sweeper": ("human", ["#5a2e4a", "#3d1f33", "#e8c9a0"], 0),
+    "ironpact_grunt":   ("human", ["#3a3a4a", "#2a2a35", "#e8c9a0"], 0),
+    "ironpact_sweeper": ("human", ["#5a2e4a", "#3d1f33", "#e8c9a0"], 0),
 }
 
 def render_pal(spec_id):
@@ -330,7 +330,7 @@ def render_pal(spec_id):
                     dither = ((x + y) % 2 == 0) and (nearHi or nearLo or h < fluff)
                     col = rp["light"] if (dither and nearHi) else (rp["shade"] if dither else rp["base"])
                 px[x, y] = col + (255,)
-        img.save(os.path.join(A, "pals", f"{spec_id}_f{f}.png"))
+        img.save(os.path.join(A, "kin", f"{spec_id}_f{f}.png"))
 
 # =========================================================================
 # TERRAIN ATLAS — 64x64 slots; ground diamond 64x32 in top half
@@ -662,7 +662,7 @@ def make_structure(sid, color, w, h):
     hpx = 26 if sid not in ("ranch", "berry_farm", "wheat_farm") else 8
     img, d = struct_img(w, h, hpx, top, sl, sr)
     W, H = img.size
-    if sid == "palbox":
+    if sid == "kinbox":
         d.ellipse([W//2 - 13, 8, W//2 + 13, 34], fill=hxc("#4dd0e1") + (255,))
         d.ellipse([W//2 - 9, 12, W//2 + 3, 22], fill=hxc("#aef0fa") + (255,))
         d.rectangle([W//2 - 8, 34, W//2 + 8, 44], fill=hxc("#2b5d8a") + (255,))
@@ -680,7 +680,7 @@ def make_structure(sid, color, w, h):
     elif sid == "chest":
         d.line([(W//2 - 20, 34), (W//2 + 20, 34)], fill=hxc("#3c2f22") + (255,), width=3)
         d.rectangle([W//2 - 3, 30, W//2 + 3, 38], fill=hxc("#e8d44d") + (255,))
-    elif sid == "pal_bed" or sid == "straw_bed":
+    elif sid == "kin_bed" or sid == "straw_bed":
         d.polygon([(W//2 - 30, 30), (W//2 + 26, 30), (W//2 + 32, 40), (W//2 - 24, 40)],
                   fill=hxc("#f2e6ae") + (255,))
         d.line([(W//2 - 28, 36), (W//2 + 28, 36)], fill=hxc("#c4a678") + (255,), width=2)
@@ -731,7 +731,7 @@ def make_structure(sid, color, w, h):
         d.line([(W//2 - 14, 24), (W//2 + 14, 24)], fill=hxc("#4d9de0") + (255,), width=2)
         for (dx, dy) in ((-6, 30), (2, 33), (8, 29)):
             d.ellipse([W//2 + dx - 2, dy, W//2 + dx + 2, dy + 4], fill=hxc("#aef0fa") + (255,))
-    elif sid == "pal_condenser":
+    elif sid == "kin_condenser":
         # two joining cylinders + star spark between them
         d.rectangle([8, 16, 26, 44], fill=hxc("#5a448f") + (255,))
         d.rectangle([W - 26, 16, W - 8, 44], fill=hxc("#5a448f") + (255,))
@@ -788,7 +788,7 @@ def make_structure(sid, color, w, h):
         d.line([(W//2 - 8, 21), (W//2 + 8, 21)], fill=hxc("#ede0c8") + (255,), width=2)
         d.line([(W//2, 21), (W//2, 27)], fill=hxc("#ede0c8") + (255,), width=2)
     elif sid == "sphere_factory":
-        # conveyor bench rolling a fresh sphere — Palworld's assembly line
+        # conveyor bench rolling a fresh sphere — assembly line
         d.rectangle([W//2 - 22, 30, W//2 + 22, 40], fill=hxc("#5e462e") + (255,))
         for i in range(4):
             x = W//2 - 18 + i * 11
@@ -866,7 +866,7 @@ def make_structure(sid, color, w, h):
         d.rectangle([W//2 + 1, 20, W//2 + 3, 23], fill=hxc("#4a3c28") + (255,))
         for rx2 in (-9, -3, 4, 9):
             d.line([(W//2 + rx2, 34), (W//2 + rx2 + 3, 30)], fill=hxc("#d8ccb0") + (255,), width=2)
-    elif sid == "pal_gacha":
+    elif sid == "kin_gacha":
         # brass capsule machine — glass dome of eggs over a coin slot
         d.rectangle([W//2 - 10, 28, W//2 + 10, 44], fill=hxc("#a87830") + (255,))
         d.rectangle([W//2 - 10, 28, W//2 + 10, 30], fill=hxc("#e8b830") + (255,))
@@ -913,14 +913,14 @@ def make_structure(sid, color, w, h):
         d.line([(W//2, 12), (W//2 - 5, 6)], fill=hxc("#f0e060") + (255,), width=2)
         d.line([(W//2, 12), (W//2 + 5, 6)], fill=hxc("#f0e060") + (255,), width=2)
         d.line([(W//2, 12), (W//2, 4)], fill=hxc("#f0e060") + (255,), width=2)
-    elif sid == "pal_cage":
+    elif sid == "kin_cage":
         # iron-bar cage with a lockplate — grey bars on a dark frame
         d.rectangle([W//2 - 12, 10, W//2 + 12, 44], outline=hxc("#3a4450") + (255,), width=2)
         for bx9 in (-8, -4, 0, 4, 8):
             d.line([(W//2 + bx9, 11), (W//2 + bx9, 43)], fill=hxc("#6a7a8a") + (255,), width=2)
         d.rectangle([W//2 - 3, 24, W//2 + 3, 30], fill=hxc("#d8b84a") + (255,))
     elif sid == "weather_shrine":
-        # stone altar with a floating paldium crystal and swirling wind lines
+        # stone altar with a floating lumenite crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
         d.rectangle([W//2 - 8, 30, W//2 + 8, 36], fill=hxc("#8b8f92") + (255,))
         d.polygon([(W//2, 12), (W//2 + 7, 22), (W//2, 30), (W//2 - 7, 22)], fill=hxc("#4dd0e1") + (255,))
@@ -945,7 +945,7 @@ def make_structure(sid, color, w, h):
         d.line([(W//2 - 14, 27), (W//2 + 14, 27)], fill=hxc("#5e462e") + (255,), width=2)
         d.ellipse([W//2 - 5, 28, W//2 + 5, 33], fill=hxc("#9ac8e8") + (255,))
     elif sid == "expedition_post":
-        # rally flag over a supply crate — Palworld's dispatch camp
+        # rally flag over a supply crate — dispatch camp
         d.rectangle([W//2 - 20, 34, W//2 - 6, 44], fill=hxc("#8a6d4d") + (255,))
         d.rectangle([W//2 - 20, 38, W//2 - 6, 40], fill=hxc("#5e462e") + (255,))
         d.line([(W//2 + 6, 46), (W//2 + 6, 12)], fill=hxc("#5e462e") + (255,), width=3)
@@ -953,7 +953,7 @@ def make_structure(sid, color, w, h):
                   fill=hxc("#e05050") + (255,))
         d.ellipse([W//2 + 4, 10, W//2 + 8, 14], fill=hxc("#ede0c8") + (255,))
     elif sid == "waypoint":
-        # standing stone with a glowing paldium core
+        # standing stone with a glowing lumenite core
         d.polygon([(W//2 - 10, 48), (W//2 + 10, 48), (W//2 + 7, 16), (W//2 - 7, 16)],
                   fill=hxc("#6b6f72") + (255,))
         d.polygon([(W//2 - 4, 44), (W//2 + 4, 44), (W//2 + 3, 20), (W//2 - 3, 20)],
@@ -971,7 +971,7 @@ def make_structure(sid, color, w, h):
     return img
 
 STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
-    "palbox": ("#4dd0e1", 2, 2), "pal_bed": ("#ede0c8", 2, 1),
+    "kinbox": ("#4dd0e1", 2, 2), "kin_bed": ("#ede0c8", 2, 1),
     "feed_box": ("#b8a468", 1, 1), "campfire": ("#e8963c", 1, 1),
     "workbench": ("#7f8c8d", 2, 1), "logging_site": ("#4d7d47", 2, 2),
     "stone_pit": ("#6b6f72", 2, 2), "ore_mine": ("#a0622d", 2, 2),
@@ -982,7 +982,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "torch": ("#e8963c", 1, 1), "straw_bed": ("#b8a468", 2, 1),
     "gathering_site": ("#7d9a4a", 2, 2), "pharmacy": ("#8fd0a0", 2, 1),
     "cooler": ("#a8dff0", 1, 1), "oil_extractor": ("#4d565c", 2, 2),
-    "pal_condenser": ("#7a5ac9", 2, 1), "incubator": ("#f2a0b5", 2, 2),
+    "kin_condenser": ("#7a5ac9", 2, 1), "incubator": ("#f2a0b5", 2, 2),
     "wooden_wall": ("#8a6d4d", 1, 1), "spikes": ("#a98a5e", 1, 1),
     "hot_spring": ("#7ec8e3", 2, 2),
     "monitoring_stand": ("#d06a6a", 1, 1),
@@ -998,13 +998,13 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "sparring_ring": ("#a87848", 2, 2),
     "notice_board": ("#c9a15a", 1, 1),
     "snare_trap": ("#8a7a5a", 1, 1),
-    "pal_gacha": ("#e8b830", 1, 1),
+    "kin_gacha": ("#e8b830", 1, 1),
     "fossil_bed": ("#c8b890", 1, 1),
     "war_banner": ("#b84a3a", 1, 1),
     "spyglass": ("#7a9ab8", 1, 1),
     "well": ("#6a8ab0", 1, 1),
     "lightning_rod": ("#d8c04a", 1, 1),
-    "pal_cage": ("#6a7a8a", 1, 1),
+    "kin_cage": ("#6a7a8a", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
@@ -1080,105 +1080,105 @@ def decor():
 
 
 SPRITES.update({
-    "flambelle": ("blob", ["#e8734a", "#c9552f", "#ffd54f"], 0.25),
-    "rooby": ("kitty", ["#c93a4d", "#a32c3d", "#f5eee0"], 0.3),
-    "arsox": ("quadruped", ["#d1813c", "#a96a2f", "#ffd54f"], 0.2),
-    "incineram": ("human", ["#8a3d5c", "#6d2e48", "#e8734a"], 0.1),
-    "blazehowl": ("quadruped", ["#c9552f", "#9e3f22", "#ffd76e"], 0.15),
-    "bushi": ("human", ["#a83232", "#7d2525", "#e8c9a0"], 0.1),
-    "ragnahawk": ("bird", ["#e8734a", "#c9552f", "#3a3a4a"], 0.15),
-    "suzaku": ("bird", ["#e8452f", "#c93522", "#ffd76e"], 0.2),
-    "blazamut": ("cow", ["#8a4a4a", "#6d3838", "#e8734a"], 0.1),
-    "kelpsea": ("serpent", ["#5ab8d1", "#4296b0", "#9be8d8"], 0.2),
-    "chillet": ("quadruped", ["#8fd1e8", "#68b0d1", "#f5eee0"], 0.3),
-    "celaray": ("ghost", ["#7ec8e3", "#5aa8c4", "#c8e8f5"], 0.15),
-    "teafant": ("blob", ["#a8d8c8", "#85bfae", "#f5eee0"], 0.35),
-    "relaxaurus": ("cow", ["#6d9dc5", "#5480a8", "#8fd1a0"], 0.15),
-    "azurobe": ("serpent", ["#4d7db8", "#3a6196", "#9be8d8"], 0.1),
-    "jormuntide": ("serpent", ["#3a5a8a", "#2d4770", "#8fd1e8"], 0.1),
-    "gobfin": ("blob", ["#5a8db0", "#47708c", "#8fd1e8"], 0.2),
-    "surfdog": ("quadruped", ["#e8c46a", "#c9a34d", "#4dd0e1"], 0.3),
-    "ribbuny": ("mouse", ["#f2b8d1", "#d193ad", "#f5eee0"], 0.4),
-    "flopie": ("blob", ["#b8d77c", "#96ba5e", "#f5eee0"], 0.35),
-    "sweety": ("blob", ["#e8d44d", "#c9b23a", "#f5eee0"], 0.4),
-    "beegarde": ("human", ["#e8d44d", "#b89a2f", "#3a3a4a"], 0.1),
-    "bristla": ("quadruped", ["#7cb86a", "#5e9a4e", "#e8d44d"], 0.25),
-    "caprity": ("deer", ["#a8c97a", "#88a85c", "#f2b8d1"], 0.25),
-    "broncherry": ("quadruped", ["#c9b8d1", "#a89ab8", "#9be8d8"], 0.2),
-    "dinossom": ("quadruped", ["#8fc46a", "#6da350", "#e8734a"], 0.2),
-    "verdash": ("monkey", ["#6dc48a", "#4ea36a", "#e8d44d"], 0.2),
-    "mossanda": ("monkey", ["#7cb86a", "#5e9a4e", "#b8935f"], 0.15),
-    "grintale": ("kitty", ["#e8b8d1", "#c998b8", "#f5eee0"], 0.3),
-    "elizabee": ("ghost", ["#e8d44d", "#c9a82f", "#3a3a4a"], 0.15),
-    "vaelet": ("ghost", ["#c9a8e8", "#a885c9", "#f5eee0"], 0.25),
-    "cinnamoth": ("ghost", ["#e8c98a", "#c9a85e", "#f5eee0"], 0.3),
-    "lullu": ("ghost", ["#d8c8e8", "#b8a8c9", "#f5eee0"], 0.35),
-    "petallia": ("ghost", ["#f2b8d1", "#d193ad", "#9be8a0"], 0.3),
-    "univolt": ("deer", ["#e8d44d", "#c9a82f", "#4dd0e1"], 0.15),
-    "beakon": ("bird", ["#e8d44d", "#c9b23a", "#3a3a4a"], 0.15),
-    "rayhound": ("quadruped", ["#7ac9e8", "#5aa8c9", "#e8d44d"], 0.15),
-    "dazzi": ("mouse", ["#e8e0a8", "#c9be85", "#e8d44d"], 0.3),
-    "tocotoco": ("bird", ["#e8a83c", "#c9852a", "#3a3a4a"], 0.25),
-    "grizzbolt": ("cow", ["#8a7a5a", "#6d5e45", "#e8d44d"], 0.1),
-    "sweepa": ("quadruped", ["#b8d8e8", "#96b8c9", "#f5eee0"], 0.3),
-    "swee": ("blob", ["#c8e8f5", "#a5c9d8", "#f5eee0"], 0.4),
-    "wumpo": ("cow", ["#a8b8c9", "#8899aa", "#f5eee0"], 0.15),
-    "sibelyx": ("quadruped", ["#d8d8e8", "#b8b8d1", "#8fd1e8"], 0.25),
-    "reindrix": ("deer", ["#a8c9e8", "#85a8c9", "#f5eee0"], 0.2),
-    "frostallion": ("deer", ["#8fc9e8", "#6aa8c9", "#f5eee0"], 0.1),
-    "mau_cryst": ("kitty", ["#a8d8e8", "#85b8c9", "#e8f5fa"], 0.25),
-    "hangyu": ("ghost", ["#8fb8a8", "#6d9685", "#f5eee0"], 0.3),
-    "fuddler": ("mouse", ["#8a7a6a", "#6d5f52", "#d8b8a8"], 0.3),
-    "digtoise": ("hedgehog", ["#a8885a", "#8a6d45", "#d8c9a0"], 0.15),
-    "anubis": ("human", ["#5a5a8a", "#44446d", "#e8c9a0"], 0.1),
-    "reptyro": ("quadruped", ["#8a6d5a", "#6d5443", "#d89a5a"], 0.15),
-    "direhowl": ("quadruped", ["#8a8a9a", "#6d6d7d", "#f5eee0"], 0.15),
-    "galeclaw": ("bird", ["#7a9db8", "#5d82a0", "#e8d44d"], 0.15),
-    "cawgnito": ("bird", ["#5a5a6a", "#44445a", "#e8c98a"], 0.2),
-    "robinquill": ("human", ["#7ab86a", "#5d9a4e", "#e8c9a0"], 0.15),
-    "gorirat": ("monkey", ["#7a6a5a", "#5d5243", "#d8c9a0"], 0.2),
-    "woolipop": ("hedgehog", ["#f5d8e8", "#d8b8c9", "#f5eee0"], 0.45),
-    "melpaca": ("quadruped", ["#e8b8c9", "#c998ad", "#f5eee0"], 0.3),
-    "vixy": ("kitty", ["#e8c9a8", "#c9a888", "#f5eee0"], 0.35),
-    "lovander": ("human", ["#d88aa8", "#b86a8a", "#f5eee0"], 0.2),
-    "loupmoon": ("quadruped", ["#5a5a7a", "#43435e", "#c9d8e8"], 0.15),
-    "hoocrates": ("human", ["#7a6a8a", "#5d526d", "#e8d44d"], 0.2),
-    "killamari": ("ghost", ["#8a7ad1", "#6d5eb0", "#f5eee0"], 0.25),
-    "lunaris": ("human", ["#8aa8d1", "#6a85b0", "#f5eee0"], 0.2),
-    "nox": ("ghost", ["#8a6a9a", "#6d517d", "#f5eee0"], 0.3),
-    "maraith": ("ghost", ["#6a8a7a", "#526d5e", "#c9e8d8"], 0.25),
-    "catress": ("kitty", ["#9a7ab8", "#7d5e9a", "#e8d44d"], 0.25),
-    "wixen": ("human", ["#b87a9a", "#96587d", "#f5eee0"], 0.2),
-    "menasting": ("human", ["#4a3a5a", "#3a2d47", "#e8d44d"], 0.1),
-    "shadowbeak": ("bird", ["#5a4a7a", "#443761", "#e8452f"], 0.1),
-    "necromus": ("human", ["#6a5a7a", "#53455e", "#e8452f"], 0.1),
-    "helzephyr": ("bird", ["#6a5a8a", "#53456d", "#a8d8e8"], 0.15),
-    "tombat": ("blob", ["#8a7a9a", "#6d5f7d", "#d8c9a0"], 0.25),
-    "jetragon": ("bird", ["#5a8ad1", "#4370b0", "#e8d44d"], 0.1),
-    "paladius": ("human", ["#d8d8e8", "#b8b8d1", "#e8c9a0"], 0.1),
-    "quivern": ("bird", ["#8a9ad1", "#6a7cb0", "#f5eee0"], 0.15),
-    "astegon": ("quadruped", ["#4a4a6a", "#383853", "#e8452f"], 0.1),
-    "elphidran": ("quadruped", ["#a8c9e8", "#85a8c9", "#f5eee0"], 0.15),
-    "blazequil": ("hedgehog", ["#e88a4a", "#c96d2f", "#ffd76e"], 0.3),
-    "hydrostar": ("blob", ["#5ac9d1", "#42a8b0", "#f5eee0"], 0.3),
-    "stormpuff": ("ghost", ["#8ad1e8", "#68b0c9", "#e8d44d"], 0.3),
-    "emberwing": ("bird", ["#e8a85a", "#c98542", "#3a3a4a"], 0.2),
-    "mirelurk": ("hedgehog", ["#6a8a5a", "#526d45", "#d8c9a0"], 0.2),
-    "frostbun": ("mouse", ["#c9e8f5", "#a5c9d8", "#f5eee0"], 0.4),
-    "thornite": ("hedgehog", ["#7a8a6a", "#5e6d52", "#c9b88a"], 0.2),
-    "dreadmaw": ("serpent", ["#5a4a6a", "#453a53", "#e8452f"], 0.1),
-    "glimmora": ("ghost", ["#c9d8a8", "#a8b885", "#e8d44d"], 0.3),
-    "cragboar": ("boar", ["#8a7a6a", "#6d5f52", "#d8c9a0"], 0.15),
-    "vapori": ("ghost", ["#a8e8d8", "#85c9b8", "#f5eee0"], 0.35),
-    "bombird": ("bird", ["#9a6a4a", "#7d523a", "#e8734a"], 0.15),
-    "pyropup": ("quadruped", ["#e8734a", "#c9552f", "#f5eee0"], 0.3),
-    "dustmite": ("hedgehog", ["#a89468", "#8a7452", "#d8c9a0"], 0.35),
-    "brackent": ("serpent", ["#3a7a9a", "#2d6080", "#9be8d8"], 0.15),
-    "thundergeist": ("ghost", ["#5a5ae8", "#3a3aa8", "#e8d44d"], 0.1),
+    "pyrejelly": ("blob", ["#e8734a", "#c9552f", "#ffd54f"], 0.25),
+    "branpurr": ("kitty", ["#c93a4d", "#a32c3d", "#f5eee0"], 0.3),
+    "scalfang": ("quadruped", ["#d1813c", "#a96a2f", "#ffd54f"], 0.2),
+    "pyresmith": ("human", ["#8a3d5c", "#6d2e48", "#e8734a"], 0.1),
+    "cindpaw": ("quadruped", ["#c9552f", "#9e3f22", "#ffd76e"], 0.15),
+    "branling": ("human", ["#a83232", "#7d2525", "#e8c9a0"], 0.1),
+    "pyreplume": ("bird", ["#e8734a", "#c9552f", "#3a3a4a"], 0.15),
+    "flarbeak": ("bird", ["#e8452f", "#c93522", "#ffd76e"], 0.2),
+    "cindchew": ("cow", ["#8a4a4a", "#6d3838", "#e8734a"], 0.1),
+    "bubwrith": ("serpent", ["#5ab8d1", "#4296b0", "#9be8d8"], 0.2),
+    "frostfang": ("quadruped", ["#8fd1e8", "#68b0d1", "#f5eee0"], 0.3),
+    "bringloom": ("ghost", ["#7ec8e3", "#5aa8c4", "#c8e8f5"], 0.15),
+    "lazpuff": ("blob", ["#a8d8c8", "#85bfae", "#f5eee0"], 0.35),
+    "ripbell": ("cow", ["#6d9dc5", "#5480a8", "#8fd1a0"], 0.15),
+    "ripwrith": ("serpent", ["#4d7db8", "#3a6196", "#9be8d8"], 0.1),
+    "tidscale": ("serpent", ["#3a5a8a", "#2d4770", "#8fd1e8"], 0.1),
+    "bubgoo": ("blob", ["#5a8db0", "#47708c", "#8fd1e8"], 0.2),
+    "dewmane": ("quadruped", ["#e8c46a", "#c9a34d", "#4dd0e1"], 0.3),
+    "hushnib": ("mouse", ["#f2b8d1", "#d193ad", "#f5eee0"], 0.4),
+    "thornmelt": ("blob", ["#b8d77c", "#96ba5e", "#f5eee0"], 0.35),
+    "mossjelly": ("blob", ["#e8d44d", "#c9b23a", "#f5eee0"], 0.4),
+    "wortling": ("human", ["#e8d44d", "#b89a2f", "#3a3a4a"], 0.1),
+    "thornhoof": ("quadruped", ["#7cb86a", "#5e9a4e", "#e8d44d"], 0.25),
+    "petalantler": ("deer", ["#a8c97a", "#88a85c", "#f2b8d1"], 0.25),
+    "leaftrot": ("quadruped", ["#c9b8d1", "#a89ab8", "#9be8d8"], 0.2),
+    "briarmaw": ("quadruped", ["#8fc46a", "#6da350", "#e8734a"], 0.2),
+    "briarchim": ("monkey", ["#6dc48a", "#4ea36a", "#e8d44d"], 0.2),
+    "fernchim": ("monkey", ["#7cb86a", "#5e9a4e", "#b8935f"], 0.15),
+    "tawtail": ("kitty", ["#e8b8d1", "#c998b8", "#f5eee0"], 0.3),
+    "mossveil": ("ghost", ["#e8d44d", "#c9a82f", "#3a3a4a"], 0.15),
+    "ivyveil": ("ghost", ["#c9a8e8", "#a885c9", "#f5eee0"], 0.25),
+    "mosswisp": ("ghost", ["#e8c98a", "#c9a85e", "#f5eee0"], 0.3),
+    "fernveil": ("ghost", ["#d8c8e8", "#b8a8c9", "#f5eee0"], 0.35),
+    "floraling": ("ghost", ["#f2b8d1", "#d193ad", "#9be8a0"], 0.3),
+    "statstride": ("deer", ["#e8d44d", "#c9a82f", "#4dd0e1"], 0.15),
+    "zapplume": ("bird", ["#e8d44d", "#c9b23a", "#3a3a4a"], 0.15),
+    "zaptrot": ("quadruped", ["#7ac9e8", "#5aa8c9", "#e8d44d"], 0.15),
+    "sparkwhisk": ("mouse", ["#e8e0a8", "#c9be85", "#e8d44d"], 0.3),
+    "tambeak": ("bird", ["#e8a83c", "#c9852a", "#3a3a4a"], 0.25),
+    "statchew": ("cow", ["#8a7a5a", "#6d5e45", "#e8d44d"], 0.1),
+    "rimemane": ("quadruped", ["#b8d8e8", "#96b8c9", "#f5eee0"], 0.3),
+    "glaclump": ("blob", ["#c8e8f5", "#a5c9d8", "#f5eee0"], 0.4),
+    "snovmool": ("cow", ["#a8b8c9", "#8899aa", "#f5eee0"], 0.15),
+    "glacmane": ("quadruped", ["#d8d8e8", "#b8b8d1", "#8fd1e8"], 0.25),
+    "snovfawn": ("deer", ["#a8c9e8", "#85a8c9", "#f5eee0"], 0.2),
+    "snovstride": ("deer", ["#8fc9e8", "#6aa8c9", "#f5eee0"], 0.1),
+    "snowtail": ("kitty", ["#a8d8e8", "#85b8c9", "#e8f5fa"], 0.25),
+    "chilgloom": ("ghost", ["#8fb8a8", "#6d9685", "#f5eee0"], 0.3),
+    "terrnib": ("mouse", ["#8a7a6a", "#6d5f52", "#d8b8a8"], 0.3),
+    "loamquill": ("hedgehog", ["#a8885a", "#8a6d45", "#d8c9a0"], 0.15),
+    "terrkin": ("human", ["#5a5a8a", "#44446d", "#e8c9a0"], 0.1),
+    "grithoof": ("quadruped", ["#8a6d5a", "#6d5443", "#d89a5a"], 0.15),
+    "tammane": ("quadruped", ["#8a8a9a", "#6d6d7d", "#f5eee0"], 0.15),
+    "bramplume": ("bird", ["#7a9db8", "#5d82a0", "#e8d44d"], 0.15),
+    "murkwing": ("bird", ["#5a5a6a", "#44445a", "#e8c98a"], 0.2),
+    "worthand": ("human", ["#7ab86a", "#5d9a4e", "#e8c9a0"], 0.15),
+    "puffchim": ("monkey", ["#7a6a5a", "#5d5243", "#d8c9a0"], 0.2),
+    "mimspike": ("hedgehog", ["#f5d8e8", "#d8b8c9", "#f5eee0"], 0.45),
+    "mimtrot": ("quadruped", ["#e8b8c9", "#c998ad", "#f5eee0"], 0.3),
+    "doztail": ("kitty", ["#e8c9a8", "#c9a888", "#f5eee0"], 0.35),
+    "hushsmith": ("human", ["#d88aa8", "#b86a8a", "#f5eee0"], 0.2),
+    "noctmane": ("quadruped", ["#5a5a7a", "#43435e", "#c9d8e8"], 0.15),
+    "shadehand": ("human", ["#7a6a8a", "#5d526d", "#e8d44d"], 0.2),
+    "noctgloom": ("ghost", ["#8a7ad1", "#6d5eb0", "#f5eee0"], 0.25),
+    "grimling": ("human", ["#8aa8d1", "#6a85b0", "#f5eee0"], 0.2),
+    "shadegloom": ("ghost", ["#8a6a9a", "#6d517d", "#f5eee0"], 0.3),
+    "shadewisp": ("ghost", ["#6a8a7a", "#526d5e", "#c9e8d8"], 0.25),
+    "duskpurr": ("kitty", ["#9a7ab8", "#7d5e9a", "#e8d44d"], 0.25),
+    "veilkin": ("human", ["#b87a9a", "#96587d", "#f5eee0"], 0.2),
+    "shadesmith": ("human", ["#4a3a5a", "#3a2d47", "#e8d44d"], 0.1),
+    "veilplume": ("bird", ["#5a4a7a", "#443761", "#e8452f"], 0.1),
+    "shadekin": ("human", ["#6a5a7a", "#53455e", "#e8452f"], 0.1),
+    "noctplume": ("bird", ["#6a5a8a", "#53456d", "#a8d8e8"], 0.15),
+    "duskwing": ("blob", ["#8a7a9a", "#6d5f7d", "#d8c9a0"], 0.25),
+    "scalbeak": ("bird", ["#5a8ad1", "#4370b0", "#e8d44d"], 0.1),
+    "nibhand": ("human", ["#d8d8e8", "#b8b8d1", "#e8c9a0"], 0.1),
+    "scalcrest": ("bird", ["#8a9ad1", "#6a7cb0", "#f5eee0"], 0.15),
+    "wyrmhoof": ("quadruped", ["#4a4a6a", "#383853", "#e8452f"], 0.1),
+    "vermtrot": ("quadruped", ["#a8c9e8", "#85a8c9", "#f5eee0"], 0.15),
+    "embquill": ("hedgehog", ["#e88a4a", "#c96d2f", "#ffd76e"], 0.3),
+    "dewpuff": ("blob", ["#5ac9d1", "#42a8b0", "#f5eee0"], 0.3),
+    "faradwisp": ("ghost", ["#8ad1e8", "#68b0c9", "#e8d44d"], 0.3),
+    "soltalon": ("bird", ["#e8a85a", "#c98542", "#3a3a4a"], 0.2),
+    "lazburr": ("hedgehog", ["#6a8a5a", "#526d45", "#d8c9a0"], 0.2),
+    "rimewhisk": ("mouse", ["#c9e8f5", "#a5c9d8", "#f5eee0"], 0.4),
+    "wortquill": ("hedgehog", ["#7a8a6a", "#5e6d52", "#c9b88a"], 0.2),
+    "noctfang": ("serpent", ["#5a4a6a", "#453a53", "#e8452f"], 0.1),
+    "sprigveil": ("ghost", ["#c9d8a8", "#a8b885", "#e8d44d"], 0.3),
+    "digsnout": ("boar", ["#8a7a6a", "#6d5f52", "#d8c9a0"], 0.15),
+    "bubgloom": ("ghost", ["#a8e8d8", "#85c9b8", "#f5eee0"], 0.35),
+    "brancrest": ("bird", ["#9a6a4a", "#7d523a", "#e8734a"], 0.15),
+    "embpaw": ("quadruped", ["#e8734a", "#c9552f", "#f5eee0"], 0.3),
+    "gritmite": ("hedgehog", ["#a89468", "#8a7452", "#d8c9a0"], 0.35),
+    "corlfang": ("serpent", ["#3a7a9a", "#2d6080", "#9be8d8"], 0.15),
+    "sparkhaunt": ("ghost", ["#5a5ae8", "#3a3aa8", "#e8d44d"], 0.1),
 })
 
 if __name__ == "__main__":
-    print("generating pals…")
+    print("generating kin…")
     for sid in SPRITES:
         render_pal(sid)
     print("generating atlas…")

@@ -98,12 +98,12 @@ export class World {
         this.elev[i] = 1; // flat spawn plateau
       }
     }
-    // scatter wild resource tiles: berry bushes & paldium on sand
+    // scatter wild resource tiles: berry bushes & lumenite on sand
     for (let y = 0; y < WORLD_H; y++) {
       for (let x = 0; x < WORLD_W; x++) {
         const i = this.idx(x, y);
         if (this.tiles[i] === "tallgrass" && hash2(x, y, seed + 5) < 0.2) this.tiles[i] = "flower"; // flower marks berry bushes visually
-        if (this.tiles[i] === "sand" && hash2(x, y, seed + 9) < 0.12) { this.tiles[i] = "ore"; this.hp[i] = 45; } // paldium-ish nodes on sand
+        if (this.tiles[i] === "sand" && hash2(x, y, seed + 9) < 0.12) { this.tiles[i] = "ore"; this.hp[i] = 45; } // lumenite-ish nodes on sand
       }
     }
     // ramps: slope tiles wherever a land tile borders a different elevation

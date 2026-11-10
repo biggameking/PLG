@@ -12,11 +12,11 @@ func _boot() -> void:
 	rng.seed = 7
 
 	var base_n := int(Performance.get_monitor(Performance.OBJECT_COUNT))
-	print("=== baseline objects=%d pals=%d drops=%d nodes(el)=%d ==="
+	print("=== baseline objects=%d kin=%d drops=%d nodes(el)=%d ==="
 		% [base_n, game.pals.size(), game.drops.size(), game.entity_layer.get_child_count()])
 
 	for round in 3:
-		# 1) spawn + kill churn: wild pals live, drop loot, get collected
+		# 1) spawn + kill churn: wild kin live, drop loot, get collected
 		var made := []
 		for i in 40:
 			var a: float = rng.randf() * TAU
@@ -46,10 +46,10 @@ func _boot() -> void:
 		for c in built:
 			if game.structures.has(c):
 				game.raze_structure(game.structures[c])
-		# 2b) box churn: catch -> box -> butcher round trip on disposable pals
+		# 2b) box churn: catch -> box -> butcher round trip on disposable kin
 		game.add_item("meat_cleaver", 1)
 		for i3 in 6:
-			var cp: Pal = game.gen_pal("chikipi", 3, game.player.pos)
+			var cp: Pal = game.gen_pal("fenlump", 3, game.player.pos)
 			cp.mode = "box"; game.box.append(cp); game.box_pal(cp)
 			game.butcher_pal(cp.uid)
 		for d2 in game.drops.duplicate():
@@ -59,7 +59,7 @@ func _boot() -> void:
 		game.load_game()
 		for i2 in 120: # let kill floaters/labels age out before counting — transients aren't leaks
 			await process_frame
-		print("=== round %d objects=%d pals=%d box=%d drops=%d el=%d ==="
+		print("=== round %d objects=%d kin=%d box=%d drops=%d el=%d ==="
 			% [round, int(Performance.get_monitor(Performance.OBJECT_COUNT)),
 				game.pals.size(), game.box.size(),
 				game.drops.size(), game.entity_layer.get_child_count()])

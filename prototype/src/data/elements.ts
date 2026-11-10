@@ -1,4 +1,4 @@
-// Palworld's element chart: each element is super-effective vs ~1 element,
+// element chart: each element is super-effective vs ~1 element,
 // resisted by itself. Neutral is weak vs Dark, strong vs nothing.
 export type Element =
   | "neutral" | "fire" | "water" | "grass" | "electric"

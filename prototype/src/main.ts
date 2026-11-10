@@ -71,7 +71,7 @@ function update(dt: number): void {
     if (input.hit("i") && s.mode !== "build" && !s.buildSel) s.mode = s.mode === "inv" ? "play" : "inv";
     if (input.hit("b") && !s.buildSel) s.mode = s.mode === "build" ? "play" : "build";
     if (input.hit("t")) s.mode = s.mode === "tech" ? "play" : "tech";
-    if (input.hit("p")) s.mode = s.mode === "palbox" ? "play" : "palbox";
+    if (input.hit("p")) s.mode = s.mode === "kinbox" ? "play" : "kinbox";
     if (input.hit("h")) s.mode = s.mode === "help" ? "play" : "help";
   }
 
@@ -254,7 +254,7 @@ function render(): void {
   if (s.aimSphere) ui.drawAim(r, s, input, r.camX, r.camY);
   switch (s.mode) {
     case "inv": ui.drawInventory(r, s, input); break;
-    case "palbox": ui.drawPalbox(r, s, input); break;
+    case "kinbox": ui.drawKinbox(r, s, input); break;
     case "build": {
       const res = ui.drawBuild(r, s, input);
       if (res.sel) { s.buildSel = res.sel; s.mode = "play"; }

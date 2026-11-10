@@ -1,4 +1,4 @@
-// Structure placement + interactions (build, harvest stations, chests, beds, palbox).
+// Structure placement + interactions (build, harvest stations, chests, beds, kinbox).
 import { GameState, Structure, BASE_RADIUS, WORLD_W, WORLD_H, uid } from "./types.ts";
 import { STRUCTURES } from "../data/structures.ts";
 import { ITEMS, RECIPES, Recipe } from "../data/items.ts";
@@ -9,8 +9,8 @@ import { storageStructures, feedBoxes, storageAdd, completeJob } from "./jobs.ts
 export function placeStructure(s: GameState, world: World, defId: string, x: number, y: number): boolean {
   const def = STRUCTURES[defId];
   if (!def) return false;
-  if (def.anchor && s.structures.some((st) => st.defId === "palbox")) {
-    log(s, "You already have a Palbox.");
+  if (def.anchor && s.structures.some((st) => st.defId === "kinbox")) {
+    log(s, "You already have a Kinbox.");
     return false;
   }
   if (!payCost(s, def.cost)) {
@@ -28,7 +28,7 @@ export function placeStructure(s: GameState, world: World, defId: string, x: num
       world.structures.add(world.idx(tx, ty));
   if (def.anchor) {
     s.baseCenter = { x: x + 1, y: y + 1 };
-    log(s, "Palbox established! This is now your base.");
+    log(s, "Kinbox established! This is now your base.");
   }
   log(s, `Built ${def.name}.`);
   return true;

@@ -1,9 +1,9 @@
 class_name SpeciesGen
 
 const SPECIES = {
- "flambelle": {
-  "id": "flambelle",
-  "name": "Flambelle",
+ "pyrejelly": {
+  "id": "pyrejelly",
+  "name": "Pyrejelly",
   "glyph": "f",
   "color": "#e8734a",
   "elements": [
@@ -40,9 +40,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "rooby": {
-  "id": "rooby",
-  "name": "Rooby",
+ "branpurr": {
+  "id": "branpurr",
+  "name": "Branpurr",
   "glyph": "r",
   "color": "#c93a4d",
   "elements": [
@@ -84,9 +84,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "kitty"
  },
- "arsox": {
-  "id": "arsox",
-  "name": "Arsox",
+ "scalfang": {
+  "id": "scalfang",
+  "name": "Scalfang",
   "glyph": "a",
   "color": "#d1813c",
   "elements": [
@@ -128,9 +128,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "quadruped"
  },
- "incineram": {
-  "id": "incineram",
-  "name": "Incineram",
+ "pyresmith": {
+  "id": "pyresmith",
+  "name": "Pyresmith",
   "glyph": "i",
   "color": "#8a3d5c",
   "elements": [
@@ -182,9 +182,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "human"
  },
- "blazehowl": {
-  "id": "blazehowl",
-  "name": "Blazehowl",
+ "cindpaw": {
+  "id": "cindpaw",
+  "name": "Cindpaw",
   "glyph": "b",
   "color": "#c9552f",
   "elements": [
@@ -230,9 +230,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "quadruped"
  },
- "bushi": {
-  "id": "bushi",
-  "name": "Bushi",
+ "branling": {
+  "id": "branling",
+  "name": "Branling",
   "glyph": "b",
   "color": "#a83232",
   "elements": [
@@ -275,13 +275,13 @@ const SPECIES = {
     3
    ]
   ],
-  "desc": "Fire-blade ronin pal.",
+  "desc": "Fire-blade ronin kin.",
   "hostile": 2,
   "body": "human"
  },
- "ragnahawk": {
-  "id": "ragnahawk",
-  "name": "Ragnahawk",
+ "pyreplume": {
+  "id": "pyreplume",
+  "name": "Pyreplume",
   "glyph": "r",
   "color": "#e8734a",
   "elements": [
@@ -328,9 +328,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "bird"
  },
- "suzaku": {
-  "id": "suzaku",
-  "name": "Suzaku",
+ "flarbeak": {
+  "id": "flarbeak",
+  "name": "Flarbeak",
   "glyph": "s",
   "color": "#e8452f",
   "elements": [
@@ -376,9 +376,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "bird"
  },
- "blazamut": {
-  "id": "blazamut",
-  "name": "Blazamut",
+ "cindchew": {
+  "id": "cindchew",
+  "name": "Cindchew",
   "glyph": "b",
   "color": "#8a4a4a",
   "elements": [
@@ -425,9 +425,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "cow"
  },
- "kelpsea": {
-  "id": "kelpsea",
-  "name": "Kelpsea",
+ "bubwrith": {
+  "id": "bubwrith",
+  "name": "Bubwrith",
   "glyph": "k",
   "color": "#5ab8d1",
   "elements": [
@@ -464,9 +464,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "serpent"
  },
- "chillet": {
-  "id": "chillet",
-  "name": "Chillet",
+ "frostfang": {
+  "id": "frostfang",
+  "name": "Frostfang",
   "glyph": "c",
   "color": "#8fd1e8",
   "elements": [
@@ -510,13 +510,13 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Otter-dragon glide pal.",
+  "desc": "Otter-dragon glide kin.",
   "hostile": 0,
   "body": "quadruped"
  },
- "celaray": {
-  "id": "celaray",
-  "name": "Celaray",
+ "bringloom": {
+  "id": "bringloom",
+  "name": "Bringloom",
   "glyph": "c",
   "color": "#7ec8e3",
   "elements": [
@@ -553,9 +553,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "teafant": {
-  "id": "teafant",
-  "name": "Teafant",
+ "lazpuff": {
+  "id": "lazpuff",
+  "name": "Lazpuff",
   "glyph": "t",
   "color": "#a8d8c8",
   "elements": [
@@ -592,9 +592,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "relaxaurus": {
-  "id": "relaxaurus",
-  "name": "Relaxaurus",
+ "ripbell": {
+  "id": "ripbell",
+  "name": "Ripbell",
   "glyph": "r",
   "color": "#6d9dc5",
   "elements": [
@@ -646,9 +646,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "cow"
  },
- "azurobe": {
-  "id": "azurobe",
-  "name": "Azurobe",
+ "ripwrith": {
+  "id": "ripwrith",
+  "name": "Ripwrith",
   "glyph": "a",
   "color": "#4d7db8",
   "elements": [
@@ -699,9 +699,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "serpent"
  },
- "jormuntide": {
-  "id": "jormuntide",
-  "name": "Jormuntide",
+ "tidscale": {
+  "id": "tidscale",
+  "name": "Tidscale",
   "glyph": "j",
   "color": "#3a5a8a",
   "elements": [
@@ -752,9 +752,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "serpent"
  },
- "gobfin": {
-  "id": "gobfin",
-  "name": "Gobfin",
+ "bubgoo": {
+  "id": "bubgoo",
+  "name": "Bubgoo",
   "glyph": "g",
   "color": "#5a8db0",
   "elements": [
@@ -797,9 +797,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "blob"
  },
- "surfdog": {
-  "id": "surfdog",
-  "name": "Surfdog",
+ "dewmane": {
+  "id": "dewmane",
+  "name": "Dewmane",
   "glyph": "s",
   "color": "#e8c46a",
   "elements": [
@@ -838,13 +838,13 @@ const SPECIES = {
     1
    ]
   ],
-  "desc": "Surfing retriever pal.",
+  "desc": "Surfing retriever kin.",
   "hostile": 0,
   "body": "quadruped"
  },
- "ribbuny": {
-  "id": "ribbuny",
-  "name": "Ribbuny",
+ "hushnib": {
+  "id": "hushnib",
+  "name": "Hushnib",
   "glyph": "r",
   "color": "#f2b8d1",
   "elements": [
@@ -887,9 +887,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "mouse"
  },
- "flopie": {
-  "id": "flopie",
-  "name": "Flopie",
+ "thornmelt": {
+  "id": "thornmelt",
+  "name": "Thornmelt",
   "glyph": "f",
   "color": "#b8d77c",
   "elements": [
@@ -931,9 +931,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "sweety": {
-  "id": "sweety",
-  "name": "Sweety",
+ "mossjelly": {
+  "id": "mossjelly",
+  "name": "Mossjelly",
   "glyph": "s",
   "color": "#e8d44d",
   "elements": [
@@ -971,9 +971,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "beegarde": {
-  "id": "beegarde",
-  "name": "Beegarde",
+ "wortling": {
+  "id": "wortling",
+  "name": "Wortling",
   "glyph": "b",
   "color": "#e8d44d",
   "elements": [
@@ -1016,9 +1016,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "human"
  },
- "bristla": {
-  "id": "bristla",
-  "name": "Bristla",
+ "thornhoof": {
+  "id": "thornhoof",
+  "name": "Thornhoof",
   "glyph": "b",
   "color": "#7cb86a",
   "elements": [
@@ -1061,9 +1061,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "caprity": {
-  "id": "caprity",
-  "name": "Caprity",
+ "petalantler": {
+  "id": "petalantler",
+  "name": "Petalantler",
   "glyph": "c",
   "color": "#a8c97a",
   "elements": [
@@ -1105,9 +1105,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "deer"
  },
- "broncherry": {
-  "id": "broncherry",
-  "name": "Broncherry",
+ "leaftrot": {
+  "id": "leaftrot",
+  "name": "Leaftrot",
   "glyph": "b",
   "color": "#c9b8d1",
   "elements": [
@@ -1154,9 +1154,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "dinossom": {
-  "id": "dinossom",
-  "name": "Dinossom",
+ "briarmaw": {
+  "id": "briarmaw",
+  "name": "Briarmaw",
   "glyph": "d",
   "color": "#8fc46a",
   "elements": [
@@ -1204,9 +1204,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "quadruped"
  },
- "verdash": {
-  "id": "verdash",
-  "name": "Verdash",
+ "briarchim": {
+  "id": "briarchim",
+  "name": "Briarchim",
   "glyph": "v",
   "color": "#6dc48a",
   "elements": [
@@ -1250,9 +1250,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "monkey"
  },
- "mossanda": {
-  "id": "mossanda",
-  "name": "Mossanda",
+ "fernchim": {
+  "id": "fernchim",
+  "name": "Fernchim",
   "glyph": "m",
   "color": "#7cb86a",
   "elements": [
@@ -1300,9 +1300,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "monkey"
  },
- "grintale": {
-  "id": "grintale",
-  "name": "Grintale",
+ "tawtail": {
+  "id": "tawtail",
+  "name": "Tawtail",
   "glyph": "g",
   "color": "#e8b8d1",
   "elements": [
@@ -1345,9 +1345,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "kitty"
  },
- "elizabee": {
-  "id": "elizabee",
-  "name": "Elizabee",
+ "mossveil": {
+  "id": "mossveil",
+  "name": "Mossveil",
   "glyph": "e",
   "color": "#e8d44d",
   "elements": [
@@ -1395,9 +1395,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "ghost"
  },
- "vaelet": {
-  "id": "vaelet",
-  "name": "Vaelet",
+ "ivyveil": {
+  "id": "ivyveil",
+  "name": "Ivyveil",
   "glyph": "v",
   "color": "#c9a8e8",
   "elements": [
@@ -1435,9 +1435,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "cinnamoth": {
-  "id": "cinnamoth",
-  "name": "Cinnamoth",
+ "mosswisp": {
+  "id": "mosswisp",
+  "name": "Mosswisp",
   "glyph": "c",
   "color": "#e8c98a",
   "elements": [
@@ -1475,9 +1475,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "lullu": {
-  "id": "lullu",
-  "name": "Lullu",
+ "fernveil": {
+  "id": "fernveil",
+  "name": "Fernveil",
   "glyph": "l",
   "color": "#d8c8e8",
   "elements": [
@@ -1514,9 +1514,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "petallia": {
-  "id": "petallia",
-  "name": "Petallia",
+ "floraling": {
+  "id": "floraling",
+  "name": "Floraling",
   "glyph": "p",
   "color": "#f2b8d1",
   "elements": [
@@ -1554,9 +1554,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "univolt": {
-  "id": "univolt",
-  "name": "Univolt",
+ "statstride": {
+  "id": "statstride",
+  "name": "Statstride",
   "glyph": "u",
   "color": "#e8d44d",
   "elements": [
@@ -1598,9 +1598,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "deer"
  },
- "beakon": {
-  "id": "beakon",
-  "name": "Beakon",
+ "zapplume": {
+  "id": "zapplume",
+  "name": "Zapplume",
   "glyph": "b",
   "color": "#e8d44d",
   "elements": [
@@ -1647,9 +1647,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "bird"
  },
- "rayhound": {
-  "id": "rayhound",
-  "name": "Rayhound",
+ "zaptrot": {
+  "id": "zaptrot",
+  "name": "Zaptrot",
   "glyph": "r",
   "color": "#7ac9e8",
   "elements": [
@@ -1695,9 +1695,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "quadruped"
  },
- "dazzi": {
-  "id": "dazzi",
-  "name": "Dazzi",
+ "sparkwhisk": {
+  "id": "sparkwhisk",
+  "name": "Sparkwhisk",
   "glyph": "d",
   "color": "#e8e0a8",
   "elements": [
@@ -1735,9 +1735,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "mouse"
  },
- "tocotoco": {
-  "id": "tocotoco",
-  "name": "Tocotoco",
+ "tambeak": {
+  "id": "tambeak",
+  "name": "Tambeak",
   "glyph": "t",
   "color": "#e8a83c",
   "elements": [
@@ -1779,9 +1779,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "bird"
  },
- "grizzbolt": {
-  "id": "grizzbolt",
-  "name": "Grizzbolt",
+ "statchew": {
+  "id": "statchew",
+  "name": "Statchew",
   "glyph": "g",
   "color": "#8a7a5a",
   "elements": [
@@ -1828,9 +1828,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "cow"
  },
- "sweepa": {
-  "id": "sweepa",
-  "name": "Sweepa",
+ "rimemane": {
+  "id": "rimemane",
+  "name": "Rimemane",
   "glyph": "s",
   "color": "#b8d8e8",
   "elements": [
@@ -1873,9 +1873,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "swee": {
-  "id": "swee",
-  "name": "Swee",
+ "glaclump": {
+  "id": "glaclump",
+  "name": "Glaclump",
   "glyph": "s",
   "color": "#c8e8f5",
   "elements": [
@@ -1912,9 +1912,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "wumpo": {
-  "id": "wumpo",
-  "name": "Wumpo",
+ "snovmool": {
+  "id": "snovmool",
+  "name": "Snovmool",
   "glyph": "w",
   "color": "#a8b8c9",
   "elements": [
@@ -1962,9 +1962,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "cow"
  },
- "sibelyx": {
-  "id": "sibelyx",
-  "name": "Sibelyx",
+ "glacmane": {
+  "id": "glacmane",
+  "name": "Glacmane",
   "glyph": "s",
   "color": "#d8d8e8",
   "elements": [
@@ -2011,9 +2011,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "reindrix": {
-  "id": "reindrix",
-  "name": "Reindrix",
+ "snovfawn": {
+  "id": "snovfawn",
+  "name": "Snovfawn",
   "glyph": "r",
   "color": "#a8c9e8",
   "elements": [
@@ -2056,9 +2056,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "deer"
  },
- "frostallion": {
-  "id": "frostallion",
-  "name": "Frostallion",
+ "snovstride": {
+  "id": "snovstride",
+  "name": "Snovstride",
   "glyph": "f",
   "color": "#8fc9e8",
   "elements": [
@@ -2104,9 +2104,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "deer"
  },
- "mau_cryst": {
-  "id": "mau_cryst",
-  "name": "Mau Cryst",
+ "snowtail": {
+  "id": "snowtail",
+  "name": "Snowtail",
   "glyph": "m",
   "color": "#a8d8e8",
   "elements": [
@@ -2144,13 +2144,13 @@ const SPECIES = {
     2
    ]
   ],
-  "desc": "Icy Mau variant.",
+  "desc": "Icy Shademelt variant.",
   "hostile": 0,
   "body": "kitty"
  },
- "hangyu": {
-  "id": "hangyu",
-  "name": "Hangyu",
+ "chilgloom": {
+  "id": "chilgloom",
+  "name": "Chilgloom",
   "glyph": "h",
   "color": "#8fb8a8",
   "elements": [
@@ -2188,9 +2188,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "fuddler": {
-  "id": "fuddler",
-  "name": "Fuddler",
+ "terrnib": {
+  "id": "terrnib",
+  "name": "Terrnib",
   "glyph": "f",
   "color": "#8a7a6a",
   "elements": [
@@ -2233,9 +2233,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "mouse"
  },
- "digtoise": {
-  "id": "digtoise",
-  "name": "Digtoise",
+ "loamquill": {
+  "id": "loamquill",
+  "name": "Loamquill",
   "glyph": "d",
   "color": "#a8885a",
   "elements": [
@@ -2277,9 +2277,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "hedgehog"
  },
- "anubis": {
-  "id": "anubis",
-  "name": "Anubis",
+ "terrkin": {
+  "id": "terrkin",
+  "name": "Terrkin",
   "glyph": "a",
   "color": "#5a5a8a",
   "elements": [
@@ -2332,9 +2332,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "human"
  },
- "reptyro": {
-  "id": "reptyro",
-  "name": "Reptyro",
+ "grithoof": {
+  "id": "grithoof",
+  "name": "Grithoof",
   "glyph": "r",
   "color": "#8a6d5a",
   "elements": [
@@ -2386,9 +2386,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "quadruped"
  },
- "direhowl": {
-  "id": "direhowl",
-  "name": "Direhowl",
+ "tammane": {
+  "id": "tammane",
+  "name": "Tammane",
   "glyph": "d",
   "color": "#8a8a9a",
   "elements": [
@@ -2431,9 +2431,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "quadruped"
  },
- "galeclaw": {
-  "id": "galeclaw",
-  "name": "Galeclaw",
+ "bramplume": {
+  "id": "bramplume",
+  "name": "Bramplume",
   "glyph": "g",
   "color": "#7a9db8",
   "elements": [
@@ -2475,9 +2475,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "bird"
  },
- "cawgnito": {
-  "id": "cawgnito",
-  "name": "Cawgnito",
+ "murkwing": {
+  "id": "murkwing",
+  "name": "Murkwing",
   "glyph": "c",
   "color": "#5a5a6a",
   "elements": [
@@ -2520,9 +2520,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "bird"
  },
- "robinquill": {
-  "id": "robinquill",
-  "name": "Robinquill",
+ "worthand": {
+  "id": "worthand",
+  "name": "Worthand",
   "glyph": "r",
   "color": "#7ab86a",
   "elements": [
@@ -2562,13 +2562,13 @@ const SPECIES = {
     2
    ]
   ],
-  "desc": "Forest archer pal.",
+  "desc": "Forest archer kin.",
   "hostile": 0,
   "body": "human"
  },
- "gorirat": {
-  "id": "gorirat",
-  "name": "Gorirat",
+ "puffchim": {
+  "id": "puffchim",
+  "name": "Puffchim",
   "glyph": "g",
   "color": "#7a6a5a",
   "elements": [
@@ -2611,9 +2611,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "monkey"
  },
- "woolipop": {
-  "id": "woolipop",
-  "name": "Woolipop",
+ "mimspike": {
+  "id": "mimspike",
+  "name": "Mimspike",
   "glyph": "w",
   "color": "#f5d8e8",
   "elements": [
@@ -2650,9 +2650,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "hedgehog"
  },
- "melpaca": {
-  "id": "melpaca",
-  "name": "Melpaca",
+ "mimtrot": {
+  "id": "mimtrot",
+  "name": "Mimtrot",
   "glyph": "m",
   "color": "#e8b8c9",
   "elements": [
@@ -2695,9 +2695,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "vixy": {
-  "id": "vixy",
-  "name": "Vixy",
+ "doztail": {
+  "id": "doztail",
+  "name": "Doztail",
   "glyph": "v",
   "color": "#e8c9a8",
   "elements": [
@@ -2739,9 +2739,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "kitty"
  },
- "lovander": {
-  "id": "lovander",
-  "name": "Lovander",
+ "hushsmith": {
+  "id": "hushsmith",
+  "name": "Hushsmith",
   "glyph": "l",
   "color": "#d88aa8",
   "elements": [
@@ -2785,9 +2785,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "human"
  },
- "loupmoon": {
-  "id": "loupmoon",
-  "name": "Loupmoon",
+ "noctmane": {
+  "id": "noctmane",
+  "name": "Noctmane",
   "glyph": "l",
   "color": "#5a5a7a",
   "elements": [
@@ -2829,9 +2829,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "quadruped"
  },
- "hoocrates": {
-  "id": "hoocrates",
-  "name": "Hoocrates",
+ "shadehand": {
+  "id": "shadehand",
+  "name": "Shadehand",
   "glyph": "h",
   "color": "#7a6a8a",
   "elements": [
@@ -2874,9 +2874,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "human"
  },
- "killamari": {
-  "id": "killamari",
-  "name": "Killamari",
+ "noctgloom": {
+  "id": "noctgloom",
+  "name": "Noctgloom",
   "glyph": "k",
   "color": "#8a7ad1",
   "elements": [
@@ -2919,9 +2919,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "lunaris": {
-  "id": "lunaris",
-  "name": "Lunaris",
+ "grimling": {
+  "id": "grimling",
+  "name": "Grimling",
   "glyph": "l",
   "color": "#8aa8d1",
   "elements": [
@@ -2965,9 +2965,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "human"
  },
- "nox": {
-  "id": "nox",
-  "name": "Nox",
+ "shadegloom": {
+  "id": "shadegloom",
+  "name": "Shadegloom",
   "glyph": "n",
   "color": "#8a6a9a",
   "elements": [
@@ -3004,9 +3004,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "maraith": {
-  "id": "maraith",
-  "name": "Maraith",
+ "shadewisp": {
+  "id": "shadewisp",
+  "name": "Shadewisp",
   "glyph": "m",
   "color": "#6a8a7a",
   "elements": [
@@ -3049,9 +3049,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "catress": {
-  "id": "catress",
-  "name": "Catress",
+ "duskpurr": {
+  "id": "duskpurr",
+  "name": "Duskpurr",
   "glyph": "c",
   "color": "#9a7ab8",
   "elements": [
@@ -3094,9 +3094,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "kitty"
  },
- "wixen": {
-  "id": "wixen",
-  "name": "Wixen",
+ "veilkin": {
+  "id": "veilkin",
+  "name": "Veilkin",
   "glyph": "w",
   "color": "#b87a9a",
   "elements": [
@@ -3139,9 +3139,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "human"
  },
- "menasting": {
-  "id": "menasting",
-  "name": "Menasting",
+ "shadesmith": {
+  "id": "shadesmith",
+  "name": "Shadesmith",
   "glyph": "m",
   "color": "#4a3a5a",
   "elements": [
@@ -3193,9 +3193,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "human"
  },
- "shadowbeak": {
-  "id": "shadowbeak",
-  "name": "Shadowbeak",
+ "veilplume": {
+  "id": "veilplume",
+  "name": "Veilplume",
   "glyph": "s",
   "color": "#5a4a7a",
   "elements": [
@@ -3242,9 +3242,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "bird"
  },
- "necromus": {
-  "id": "necromus",
-  "name": "Necromus",
+ "shadekin": {
+  "id": "shadekin",
+  "name": "Shadekin",
   "glyph": "n",
   "color": "#6a5a7a",
   "elements": [
@@ -3291,9 +3291,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "human"
  },
- "helzephyr": {
-  "id": "helzephyr",
-  "name": "Helzephyr",
+ "noctplume": {
+  "id": "noctplume",
+  "name": "Noctplume",
   "glyph": "h",
   "color": "#6a5a8a",
   "elements": [
@@ -3345,9 +3345,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "bird"
  },
- "tombat": {
-  "id": "tombat",
-  "name": "Tombat",
+ "duskwing": {
+  "id": "duskwing",
+  "name": "Duskwing",
   "glyph": "t",
   "color": "#8a7a9a",
   "elements": [
@@ -3385,9 +3385,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "jetragon": {
-  "id": "jetragon",
-  "name": "Jetragon",
+ "scalbeak": {
+  "id": "scalbeak",
+  "name": "Scalbeak",
   "glyph": "j",
   "color": "#5a8ad1",
   "elements": [
@@ -3433,9 +3433,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "bird"
  },
- "paladius": {
-  "id": "paladius",
-  "name": "Paladius",
+ "nibhand": {
+  "id": "nibhand",
+  "name": "Nibhand",
   "glyph": "p",
   "color": "#d8d8e8",
   "elements": [
@@ -3482,9 +3482,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "human"
  },
- "quivern": {
-  "id": "quivern",
-  "name": "Quivern",
+ "scalcrest": {
+  "id": "scalcrest",
+  "name": "Scalcrest",
   "glyph": "q",
   "color": "#8a9ad1",
   "elements": [
@@ -3531,9 +3531,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "bird"
  },
- "astegon": {
-  "id": "astegon",
-  "name": "Astegon",
+ "wyrmhoof": {
+  "id": "wyrmhoof",
+  "name": "Wyrmhoof",
   "glyph": "a",
   "color": "#4a4a6a",
   "elements": [
@@ -3585,9 +3585,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "quadruped"
  },
- "elphidran": {
-  "id": "elphidran",
-  "name": "Elphidran",
+ "vermtrot": {
+  "id": "vermtrot",
+  "name": "Vermtrot",
   "glyph": "e",
   "color": "#a8c9e8",
   "elements": [
@@ -3633,9 +3633,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "blazequil": {
-  "id": "blazequil",
-  "name": "Blazequil",
+ "embquill": {
+  "id": "embquill",
+  "name": "Embquill",
   "glyph": "b",
   "color": "#e88a4a",
   "elements": [
@@ -3673,9 +3673,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "hedgehog"
  },
- "hydrostar": {
-  "id": "hydrostar",
-  "name": "Hydrostar",
+ "dewpuff": {
+  "id": "dewpuff",
+  "name": "Dewpuff",
   "glyph": "h",
   "color": "#5ac9d1",
   "elements": [
@@ -3712,9 +3712,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "blob"
  },
- "stormpuff": {
-  "id": "stormpuff",
-  "name": "Stormpuff",
+ "faradwisp": {
+  "id": "faradwisp",
+  "name": "Faradwisp",
   "glyph": "s",
   "color": "#8ad1e8",
   "elements": [
@@ -3752,9 +3752,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "emberwing": {
-  "id": "emberwing",
-  "name": "Emberwing",
+ "soltalon": {
+  "id": "soltalon",
+  "name": "Soltalon",
   "glyph": "e",
   "color": "#e8a85a",
   "elements": [
@@ -3792,9 +3792,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "bird"
  },
- "mirelurk": {
-  "id": "mirelurk",
-  "name": "Mirelurk",
+ "lazburr": {
+  "id": "lazburr",
+  "name": "Lazburr",
   "glyph": "m",
   "color": "#6a8a5a",
   "elements": [
@@ -3842,9 +3842,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "hedgehog"
  },
- "frostbun": {
-  "id": "frostbun",
-  "name": "Frostbun",
+ "rimewhisk": {
+  "id": "rimewhisk",
+  "name": "Rimewhisk",
   "glyph": "f",
   "color": "#c9e8f5",
   "elements": [
@@ -3887,9 +3887,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "mouse"
  },
- "thornite": {
-  "id": "thornite",
-  "name": "Thornite",
+ "wortquill": {
+  "id": "wortquill",
+  "name": "Wortquill",
   "glyph": "t",
   "color": "#7a8a6a",
   "elements": [
@@ -3937,9 +3937,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "hedgehog"
  },
- "dreadmaw": {
-  "id": "dreadmaw",
-  "name": "Dreadmaw",
+ "noctfang": {
+  "id": "noctfang",
+  "name": "Noctfang",
   "glyph": "d",
   "color": "#5a4a6a",
   "elements": [
@@ -3991,9 +3991,9 @@ const SPECIES = {
   "hostile": 2,
   "body": "serpent"
  },
- "glimmora": {
-  "id": "glimmora",
-  "name": "Glimmora",
+ "sprigveil": {
+  "id": "sprigveil",
+  "name": "Sprigveil",
   "glyph": "g",
   "color": "#c9d8a8",
   "elements": [
@@ -4036,9 +4036,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "ghost"
  },
- "cragboar": {
-  "id": "cragboar",
-  "name": "Cragboar",
+ "digsnout": {
+  "id": "digsnout",
+  "name": "Digsnout",
   "glyph": "c",
   "color": "#8a7a6a",
   "elements": [
@@ -4081,9 +4081,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "boar"
  },
- "vapori": {
-  "id": "vapori",
-  "name": "Vapori",
+ "bubgloom": {
+  "id": "bubgloom",
+  "name": "Bubgloom",
   "glyph": "v",
   "color": "#a8e8d8",
   "elements": [
@@ -4117,13 +4117,13 @@ const SPECIES = {
     2
    ]
   ],
-  "desc": "Steam-sprite kettle pal.",
+  "desc": "Steam-sprite kettle kin.",
   "hostile": 0,
   "body": "ghost"
  },
- "bombird": {
-  "id": "bombird",
-  "name": "Bombird",
+ "brancrest": {
+  "id": "brancrest",
+  "name": "Brancrest",
   "glyph": "b",
   "color": "#9a6a4a",
   "elements": [
@@ -4171,9 +4171,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "bird"
  },
- "pyropup": {
-  "id": "pyropup",
-  "name": "Pyropup",
+ "embpaw": {
+  "id": "embpaw",
+  "name": "Embpaw",
   "glyph": "p",
   "color": "#e8734a",
   "elements": [
@@ -4211,9 +4211,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "quadruped"
  },
- "dustmite": {
-  "id": "dustmite",
-  "name": "Dustmite",
+ "gritmite": {
+  "id": "gritmite",
+  "name": "Gritmite",
   "glyph": "d",
   "color": "#a89468",
   "elements": [
@@ -4256,9 +4256,9 @@ const SPECIES = {
   "hostile": 0,
   "body": "hedgehog"
  },
- "brackent": {
-  "id": "brackent",
-  "name": "Brackent",
+ "corlfang": {
+  "id": "corlfang",
+  "name": "Corlfang",
   "glyph": "b",
   "color": "#3a7a9a",
   "elements": [
@@ -4305,9 +4305,9 @@ const SPECIES = {
   "hostile": 1,
   "body": "serpent"
  },
- "thundergeist": {
-  "id": "thundergeist",
-  "name": "Thundergeist",
+ "sparkhaunt": {
+  "id": "sparkhaunt",
+  "name": "Sparkhaunt",
   "glyph": "t",
   "color": "#5a5ae8",
   "elements": [
@@ -4361,7 +4361,7 @@ const SPECIES = {
  }
 }
 
-const ZONE = {"0": ["flambelle", "kelpsea", "teafant", "ribbuny", "flopie", "sweety", "lullu", "dazzi", "tocotoco", "swee", "mau_cryst", "hangyu", "fuddler", "woolipop", "melpaca", "vixy", "killamari", "nox", "tombat", "hydrostar", "stormpuff", "frostbun", "vapori", "pyropup", "dustmite"], "1": ["rooby", "arsox", "chillet", "celaray", "gobfin", "surfdog", "beegarde", "bristla", "caprity", "dinossom", "verdash", "grintale", "vaelet", "cinnamoth", "petallia", "univolt", "sweepa", "reindrix", "digtoise", "direhowl", "galeclaw", "cawgnito", "robinquill", "gorirat", "lovander", "loupmoon", "hoocrates", "lunaris", "maraith", "catress", "wixen", "blazequil", "emberwing", "mirelurk", "thornite", "glimmora", "cragboar", "bombird"], "2": ["incineram", "blazehowl", "bushi", "ragnahawk", "relaxaurus", "azurobe", "broncherry", "mossanda", "elizabee", "beakon", "rayhound", "wumpo", "sibelyx", "anubis", "reptyro", "helzephyr", "quivern", "elphidran", "brackent"], "3": ["suzaku", "blazamut", "jormuntide", "grizzbolt", "frostallion", "menasting", "shadowbeak", "necromus", "jetragon", "paladius", "astegon", "dreadmaw", "thundergeist"]}
+const ZONE = {"0": ["pyrejelly", "bubwrith", "lazpuff", "hushnib", "thornmelt", "mossjelly", "fernveil", "sparkwhisk", "tambeak", "glaclump", "snowtail", "chilgloom", "terrnib", "mimspike", "mimtrot", "doztail", "noctgloom", "shadegloom", "duskwing", "dewpuff", "faradwisp", "rimewhisk", "bubgloom", "embpaw", "gritmite"], "1": ["branpurr", "scalfang", "frostfang", "bringloom", "bubgoo", "dewmane", "wortling", "thornhoof", "petalantler", "briarmaw", "briarchim", "tawtail", "ivyveil", "mosswisp", "floraling", "statstride", "rimemane", "snovfawn", "loamquill", "tammane", "bramplume", "murkwing", "worthand", "puffchim", "hushsmith", "noctmane", "shadehand", "grimling", "shadewisp", "duskpurr", "veilkin", "embquill", "soltalon", "lazburr", "wortquill", "sprigveil", "digsnout", "brancrest"], "2": ["pyresmith", "cindpaw", "branling", "pyreplume", "ripbell", "ripwrith", "leaftrot", "fernchim", "mossveil", "zapplume", "zaptrot", "snovmool", "glacmane", "terrkin", "grithoof", "noctplume", "scalcrest", "vermtrot", "corlfang"], "3": ["flarbeak", "cindchew", "tidscale", "statchew", "snovstride", "shadesmith", "veilplume", "shadekin", "scalbeak", "nibhand", "wyrmhoof", "noctfang", "sparkhaunt"]}
 
 static func species_of(id: String) -> Dictionary:
 	return SPECIES.get(id, {})
@@ -4371,7 +4371,7 @@ static func zone_pool(z: int) -> Array:
 
 static var _zone_of := {}
 static func habitat(sid: String) -> int:
-	# Paldeck habitat: which wild band this species calls home (-1 = none)
+	# Kindex habitat: which wild band this species calls home (-1 = none)
 	if _zone_of.is_empty():
 		for z in ZONE:
 			for s2 in ZONE[z]:

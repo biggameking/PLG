@@ -5,7 +5,7 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	var game = main.get_node("Game")
-	# PLG_STRESS=N: top the world up to N wild pals before measuring — this is
+	# PLG_STRESS=N: top the world up to N wild kin before measuring — this is
 	# the MAX_PALS CPU guard check, not just a smoke of the spawn state.
 	var want := int(OS.get_environment("PLG_STRESS"))
 	var rng = RandomNumberGenerator.new()
@@ -17,13 +17,13 @@ func _boot() -> void:
 		var pool: Array = SpeciesGen.zone_pool(game.world.zone_at(int(at.x), int(at.y)))
 		var sid: String = pool[rng.randi_range(0, pool.size() - 1)]
 		game.pals.append(game.gen_pal(sid, rng.randi_range(2, 10), at))
-	print("=== pals now %d ===" % game.pals.size())
-	# pals AI: call _physics_process on each pal
+	print("=== kin now %d ===" % game.pals.size())
+	# kin AI: call _physics_process on each kin
 	var t0 = Time.get_ticks_msec()
 	for i in 200:
 		for p in game.pals:
 			p._physics_process(0.016)
-	print("=== PERF pals-tick: %d ms for 200 rounds x %d pals ===" % [Time.get_ticks_msec() - t0, game.pals.size()])
+	print("=== PERF kin-tick: %d ms for 200 rounds x %d kin ===" % [Time.get_ticks_msec() - t0, game.pals.size()])
 	# game-level tick
 	t0 = Time.get_ticks_msec()
 	for i in 200:
@@ -33,7 +33,7 @@ func _boot() -> void:
 	# heaviest live combat scene this game produces
 	var raid_n := int(OS.get_environment("PLG_RAID"))
 	if raid_n > 0:
-		var bc: Vector2 = game.palbox_pos if game.palbox_pos.x >= 0 else game.player.pos
+		var bc: Vector2 = game.kinbox_pos if game.kinbox_pos.x >= 0 else game.player.pos
 		var spawned := []
 		var guard := 0
 		while spawned.size() < raid_n and guard < raid_n * 40:
@@ -42,7 +42,7 @@ func _boot() -> void:
 			var at2: Vector2 = bc + Vector2(cos(a2), sin(a2)) * rng.randf_range(6, 12)
 			if game.world.blocked(int(at2.x), int(at2.y)):
 				continue
-			var rp: Pal = game.gen_pal("syndicate_grunt", rng.randi_range(5, 15), at2)
+			var rp: Pal = game.gen_pal("ironpact_grunt", rng.randi_range(5, 15), at2)
 			rp.mode = "wild"; rp.raid = true; rp.aggro = 0
 			rp.set_meta("raid_t0", game.t)
 			game.pals.append(rp)
@@ -77,10 +77,10 @@ func _boot() -> void:
 	var base_n := mini(int(OS.get_environment("PLG_BASE")), 60)
 	if base_n > 0:
 		var kinds := ["ore_mine", "logging_site", "furnace", "wheat_farm",
-			"sphere_factory", "ranch", "pal_bed"]
+			"sphere_factory", "ranch", "kin_bed"]
 		var workers := []
 		var sites := []
-		var bc2: Vector2 = game.palbox_pos if game.palbox_pos.x >= 0 else game.player.pos
+		var bc2: Vector2 = game.kinbox_pos if game.kinbox_pos.x >= 0 else game.player.pos
 		var placed2 := 0
 		var gx := 0
 		# ring the box in a rough grid — place_free skips cost/tech for probes
@@ -96,12 +96,12 @@ func _boot() -> void:
 		game.place_free("chest", ch_k.x, ch_k.y)
 		var ch = game.structures.get(ch_k)
 		if ch:
-			for it in ["ore", "wood", "paldium", "stone", "cake", "berries"]:
+			for it in ["ore", "wood", "lumenite", "stone", "cake", "berries"]:
 				ch["store"][it] = 500
 		for st2 in sites:
 			if st2 == null or st2.get("workers") == null:
 				continue
-			var wp: Pal = game.gen_pal("lamball", 8, Vector2(bc2.x, bc2.y))
+			var wp: Pal = game.gen_pal("fenjelly", 8, Vector2(bc2.x, bc2.y))
 			wp.mode = "base"; wp.san = 90.0
 			game.pals.append(wp)
 			st2["workers"].append(wp); wp.job_site = st2

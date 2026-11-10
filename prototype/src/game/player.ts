@@ -161,7 +161,7 @@ function playerAttack(s: GameState, world: World, tx: number, ty: number): void 
     world.hp[i] -= w.dmg * toolBonus;
     hitAny = true;
     if (world.hp[i] <= 0) {
-      const [itemId, lo, hi] = t === "tree" ? ["wood", 2, 4] : t === "rock" ? ["stone", 2, 4] : (world.zoneAt(tx0, ty0) >= 1 && Math.random() < 0.6) ? ["ore", 1, 2] : ["paldium", 1, 2];
+      const [itemId, lo, hi] = t === "tree" ? ["wood", 2, 4] : t === "rock" ? ["stone", 2, 4] : (world.zoneAt(tx0, ty0) >= 1 && Math.random() < 0.6) ? ["ore", 1, 2] : ["lumenite", 1, 2];
       const n = lo + Math.floor(Math.random() * (hi - lo + 1));
       dropItem(s, itemId, n, tx0 + 0.5, ty0 + 0.5);
       if (t === "tree" && Math.random() < 0.4) dropItem(s, "fiber", 1 + Math.floor(Math.random() * 2), tx0 + 0.5, ty0 + 0.5);
@@ -178,7 +178,7 @@ function interact(s: GameState, world: World, mx: number, my: number): void {
   const st = structureNear(s, p.x, p.y, 2.2) ?? structureNear(s, mx, my, 1.5);
   if (st) {
     const def = STRUCTURES[st.defId];
-    if (def.anchor) { s.mode = "palbox"; return; }
+    if (def.anchor) { s.mode = "kinbox"; return; }
     if (st.defId === "workbench") { s.mode = "craft"; s.craftStation = st.uid; return; }
     if (def.feedBox) { depositFood(s, st); return; }
     if (def.storage && st.buffer.size) { withdrawAll(s, st); return; }

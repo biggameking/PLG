@@ -12,7 +12,7 @@ export function newGame(seed: number): GameState {
     level: 1, xp: 0, techPoints: 3, captureLevel: 1,
     facing: 0, attackT: 0, dodgeT: 0,
     inv: new Map(), weapon: null, sphereSel: 0,
-    unlocked: new Set(["palbox", "club", "pal_sphere", "straw_bed_placeholder"]),
+    unlocked: new Set(["kinbox", "club", "kin_orb", "straw_bed_placeholder"]),
   };
   p.unlocked.delete("straw_bed_placeholder");
   const s: GameState = {
@@ -25,8 +25,8 @@ export function newGame(seed: number): GameState {
     camShake: 0,
   };
   // starter kit
-  addItem(s, "wood", 10); addItem(s, "stone", 8); addItem(s, "paldium", 8);
-  addItem(s, "red_berries", 6); addItem(s, "pal_sphere", 3); addItem(s, "wooden_club", 1);
+  addItem(s, "wood", 10); addItem(s, "stone", 8); addItem(s, "lumenite", 8);
+  addItem(s, "red_berries", 6); addItem(s, "kin_orb", 3); addItem(s, "wooden_club", 1);
   p.weapon = "wooden_club";
   return s;
 }
@@ -111,7 +111,7 @@ export function isNight(s: GameState): boolean {
 }
 
 export function ownedSpheres(s: GameState): string[] {
-  const tiers = ["pal_sphere", "mega_sphere", "giga_sphere", "ultra_sphere", "legendary_sphere"];
+  const tiers = ["kin_orb", "mega_orb", "giga_orb", "ultra_orb", "legendary_orb"];
   return tiers.filter((id) => itemCount(s, id) > 0);
 }
 

@@ -14,7 +14,7 @@ func _ready() -> void:
 	shadow.modulate = Color(0, 0, 0, 0.35)
 	add_child(shadow)
 	sprite = Sprite2D.new()
-	sprite.texture = load("res://assets/pals/player_f0.png")
+	sprite.texture = load("res://assets/kin/player_f0.png")
 	sprite.position.y = -40.0
 	add_child(sprite)
 

@@ -36,7 +36,7 @@ export interface Pal {
   dir: number;      // facing for glyph flip
   skillCd: number;
   mount?: boolean;
-  talent?: number; // hidden IV 0-100 (Palworld TalentBonus): +0..20% hp/atk/def
+  talent?: number; // hidden IV 0-100 (the island TalentBonus): +0..20% hp/atk/def
 }
 
 export function species(p: Pal): Species {
@@ -48,7 +48,7 @@ export interface Projectile {
   skillId: string;
   x: number; y: number;
   vx: number; vy: number;
-  owner: "player" | "pal" | "wild";
+  owner: "player" | "kin" | "wild";
   ownerUid: number;
   power: number;
   ttl: number;
@@ -111,7 +111,7 @@ export interface Player {
   unlocked: Set<string>;
 }
 
-export type GameMode = "play" | "build" | "inv" | "palbox" | "tech" | "craft" | "help" | "dead";
+export type GameMode = "play" | "build" | "inv" | "kinbox" | "tech" | "craft" | "help" | "dead";
 
 export interface FloatingText { x: number; y: number; s: string; color: string; t: number }
 
@@ -126,7 +126,7 @@ export interface GameState {
   party: number[];     // pal uids in party (max 5)
   palparty: Pal[];     // party pals currently in their ball (not deployed)
   activePal: number;   // index into party of deployed partner (-1 none)
-  box: Pal[];          // palbox storage (not entities)
+  box: Pal[];          // kinbox storage (not entities)
   structures: Structure[];
   jobs: Job[];
   projectiles: Projectile[];

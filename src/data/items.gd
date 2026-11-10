@@ -27,7 +27,7 @@ const ITEMS = {
   "color": "#6a5a3a",
   "kind": "material",
   "price": 1,
-  "desc": "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it."
+  "desc": "Rotten scraps — unfit for man or kin. A staffed ice box would have saved it."
  },
 "honey": {
   "id": "honey",
@@ -38,7 +38,7 @@ const ITEMS = {
   "stack": 999,
   "food": 15,
   "price": 10,
-  "desc": "Sweet comb straight from the apiary."
+  "desc": "Glaclumpt comb straight from the apiary."
  },
  "honey_bun": {
   "id": "honey_bun",
@@ -63,13 +63,13 @@ const ITEMS = {
  },
  "pal_bait": {
   "id": "pal_bait",
-  "name": "Pal Bait",
+  "name": "Kin Bait",
   "glyph": "❁",
   "color": "#d8b84a",
   "kind": "material",
   "stack": 999,
   "price": 8,
-  "desc": "A honeyed berry mash — toss it out and hungry wild pals come sniffing."
+  "desc": "A honeyed berry mash — toss it out and hungry wild kin come sniffing."
  },
  "fertilizer": {
   "id": "fertilizer",
@@ -89,9 +89,9 @@ const ITEMS = {
   "stack": 999,
   "desc": "Plant fibers for cordage."
  },
- "paldium": {
-  "id": "paldium",
-  "name": "Paldium Fragment",
+ "lumenite": {
+  "id": "lumenite",
+  "name": "Lumenite Shard",
   "glyph": "◊",
   "color": "#4dd0e1",
   "kind": "material",
@@ -181,12 +181,12 @@ const ITEMS = {
  },
  "pal_fluid": {
   "id": "pal_fluid",
-  "name": "Pal Fluid",
+  "name": "Kin Fluid",
   "glyph": "○",
   "color": "#4d9de0",
   "kind": "material",
   "stack": 999,
-  "desc": "Fluid from water pals."
+  "desc": "Fluid from water kin."
  },
  "venom_gland": {
   "id": "venom_gland",
@@ -222,7 +222,7 @@ const ITEMS = {
   "color": "#e8f0f2",
   "kind": "material",
   "stack": 999,
-  "desc": "Pal bone."
+  "desc": "Kin bone."
  },
  "coal": {
   "id": "coal",
@@ -302,7 +302,7 @@ const ITEMS = {
   "perish": 1,
   "stack": 999,
   "food": 20,
-  "desc": "Chikipi egg."
+  "desc": "Fenlump egg."
  },
  "milk": {
   "id": "milk",
@@ -353,11 +353,11 @@ const ITEMS = {
   "stack": 999,
   "food": 55,
   "buff": {"atk": 0.1, "t": 300},
-  "desc": "Sweet bun. +10% attack for a while."
+  "desc": "Glaclumpt bun. +10% attack for a while."
  },
- "chikipi_poultry": {
-  "id": "chikipi_poultry",
-  "name": "Chikipi Poultry",
+ "fenlump_poultry": {
+  "id": "fenlump_poultry",
+  "name": "Fenlump Poultry",
   "glyph": "♦",
   "color": "#f2a0b5",
   "kind": "food",
@@ -366,9 +366,9 @@ const ITEMS = {
   "food": 30,
   "desc": "Poultry meat."
  },
- "lamball_mutton": {
-  "id": "lamball_mutton",
-  "name": "Lamball Mutton",
+ "fenjelly_mutton": {
+  "id": "fenjelly_mutton",
+  "name": "Fenjelly Mutton",
   "glyph": "♦",
   "color": "#e64533",
   "kind": "food",
@@ -442,7 +442,7 @@ const ITEMS = {
   "food": 60,
   "price": 18,
   "buff": {"def": 0.1, "t": 300},
-  "desc": "Palworld's grilled lamball — +10% defense for a while."
+  "desc": "grilled fenjelly — +10% defense for a while."
  },
  "fried_egg": {
   "id": "fried_egg",
@@ -493,9 +493,9 @@ const ITEMS = {
   "stack": 999,
   "desc": "Plant at a plantation."
  },
- "pal_sphere": {
-  "id": "pal_sphere",
-  "name": "Pal Sphere",
+ "kin_orb": {
+  "id": "kin_orb",
+  "name": "Kin Orb",
   "glyph": "◐",
   "color": "#4d9de0",
   "kind": "sphere",
@@ -503,10 +503,10 @@ const ITEMS = {
   "spherePower": 26,
   "desc": "Standard sphere."
  },
- "mega_sphere": {
-  "id": "mega_sphere",
-  "tech": "mega_sphere",
-  "name": "Mega Sphere",
+ "mega_orb": {
+  "id": "mega_orb",
+  "tech": "mega_orb",
+  "name": "Mega Orb",
   "glyph": "◐",
   "color": "#4caf50",
   "kind": "sphere",
@@ -514,10 +514,10 @@ const ITEMS = {
   "spherePower": 42,
   "desc": "Improved sphere."
  },
- "giga_sphere": {
-  "id": "giga_sphere",
-  "tech": "giga_sphere",
-  "name": "Giga Sphere",
+ "giga_orb": {
+  "id": "giga_orb",
+  "tech": "giga_orb",
+  "name": "Giga Orb",
   "glyph": "◐",
   "color": "#e8d44d",
   "kind": "sphere",
@@ -525,10 +525,10 @@ const ITEMS = {
   "spherePower": 58,
   "desc": "Strong sphere."
  },
- "ultra_sphere": {
-  "id": "ultra_sphere",
-  "tech": "ultra_sphere",
-  "name": "Ultra Sphere",
+ "ultra_orb": {
+  "id": "ultra_orb",
+  "tech": "ultra_orb",
+  "name": "Ultra Orb",
   "glyph": "◐",
   "color": "#e8963c",
   "kind": "sphere",
@@ -536,10 +536,10 @@ const ITEMS = {
   "spherePower": 75,
   "desc": "Very strong sphere."
  },
- "legendary_sphere": {
-  "id": "legendary_sphere",
-  "tech": "legendary_sphere",
-  "name": "Legendary Sphere",
+ "legendary_orb": {
+  "id": "legendary_orb",
+  "tech": "legendary_orb",
+  "name": "Legendary Orb",
   "glyph": "◐",
   "color": "#e64533",
   "kind": "sphere",
@@ -627,7 +627,7 @@ const ITEMS = {
    "sleep": 8.0,
    "dur": 50
   },
-  "desc": "A puff of sedative, not a slug — darts put a wild pal down for the count."
+  "desc": "A puff of sedative, not a slug — darts put a wild kin down for the count."
  },
  "schematic_bow": {
   "id": "schematic_bow",
@@ -679,10 +679,10 @@ const ITEMS = {
   },
   "desc": "Schematic-built: rifled barrel, faster lock."
  },
- "sphere_launcher": {
-  "id": "sphere_launcher",
-  "tech": "sphere_launcher",
-  "name": "Sphere Launcher",
+ "orb_launcher": {
+  "id": "orb_launcher",
+  "tech": "orb_launcher",
+  "name": "Orb Launcher",
   "glyph": "◎",
   "color": "#7a5fa8",
   "kind": "weapon",
@@ -765,7 +765,7 @@ const ITEMS = {
   "usable": true,
   "stack": 50,
   "heal": 50,
-  "desc": "Heals pals/player."
+  "desc": "Heals kin/player."
  },
  "medical_supplies": {
   "id": "medical_supplies",
@@ -787,27 +787,27 @@ const ITEMS = {
   "usable": true,
   "stack": 10,
   "price": 120,
-  "desc": "Palworld respec: refunds every statue perk as stat points."
+  "desc": "the island respec: refunds every statue perk as stat points."
  },
- "pal_egg": {
-  "id": "pal_egg",
-  "name": "Pal Egg",
+ "kin_egg": {
+  "id": "kin_egg",
+  "name": "Kin Egg",
   "desc": "A fertilized egg from the ranch. Use to hatch.",
   "usable": true,
   "stack": 5,
   "price": 30
  },
- "huge_pal_egg": {
-  "id": "huge_pal_egg",
-  "name": "Huge Pal Egg",
-  "desc": "Something enormous stirs inside. Incubate for a guaranteed Lucky pal.",
+ "huge_kin_egg": {
+  "id": "huge_kin_egg",
+  "name": "Huge Kin Egg",
+  "desc": "Something enormous stirs inside. Incubate for a guaranteed Lucky kin.",
   "usable": true,
   "stack": 5,
   "price": 200
  },
- "lifmunk_effigy": {
-  "id": "lifmunk_effigy",
-  "name": "Lifmunk Effigy",
+ "sprigmelt_effigy": {
+  "id": "sprigmelt_effigy",
+  "name": "Sprigmelt Effigy",
   "desc": "A green mouse idol. Spend at the statue (U) to upgrade powers.",
   "stack": 99,
   "price": 0
@@ -822,7 +822,7 @@ const ITEMS = {
  "boss_sigil": {
   "id": "boss_sigil",
   "name": "Boss Sigil",
-  "desc": "Summons a raid boss at your palbox. Use it. If you dare.",
+  "desc": "Summons a raid boss at your kinbox. Use it. If you dare.",
   "usable": true,
   "stack": 5,
   "price": 0
@@ -830,7 +830,7 @@ const ITEMS = {
  "gauntlet_sigil": {
   "id": "gauntlet_sigil",
   "name": "Gauntlet Sigil",
-  "desc": "Starts a 3-wave trial at your palbox. Tower rules: only the strong walk out.",
+  "desc": "Starts a 3-wave trial at your kinbox. Tower rules: only the strong walk out.",
   "usable": true,
   "stack": 3,
   "price": 0
@@ -850,7 +850,7 @@ const ITEMS = {
    "dur": 50
   },
   "price": 140,
-  "desc": "Palworld's grim tool: butcher a boxed pal for its drops (palbox x)."
+  "desc": "grim tool: butcher a boxed kin for its drops (kinbox x)."
  },
  "glider": {
   "id": "glider",
@@ -865,14 +865,14 @@ const ITEMS = {
  },
  "saddle": {
   "id": "saddle",
-  "name": "Pal Saddle",
+  "name": "Kin Saddle",
   "glyph": "◠",
   "color": "#8a6d4d",
   "kind": "gear",
   "stack": 1,
   "tech": "saddle",
   "price": 90,
-  "desc": "Palworld saddle: required in the pack to ride a land mount."
+  "desc": "the island saddle: required in the pack to ride a land mount."
  },
  "sky_saddle": {
   "id": "sky_saddle",
@@ -883,7 +883,7 @@ const ITEMS = {
   "stack": 1,
   "tech": "sky_saddle",
   "price": 160,
-  "desc": "Palworld saddle: required in the pack to ride a flying mount."
+  "desc": "the island saddle: required in the pack to ride a flying mount."
  },
  "wave_saddle": {
   "id": "wave_saddle",
@@ -894,7 +894,7 @@ const ITEMS = {
   "stack": 1,
   "tech": "wave_saddle",
   "price": 140,
-  "desc": "Palworld saddle: required in the pack to ride a swimming mount."
+  "desc": "the island saddle: required in the pack to ride a swimming mount."
  },
  "grappling_hook": {
   "id": "grappling_hook",
@@ -905,51 +905,51 @@ const ITEMS = {
   "stack": 1,
   "tech": "grappling_hook",
   "price": 180,
-  "desc": "Palworld hookshot: haul yourself UP a cliff face — one-way, no descents."
+  "desc": "the island hookshot: haul yourself UP a cliff face — one-way, no descents."
  },
- "foxparks_harness": {
-  "id": "foxparks_harness",
-  "name": "Foxparks Harness",
+ "cindlump_harness": {
+  "id": "cindlump_harness",
+  "name": "Cindlump Harness",
   "glyph": "◠",
   "color": "#e88a4d",
   "kind": "gear",
   "stack": 1,
-  "tech": "foxparks_harness",
+  "tech": "cindlump_harness",
   "price": 200,
-  "desc": "Pal gear: unlocks Foxparks' Flamethrower partner skill."
+  "desc": "Kin gear: unlocks Cindlump' Flamethrower partner skill."
  },
- "lifmunk_smg": {
-  "id": "lifmunk_smg",
-  "name": "Lifmunk SMG",
+ "sprigmelt_smg": {
+  "id": "sprigmelt_smg",
+  "name": "Sprigmelt SMG",
   "glyph": "┐",
   "color": "#8ab86a",
   "kind": "gear",
   "stack": 1,
-  "tech": "lifmunk_smg",
+  "tech": "sprigmelt_smg",
   "price": 240,
-  "desc": "Pal gear: unlocks Lifmunk's SMG Burst partner skill."
+  "desc": "Kin gear: unlocks Sprigmelt's SMG Burst partner skill."
  },
- "pengullet_launcher": {
-  "id": "pengullet_launcher",
-  "name": "Pengullet Launcher",
+ "corlmite_launcher": {
+  "id": "corlmite_launcher",
+  "name": "Corlmite Launcher",
   "glyph": "⊙",
   "color": "#7ec8e3",
   "kind": "gear",
   "stack": 1,
-  "tech": "pengullet_launcher",
+  "tech": "corlmite_launcher",
   "price": 320,
-  "desc": "Pal gear: loads Pengullet for its signature Penguin Cannon."
+  "desc": "Kin gear: loads Corlmite for its signature Penguin Cannon."
  },
- "tanzee_rifle": {
-  "id": "tanzee_rifle",
-  "name": "Tanzee Assault Rifle",
+ "briargoo_rifle": {
+  "id": "briargoo_rifle",
+  "name": "Briargoo Assault Rifle",
   "glyph": "┐",
   "color": "#6a9ab8",
   "kind": "gear",
   "stack": 1,
-  "tech": "tanzee_rifle",
+  "tech": "briargoo_rifle",
   "price": 260,
-  "desc": "Pal gear: unlocks Tanzee's Rifle Shot partner skill."
+  "desc": "Kin gear: unlocks Briargoo's Rifle Shot partner skill."
  },
  "fishing_rod": {
   "id": "fishing_rod",
@@ -964,47 +964,47 @@ const ITEMS = {
  "skill_fruit_neutral": {
   "id": "skill_fruit_neutral", "name": "Neutral Skill Fruit", "glyph": "●",
   "color": "#c8d3d5", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "neutral", "price": 60, "desc": "Teaches the active pal a neutral move."
+  "elem": "neutral", "price": 60, "desc": "Teaches the active kin a neutral move."
  },
  "skill_fruit_fire": {
   "id": "skill_fruit_fire", "name": "Fire Skill Fruit", "glyph": "●",
   "color": "#e8963c", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "fire", "price": 60, "desc": "Teaches the active pal a fire move."
+  "elem": "fire", "price": 60, "desc": "Teaches the active kin a fire move."
  },
  "skill_fruit_water": {
   "id": "skill_fruit_water", "name": "Water Skill Fruit", "glyph": "●",
   "color": "#4d9de0", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "water", "price": 60, "desc": "Teaches the active pal a water move."
+  "elem": "water", "price": 60, "desc": "Teaches the active kin a water move."
  },
  "skill_fruit_grass": {
   "id": "skill_fruit_grass", "name": "Grass Skill Fruit", "glyph": "●",
   "color": "#4caf50", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "grass", "price": 60, "desc": "Teaches the active pal a grass move."
+  "elem": "grass", "price": 60, "desc": "Teaches the active kin a grass move."
  },
  "skill_fruit_electric": {
   "id": "skill_fruit_electric", "name": "Electric Skill Fruit", "glyph": "●",
   "color": "#e8d44d", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "electric", "price": 60, "desc": "Teaches the active pal an electric move."
+  "elem": "electric", "price": 60, "desc": "Teaches the active kin an electric move."
  },
  "skill_fruit_ice": {
   "id": "skill_fruit_ice", "name": "Ice Skill Fruit", "glyph": "●",
   "color": "#a8dff0", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "ice", "price": 60, "desc": "Teaches the active pal an ice move."
+  "elem": "ice", "price": 60, "desc": "Teaches the active kin an ice move."
  },
  "skill_fruit_ground": {
   "id": "skill_fruit_ground", "name": "Ground Skill Fruit", "glyph": "●",
   "color": "#b8935f", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "ground", "price": 60, "desc": "Teaches the active pal a ground move."
+  "elem": "ground", "price": 60, "desc": "Teaches the active kin a ground move."
  },
  "skill_fruit_dark": {
   "id": "skill_fruit_dark", "name": "Dark Skill Fruit", "glyph": "●",
   "color": "#a45ec0", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "dark", "price": 60, "desc": "Teaches the active pal a dark move."
+  "elem": "dark", "price": 60, "desc": "Teaches the active kin a dark move."
  },
  "skill_fruit_dragon": {
   "id": "skill_fruit_dragon", "name": "Dragon Skill Fruit", "glyph": "●",
   "color": "#4d6fd1", "kind": "fruit", "usable": true, "stack": 10,
-  "elem": "dragon", "price": 60, "desc": "Teaches the active pal a dragon move."
+  "elem": "dragon", "price": 60, "desc": "Teaches the active kin a dragon move."
  },
  "hide_armor": {
   "id": "hide_armor",
@@ -1060,7 +1060,7 @@ const ITEMS = {
   "name": "Attack Pendant",
   "kind": "accessory",
   "acc": {"atk": 0.12},
-  "desc": "Palworld trinket: +12% damage dealt. Two accessory slots.",
+  "desc": "the island trinket: +12% damage dealt. Two accessory slots.",
   "stack": 1,
   "price": 150
  },
@@ -1069,7 +1069,7 @@ const ITEMS = {
   "name": "Defense Pendant",
   "kind": "accessory",
   "acc": {"def": 5},
-  "desc": "Palworld trinket: +5 armor. Two accessory slots.",
+  "desc": "the island trinket: +5 armor. Two accessory slots.",
   "stack": 1,
   "price": 150
  },
@@ -1078,7 +1078,7 @@ const ITEMS = {
   "name": "Swift Charm",
   "kind": "accessory",
   "acc": {"spd": 0.10},
-  "desc": "Palworld trinket: +10% move speed. Two accessory slots.",
+  "desc": "the island trinket: +10% move speed. Two accessory slots.",
   "stack": 1,
   "price": 150
  },
@@ -1087,7 +1087,7 @@ const ITEMS = {
   "name": "Ring of Mercy",
   "kind": "accessory",
   "acc": {"mercy": 1},
-  "desc": "Palworld trinket: your blows weaken wild pals but can never drop one below 1 HP.",
+  "desc": "the island trinket: your blows weaken wild kin but can never drop one below 1 HP.",
   "stack": 1,
   "price": 300
  }
@@ -1252,9 +1252,9 @@ const RECIPES = [
   "work": 60
  },
  {
-  "id": "sphere_launcher",
+  "id": "orb_launcher",
   "out": [
-   "sphere_launcher",
+   "orb_launcher",
    1
   ],
   "cost": [
@@ -1263,7 +1263,7 @@ const RECIPES = [
     8
    ],
    [
-    "paldium",
+    "lumenite",
     4
    ],
    [
@@ -1345,14 +1345,14 @@ const RECIPES = [
   "work": 60
  },
  {
-  "id": "pal_sphere",
+  "id": "kin_orb",
   "out": [
-   "pal_sphere",
+   "kin_orb",
    1
   ],
   "cost": [
    [
-    "paldium",
+    "lumenite",
     3
    ],
    [
@@ -1368,14 +1368,14 @@ const RECIPES = [
   "work": 90
  },
  {
-  "id": "mega_sphere",
+  "id": "mega_orb",
   "out": [
-   "mega_sphere",
+   "mega_orb",
    1
   ],
   "cost": [
    [
-    "paldium",
+    "lumenite",
     6
    ],
    [
@@ -1391,14 +1391,14 @@ const RECIPES = [
   "work": 180
  },
  {
-  "id": "giga_sphere",
+  "id": "giga_orb",
   "out": [
-   "giga_sphere",
+   "giga_orb",
    1
   ],
   "cost": [
    [
-    "paldium",
+    "lumenite",
     12
    ],
    [
@@ -1414,14 +1414,14 @@ const RECIPES = [
   "work": 300
  },
  {
-  "id": "ultra_sphere",
+  "id": "ultra_orb",
   "out": [
-   "ultra_sphere",
+   "ultra_orb",
    1
   ],
   "cost": [
    [
-    "paldium",
+    "lumenite",
     20
    ],
    [
@@ -1441,14 +1441,14 @@ const RECIPES = [
   "work": 500
  },
  {
-  "id": "legendary_sphere",
+  "id": "legendary_orb",
   "out": [
-   "legendary_sphere",
+   "legendary_orb",
    1
   ],
   "cost": [
    [
-    "paldium",
+    "lumenite",
     35
    ],
    [
@@ -1559,7 +1559,7 @@ const RECIPES = [
   ],
   "cost": [
    [
-    "lamball_mutton",
+    "fenjelly_mutton",
     1
    ]
   ],
@@ -1642,7 +1642,7 @@ const RECIPES = [
   ],
   "cost": [
    [
-    "lamball_mutton",
+    "fenjelly_mutton",
     1
    ],
    [
@@ -1775,31 +1775,31 @@ const RECIPES = [
   "id": "grappling_hook",
   "tech": "grappling_hook",
   "out": ["grappling_hook", 1],
-  "cost": [["ingot", 4], ["fiber", 10], ["paldium", 3]],
+  "cost": [["ingot", 4], ["fiber", 10], ["lumenite", 3]],
   "station": "workbench",
   "work": 140
  },
  {
-  "id": "foxparks_harness",
-  "tech": "foxparks_harness",
-  "out": ["foxparks_harness", 1],
-  "cost": [["leather", 4], ["fiber", 8], ["ingot", 2], ["paldium", 2]],
+  "id": "cindlump_harness",
+  "tech": "cindlump_harness",
+  "out": ["cindlump_harness", 1],
+  "cost": [["leather", 4], ["fiber", 8], ["ingot", 2], ["lumenite", 2]],
   "station": "workbench",
   "work": 120
  },
  {
-  "id": "lifmunk_smg",
-  "tech": "lifmunk_smg",
-  "out": ["lifmunk_smg", 1],
-  "cost": [["ingot", 6], ["wood", 4], ["paldium", 3]],
+  "id": "sprigmelt_smg",
+  "tech": "sprigmelt_smg",
+  "out": ["sprigmelt_smg", 1],
+  "cost": [["ingot", 6], ["wood", 4], ["lumenite", 3]],
   "station": "workbench",
   "work": 160
  },
  {
-  "id": "tanzee_rifle",
-  "tech": "tanzee_rifle",
-  "out": ["tanzee_rifle", 1],
-  "cost": [["ingot", 8], ["wood", 6], ["paldium", 4]],
+  "id": "briargoo_rifle",
+  "tech": "briargoo_rifle",
+  "out": ["briargoo_rifle", 1],
+  "cost": [["ingot", 8], ["wood", 6], ["lumenite", 4]],
   "station": "workbench",
   "work": 180
  },
@@ -1820,10 +1820,10 @@ const RECIPES = [
   "work": 400
  },
  {
-  "id": "pengullet_launcher",
-  "tech": "pengullet_launcher",
-  "out": ["pengullet_launcher", 1],
-  "cost": [["ingot", 6], ["paldium", 4], ["ice_organ", 3], ["fiber", 6]],
+  "id": "corlmite_launcher",
+  "tech": "corlmite_launcher",
+  "out": ["corlmite_launcher", 1],
+  "cost": [["ingot", 6], ["lumenite", 4], ["ice_organ", 3], ["fiber", 6]],
   "station": "workbench",
   "work": 180
  },
@@ -1839,7 +1839,7 @@ const RECIPES = [
   "id": "sky_saddle",
   "tech": "sky_saddle",
   "out": ["sky_saddle", 1],
-  "cost": [["leather", 4], ["fiber", 10], ["paldium", 2]],
+  "cost": [["leather", 4], ["fiber", 10], ["lumenite", 2]],
   "station": "workbench",
   "work": 140
  },
@@ -1847,14 +1847,14 @@ const RECIPES = [
   "id": "wave_saddle",
   "tech": "wave_saddle",
   "out": ["wave_saddle", 1],
-  "cost": [["leather", 4], ["fiber", 8], ["paldium", 2]],
+  "cost": [["leather", 4], ["fiber", 8], ["lumenite", 2]],
   "station": "workbench",
   "work": 120
  },
  {
   "id": "fishing_rod",
   "out": ["fishing_rod", 1],
-  "cost": [["wood", 8], ["fiber", 6], ["paldium", 2]],
+  "cost": [["wood", 8], ["fiber", 6], ["lumenite", 2]],
   "station": "workbench",
   "work": 80
  },
@@ -1916,7 +1916,7 @@ const RECIPES = [
  {
   "id": "attack_pendant",
   "out": ["attack_pendant", 1],
-  "cost": [["cloth", 3], ["paldium", 4], ["gold_coin", 20]],
+  "cost": [["cloth", 3], ["lumenite", 4], ["gold_coin", 20]],
   "station": "workbench",
   "work": 160
  },
@@ -1930,21 +1930,21 @@ const RECIPES = [
  {
   "id": "swift_charm",
   "out": ["swift_charm", 1],
-  "cost": [["cloth", 3], ["fiber", 6], ["paldium", 2]],
+  "cost": [["cloth", 3], ["fiber", 6], ["lumenite", 2]],
   "station": "workbench",
   "work": 160
  },
  {
   "id": "mercy_ring",
   "out": ["mercy_ring", 1],
-  "cost": [["cloth", 3], ["paldium", 6], ["gold_coin", 30]],
+  "cost": [["cloth", 3], ["lumenite", 6], ["gold_coin", 30]],
   "station": "workbench",
   "work": 160
  },
  {
   "id": "miner_cap",
   "out": ["miner_cap", 1],
-  "cost": [["leather", 6], ["ingot", 4], ["paldium", 3]],
+  "cost": [["leather", 6], ["ingot", 4], ["lumenite", 3]],
   "station": "workbench",
   "work": 140
  }]
