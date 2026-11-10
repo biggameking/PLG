@@ -195,8 +195,8 @@ build-tools/apksigner).
   harvest/loot/roster shared 8/s+10). pal_hit claims now bounded by the
   formula's own ceiling vs THIS target (atk=500 model, ≤250 landed) and
   sleep claims route through `apply_sleep_claim`'s chain-sleep immunity
-  (host tranq uses the same gate). sphere_catch cap_lv clamp fixed 10→20
-  (real capture_level range). demolish refuses anchors outright and any
+  (host tranq uses the same gate). sphere_catch cap_lv clamps to 1..6 —
+  the real range (1 + statue≤5), not a plausible-looking 20. demolish refuses anchors outright and any
   structure not stamped `placed_by = sender` (net_place stamps it).
   Disconnect: `_on_peer_disconnected` retracts the field pal then
   `orphan_guest_kin` boxes every owned kin under its tag for rejoin
@@ -211,5 +211,18 @@ build-tools/apksigner).
   live peer. Smoke +26 checks covering every new gate's accept/reject.
   Deferred honestly: client damage/sleep claims are bounded, not
   re-derived; guest bag/orb spend unverifiable (private rosters);
-  build_deny refunds a possibly-forged request (bounded by tech gate +
-  throttle; only the cheater's client sees the refund).
+  build_deny only fires for honest-reachable denials (site contested) —
+  forged locked/throttled requests get silence, not a refund.
+- S21b re-audit fixes — DONE: second context-free pass over S21 found
+  4M+8L, all landed. `orphan_guest_kin` now restores `visible` for
+  expedition kin and routes `carry` home via `give_remote` (L1), caps
+  its `box.append` at MAX_BOX+32 releasing tagged kin past the lane.
+  `sphere_catch` cap_lv clamp is 1..6 (statue-derived, not a plausible
+  20). `sync_pos` first fixes must land at spawn or a travel pad — the
+  one free blink per ghost is gone. `net_catch` enforces the global
+  `box.size()` bound alongside the per-owner lane. `pal_hit` drops 0/0
+  claims before they wake tranq'd kin; `peer_pos` relays the clamped z
+  and rejects non-finite elev; `kill_pal`'s wild-release clears
+  `owner_tag`; `_legit_blink` scans a cached travel-cell set (rebuild on
+  count change or 3s TTL); `chat_last` prunes on disconnect. Smoke +4
+  (spawn first-fix accept/reject, expedition orphan, zero-claim no-op).

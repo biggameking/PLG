@@ -225,3 +225,14 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     `ghosts.get(pid)` — a null ghost means refuse, and headless tests
     must `spawn_ghost(sender_pid)` before calling the RPC, not just
     set `is_host`.
+46. **Transfer paths normalize every per-kin flag, not just `mode`.**
+    `orphan_guest_kin` boxed expedition pals still `visible=false` with
+    cargo attached — every sibling box path clears `carry`/`job_site`.
+    When a kin changes containers, scrub the full flag list
+    (`visible`, `carry`, `job_site`, `owner_*`) or it resurfaces as an
+    invisible worker / stasis cargo / rebindable wild.
+47. **Clamp bounds derive from the model's real max — verify the number.**
+    `cap_lv` was "fixed" to 20 while the reachable range is 1..6
+    (`capture_level = 1 + statue≤5`). When a bound is meant to match
+    honest play, compute it from the data (perk caps, item tables,
+    level max) — a plausible-looking constant IS the exploit.

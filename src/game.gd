@@ -880,6 +880,7 @@ func kill_pal(p: Kin, by_player: bool) -> void:
 		else: # even the overflow lane is full — the wild reclaims it, KO'd
 			p.mode = "wild"
 			p.owner_id = 0
+			p.owner_tag = "" # released means released — no tag to rebind into a free kin
 			p.hp = 1
 			pals.append(p) # pals.erase ran above — re-enter or it orphans in-tree
 			log_msg("%s is KO'd - the full kinbox can't take it; it limps back to the wild" % p.spec["name"])
@@ -1581,7 +1582,9 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		sp_pow, target.any_status(), behind, cap_lv))
 	if randf() < chance:
 		var rp := rparty_for(pid)
-		if rp.size() >= 5 and box_count_of(pid) >= MAX_BOX:
+		# per-owner lane AND the global bound: one guest's roster can't push
+		# the shared box past what every local path already enforces
+		if rp.size() >= 5 and (box_count_of(pid) >= MAX_BOX or box.size() >= MAX_BOX):
 			floater(target.pos, "BOX FULL", "#e8963c")
 			log_msg("Kinbox is full (%d) - %s got away" % [MAX_BOX, target.spec["name"]])
 			return
@@ -5474,10 +5477,19 @@ func orphan_guest_kin(pid: int) -> void:
 			if p.job_site != null:
 				p.job_site["workers"].erase(p)
 				p.job_site = null
+			if p.carry != null: # cargo rides home with the tag, not into stasis
+				give_remote(pid, str(p.carry["id"]), int(p.carry["n"]))
+				p.carry = null
+			p.visible = true # an expedition pal enters cold-storage daylight
 			pals.erase(p)
 			p.mode = "box"
-			box.append(p)
-			box_pal(p)
+			if box.size() < MAX_BOX + 32:
+				box.append(p)
+				box_pal(p)
+			else: # the overflow lane is full too — release it, tag and all
+				p.owner_id = -1
+				p.owner_tag = ""
+				p.free()
 	for coll in [box, bench]:
 		for p in coll:
 			if is_instance_valid(p) and p.owner_id == pid:

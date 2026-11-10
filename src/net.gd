@@ -142,6 +142,7 @@ func _on_peer_disconnected(id: int) -> void:
 		game.r_retract(id) # a leaving keeper's field pal balls up under their tag
 		game.orphan_guest_kin(id) # roster survives under the tag for a rejoin
 		peer_tags.erase(id) # the tag survives in remote_parties for a rejoin
+		chat_last.erase(id) # a dead pid's spam brake shouldn't park a reuse
 		rpc("peer_left", id)
 
 @rpc("authority", "call_remote", "reliable")
@@ -244,7 +245,7 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false) -> vo
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
-	if not (is_finite(float(x)) and is_finite(float(y))):
+	if not (is_finite(float(x)) and is_finite(float(y)) and is_finite(float(elev))):
 		return
 	if ghosts.has(id):
 		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
@@ -286,7 +287,13 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	if nx < 0.0 or ny < 0.0 or nx >= World.WORLD_W or ny >= World.WORLD_H:
 		return # every proximity gate trusts this position — keep it inside the island
 	var g = ghosts[id]
-	if g.net_pos.x >= 0:
+	if g.net_pos.x < 0:
+		# the first fix is where the join actually materializes — spawn, or a
+		# pad beside it. Anything else stays -1 and keeps failing every gate
+		var sp := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
+		if Vector2(nx, ny).distance_to(sp) > 12.0 and _near_travel_node(Vector2(nx, ny)) == "":
+			return
+	else:
 		# token-bucket speed cap: allowance accrues at POS_RATE tiles/sec up to
 		# POS_BURST, so honest packets (and lossy-network clumping) always fit
 		# while sustained spoofed walking converges to the cap — and legit big
@@ -305,22 +312,37 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	# honest need to be sprinting the very next frame
 	g.net_pos = Vector3(nx, ny, clampf(nz, -1.0, 8.0))
 	if is_host:
-		rpc("peer_pos", id, nx, ny, float(elev))  # relay so clients see each other
+		rpc("peer_pos", id, nx, ny, g.net_pos.z)  # relay the CLAMPED z, not the claim
 
 const BLINK_RADIUS := 5.0 # landing tolerance: nearest_free can shove a few tiles
 const POS_RATE := 40.0 # mounted sprint peaks ~29 u/s; cap leaves 38% headroom
 const POS_BURST := 6.0 # absorbs ~5 dropped 20Hz packets before honest steps clip
 const BLINK_CD := 3.0 # home-lane cooldown — deaths are minutes apart, not seconds
 
+var _tn_stamp := -1
+var _tn_t := 0.0
+var _tn_cells := {}
+func _travel_cells() -> Dictionary:
+	# the blink-pad census is O(structures) — rebuild on count change or a
+	# 3s TTL so a same-count swap still converges, not per spoofed packet
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if _tn_stamp != game.structures.size() or now - _tn_t > 3.0:
+		_tn_stamp = game.structures.size()
+		_tn_t = now
+		_tn_cells.clear()
+		for k in game.structures:
+			var st = game.structures[k]
+			if st["id"] == "waypoint" or st["id"] == "kinbox":
+				_tn_cells[k] = st["id"]
+	return _tn_cells
+
 func _near_travel_node(p: Vector2) -> String:
 	# waypoint stones and kinbox terminals are the only sanctioned blink pads —
 	# the same set the travel panel offers
-	for k in game.structures:
-		var st = game.structures[k]
-		if st["id"] != "waypoint" and st["id"] != "kinbox":
-			continue
+	var cells := _travel_cells()
+	for k in cells:
 		if p.distance_to(Vector2(k.x + 0.5, k.y + 0.5)) <= BLINK_RADIUS:
-			return st["id"]
+			return cells[k]
 	return ""
 
 func _legit_blink(g, from: Vector2, to: Vector2) -> bool:
@@ -365,6 +387,8 @@ func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
 		return # fail closed: the swing has to come from somewhere real
+	if float(dmg) <= 0.0 and float(sleep_s) <= 0.0:
+		return # a 0-damage claim still wakes tranq'd kin and pulls aggro — pure grief
 	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
 		return # honest swings top out ~2.2/s — a 60Hz claim feed is a script
 	var bound := Combat.damage(guest_atk_cap(), 34.0,
@@ -382,7 +406,8 @@ func sphere_catch(nid: int, sid: String, behind: bool, cap_lv: int) -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "catch_bkt", 0.7, 1.0):
 		return # honest throws pay flight+wobble seconds — not one per frame
-	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 20), pid)
+	# cap_lv honest range is 1..6 — capture_level = 1 + statue(≤5)
+	game.net_catch(int(nid), str(sid), behind == true, clampi(int(cap_lv), 1, 6), pid)
 
 # Ground loot rides the same 2Hz broadcast as kin. A client never owns a
 # drop: it walks over a replica, asks with take_drop, and the host pays out
@@ -469,10 +494,11 @@ func build_req(sid: String, tx: int, ty: int) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "build_bkt", 0.7, 1.0):
-		rpc_id(pid, "build_deny", str(sid))
 		return # one blueprint per breath — a fill script can't pave the island
+	if not game.unlocked.has(str(sid)):
+		return # a locked blueprint can't come from an honest client — no refund for forgeries
 	if not game.net_place(str(sid), int(tx), int(ty), pid):
-		rpc_id(pid, "build_deny", str(sid)) # the client paid up front — refund the bill
+		rpc_id(pid, "build_deny", str(sid)) # site contested mid-click — the one honest deny
 
 @rpc("authority", "call_remote", "reliable")
 func build_deny(sid: String) -> void:

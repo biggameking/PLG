@@ -77,8 +77,9 @@ the interaction-verb layer was not. Closed in this pass:
   host pantry/medicine. Remaining trust class: client claims of damage
   dealt and items paid are bounded/gated, not re-derived — private bags
   are client-side, so a forged `build_req` can still plant an unlocked
-  structure free in the shared world (throttled + tech-gated; the refund
-  only ever lands on the cheater's own client). Co-op friend scope.
+  structure free in the shared world (throttled + tech-gated; deny refunds
+  only fire for honest-reachable placement failures, so forgery gains the
+  plant itself but never free materials). Co-op friend scope.
 - **BGM**: three procedural pads — day, night, and a minor danger drone that
   swallows the mix during raids/gauntlets/phase-2 bosses — each with a
   plucked arp layer so the drones carry a line. Reactive, still not produced.

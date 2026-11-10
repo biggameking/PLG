@@ -4646,9 +4646,22 @@ func run() -> void:
 	# coordinates must die at the door (id 0 = a headless sender)
 	game.net.spawn_ghost(0)
 	var g0 = game.net.ghosts[0]
-	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — first packet always lands
-	game.net.sync_pos(150.0, 150.0, 0.0)
-	check("sync_pos accepts first fix", g0.net_pos == Vector3(150, 150, 0))
+	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — but the first fix must
+	# still land where a join materializes: spawn, or a pad beside it
+	var spfx := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
+	game.net.sync_pos(spfx.x + 3.0, spfx.y, 0.0)
+	check("first fix lands at spawn", g0.net_pos == Vector3(spfx.x + 3.0, spfx.y, 0))
+	g0.net_pos = Vector3(-1, -1, 0) # a recycled ghost gets no second free blink
+	var ffx := Vector2.ZERO
+	for fcand in [Vector2(200, 200), Vector2(20, 20), Vector2(400, 400), Vector2(150, 180)]:
+		if game.net._near_travel_node(fcand) == "" and fcand.distance_to(spfx) > 12.0:
+			ffx = fcand
+			break
+	check("far first-fix target exists", ffx != Vector2.ZERO)
+	if ffx != Vector2.ZERO:
+		game.net.sync_pos(ffx.x, ffx.y, 0.0)
+		check("first fix off-spawn dies", g0.net_pos == Vector3(-1, -1, 0))
+	g0.net_pos = Vector3(150, 150, 0) # planted for the step/blink checks below
 	# a jump to nowhere still dies at the door — hunt a spot that is provably
 	# not a travel-node landing so seeds can't make this test seed-dependent
 	var bad := Vector2.ZERO
@@ -4753,6 +4766,12 @@ func run() -> void:
 	game.net.ghosts[0].set_meta("hit_bkt", 6.0) # fresh bucket for the sleep claims
 	game.net.pal_hit(vt.uid, 0.0, 10.0)
 	check("sleep claim lands", vt.statuses.get("sleep", 0.0) > game.t)
+	# a 0/0 claim is a pure no-op — it can't wake a darted kin or pull aggro
+	var agg0 := vt.aggro_pid
+	game.net.ghosts[0].set_meta("hit_bkt", 6.0)
+	game.net.pal_hit(vt.uid, 0.0, 0.0)
+	check("zero claim stays asleep", vt.statuses.get("sleep", 0.0) > game.t
+		and vt.aggro_pid == agg0)
 	vt.statuses.erase("sleep")
 	game.net.ghosts[0].set_meta("hit_bkt", 6.0)
 	game.net.pal_hit(vt.uid, 0.0, 10.0)
@@ -4860,6 +4879,17 @@ func run() -> void:
 	check("rejoin reclaims orphans", op1.owner_id == 7)
 	game.box.erase(op1); game.box.erase(op2)
 	op1.free(); op2.free()
+	# an expedition kin orphans into daylight — visible again, cargo rode home
+	var op3: Kin = game.gen_pal("fenjelly", 2, Vector2(150, 152))
+	op3.mode = "expedition"; op3.owner_id = 7; op3.owner_tag = "tok_z"
+	op3.visible = false; op3.carry = {"id": "wood", "n": 4}
+	game.pals.append(op3)
+	var bag_w := game.item_count("wood")
+	game.orphan_guest_kin(7)
+	check("expedition orphan surfaces", op3.mode == "box" and op3.visible
+		and op3.carry == null and game.item_count("wood") == bag_w + 4,
+		"mode=%s vis=%s carry=%s" % [op3.mode, op3.visible, op3.carry])
+	game.box.erase(op3); op3.free()
 	# severed session: host-owned replicas purge, they can't be free catches
 	var rex: Kin = game.gen_pal("fenjelly", 2, Vector2(150, 152))
 	rex.mode = "wild"; rex.net_id = 4242; game.pals.append(rex)
