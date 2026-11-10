@@ -60,9 +60,14 @@ the interaction-verb layer was not. Closed in this pass:
   guest applies the same `power*0.6` keeper pipeline locally (own armor/
   absorb, statuses only when damage lands, chance rolled host-side). Guest
   shots relay through `pal_hit` (guest bows/muskets/tranq darts work; a
-  client claims the damage number — host clamps it, can't re-derive guest
-  gear math). Guest melee statuses still don't transfer; `danger` reaches
-  clients via env_sync.
+  client claims the damage number — host clamps it at 500, ~3x the
+  honest-formula ceiling, can't re-derive guest gear math). `danger`
+  reaches clients via env_sync. Guest teleports are shaped, not banned:
+  `sync_pos` accepts >12-tile jumps only onto travel nodes (kinbox/spawn
+  from anywhere = respawn; waypoint needs a node departure). Guests
+  claim to have paid build costs — private bags are client-side, so a
+  forged `build_req` can plant an unlocked structure free in the shared
+  world; same trust class as damage claims, co-op friend scope.
 - **BGM**: three procedural pads — day, night, and a minor danger drone that
   swallows the mix during raids/gauntlets/phase-2 bosses — each with a
   plucked arp layer so the drones carry a line. Reactive, still not produced.

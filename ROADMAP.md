@@ -141,8 +141,23 @@ build-tools/apksigner).
   same power*0.6 formula against its own armor/absorb locally (real
   parity gain: the guest's plate actually protects it now, and statuses
   only land when damage does). Smoke asserts the guest-side pipeline.
-  Deferred honestly: guest claims damage numbers (host clamps), guest melee
-  statuses don't transfer, guest armor invisible to host.
+- S19c teleport protocol + claim bound — DONE: the 12-tile `sync_pos`
+  cap was silently killing legit guest teleports (waypoint hops and
+  death respawn). `_legit_blink` now shapes the allowance: jumps land
+  only on travel nodes — kinbox/spawn accept any origin (respawn is
+  legal from anywhere), waypoint destinations also require a node
+  departure. `pal_hit` claim clamp tightened 2000→500 (~3x the honest
+  formula ceiling — the damage formula self-caps near 2*power*mult).
+  All remaining `aggro = 0` literal sites paired with `aggro_pid`
+  (gauntlet/raid-boss spawns and raid fallback use nearest_body_pid;
+  host-only provocations set 0 explicitly). "Guest melee statuses don't
+  transfer" deferred item RETIRED — melee weapons carry no status data
+  on the host side either; parity already held. Smoke: blink accept/
+  reject matrix with planted fixtures, pal_hit clamp bound. Suite
+  500 checks / 0 failures.
+  Deferred honestly: guest claims damage numbers (host clamps), forged
+  build_req plants free unlocked structures (private-bag limit),
+  guest armor invisible to host.
 - S20 shell visual pass — DONE: procedural animated dawn behind the title
   (gradient sky, sun+glow, drifting clouds, sea, island ridge silhouette,
   rising motes — all driven by game.t); wordmark gets gold rule + twin orb

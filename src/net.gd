@@ -263,10 +263,35 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		return # every proximity gate trusts this position — keep it inside the island
 	var g = ghosts[id]
 	if g.net_pos.x >= 0 and Vector2(nx, ny).distance_to(Vector2(g.net_pos.x, g.net_pos.y)) > 12.0:
-		return # guests have no legit teleport — a jump this big is a spoofed anchor
+		# legit big moves exist: waypoint hops land on a travel node and
+		# respawns wake at a kinbox or spawn — shape the allowance, not the trust
+		if not _legit_blink(Vector2(g.net_pos.x, g.net_pos.y), Vector2(nx, ny)):
+			return # a jump anywhere else is a spoofed anchor
 	g.net_pos = Vector3(nx, ny, float(elev))
 	if is_host:
 		rpc("peer_pos", id, nx, ny, float(elev))  # relay so clients see each other
+
+const BLINK_RADIUS := 5.0 # landing tolerance: nearest_free can shove a few tiles
+
+func _near_travel_node(p: Vector2) -> String:
+	# waypoint stones and kinbox terminals are the only sanctioned blink pads —
+	# the same set the travel panel offers
+	for k in game.structures:
+		var st = game.structures[k]
+		if st["id"] != "waypoint" and st["id"] != "kinbox":
+			continue
+		if p.distance_to(Vector2(k.x + 0.5, k.y + 0.5)) <= BLINK_RADIUS:
+			return st["id"]
+	return ""
+
+func _legit_blink(from: Vector2, to: Vector2) -> bool:
+	# a big jump is only honest when it lands where the game's own teleports do
+	var dst := _near_travel_node(to)
+	if dst == "kinbox" or \
+			to.distance_to(Vector2(game.world.spawn) + Vector2(0.5, 0.5)) <= BLINK_RADIUS:
+		return true # respawns come from wherever death found the keeper
+	# waypoint hops have a visible departure too — the stone you stood on
+	return dst == "waypoint" and _near_travel_node(from) != ""
 
 @rpc("any_peer", "call_remote", "unreliable")
 func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
@@ -282,7 +307,7 @@ func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
 		return # fail closed: the swing has to come from somewhere real
-	p.hit(clampf(float(dmg), 0.0, 2000.0), 1.0, false, pid) # the guest who swung takes the aggro — the host doesn't tank for remote blows
+	p.hit(clampf(float(dmg), 0.0, 500.0), 1.0, false, pid) # the guest who swung takes the aggro — the host doesn't tank for remote blows
 	if sleep_s > 0.0 and p.hp > 0: # a tranq dart lands after the sting — same rule as the host's own shot
 		p.statuses["sleep"] = game.t + clampf(float(sleep_s), 0.5, 15.0)
 		game.floater(p.pos, "zzz", "#9ad8ff")

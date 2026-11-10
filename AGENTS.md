@@ -197,3 +197,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     immune while projectiles weren't. If two hit paths disagree about a
     gate (`state`, dodge, god-mode), they share one predicate or the
     difference is a documented asymmetry.
+41. **Shape the allowance, don't drop the cap.** A 12-tile step cap on
+    `sync_pos` killed legit teleports too (waypoint hops, death respawn).
+    The fix is a destination-shape rule — big jumps may only land on
+    sanctioned travel nodes, and outbound-only nodes require a node
+    departure — never "trust the client when it says teleport". Claim
+    clamps get the same treatment: bound `pal_hit` claims at ~3x the
+    honest formula ceiling (500), not "whatever fits in a float".
+42. **Test fixtures must not depend on world state a later load can
+    erase.** The save-coercion tests reload with `structures: {}`, so a
+    blink test that hunted "an existing waypoint" found nothing. Plant
+    the structures the test needs (or compute provably-empty spots) —
+    a check that reads ambient world content flakes on suite order.

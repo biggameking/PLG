@@ -4584,7 +4584,16 @@ func run() -> void:
 	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — first packet always lands
 	game.net.sync_pos(150.0, 150.0, 0.0)
 	check("sync_pos accepts first fix", g0.net_pos == Vector3(150, 150, 0))
-	game.net.sync_pos(200.0, 200.0, 0.0) # 70-tile jump: no legit teleport exists
+	# a jump to nowhere still dies at the door — hunt a spot that is provably
+	# not a travel-node landing so seeds can't make this test seed-dependent
+	var bad := Vector2.ZERO
+	for cand in [Vector2(200, 200), Vector2(20, 20), Vector2(400, 400), Vector2(150, 180)]:
+		if game.net._near_travel_node(cand) == "" \
+				and cand.distance_to(Vector2(game.world.spawn) + Vector2(0.5, 0.5)) > game.net.BLINK_RADIUS:
+			bad = cand
+			break
+	check("bad blink target exists", bad != Vector2.ZERO)
+	game.net.sync_pos(bad.x, bad.y, 0.0)
 	check("sync_pos kills teleports", g0.net_pos == Vector3(150, 150, 0))
 	game.net.sync_pos(NAN, 50.0, 0.0)
 	check("sync_pos kills NaN", g0.net_pos == Vector3(150, 150, 0))
@@ -4592,7 +4601,63 @@ func run() -> void:
 	check("sync_pos kills out-of-bounds", g0.net_pos == Vector3(150, 150, 0))
 	game.net.sync_pos(152.0, 150.0, 0.0) # a normal step still lands
 	check("sync_pos accepts steps", g0.net_pos == Vector3(152, 150, 0))
+	# legit blinks land: respawns wake at a kinbox, waypoint hops go
+	# node-to-node — a waypoint destination from open ground is still a spoof.
+	# The save-coercion tests leave the world structure-less: plant fixtures.
+	var kb := Vector2i(-1, -1)
+	var wk := Vector2i(-1, -1)
+	for r3 in range(6, 70):
+		if kb.x >= 0 and wk.x >= 0:
+			break
+		var cc := Vector2i(int(game.player.pos.x) + r3, int(game.player.pos.y))
+		var clear := true
+		for dy3 in range(3):
+			for dx3 in range(3):
+				var k3 := cc + Vector2i(dx3, dy3)
+				if not game.world.in_bounds(k3.x, k3.y) or game.world.blocked(k3.x, k3.y) \
+						or game.structures.has(k3):
+					clear = false
+		if not clear:
+			continue
+		if kb.x < 0 and game.place_free("kinbox", cc.x, cc.y):
+			kb = cc
+		elif wk.x < 0 and cc.distance_to(kb) > 16.0 and game.place_free("waypoint", cc.x, cc.y):
+			wk = cc
+	check("blink fixtures planted", kb.x >= 0 and wk.x >= 0, "kb=%s wk=%s" % [kb, wk])
+	if kb.x >= 0:
+		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0)
+		check("respawn blink lands", g0.net_pos == Vector3(kb.x + 0.5, kb.y + 2.5, 0))
+	if wk.x >= 0:
+		var wdst := Vector2(wk.x + 0.5, wk.y + 2.5)
+		var src_far := Vector2.ZERO
+		for cand in [Vector2(150, 150), Vector2(180, 180), Vector2(300, 60), Vector2(60, 300), Vector2(250, 250), Vector2(40, 40)]:
+			if game.net._near_travel_node(cand) == "" and cand.distance_to(wdst) > 12.0:
+				src_far = cand
+				break
+		check("off-node source exists", src_far != Vector2.ZERO)
+		g0.net_pos = Vector3(src_far.x, src_far.y, 0) # open ground, far from stones
+		game.net.sync_pos(wdst.x, wdst.y, 0.0)
+		check("waypoint jump off-node dies", g0.net_pos == Vector3(src_far.x, src_far.y, 0))
+		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0) # home first…
+		game.net.sync_pos(wdst.x, wdst.y, 0.0) # …then node→node
+		check("node-to-node hop lands", g0.net_pos == Vector3(wdst.x, wdst.y, 0))
 	g0.queue_free(); game.net.ghosts.erase(0)
+	# pal_hit clamps the claimed number — the wire says 99999, the kin feels ≤500
+	game.net.is_host = true # the relay only runs host-side
+	var vt: Kin = game.gen_pal("fenjelly", 5, Vector2(160, 150))
+	vt.mode = "wild"; game.pals.append(vt)
+	game.net.spawn_ghost(0)
+	game.net.ghosts[0].net_pos = Vector3(vt.pos.x, vt.pos.y, 0)
+	var hp_v: float = vt.hp
+	game.net.pal_hit(vt.uid, 99999.0)
+	check("pal_hit clamps claims", vt.hp >= hp_v - 500.0 and vt.hp < hp_v,
+		"hp=%.0f/%0f" % [vt.hp, hp_v])
+	game.net.ghosts[0].queue_free(); game.net.ghosts.erase(0)
+	game.pals.erase(vt)
+	if vt.get_parent():
+		vt.get_parent().remove_child(vt)
+	vt.free()
+	game.net.is_host = false
 	if game.item_count("kin_egg") == 0:
 		game.add_item("kin_egg", 1)
 	var eggs_have: int = game.item_count("kin_egg")

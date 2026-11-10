@@ -966,6 +966,7 @@ func gauntlet_next_wave() -> void:
 				np.sprite.scale = Vector2(2.2, 2.2)
 				np.sprite.position.y = -70.0
 			np.aggro = 0
+			np.aggro_pid = np.nearest_body_pid() # a guest holding the base draws the wave too
 			np.raid = true # den-respawn skips raiders — the tower stays dead too
 			np.set_meta("gauntlet", true)
 			np.set_meta("raid_t0", t)
@@ -1317,7 +1318,8 @@ func summon_raid() -> bool:
 	bp.setup(self, sid, 45, nearest_free(kinbox_pos.x + 2.5, kinbox_pos.y + 2.5))
 	bp.sprite.scale = Vector2(2.2, 2.2)
 	bp.sprite.position.y = -70.0
-	bp.aggro = 0  # player
+	bp.aggro = 0  # player — or the guest standing closest to the spawn
+	bp.aggro_pid = bp.nearest_body_pid()
 	bp.raid = true
 	bp.set_meta("raid_t0", t)
 	pals.append(bp)
@@ -1533,6 +1535,7 @@ func resolve_sphere(sp) -> void:
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
 		catch_fail()
 		target.aggro = 0 if target.hostile() >= 1 else -1
+		target.aggro_pid = 0 # the local keeper threw the orb — the heat is his
 
 func release_event_flags(p: Kin) -> void:
 	# a caught kin stops being an invader: raid/gauntlet metas mark a
@@ -3008,6 +3011,7 @@ func anger_nesters(at: Vector2) -> void:
 		if q.mode == "wild" and q.hp > 0 and q.aggro < 0 \
 				and q.pos.distance_to(at) < 9.0:
 			q.aggro = 0
+			q.aggro_pid = 0 # egg theft is a keeper verb — the thief pays
 			q.statuses.erase("sleep")
 
 func make_active(uid: int) -> void:
@@ -4264,6 +4268,7 @@ func start_raid() -> void:
 				rp.bounty = rng.int_range(8, 18) # wanted criminals pay cash on the spot
 			# raider picks nearest non-wild kin; falls back to the player
 			rp.aggro = 0
+			rp.aggro_pid = rp.nearest_body_pid() # or the guest it spawns on top of
 			rp.raid = true
 			rp.set_meta("raid_t0", t)
 			var bp: Kin = null; var bd := 30.0
@@ -4684,6 +4689,7 @@ func open_mimic(st: Dictionary) -> void:
 		Vector2(cell.x + 0.5, cell.y + 0.5))
 	m.mode = "wild"
 	m.aggro = 0 # the mimic picks its fight before you pick yours
+	m.aggro_pid = 0 # chest-opening is a keeper verb — the opener is the mark
 	pals.append(m)
 	floater(m.pos, "IT GRINS.", "#e8452f")
 	log_msg("The chest was a %s — it was never a chest!" % m.spec["name"])
@@ -5782,7 +5788,7 @@ func hit_merchant(dmg: float) -> void:
 			var at := nearest_free(player.pos.x + cos(a) * 5.0, player.pos.y + sin(a) * 5.0)
 			var thug := gen_pal("ironpact_grunt" if i % 2 == 0 else "ironpact_sweeper",
 				maxi(3, player.level + rng.int_range(-1, 2)), at)
-			thug.mode = "wild"; thug.aggro = 0; thug.home = player.pos
+			thug.mode = "wild"; thug.aggro = 0; thug.aggro_pid = 0; thug.home = player.pos
 			pals.append(thug)
 		merchant_tgt = merchant.pos + (merchant.pos - player.pos).normalized() * 20.0
 		log_msg("WANTED! The Iron Pact answers violence with violence")

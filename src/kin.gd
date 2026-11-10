@@ -379,6 +379,7 @@ func wild_ai(dt: float) -> void:
 			return
 		if dist < 6.0 and not has_status("sleep"):
 			aggro = 0
+			aggro_pid = nearest_body_pid() # a guest in the lair is a trespasser too
 			return
 	# a de-aggro'd raider re-targets the base instead of wandering home
 	if raid:
