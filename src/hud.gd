@@ -61,6 +61,16 @@ func _process(_dt: float) -> void:
 
 var _menu_key := "" # last drawn "state|panel" — rects belong to exactly one menu
 
+func _input(event: InputEvent) -> void:
+	# last-seen device drives hint phrasing — sticks drift, so gate on intent
+	if event is InputEventJoypadButton:
+		game.using_pad = event.pressed or game.using_pad
+	elif event is InputEventJoypadMotion:
+		if absf(event.axis_value) > 0.4:
+			game.using_pad = true
+	elif (event is InputEventKey or event is InputEventMouseButton) and event.is_pressed():
+		game.using_pad = false
+
 func _unhandled_input(event: InputEvent) -> void:
 	var mk := "%s|%s" % [game.state, game.panel]
 	if mk != _menu_key: # a transition just happened: last frame's rows are void
@@ -596,7 +606,8 @@ func _draw() -> void:
 	var hy := 62.0
 	for h in game.active_hints(): # contextual nudges — retire themselves
 		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
-		draw_string(font, Vector2(r.x - 212, hy), "» " + tr(h["text"]),
+		var htxt: String = str(h.get("pad", h["text"])) if game.using_pad else str(h["text"])
+		draw_string(font, Vector2(r.x - 212, hy), "» " + tr(htxt),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.85, 0.9, 0.95))
 		hy += 17
 	if game.spires_done.size() > 0 or game.crowned: # the campaign spine's tally

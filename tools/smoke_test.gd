@@ -4318,6 +4318,29 @@ func run() -> void:
 	game.settings["lang"] = "en"; game.apply_settings()
 	check("tr en", tr("SETTINGS") == "SETTINGS")
 
+	# hero accessories: the crown jewels and back wings are real pixels, not
+	# a comment — scalbeak wears white jewel dots, vermtrot carries a back fan
+	var h1 := Image.load_from_file("res://assets/kin/scalbeak_f0.png")
+	var h2 := Image.load_from_file("res://assets/kin/vermtrot_f0.png")
+	var jc: Color = h1.get_pixel(40, 2)
+	check("hero crown pixels", h1 != null and jc.r > 0.9 and jc.g > 0.9 and jc.b > 0.9)
+	check("hero wing pixels", h2 != null and h2.get_pixel(34, 14).a > 0.9)
+	# pad-aware hints: variants exist, the device detector flips on intent
+	var pad_keys := 0
+	for hh in game.HINTS:
+		if hh.has("pad"):
+			pad_keys += 1
+	check("pad hint variants", pad_keys >= 2)
+	var hud2 = main.get_node("UILayer/HUD")
+	var jev := InputEventJoypadButton.new()
+	jev.button_index = JOY_BUTTON_A; jev.pressed = true
+	hud2._input(jev)
+	check("pad seen", game.using_pad)
+	var kev2 := InputEventKey.new()
+	kev2.keycode = KEY_Q; kev2.pressed = true
+	hud2._input(kev2)
+	check("keyboard seen", not game.using_pad)
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)

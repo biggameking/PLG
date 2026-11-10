@@ -297,12 +297,69 @@ SPRITES = {
     "ironpact_sweeper": ("human", ["#5a2e4a", "#3d1f33", "#e8c9a0"], 0),
 }
 
+# ---- hero accessories: legendaries wear a silhouette the wilds recognize ----
+# stamps draw in the same 40x32 plan space AFTER the body plan, so an accessory
+# can replace a tuft or sit clean on the skull. Anchor = top-of-head per plan.
+def acc_crown(b, x, y):
+    R(b, x - 3, y, x + 3, y + 1, 4)
+    for i in (-3, 0, 3):
+        S(b, x + i, y - 1, 4)
+    S(b, x - 1, y + 1, 5); S(b, x + 1, y + 1, 5)
+
+def acc_halo(b, x, y):
+    for i in range(-3, 4):
+        S(b, x + i, y, 5)
+    S(b, x - 3, y + 1, 5); S(b, x + 3, y + 1, 5)
+
+def acc_horns(b, x, y):
+    R(b, x - 6, y, x - 5, y + 3, 3); R(b, x + 5, y, x + 6, y + 3, 3)
+    S(b, x - 6, y - 1, 3); S(b, x + 6, y - 1, 3)
+    S(b, x - 5, y + 4, 3); S(b, x + 5, y + 4, 3)
+
+def acc_wings(b, x, y):
+    R(b, x - 14, y + 4, x - 10, y + 9, 3)
+    S(b, x - 15, y + 5, 3); S(b, x - 15, y + 8, 3); S(b, x - 13, y + 10, 3)
+
+def acc_crest(b, x, y):
+    S(b, x, y - 2, 5); S(b, x, y - 1, 4)
+    S(b, x - 1, y, 4); S(b, x + 1, y, 4); R(b, x - 2, y + 1, x + 2, y + 2, 4)
+
+def acc_fins(b, x, y):
+    S(b, x - 2, y, 3); S(b, x, y - 1, 3); S(b, x + 2, y, 3)
+    S(b, x - 1, y + 1, 3); S(b, x + 1, y + 1, 3)
+
+def acc_mask(b, x, y):
+    R(b, x - 3, y + 2, x + 4, y + 3, 3)
+
+def acc_hood(b, x, y):
+    R(b, x - 4, y - 1, x + 4, y + 1, 3)
+    S(b, x - 4, y + 2, 3); S(b, x + 4, y + 2, 3)
+
+HEAD = { # top-of-skull anchor per body plan (logical 40x32 coords)
+    "quadruped": (29, 2), "kitty": (28, 2), "bird": (21, 0), "mouse": (26, 4),
+    "hedgehog": (31, 9), "deer": (29, -1), "boar": (30, 9), "cow": (30, 0),
+    "monkey": (18, 1), "blob": (19, 4), "serpent": (28, -1), "human": (19, -1),
+    "ghost": (19, 4),
+}
+ACCESSORY = {
+    "scalbeak": "crown", "snovstride": "halo", "nibhand": "mask",
+    "shadekin": "horns", "wyrmhoof": "horns", "cindchew": "crest",
+    "flarbeak": "crest", "tidscale": "fins", "scalcrest": "crown",
+    "vermtrot": "wings",
+}
+ACC_FNS = {"crown": acc_crown, "halo": acc_halo, "horns": acc_horns,
+    "wings": acc_wings, "crest": acc_crest, "fins": acc_fins,
+    "mask": acc_mask, "hood": acc_hood}
+
 def render_pal(spec_id):
     plan, colors, fluff = SPRITES[spec_id]
     ramps = [ramp(colors[0]), ramp(colors[1]), ramp(colors[2]), DARK, WHITE]
     for f in (0, 1):
         b = newbuf()
         PLANS[plan](b, f)
+        if spec_id in ACCESSORY:
+            hx, hy = HEAD.get(plan, (20, 0))
+            ACC_FNS[ACCESSORY[spec_id]](b, hx, hy)
         img = Image.new("RGBA", (PW, PH), (0, 0, 0, 0))
         px = img.load()
         def at(x, y):

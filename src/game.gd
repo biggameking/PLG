@@ -1758,9 +1758,11 @@ func net_live() -> bool:
 var HINTS := [
 	{"id": "orb", "once": 20.0,
 	 "text": "Q aims — click a wild kin to throw an orb",
+	 "pad": "X aims — RT throws at a wild kin",
 	 "cond": func(g): return g.item_count("kin_orb") > 0 and g.catch_counts.is_empty() and g.player != null},
 	{"id": "build", "once": 25.0,
 	 "text": "B builds — a workbench turns wood + stone into gear",
+	 "pad": "Back builds — a workbench turns wood + stone into gear",
 	 "cond": func(g): return g.kinbox_pos.x >= 0 and not g.structures.values().any(func(s): return s["id"] == "workbench")},
 	{"id": "eat", "once": 12.0,
 	 "text": "You're starving — eat berries or cooked food (I opens the bag)",
@@ -1773,6 +1775,7 @@ var HINTS := [
 	 "cond": func(g): return g.pals.any(func(q): return q.mode in ["partner", "base"] and q.san < 30.0)},
 ]
 var hint_seen := {} # id -> cumulative seconds shown
+var using_pad := false # last-seen device: hints swap Q/click for X/RT
 
 func active_hints() -> Array:
 	if state != "play" or player == null:
