@@ -141,3 +141,6 @@ build-tools/apksigner).
   sigils; menu rows gain cursor ticks + separators; pause header gets the
   gold rule. BGM pads gained a plucked arp voice (per-track step/vol:
   day .75s, night 1.0s, danger .3s) — melodies stay inside the loop seam.
+- S20b brand type — DONE: bundled Press Start 2P (OFL, license in
+  fonts/OFL.txt) as the HUD face; CJK/icons fall through to the system font
+  via FontFile.fallbacks. Title verified by live render, not just headless.

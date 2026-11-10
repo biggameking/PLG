@@ -3,7 +3,7 @@ extends Control
 # E interact (craft near workbench, kinbox mgmt near kinbox); ESC closes.
 
 var game: Game
-var font := ThemeDB.fallback_font
+var font: Font = ThemeDB.fallback_font
 var show_help := false
 var guide_page := 0
 var dex_scroll := 0
@@ -55,6 +55,10 @@ func bake_fog() -> void:
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pf = load("res://fonts/PressStart2P-Regular.ttf")
+	if pf != null:
+		pf.fallbacks = [font] # CJK and icons fall through to the system face
+		font = pf # the island's own voice: pixel type, not the engine default
 
 var nav_hold := 0.0 # menu hold-to-repeat clock — edge press moves once, hold marches
 func _process(dt: float) -> void:
