@@ -168,15 +168,25 @@ func enter_phase_two() -> void:
 		n += 1
 
 func pact_slam() -> void:
-	# phase-two signature: a shock ring that punishes the pile-up
+	# phase-two signature: a shock ring that punishes the pile-up — and at a
+	# Pact spire the ring carries the shrine's element, so each guardian's
+	# slam asks a different question of the roster you brought
 	game.floater(pos, "PACT SLAM", "#ff5544")
 	var pl = game.player
 	if pl != null and pos.distance_to(pl.pos) <= 2.6:
 		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
+	var ail := ""
+	if spire_tag != "":
+		var si := int(spire_tag.trim_prefix("spire_"))
+		if si >= 0 and si < game.SPIRE_DEFS.size():
+			ail = {"fire": "burn", "water": "soak", "grass": "poison",
+				"dark": "sleep", "dragon": ""}.get(str(game.SPIRE_DEFS[si]["elem"]), "")
 	for q in game.pals:
 		if q != self and q.hp > 0 and q.mode == "partner" \
 				and pos.distance_to(q.pos) <= 2.6: # punish the pile-up, not parked farmhands
 			q.hit(maxi(2, int(spec.get("atk", 40) * 0.5 * rage_mult())), 1.0, false)
+			if ail != "":
+				q.add_status(ail, 3.0)
 
 func elem() -> Array:
 	return spec.get("elements", ["neutral"])

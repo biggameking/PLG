@@ -4307,6 +4307,31 @@ func run() -> void:
 	check("five spires crown", game.crowned)
 	game.crowned = false
 	game.spires_done.clear()
+	# spire slams carry their shrine's element: a fire-spire guardian burns the
+	# pile-up, water soaks it, dark puts it to sleep — each asks a different question
+	var slam_boss: Kin = game.gen_pal("fenjelly", 40, game.player.pos + Vector2(1, 0))
+	slam_boss.spire_tag = "spire_0" # fire
+	slam_boss.boss = true
+	game.pals.append(slam_boss)
+	var victim: Kin = null
+	for q in game.pals:
+		if q.mode == "partner" and q.hp > 0:
+			victim = q; break
+	if victim == null:
+		victim = game.gen_pal("fenjelly", 5, game.player.pos)
+		victim.mode = "partner"; game.pals.append(victim)
+	victim.pos = slam_boss.pos + Vector2(0.5, 0)
+	victim.statuses.clear()
+	slam_boss.pact_slam()
+	check("fire spire slam burns", victim.statuses.has("burn"))
+	slam_boss.spire_tag = "spire_3" # dark
+	victim.statuses.clear()
+	slam_boss.pact_slam()
+	check("dark spire slam sleeps", victim.statuses.has("sleep"))
+	victim.statuses.clear()
+	game.pals.erase(slam_boss); slam_boss.queue_free()
+	if not game.party.has(victim.uid):
+		game.pals.erase(victim); victim.queue_free()
 
 	# i18n — zh translation registered, toggle swaps tr() output, garbage coerced
 	check("zh translation loaded", "zh" in TranslationServer.get_loaded_locales())
