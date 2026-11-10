@@ -214,6 +214,10 @@ func _ready() -> void:
 		AudioServer.set_bus_send(AudioServer.get_bus_index("SFX"), "Master")
 	for ap0 in sfx_pool:
 		ap0.bus = "SFX"
+	# the Dummy driver never mixes: play() would orphan a playback object per
+	# call that the ObjectDB sweep reports as a leak — synth+cache still runs
+	# headless (tests assert on it), only the actual output is skipped
+	audio_live = AudioServer.get_driver_name() != "Dummy"
 	# ambient score: day and night pad loops crossfaded on the Music bus —
 	# no assets, synthesized at boot like the SFX bank
 	music_day = AudioStreamPlayer.new()
@@ -221,13 +225,15 @@ func _ready() -> void:
 	music_day.bus = "Music"
 	music_day.volume_db = -10.0
 	add_child(music_day)
-	music_day.play()
+	if audio_live:
+		music_day.play()
 	music_night = AudioStreamPlayer.new()
 	music_night.stream = SfxLib.pad([[146.8, 174.6, 220.0], [130.8, 155.6, 196.0], [110.0, 146.8, 174.6], [123.5, 164.8, 196.0]])
 	music_night.bus = "Music"
 	music_night.volume_db = -80.0
 	add_child(music_night)
-	music_night.play()
+	if audio_live:
+		music_night.play()
 	load_settings()
 	bind_gamepad()
 	has_save = FileAccess.file_exists("user://savegame.plg") # stat once at boot
@@ -572,11 +578,13 @@ func cry_for(sid: String) -> void:
 	var ap: AudioStreamPlayer = sfx_pool[sfx_idx]
 	sfx_idx = (sfx_idx + 1) % sfx_pool.size()
 	ap.stream = s
-	ap.play()
+	if audio_live:
+		ap.play()
 
 var music_day: AudioStreamPlayer
 var music_night: AudioStreamPlayer
 var sfx_idx := 0
+var audio_live := true
 func sfx_play(k: String) -> void:
 	var s = SFX.get(k)
 	if s == null or sfx_pool.is_empty():
@@ -584,7 +592,8 @@ func sfx_play(k: String) -> void:
 	var ap: AudioStreamPlayer = sfx_pool[sfx_idx]
 	sfx_idx = (sfx_idx + 1) % sfx_pool.size()
 	ap.stream = s
-	ap.play()
+	if audio_live:
+		ap.play()
 
 func log_msg(msg: String) -> void:
 	messages.push_back(msg)

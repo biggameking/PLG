@@ -733,10 +733,10 @@ func run() -> void:
 			game.tod = 12.0 # keep the night bonus out of the comparison
 			mine_st["workers"] = [wp2]; wp2.job_site = mine_st
 			game.weather = "clear"; mine_st["timer"] = 0.0
-			game.tick_production(1.0)
-			var dry_v: float = mine_st["timer"]
+			game.tick_production(0.1) # small dt: a fast crew at 1.0s can wrap the
+			var dry_v: float = mine_st["timer"] # produce threshold and measure the remainder
 			game.weather = "rain"; mine_st["timer"] = 0.0
-			game.tick_production(1.0)
+			game.tick_production(0.1)
 			var wet_v: float = mine_st["timer"]
 			check("rain crew bonus", dry_v > 0 and absf(wet_v / dry_v - 1.15) < 0.01,
 				"wet/dry=%.3f" % (wet_v / maxf(dry_v, 0.001)))
@@ -751,10 +751,10 @@ func run() -> void:
 			var tsv6: float = mine_st["timer"]
 			mine_st["workers"] = [fp2]; fp2.job_site = mine_st
 			game.weather = "clear"; mine_st["timer"] = 0.0
-			game.tick_production(1.0)
+			game.tick_production(0.1) # same wrap guard as the rain check above
 			var fdry: float = mine_st["timer"]
 			game.weather = "drought"; mine_st["timer"] = 0.0
-			game.tick_production(1.0)
+			game.tick_production(0.1)
 			var fpar: float = mine_st["timer"]
 			check("drought feeds the fire crew", fdry > 0 and absf(fpar / fdry - 1.15) < 0.01,
 				"parch/clear=%.3f" % (fpar / maxf(fdry, 0.001)))
@@ -4255,7 +4255,7 @@ func run() -> void:
 	game.player.hunger = 100.0
 
 	# ---- S5: ambient score ----
-	check("music loops", game.music_day.stream != null and game.music_day.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and game.music_day.playing)
+	check("music loops", game.music_day.stream != null and game.music_day.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and game.music_day.playing == game.audio_live)
 	game.tod = 22.0; game.tick_music(1.0)
 	check("night fade", game.music_day.volume_db < -10.0 and game.music_night.volume_db > -80.0)
 	game.tod = 12.0; game.tick_music(1.0)
