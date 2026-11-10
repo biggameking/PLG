@@ -42,7 +42,9 @@ plain sphere; a lv30 alpha shrugs it off. The sphere ladder
 exists for a reason: pal < mega < giga < ultra < legendary.
 Squeamish about over-swinging? The Ring of Mercy keeps your
 blows honest — a wild pal under that charm can be whittled
-to its last breath, never past it.
+to its last breath, never past it. And the tenth of any
+species is a rite: once the paldeck counts ten of a kind,
+every one you keep fights a tenth sharper forever.
 Sphere Works and Giga Works lines feed the habit — the second
 line stretches electric organs three times further.
 

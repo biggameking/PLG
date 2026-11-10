@@ -720,6 +720,10 @@ func apply_bonuses() -> void:
 	# statue souls: each infusion is a flat +4% across the board
 	var soul := 1.0 + soul_boost * 0.04
 	atk_bonus *= soul; def_bonus *= soul; max_hp *= soul
+	# paldeck mastery: ten of a kind caught sharpens every one you keep
+	if mode != "wild" and game != null and int(game.catch_counts.get(species_id, 0)) >= 10:
+		atk_bonus *= 1.1
+		def_bonus *= 1.1
 	if lucky: # rare variant hits harder and tanks harder
 		atk_bonus *= 1.2
 		def_bonus *= 1.2

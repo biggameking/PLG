@@ -1050,6 +1050,11 @@ func resolve_sphere(sp) -> void:
 			gain_xp(bonus)
 			floater(target.pos, "CATCH x%d! +%dxp" % [catch_counts[target.species_id], bonus], "#ffd76e")
 			log_msg("%dth %s caught - bonus XP!" % [catch_counts[target.species_id], target.spec["name"]])
+		if catch_counts[target.species_id] == 10: # paldeck mastery unlocks — sharpen the whole line
+			log_msg("Paldeck mastery: %s +10%%" % target.spec["name"])
+			for mp in pals:
+				if mp.mode != "wild" and mp.species_id == target.species_id:
+					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
 		if party.size() < 5: # Palworld rule: catch joins the party until it's full
@@ -1094,6 +1099,11 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Player %d caught %s Lv%d — into the palbox" % [pid, target.spec["name"], target.level])
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
+		if catch_counts[target.species_id] == 10: # paldeck mastery unlocks — sharpen the whole line
+			log_msg("Paldeck mastery: %s +10%%" % target.spec["name"])
+			for mp in pals:
+				if mp.mode != "wild" and mp.species_id == target.species_id:
+					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
 		target.net_id = 0 # it's our pal now — replicas stop being tracked

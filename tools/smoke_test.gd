@@ -1264,6 +1264,24 @@ func run() -> void:
 	mr_victim.queue_free()
 	game.pals.erase(mr_victim)
 
+	# paldeck mastery: ten of a kind caught — every one you keep fights sharper
+	var pm_own = game.gen_pal("lamball", 5, p.pos)
+	pm_own.mode = "base"
+	var pm_wild = game.gen_pal("lamball", 5, p.pos)
+	pm_wild.mode = "wild"
+	var pm_base_a: float = pm_own.atk_bonus
+	var pm_wild_a: float = pm_wild.atk_bonus
+	game.catch_counts["lamball"] = 10
+	pm_own.apply_bonuses()
+	pm_wild.apply_bonuses()
+	check("paldeck mastery sharpens the line", pm_own.atk_bonus > pm_base_a * 1.05 and absf(pm_wild.atk_bonus - pm_wild_a) < 0.001,
+		"own=%.2f→%.2f wild=%.2f→%.2f" % [pm_base_a, pm_own.atk_bonus, pm_wild_a, pm_wild.atk_bonus])
+	game.catch_counts.erase("lamball")
+	pm_own.mode = "wild"
+	pm_own.apply_bonuses()
+	pm_own.queue_free(); game.pals.erase(pm_own)
+	pm_wild.queue_free(); game.pals.erase(pm_wild)
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
