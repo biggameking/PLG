@@ -2065,10 +2065,17 @@ func run() -> void:
 	hunter.wild_ai(0.1)
 	check("wild kin engages the ghost", hunter.aggro == 0 and hunter.aggro_pid == 7,
 		"aggro=%s pid=%s" % [hunter.aggro, hunter.aggro_pid])
+	var n_pr_h := game.projectiles.size()
 	hunter.atk_cd = 0.0
 	hunter.wild_ai(0.1)
-	check("guest bite stays off the host", p.hp == hp_g0 and hunter.atk_cd > 0,
-		"hp=%d->%d cd=%.2f" % [hp_g0, p.hp, hunter.atk_cd])
+	# the guest eats the engagement — bite or skill shot — never the host's hp
+	check("guest bite stays off the host", p.hp == hp_g0 and \
+		(hunter.atk_cd > 0 or game.projectiles.size() > n_pr_h),
+		"hp=%d->%d cd=%.2f pr=%d" % [hp_g0, p.hp, hunter.atk_cd, game.projectiles.size()])
+	if game.projectiles.size() > n_pr_h: # don't leave a shot aimed at a freed ghost
+		var pr_h = game.projectiles.pop_back()
+		if is_instance_valid(pr_h.get("node")):
+			pr_h["node"].queue_free()
 	game.net.ghosts[7].net_pos = Vector3(-1, -1, 0)
 	check("lost ghost falls back", hunter.target_pos().distance_to(p.pos) < 0.01)
 	game.net.ghosts[7].queue_free(); game.net.ghosts.erase(7)
@@ -4658,6 +4665,25 @@ func run() -> void:
 		vt.get_parent().remove_child(vt)
 	vt.free()
 	game.net.is_host = false
+	# wild kin cast at ghost coordinates — a guest draws real skill fire, not
+	# just melee bites; the kinds filter keeps body-required skills off them
+	var caster2: Kin = game.gen_pal("fenjelly", 10, Vector2(160, 150))
+	caster2.mode = "wild"; game.pals.append(caster2)
+	caster2.extra_skills = ["airCannon"]
+	var n_pr := game.projectiles.size()
+	check("ghost draws skill fire", caster2.cast_skills(Vector2(165, 150), 0.1,
+		["projectile", "self"]) and game.projectiles.size() == n_pr + 1,
+		"pr=%d" % game.projectiles.size())
+	caster2.skill_cd.clear()
+	check("ghost skips body skills", not caster2.cast_skills(Vector2(165, 150), 0.1, ["lunge"]))
+	while game.projectiles.size() > n_pr: # spawned shots hold the caster — free him last
+		var pr_c = game.projectiles.pop_back()
+		if is_instance_valid(pr_c.get("node")):
+			pr_c["node"].queue_free()
+	game.pals.erase(caster2)
+	if caster2.get_parent():
+		caster2.get_parent().remove_child(caster2)
+	caster2.free()
 	if game.item_count("kin_egg") == 0:
 		game.add_item("kin_egg", 1)
 	var eggs_have: int = game.item_count("kin_egg")

@@ -329,8 +329,18 @@ func wild_ai(dt: float) -> void:
 				if tdist > 16:
 					aggro = -1; aggro_pid = 0
 				return
-			# skills still aim the local player — a ghost gets the melee bite
-			var shot: bool = aggro_pid == 0 and cast_skills(pl, dt)
+			# skills aim at whoever holds the aggro — the keeper or a guest's
+			# ghost. Ghosts are position-only, so only projectile/self kinds
+			# can address them (lunges/bursts need a real body; the melee
+			# bite covers what those would have done anyway)
+			var shot := false
+			if aggro_pid == 0:
+				shot = cast_skills(pl, dt)
+			elif game.net != null:
+				var g = game.net.ghosts.get(aggro_pid)
+				if g != null and g.net_pos.x >= 0:
+					shot = cast_skills(Vector2(g.net_pos.x, g.net_pos.y), dt,
+						["projectile", "self"])
 			if not shot:
 				if tdist > 1.1:
 					step_toward(tpos, dt)
@@ -812,14 +822,19 @@ func take_dps(n: int) -> void:
 	if hp <= 0:
 		game.kill_pal(self, false)
 
-func cast_skills(target_ent, dt: float) -> bool:
-	var dist := pos.distance_to(target_ent.pos)
+func cast_skills(target_ent, dt: float, kinds := []) -> bool:
+	# target_ent may be a Player, a Kin, or a bare Vector2 (a guest ghost has
+	# no body — aim the shot at its coordinates instead)
+	var tp: Vector2 = target_ent if target_ent is Vector2 else target_ent.pos
+	var dist := pos.distance_to(tp)
 	var best: Dictionary = {}
 	for sid in active_skills():
 		if skill_cd.get(sid, 0) > game.t:
 			continue
 		var sk: Dictionary = SkillData.SKILLS.get(sid, {})
 		if sk.is_empty() or dist > sk.get("range", 1.4):
+			continue
+		if not kinds.is_empty() and sk.get("kind", "projectile") not in kinds:
 			continue
 		if best.is_empty() or sk.get("power", 0) > best.get("power", 0):
 			best = sk # strongest usable skill, not the lowest-level one

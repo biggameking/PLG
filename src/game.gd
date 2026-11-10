@@ -3480,8 +3480,8 @@ func update_projectiles(dt: float) -> void:
 				n.queue_free()
 				projectiles.erase(pr)
 			continue
-		var caster: Kin = pr["from"]
-		if not is_instance_valid(caster): # caster died while the shot was in flight
+		var caster: Kin = pr["from"] if is_instance_valid(pr["from"]) else null
+		if caster == null: # caster died while the shot was in flight
 			dead = true
 		if not dead:
 			if caster.mode == "wild":
