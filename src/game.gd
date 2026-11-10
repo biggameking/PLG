@@ -201,6 +201,7 @@ func _ready() -> void:
 	log_msg("Welcome to PLG. Press H for help.")
 	spawn_wild()
 	spawn_lairs()
+	spawn_camps()
 
 func saddle_for(p: Pal) -> String:
 	# Palworld gear rule: every mount wants its own tack — flyers, swimmers
@@ -2886,7 +2887,8 @@ func save_game() -> void:
 		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200), "loot": st.get("loot", false),
 			"exp": ({"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t), "cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)} if st["id"] == "expedition_post" else null),
 			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
-			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null}
+			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null,
+			"cap": st.get("captive") if st["id"] == "pal_cage" else null}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
@@ -3203,6 +3205,9 @@ func load_game() -> bool:
 			"snare": s.get("snare", false),
 			"loot": sv.get("loot", false) == true if sv is Dictionary else false}
 		if sv is Dictionary:
+			if sv.get("cap") is Dictionary and sid == "pal_cage":
+				var cap_d: Dictionary = sv["cap"]
+				st["captive"] = {"sp": str(cap_d.get("sp", "")), "lv": clampi(int(cap_d.get("lv", 5)), 1, 60)}
 			if sv.get("store") is Dictionary:
 				for sk2 in sv["store"]: # counts used in +/- arithmetic everywhere — coerce, skip junk
 					var cv = sv["store"][sk2]
@@ -3669,6 +3674,60 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	log_msg("Egg hatched: %s%s (talent %d)!" % ["LUCKY " if huge else "",
 		np.spec["name"], talent_v])
 
+func spawn_camps() -> void:
+	# Syndicate poacher camps (Palworld POI): a caged pal under armed guard.
+	# The captive exists only as cage data until someone breaks the lock —
+	# no entity, no timer, nothing to leak.
+	var placed := 0
+	var tries := 0
+	while placed < 2 and tries < 6000:
+		tries += 1
+		var tx := rng.int_range(6, World.WORLD_W - 8)
+		var ty := rng.int_range(6, World.WORLD_H - 8)
+		var zone: int = world.zone_at(tx, ty)
+		if zone < 2:
+			continue
+		var ok := true
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+					ok = false
+		if not ok:
+			continue
+		if not place_free("pal_cage", tx, ty):
+			continue
+		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+		var cst: Dictionary = structures[Vector2i(tx, ty)]
+		cst["captive"] = {"sp": pick_wild_species(pool), "lv": rng.int_range(8 + zone * 4, 14 + zone * 6)}
+		var gn := 2 + int(rng.chance(0.5))
+		for i in gn:
+			var gid: String = "syndicate_grunt" if i % 2 == 0 else "syndicate_sweeper"
+			var gp := preload("res://src/pal.gd").new()
+			entity_layer.add_child(gp)
+			gp.setup(self, gid, rng.int_range(12 + zone * 4, 18 + zone * 5),
+				Vector2(tx + [0.5, 1.5, -0.5][i % 3], ty + [1.5, -0.5, 1.5][i % 3]))
+			gp.home = Vector2(tx + 0.5, ty + 0.5) # den-pack aggro: one shout wakes the camp
+			pals.append(gp)
+		placed += 1
+
+func free_captive(st: Dictionary) -> void:
+	# prize the lock — the caged pal joins your box like any catch
+	var cap = st.get("captive")
+	if not (cap is Dictionary) or str(cap.get("sp", "")) == "":
+		log_msg("The cage is empty")
+		return
+	if box.size() >= MAX_BOX:
+		log_msg("Palbox is full — the captive won't leave its cage")
+		return
+	var bp := gen_pal(str(cap["sp"]), int(cap["lv"]), player.pos)
+	bp.mode = "box"
+	box.append(bp)
+	box_pal(bp)
+	gain_xp(15)
+	floater(player.pos, "FREED!", "#8ef0a8")
+	log_msg("Freed %s Lv%d — it scurries into your palbox" % [bp.spec["name"], bp.level])
+	net_remove_structure(st)
+
 func spawn_lairs() -> void:
 	# Zone-3 boss lairs: torch ring + an Alpha guarding elite guards
 	var placed := 0
@@ -4027,6 +4086,7 @@ func regenerate(s: int) -> void:
 	player.pos = Vector2(world.spawn) + Vector2(0.5, 0.5)
 	player.sync_screen()
 	spawn_lairs() # joining clients need their own lair bosses (pals are locally authoritative)
+	spawn_camps() # syndicate poacher camps — guards spawn locally like lair bosses
 	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
 
 # ---------- effigy statues ----------

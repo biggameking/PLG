@@ -1398,6 +1398,23 @@ func run() -> void:
 		p.hp = old_hp
 	check("spring soak mends the keeper", soak_ok, "hs=%s" % (hs_k.x >= 0))
 
+	# syndicate camp: a caged local under guard — break the lock, it joins the box
+	var cage_st = null
+	for k8 in game.structures:
+		if game.structures[k8]["id"] == "pal_cage":
+			cage_st = game.structures[k8]
+			break
+	var camp_ok := false
+	if cage_st != null:
+		var cap: Dictionary = cage_st.get("captive", {})
+		var box_n0 := game.box.size()
+		var free_sp: String = str(cap.get("sp", ""))
+		game.free_captive(cage_st)
+		await process_frame # the cage removal defers out of the tick
+		camp_ok = free_sp != "" and game.box.size() == box_n0 + 1 \
+			and game.box[-1].species_id == free_sp
+	check("camp captive joins the box", camp_ok, "cage=%s" % (cage_st != null))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

@@ -156,7 +156,11 @@ each strike banks an electric organ for the sphere lines.
 Feeling brave? Alphas sometimes carry a Boss
 Sigil — the merchant sells them under the counter, and the
 deep grottos hoard them. Use one at your own palbox to call
-the raid boss down yourself.
+the raid boss down yourself. Out in the deep wilds the
+syndicate keeps poacher camps: guards around an iron cage,
+and some unlucky local behind the bars. Break the lock and
+the captive scurries into your palbox — a free catch, if you
+can take the escort.
 
 Chests hide in grottos and lairs; the third chamber guards
 something old. And keep a notice board by the gate: each dawn

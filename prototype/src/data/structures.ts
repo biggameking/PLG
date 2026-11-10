@@ -275,6 +275,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
     cost: [["ingot", 8], ["paldium", 4]],
     desc: "A copper finger raised at the sky — in a storm it drinks the lightning and banks the charge as organs.",
   },
+  pal_cage: {
+    id: "pal_cage", name: "Pal Cage", glyph: "▦", color: "#6a7a8a", w: 1, h: 1,
+    hp: 150,
+    cost: [],
+    desc: "Iron bars and a padlock — someone inside is having a very bad day.",
+  },
   weather_shrine: {
     id: "weather_shrine", name: "Weather Shrine", glyph: "☂", color: "#7fb8d8", w: 1, h: 1,
     cost: [["stone", 20], ["paldium", 10]],

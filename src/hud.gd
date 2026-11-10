@@ -345,6 +345,9 @@ func interact() -> void:
 			"notice_board":
 				game.notice_board_action()
 				return
+			"pal_cage":
+				game.free_captive(st)
+				return
 			"pal_condenser":
 				game.condense_active()
 				return

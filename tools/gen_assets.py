@@ -896,6 +896,12 @@ def make_structure(sid, color, w, h):
         d.line([(W//2, 12), (W//2 - 5, 6)], fill=hxc("#f0e060") + (255,), width=2)
         d.line([(W//2, 12), (W//2 + 5, 6)], fill=hxc("#f0e060") + (255,), width=2)
         d.line([(W//2, 12), (W//2, 4)], fill=hxc("#f0e060") + (255,), width=2)
+    elif sid == "pal_cage":
+        # iron-bar cage with a lockplate — grey bars on a dark frame
+        d.rectangle([W//2 - 12, 10, W//2 + 12, 44], outline=hxc("#3a4450") + (255,), width=2)
+        for bx9 in (-8, -4, 0, 4, 8):
+            d.line([(W//2 + bx9, 11), (W//2 + bx9, 43)], fill=hxc("#6a7a8a") + (255,), width=2)
+        d.rectangle([W//2 - 3, 24, W//2 + 3, 30], fill=hxc("#d8b84a") + (255,))
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -979,6 +985,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "spyglass": ("#7a9ab8", 1, 1),
     "well": ("#6a8ab0", 1, 1),
     "lightning_rod": ("#d8c04a", 1, 1),
+    "pal_cage": ("#6a7a8a", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
