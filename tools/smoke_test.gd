@@ -1301,6 +1301,25 @@ func run() -> void:
 			break
 	check("boss sigil reaches the market", bs_found, "40 rolls")
 
+	# lightning rod: banks an organ per strike, only while the sky is loud
+	game.add_item("ingot", 8); game.add_item("paldium", 4)
+	var lr_k: Vector2i = free_xy.call("lightning_rod")
+	var lr_st = game.structures.get(lr_k) if lr_k.x >= 0 else null
+	var lr_ok := false
+	if lr_st != null:
+		var w0: String = game.weather
+		var o0 := game.item_count("electric_organ")
+		lr_st["timer"] = 44.9
+		game.tick_production(0.2) # clear sky — no drink
+		var o1 := game.item_count("electric_organ")
+		game.weather = "storm"
+		lr_st["timer"] = 44.9
+		game.tick_production(0.2)
+		var o2 := game.item_count("electric_organ")
+		lr_ok = o1 == o0 and o2 == o0 + 1
+		game.weather = w0
+	check("lightning rod banks the storm", lr_ok, "lr=%s" % (lr_st != null))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

@@ -143,7 +143,9 @@ posted bounties — kill them for coin.
 The syndicate raids too. Towers, walls and spikes hold the
 line; a horn warns you before the wave. Clear the raid boss
 and the spoils are real: legendary spheres, ancient parts,
-schematics. Feeling brave? Alphas sometimes carry a Boss
+schematics. Raise a lightning rod and pray for a loud sky —
+each strike banks an electric organ for the sphere lines.
+Feeling brave? Alphas sometimes carry a Boss
 Sigil — the merchant sells them under the counter, and the
 deep grottos hoard them. Use one at your own palbox to call
 the raid boss down yourself.

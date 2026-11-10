@@ -889,6 +889,13 @@ def make_structure(sid, color, w, h):
         d.line([(W//2 - 12, 8), (W//2 + 12, 8)], fill=hxc("#5e462e") + (255,), width=3)
         d.line([(W//2, 8), (W//2, 22)], fill=hxc("#8a6d4d") + (255,), width=1)
         d.rectangle([W//2 - 3, 22, W//2 + 3, 27], fill=hxc("#8a6d4d") + (255,))
+    elif sid == "lightning_rod":
+        # a copper finger on a stone foot, forked tip catching the sky
+        d.polygon([(W//2 - 10, 44), (W//2 + 10, 44), (W//2 + 6, 38), (W//2 - 6, 38)], fill=hxc("#6b6f72") + (255,))
+        d.line([(W//2, 38), (W//2, 12)], fill=hxc("#c07a3a") + (255,), width=3)
+        d.line([(W//2, 12), (W//2 - 5, 6)], fill=hxc("#f0e060") + (255,), width=2)
+        d.line([(W//2, 12), (W//2 + 5, 6)], fill=hxc("#f0e060") + (255,), width=2)
+        d.line([(W//2, 12), (W//2, 4)], fill=hxc("#f0e060") + (255,), width=2)
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -971,6 +978,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "war_banner": ("#b84a3a", 1, 1),
     "spyglass": ("#7a9ab8", 1, 1),
     "well": ("#6a8ab0", 1, 1),
+    "lightning_rod": ("#d8c04a", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

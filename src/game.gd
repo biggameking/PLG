@@ -2108,6 +2108,16 @@ func tick_production(dt: float) -> void:
 				log_msg("%s is caught in the snare!" % snared.spec.get("name", snared.species_id))
 				st["snare"] = false # spent — disarm now, remove after the tick (no mid-iteration erase)
 				call_deferred("net_remove_structure", st) # one bite and the trap is spent
+		if st["id"] == "lightning_rod":
+			if weather == "storm":
+				st["timer"] += dt # the copper finger only drinks while the sky is loud
+				if st["timer"] >= 45.0:
+					st["timer"] = 0.0
+					add_item("electric_organ", 1)
+					floater(Vector2(key.x + 0.5, key.y + 0.5), "STRIKE!", "#f0e060")
+					log_msg("Lightning bites the rod — banked an electric organ")
+			else:
+				st["timer"] = 0.0
 		if st["id"] == "spyglass":
 			st["timer"] += dt # the brass glass sweeps a wider arc every half minute
 			if st["timer"] >= 30.0:

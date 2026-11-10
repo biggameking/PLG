@@ -629,6 +629,26 @@ const STRUCTURES = {
   ],
   "desc": "A ring of stone over a driven shaft — fields within its shadow stay watered even in fair skies."
  },
+"lightning_rod": {
+  "id": "lightning_rod",
+  "name": "Lightning Rod",
+  "glyph": "↯",
+  "color": "#d8c04a",
+  "w": 1,
+  "h": 1,
+  "hp": 110,
+  "cost": [
+   [
+    "ingot",
+    8
+   ],
+   [
+    "paldium",
+    4
+   ]
+  ],
+  "desc": "A copper finger raised at the sky — in a storm it drinks the lightning and banks the charge as organs."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1510,6 +1530,12 @@ const TECH = [
   "name": "Well",
   "tier": 3,
   "cost": 1
+ },
+ {
+  "id": "lightning_rod",
+  "name": "Lightning Rod",
+  "tier": 5,
+  "cost": 2
  }
 ]
 
