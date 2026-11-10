@@ -85,7 +85,7 @@ warning reset shipped in `2f41030`.
 - S13 export identity — DONE (procedural icon set + .ico, version 0.9.0, company Wildmere Works; Windows 110MB + Web exports verified; Android blocked on local SDK build-tools/apksigner)
 - S14 element spire slams — DONE (fire→burn, water→soak, grass→poison, dark→sleep, dragon→none; partner-only)
 - S15 S8–S12 audit-fix batch — DONE (`docs/reviews/s8-s12-audit.md` — 6H/6M+/L-series all closed; rules 25–34 in AGENTS.md; client-authority gate shipped; 452 checks/0 failures/0 leaks ×5)
-- S16 final platform validation + launch sweep — NEXT
+- S16 final platform validation + launch sweep — DONE (`docs/reviews/launch-sweep.md`; E2E shell chain in-suite; Windows 115MB + Web re-verified; second external pass closed at `eaa22cb` — interaction-verb + key-binding layers gated, rules 35–36)
 
 **S4–S7 (external review, `docs/reviews/s4-s7-audit.md`):** gates belong at
 choke points, not enumerations — the acquirable pool filtered spawn sites
