@@ -743,6 +743,24 @@ func run() -> void:
 			wp2.job_site = null
 			game.weather = wt0; game.tod = tod0
 			game.pals.erase(wp2); wp2.free()
+			# the dry sky pays fire pals the same rate rain pays water
+			var fp2: Pal = game.gen_pal("foxparks", 5, game.player.pos)
+			fp2.mode = "base"; fp2.san = 90.0; fp2.ailment = ""; fp2.passives = []
+			var wsv6: Array = mine_st["workers"].duplicate()
+			var tsv6: float = mine_st["timer"]
+			mine_st["workers"] = [fp2]; fp2.job_site = mine_st
+			game.weather = "clear"; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var fdry: float = mine_st["timer"]
+			game.weather = "drought"; mine_st["timer"] = 0.0
+			game.tick_production(1.0)
+			var fpar: float = mine_st["timer"]
+			check("drought feeds the fire crew", fdry > 0 and absf(fpar / fdry - 1.15) < 0.01,
+				"parch/clear=%.3f" % (fpar / maxf(fdry, 0.001)))
+			mine_st["workers"] = wsv6; mine_st["timer"] = tsv6
+			fp2.job_site = null
+			game.weather = wt0; game.tod = tod0
+			game.pals.erase(fp2); fp2.free()
 			# worker IVs: a T100 crew outpaces a T0 crew on the same site
 			var ivp: Pal = game.gen_pal("lifmunk", 5, game.player.pos)
 			ivp.mode = "base"; ivp.san = 90.0; ivp.ailment = ""; ivp.passives = []
@@ -1106,7 +1124,16 @@ func run() -> void:
 		game.pray_weather()
 		var cycled: bool = game.weather != w0 and game.pray_cd > game.t
 		game.pray_weather() # second prayer too soon — refused
-		ws_ok = cycled and game.items.get("paldium", 0) == 2 and int(game.pray_cd - game.t) > 500
+		var spent: bool = game.items.get("paldium", 0) == 2
+		game.items["paldium"] = 12 # the cycle's full circuit: sun→rain→thunder→parch→sun
+		game.weather = "clear"
+		var seen_w := []
+		for _wi in 4:
+			game.pray_cd = 0.0
+			game.pray_weather()
+			seen_w.append(game.weather)
+		ws_ok = cycled and spent and seen_w == ["rain", "storm", "drought", "clear"] \
+			and game.items.get("paldium", 0) == 0 and int(game.pray_cd - game.t) > 500
 		game.weather = w0 # hand the sky back — later checks assume a neutral one
 	check("shrine calls weather", ws_ok, "w=%s cd=%.0f" % [game.weather, game.pray_cd - game.t])
 
@@ -1322,6 +1349,53 @@ func run() -> void:
 	if wl_k.x >= 0:
 		wl_ok = game.near_well(Vector2(wl_k.x + 4, wl_k.y)) and not game.near_well(Vector2(wl_k.x + 20, wl_k.y))
 	check("well waters its shadow", wl_ok, "wl=%s" % (wl_k.x >= 0))
+
+	# drought: a parching sky starves open fields a fifth — a well's shadow is exempt
+	var dr_k := Vector2i(-1, -1)
+	for sy2 in range(4, game.world.WORLD_H - 6, 5):
+		for sx2 in range(4, game.world.WORLD_W - 6, 5):
+			if game.can_place("wheat_farm", sx2, sy2) \
+					and not game.near_well(Vector2(sx2 + 1.5, sy2 + 1.0)):
+				dr_k = Vector2i(sx2, sy2); break
+		if dr_k.x >= 0:
+			break
+	var dr_ok := false
+	if dr_k.x >= 0 and game.place_free("wheat_farm", dr_k.x, dr_k.y):
+		var dr_st = game.structures[dr_k]
+		var dr_pal: Pal = game.gen_pal("chikipi", 5, game.player.pos)
+		dr_pal.mode = "base"; dr_pal.san = 90.0; dr_pal.hunger = 10.0; dr_pal.ailment = ""
+		dr_pal.passives = []; dr_pal.statuses.clear(); dr_pal.talent = 50
+		var wtd0: String = game.weather
+		var todd0: float = game.tod
+		game.tod = 12.0 # pin the sun — the night shift must not pad the ratio
+		dr_st["workers"] = [dr_pal]; dr_pal.job_site = dr_st
+		game.weather = "clear"; dr_st["timer"] = 0.0
+		game.tick_production(1.0)
+		var v_fair: float = dr_st["timer"]
+		game.weather = "drought"; dr_st["timer"] = 0.0
+		game.tick_production(1.0)
+		var v_parch: float = dr_st["timer"]
+		var wl2 = null # stand a well in the field's shadow — the drought can't touch it
+		for off2 in [Vector2i(-1, 0), Vector2i(3, 0), Vector2i(0, -1), Vector2i(0, 2)]:
+			var wk2: Vector2i = dr_k + off2
+			if game.world.in_bounds(wk2.x, wk2.y) and not game.structures.has(wk2) \
+					and game.world.tile_at(wk2.x, wk2.y) != World.Tile.WATER \
+					and game.place_free("well", wk2.x, wk2.y):
+				wl2 = game.structures[wk2]; break
+		var v_sh: float = -1.0
+		if wl2 != null:
+			dr_st["timer"] = 0.0
+			game.tick_production(1.0)
+			v_sh = dr_st["timer"]
+		dr_ok = v_fair > 0 and absf(v_parch / v_fair - 0.8) < 0.02 \
+			and wl2 != null and absf(v_sh / v_fair - 1.25) < 0.02
+		game.weather = wtd0; game.tod = todd0
+		dr_st["workers"] = []; dr_pal.job_site = null
+		game.pals.erase(dr_pal); dr_pal.free()
+		if wl2 != null:
+			game.net_remove_structure(wl2)
+		game.net_remove_structure(dr_st)
+	check("drought parches open fields, wells exempt", dr_ok, "farm=%s" % (dr_k.x >= 0))
 
 	# boss sigil: the dare is actually for sale — merchant rolls stock it
 	var bs_found := false
@@ -1626,6 +1700,13 @@ func run() -> void:
 		dmgs3.append(99999 - int(wrp.hp))
 	check("storm charges electric", dmgs3[0] > 0 and absf(dmgs3[1] / float(dmgs3[0]) - 1.15) < 0.05,
 		"dry=%d storm=%d" % [dmgs3[0], dmgs3[1]])
+	var dmgs4 := []
+	for wv in ["clear", "drought"]: # a parching sky feeds flame ~1.15x
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.skill_hit(wrc, wrp, SkillData.SKILLS["flameBurst"])
+		dmgs4.append(99999 - int(wrp.hp))
+	check("drought feeds flame", dmgs4[0] > 0 and absf(dmgs4[1] / float(dmgs4[0]) - 1.15) < 0.05,
+		"dry=%d parch=%d" % [dmgs4[0], dmgs4[1]])
 	# STAB (Palworld): a pal in its own element hits ~1.2x — same seed, same power
 	var stabc: Pal = game.gen_pal("foxparks", 10, p.pos)
 	stabc.mode = "wild"

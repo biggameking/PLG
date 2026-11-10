@@ -152,7 +152,7 @@ func env_sync(tod: float, day: int, weather: String) -> void:
 	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
 	game.day = int(day)
 	var w := str(weather)
-	if w in ["clear", "rain", "storm"]:
+	if w in ["clear", "rain", "storm", "drought"]:
 		game.weather = w
 
 @rpc("authority", "call_remote", "unreliable")

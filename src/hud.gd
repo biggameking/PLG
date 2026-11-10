@@ -461,8 +461,8 @@ func _draw() -> void:
 				draw_string(font, Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)],
 					HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
-	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else "")
-	var wcol := Color("#b48ef0") if game.weather == "storm" else (Color("#7fb8e8") if game.weather == "rain" else Color("#e8f0f2"))
+	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else ("  ☀" if game.weather == "drought" else ""))
+	var wcol := Color("#b48ef0") if game.weather == "storm" else (Color("#7fb8e8") if game.weather == "rain" else (Color("#e8b45c") if game.weather == "drought" else Color("#e8f0f2")))
 	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00%s" % [game.day, int(game.tod), wicon],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, wcol)
 	if game.raid_t < 30.0 and game.palbox_pos.x >= 0: # Palworld raid horn

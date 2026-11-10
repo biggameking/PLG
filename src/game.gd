@@ -619,7 +619,7 @@ var mission_t := 0.0
 var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
 var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
-var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of game hours
+var weather := "clear"  # "clear" | "rain" | "storm" | "drought" — rolls every couple of game hours
 var weather_t := 0.0
 var pray_cd := 0.0            # absolute t — shrine prayer cooldown
 var explored := PackedByteArray() # fog of war — one byte per world cell
@@ -681,18 +681,18 @@ func reveal_at(c: Vector2, r: float) -> void:
 				explored[y * world.WORLD_W + x] = 1
 
 func tick_weather(dt: float) -> void:
-	# two-state sky, ~half a game day per roll — rain waters the fields
-	# and puts water pals in their element
+	# four-state sky, ~half a game day per roll — rain waters the fields,
+	# a drought parches them, and every loud or dry sky has its pal
 	weather_t += dt
 	if weather_t < 120.0:
 		return
 	weather_t = 0.0
 	var roll: float = rng.randf()
-	var next := "storm" if roll < 0.15 else ("rain" if roll < 0.45 else "clear")
+	var next := "storm" if roll < 0.15 else ("rain" if roll < 0.45 else ("drought" if roll < 0.60 else "clear"))
 	if next != weather:
 		weather = next
 		log_msg({"rain": "Rain sweeps over the island", "storm": "A thunderstorm rolls in — electric pals crackle",
-			"clear": "The sky clears"}.get(weather, "The sky clears"))
+			"drought": "A drought settles in — the fields thirst", "clear": "The sky clears"}.get(weather, "The sky clears"))
 
 func tick_missions(dt: float) -> void:
 	if mission_idx >= MISSIONS.size():
@@ -971,12 +971,13 @@ func pray_weather() -> void:
 	if int(items.get("paldium", 0)) < 3:
 		log_msg("The shrine wants 3 paldium")
 		return
-	var nxt: String = {"clear": "rain", "rain": "storm", "storm": "clear"}.get(weather, "rain")
+	var nxt: String = {"clear": "rain", "rain": "storm", "storm": "drought", "drought": "clear"}.get(weather, "rain")
 	add_item("paldium", -3)
 	weather = nxt
 	weather_t = 0.0 # the forced sky holds until the next natural roll
 	pray_cd = t + 600.0
 	log_msg({"rain": "You offer paldium — rain answers", "storm": "The altar drinks paldium — thunder answers",
+		"drought": "The altar drinks paldium — a dry wind answers",
 		"clear": "The offering burns off — the sky clears"}.get(nxt, "The sky shifts"))
 	sfx_play("level")
 
@@ -2179,12 +2180,14 @@ func tick_production(dt: float) -> void:
 				dew = 1.15 if weather == "rain" else (1.25 if weather == "storm" else 1.0)
 			elif "electric" in w.spec.get("elements", []) and weather == "storm":
 				dew = 1.15 # thunder pals work harder in the storm too
+			elif "fire" in w.spec.get("elements", []) and weather == "drought":
+				dew = 1.15 # the dry sky is a fire pal's home turf
 			# talent shows in the palbox — make it earn its keep on the crew too
 			var iv: float = 0.9 + w.talent * 0.004 # T0 → 0.9, T100 → 1.3
 			var cond: float = 1.0 + w.star * 0.1 # Palworld: a condensed pal outworks its kin
 			var rally := 1.15 if near_banner(w.pos) else 1.0 # a war banner lifts the crew's pace
 			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond * rally
-		var wet := 1.25 if s.get("farmField", false) and (weather != "clear" or near_well(Vector2(key.x + s.get("w", 2) * 0.5, key.y + s.get("h", 2) * 0.5))) else 1.0 # rain, storm or a well does the watering
+		var wet := 1.25 if s.get("farmField", false) and (weather in ["rain", "storm"] or near_well(Vector2(key.x + s.get("w", 2) * 0.5, key.y + s.get("h", 2) * 0.5))) else (0.8 if s.get("farmField", false) and weather == "drought" else 1.0) # rain, storm or a well waters; a drought starves every field a well can't reach
 		var fert := 1.5 if s.get("farmField", false) and float(st.get("fert", 0.0)) > t else 1.0
 		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet * fert
 		var rate: float = job.get("amount", 30)
@@ -2322,7 +2325,7 @@ func nearest_bed_cell(at: Vector2) -> Vector2i:
 	return best
 
 func fish_bite_p() -> float:
-	return 0.55 if weather != "clear" else 0.4
+	return 0.55 if weather in ["rain", "storm"] else 0.4 # wet skies feed the bite; dry ones don't
 
 func cast_line() -> bool:
 	# Palworld fishing: stand at the water's edge, wait for a bite — mostly
@@ -2774,6 +2777,8 @@ func skill_hit(caster: Pal, target_ent, sk: Dictionary) -> void:
 				mult *= 1.15
 			elif elem == "electric" and weather == "storm": # thunderstorm supercharges electric
 				mult *= 1.15
+		elif weather == "drought" and elem == "fire": # the parch is a flame's weather
+			mult *= 1.15
 		if tp.has_status("freeze"):
 			# a solid-frozen target shatters — the hit lands heavy and thaws it
 			# out. Checked before soak so the ice that freezes it this same hit
@@ -3048,7 +3053,7 @@ func load_game() -> bool:
 			if not SpeciesData.species_of(str(sid)).is_empty():
 				dex_seen[str(sid)] = true # unknown ids from other builds just don't get seen
 	dex_claimed = clampi(int(d.get("dex_claimed", 0)), 0, 64)
-	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm"] else "clear"
+	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm", "drought"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	pray_cd = t + clampf(float(d.get("pray_left", 0.0)), 0.0, 600.0)
 	var bq = d.get("board_quest", {})

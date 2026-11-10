@@ -18,7 +18,8 @@ watering pal will pull fish from it all day; fry the catch for
 a meal that puts wind in your boots. A skep of bees rounds out
 the pantry — honey bakes into buns that quicken the step. And
 a well sunk near the beds keeps them watered in fair skies —
-the same quarter rain gives, without waiting on the weather.
+the same quarter rain gives, without waiting on the weather —
+and the only drink a drought respects.
 And the sea feeds those who ask: cast a line from any shore —
 fish bite harder when it rains, and once in a long while the
 water gives back a corked bottle holding somebody's map.
@@ -27,8 +28,10 @@ The island keeps a clock. Daylight is for building; night is
 when the dark element pals wake and hunt wide. Cold bites past
 dusk — stand near a fire, hug a fire pal, or wear hide. And if
 the sky won't cooperate, a weather shrine takes paldium in
-exchange for a word with the heavens: sun, rain, thunder, and
-back again — choose the sky your yard needs.
+exchange for a word with the heavens: sun, rain, thunder,
+drought, and back around — choose the sky your yard needs.
+Mind the parch: fields beyond a well's shadow work a fifth
+slower under a dry sky, while fire pals come into their own.
 
 The far north freezes around the clock. The far south scorches
 by day and snaps cold at night. Pack warm fur and a tropical
@@ -144,7 +147,7 @@ Elements interplay: water soaks, and a soaked target takes
 heavier lightning. Fire burns and melts a freeze early —
 but a frozen foe that takes a HIT shatters for bonus damage.
 Same-element strikes bite deeper (STAB); rain feeds water
-moves, a thunderstorm feeds spark.
+moves, a thunderstorm feeds spark, a drought feeds flame.
 
 Gear wears. Weapons and armor both grind down on use until
 they snap — mend them at their station for half the recipe.
