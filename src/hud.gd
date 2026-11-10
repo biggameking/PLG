@@ -973,6 +973,8 @@ func use_item(k: String) -> void:
 				game.add_item(k, -1)
 		"fertilizer":
 			game.fertilize()
+		"pal_bait":
+			game.throw_bait()
 		_:
 			if k.begins_with("skill_fruit_"):
 				game.teach_skill_fruit(k)

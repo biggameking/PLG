@@ -1038,6 +1038,23 @@ func run() -> void:
 		game.pals.erase(rookie); rookie.free()
 	check("dummy trains idle pal", td_ok, "td=%s" % (td_st != null))
 
+	# pal bait: a tossed mash pulls a wild pal to the pile — first snout eats
+	var bait_ok := false
+	var deer2: Pal = game.gen_pal("eikthyrdeer", 3, p.pos + Vector2(6, 0))
+	deer2.mode = "wild"; deer2.aggro = -1
+	p.facing = Vector2(1, 0)
+	game.items["pal_bait"] = 1
+	game.throw_bait()
+	var bait_landed: bool = game.lure and game.t < float(game.lure.get("till", 0.0))
+	for i10 in range(120):
+		deer2._physics_process(0.1)
+		if not game.lure:
+			break
+	bait_ok = bait_landed and not game.lure
+	game.pals.erase(deer2); deer2.free()
+	game.lure = {}
+	check("bait lures wild", bait_ok, "landed=%s left=%s" % [bait_landed, game.lure != {}])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

@@ -29,6 +29,16 @@ const ITEMS = {
   "price": 1,
   "desc": "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it."
  },
+"pal_bait": {
+  "id": "pal_bait",
+  "name": "Pal Bait",
+  "glyph": "❁",
+  "color": "#d8b84a",
+  "kind": "material",
+  "stack": 999,
+  "price": 8,
+  "desc": "A honeyed berry mash — toss it out and hungry wild pals come sniffing."
+ },
  "fertilizer": {
   "id": "fertilizer",
   "name": "Fertilizer",
@@ -1416,6 +1426,25 @@ const RECIPES = [
   ],
   "station": "campfire",
   "work": 40
+ },
+ {
+  "id": "pal_bait",
+  "out": [
+   "pal_bait",
+   2
+  ],
+  "cost": [
+   [
+    "red_berries",
+    4
+   ],
+   [
+    "fiber",
+    1
+   ]
+  ],
+  "station": "workbench",
+  "work": 20
  },
  {
   "id": "fried_egg",

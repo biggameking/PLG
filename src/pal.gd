@@ -319,6 +319,18 @@ func wild_ai(dt: float) -> void:
 		if dist < 14.0:
 			aggro = 0 # base wiped of defenders — turn on the player
 			return
+	# bait: a tossed mash pulls hungry wild pals off their wander — the
+	# first snout to reach the pile wolfs it down (Palworld chum play)
+	if mode == "wild" and aggro < 0 and game.lure and game.t < float(game.lure.get("till", 0.0)):
+		var lp: Vector2 = game.lure["pos"]
+		var ld := pos.distance_to(lp)
+		if ld < 14.0:
+			if ld > 0.9:
+				target = lp
+				step_toward(target, dt)
+			else:
+				game.lure_take(self)
+			return
 	# wander
 	wander_t -= dt
 	if wander_t <= 0:

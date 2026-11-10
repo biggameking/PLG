@@ -615,6 +615,7 @@ var dex_t := 0.0
 var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of game hours
 var weather_t := 0.0
 var explored := PackedByteArray() # fog of war — one byte per world cell
+var lure := {}                   # thrown bait {pos, till} — one pile at a time
 var reveal_t := 0.0               # throttle: sight updates twice a second
 var focus_target: Pal = null      # Palworld focus fire: the pal you last hit
 var focus_t := 0.0                # ...stays the partner's priority for 4s
@@ -905,6 +906,21 @@ func tick_daedream() -> void:
 	tgt.hit(Combat.damage(datk, 14, Combat.stat_at(tgt.spec["def"],
 		tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult(), 1.0, rng), 1.0, true)
 	floater(tgt.pos, "dream chaser!", "#b06ee8")
+
+func throw_bait() -> void:
+	if not items.get("pal_bait", 0):
+		return
+	items["pal_bait"] -= 1
+	if items["pal_bait"] <= 0:
+		items.erase("pal_bait")
+	lure = {"pos": player.pos + player.facing * 3.0, "till": t + 25.0}
+	log_msg("Bait tossed — something hungry will smell it")
+	sfx_play("drop")
+
+func lure_take(p: Pal) -> void: # first snout to the pile eats it
+	lure = {}
+	p.hp = mini(p.max_hp, p.hp + int(p.max_hp * 0.1))
+	floater(p.pos, "yum!", "#d8b84a")
 
 func fertilize() -> void:
 	# spread fertilizer on the nearest field — five minutes of surging crops

@@ -39,7 +39,9 @@ line stretches electric organs three times further.
 
 Spheres must hit home — nothing is spent on a miss. The
 launcher flings the selected ball downrange. Sleeping pals
-catch asleep; they wake swinging.""",
+catch asleep; they wake swinging. Shy prey? Toss a bait mash
+ahead of you: hunger beats caution, and the first snout to
+the pile holds still while it chews.""",
 """— VOL. III —
 PARTY, BOX AND BENCH
 
