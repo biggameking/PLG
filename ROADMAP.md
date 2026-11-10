@@ -121,3 +121,17 @@ build-tools/apksigner).
   shell menus; hold-to-repeat covers them. Tranq-dart smoke assert parked
   the wild herd before firing — the dart bites the FIRST kin it reaches,
   so a wandering packmate made it flake (same isolation class as weather).
+- S19 third external pass — DONE: context-free audit of S17–S18 found
+  3 HIGH / 5 MED / 4 LOW. Fixed: caught raiders demobilize via
+  `release_event_flags` (was stuck danger drone + stranded gauntlet wave +
+  sleep lock); `aggro=0` sentinel fully migrated to `aggro_pid` across hit/
+  catch-fail/herd-pull/summons/raid-fallback; `sync_pos` now validates
+  finite/bounds/step-cap at the source; pause damage rule unified (solo
+  pause armours, net session doesn't); guest shots relay via `pal_hit`
+  (+tranq payload); `env_sync` carries the danger bit so guests hear the
+  drone too; `guest_hit` transfers burn/soak/freeze; weather/STAB/freeze
+  smoke tolerances tightened to the real truncation bounds; nav-hold resets
+  on mid-hold transitions; ambient pads recover without dead air; one
+  pal snapshot per projectile tick; chat brake precedes the host log.
+  Deferred honestly: guest claims damage numbers (host clamps), guest melee
+  statuses don't transfer, guest armor invisible to host.

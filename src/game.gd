@@ -1107,7 +1107,9 @@ func tick_missions(dt: float) -> void:
 		floater(player.pos, "MISSION DONE", "#8ef0ff")
 
 func hurt_player(atk: float, from: Kin) -> void:
-	if state != "play" or player.dodge_t > 0:
+	# pause is armour only in solo — in a net session the island keeps
+	# swinging whether the host's menu is up or not
+	if (state != "play" and not net_live()) or player.dodge_t > 0:
 		return # the title's ambient wildlife never bleeds into the run
 	var def := 20.0 + player.level * 3.0
 	var d := maxi(1, int(round(25.0 * (2.0 * atk) / maxf(1.0, atk + 2.0 * def) * (0.9 + rng.next() * 0.2))))
@@ -1489,6 +1491,7 @@ func resolve_sphere(sp) -> void:
 					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
+		release_event_flags(target)
 		if party.size() < 5: # the island rule: catch joins the party until it's full
 			target.mode = "bench"
 			party.append(target.uid)
@@ -1509,6 +1512,17 @@ func resolve_sphere(sp) -> void:
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
 		catch_fail()
 		target.aggro = 0 if target.hostile() >= 1 else -1
+
+func release_event_flags(p: Kin) -> void:
+	# a caught kin stops being an invader: raid/gauntlet metas mark a
+	# "temporary attacker" — without this a caught raider keeps the danger
+	# drone on, blocks sleep forever, and its gauntlet wave never counts down
+	if p.has_meta("gauntlet") and not gauntlet.is_empty():
+		gauntlet["left"] -= 1
+		p.remove_meta("gauntlet")
+	p.raid = false
+	if p.has_meta("raid_t0"):
+		p.remove_meta("raid_t0")
 
 func catch_xp(lv: float) -> int:
 	# streak rewards a steady hand: +5% per consecutive catch, cap +50%
@@ -1561,6 +1575,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
+		release_event_flags(target)
 		target.owner_id = pid
 		target.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
 		if rp.size() < 5: # a catch joins the party until the strip is full
@@ -1580,6 +1595,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free from player %d's orb" % [target.spec["name"], pid])
 		target.aggro = 0 if target.hostile() >= 1 else -1
+		target.aggro_pid = pid if target.aggro == 0 else 0
 
 func try_harvest(at: Vector2, face: Vector2) -> void:
 	# hit the decor tile on the dominant axis the player faces (was x-only)
@@ -1918,7 +1934,10 @@ func tick_hints(dt: float) -> void:
 		hint_seen[h["id"]] = float(hint_seen.get(h["id"], 0.0)) + dt
 
 # day/night pad crossfade — runs in every state so the title breathes too
+var net_danger := false # client's mirror of the host's threat verdict — env_sync keeps it true during raids
 func danger_active() -> bool:
+	if net != null and net.is_client():
+		return net_danger # a client can't see raid flags — the host ships the verdict at 2Hz
 	# what makes the island tense: a live raid wave, a running gauntlet,
 	# or an enraged (phase-2) boss still standing
 	if not gauntlet.is_empty():
@@ -1934,9 +1953,11 @@ func tick_music(dt: float) -> void:
 	var night := is_night()
 	var danger := danger_active()
 	music_danger.volume_db = move_toward(music_danger.volume_db, -9.0 if danger else -80.0, dt * 8.0)
-	# while the drone is up the pastoral pads duck fully under it
-	music_day.volume_db = move_toward(music_day.volume_db, -80.0 if (night or danger) else -10.0, dt * 6.0)
-	music_night.volume_db = move_toward(music_night.volume_db, -10.0 if (night and not danger) else -80.0, dt * 6.0)
+	# while the drone is up the pastoral pads duck fully under it — and they
+	# come back faster while it's still ringing, so a raid's end has no dead air
+	var ambient_rate := 9.0 if music_danger.volume_db > -40.0 else 6.0
+	music_day.volume_db = move_toward(music_day.volume_db, -80.0 if (night or danger) else -10.0, dt * ambient_rate)
+	music_night.volume_db = move_toward(music_night.volume_db, -10.0 if (night and not danger) else -80.0, dt * ambient_rate)
 
 func _process(dt: float) -> void:
 	tick_music(dt)
@@ -2058,6 +2079,9 @@ func _process(dt: float) -> void:
 		tick_supply(dt)
 		for q in pals.duplicate(): # stale raiders wander off instead of stacking up
 			if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
+				if q.has_meta("gauntlet") and not gauntlet.is_empty(): # swept raiders count against the wave too — kill_pal never sees them
+					gauntlet["left"] -= 1
+					q.remove_meta("gauntlet")
 				pals.erase(q)
 				q.queue_free()
 	tick_migration(dt) # deliberate local-fauna authority — see tick_migration
@@ -3337,7 +3361,7 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 	var elem: String = sk.get("element", "neutral")
 	if target_ent is Player:
-		if player.dodge_t > 0:
+		if (state != "play" and not net_live()) or player.dodge_t > 0:
 			return
 		var final := player.absorb_hit(maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def()))
 		if final <= 0:
@@ -3392,6 +3416,7 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			gain_xp(maxi(1, d / 4))
 
 func update_projectiles(dt: float) -> void:
+	var pal_snap := pals.duplicate() # one snapshot per tick — raid volleys were allocating per projectile per frame
 	for pr in projectiles.duplicate():
 		pr["ttl"] -= dt
 		pr["pos"] += pr["dir"] * pr["speed"] * dt
@@ -3413,14 +3438,20 @@ func update_projectiles(dt: float) -> void:
 					dead = true
 		if pr["from"] is String and pr["from"] == "player":
 			if not dead:
-				for p in pals.duplicate():
+				for p in pal_snap:
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
 						var d := Combat.damage(pr["dmg"] * 2.0 * (1.0 + partner_aura("atk") + player.meal_bonus("atk")), 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
-						p.hit(player.mercy_dmg(d, p), mult, true)
-						if float(pr.get("sleep", 0.0)) > 0.0 and p.hp > 0: # a tranq dart lands AFTER the sting — the hit would wake it otherwise
-							p.statuses["sleep"] = t + float(pr["sleep"])
-							floater(p.pos, "zzz", "#9ad8ff")
+						if net != null and net.is_client() and p.net_id > 0:
+							# replicas bleed only on the host's say-so — a local
+							# hit() on a replica early-returns, which made guest
+							# bows and tranq guns cosmetic
+							net.rpc("pal_hit", p.net_id, player.mercy_dmg(d, p), float(pr.get("sleep", 0.0)))
+						else:
+							p.hit(player.mercy_dmg(d, p), mult, true)
+							if float(pr.get("sleep", 0.0)) > 0.0 and p.hp > 0: # a tranq dart lands AFTER the sting — the hit would wake it otherwise
+								p.statuses["sleep"] = t + float(pr["sleep"])
+								floater(p.pos, "zzz", "#9ad8ff")
 						dead = true
 						break
 			if dead:
@@ -3440,18 +3471,21 @@ func update_projectiles(dt: float) -> void:
 						var g = net.ghosts[pid]
 						if g != null and g.net_pos.x >= 0 \
 								and pp.distance_to(Vector2(g.net_pos.x, g.net_pos.y)) < 0.55:
+							var gk_st: Dictionary = pr["skill"].get("status", {})
 							net.rpc_id(pid, "guest_hit",
-								float(pr["skill"].get("power", 10)) * 1.2)
+								float(pr["skill"].get("power", 10)) * 1.2,
+								str(gk_st.get("kind", "")) if gk_st is Dictionary else "",
+								float(gk_st.get("dur", 0.0)) if gk_st is Dictionary else 0.0)
 							dead = true
 							break
 				if not dead:
-					for p in pals.duplicate():
+					for p in pal_snap:
 						if p.mode in ["partner", "base"] and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 							skill_hit(caster, p, pr["skill"]) # wild shots hit partners AND base workers
 							dead = true
 							break
 			else:
-				for p in pals.duplicate():
+				for p in pal_snap:
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						skill_hit(caster, p, pr["skill"])
 						dead = true

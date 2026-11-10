@@ -52,8 +52,10 @@ the interaction-verb layer was not. Closed in this pass:
 - **MP — guest combat parity is approximate**: host wildlife engages the
   nearest warm body (player OR ghost), melee bites AND wild projectiles reach
   guests via `guest_hit` (projectile damage sent as atk-equivalent —
-  `power * 1.2`, statuses don't transfer). Guest→host damage still runs
-  through `pal_hit` as before.
+  `power * 1.2` — burn/soak/freeze statuses now transfer). Guest shots relay
+  through `pal_hit` (guest bows/muskets/tranq darts work; a client claims the
+  damage number — host clamps it, can't re-derive guest gear math). Guest
+  melee statuses still don't transfer; `danger` reaches clients via env_sync.
 - **BGM**: three procedural pads — day, night, and a minor danger drone that
   swallows the mix during raids/gauntlets/phase-2 bosses. Reactive, not
   produced.

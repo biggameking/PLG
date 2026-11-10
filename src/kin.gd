@@ -107,7 +107,7 @@ func any_status() -> bool:
 			return true
 	return false
 
-func hit(dmg: int, mult: float, by_player: bool) -> void:
+func hit(dmg: int, mult: float, by_player: bool, provoked_pid: int = 0) -> void:
 	if net_id > 0:
 		return # replicas take wounds only through the host's pal_sync — a local
 		# hit would spawn ghost adds (phase 2) and ghost respawn timers
@@ -131,14 +131,17 @@ func hit(dmg: int, mult: float, by_player: bool) -> void:
 				game.focus_t = game.t + 4.0
 			if hostile() == 0 and game.rng.chance(0.5):
 				aggro = -1
+				aggro_pid = 0
 			else:
 				aggro = 0
+				aggro_pid = provoked_pid # the blow's owner takes the heat — a guest's swing must not make the host tank
 			# the island herds turn as one: a packmate under attack pulls the
 			# whole flock into the same fight-or-flight stance
 			for m in game.pals:
 				if m != self and m.mode == "wild" and m.hp > 0 and m.home == home \
 						and m.home != Vector2.ZERO and m.aggro < 0:
 					m.aggro = aggro
+					m.aggro_pid = aggro_pid if aggro == 0 else 0
 					m.statuses.erase("sleep")
 
 # ---- boss phases: at half health the guardian changes the fight ----
@@ -163,6 +166,7 @@ func enter_phase_two() -> void:
 			game.nearest_free(pos.x + 1.0, pos.y))
 		m.set_meta("summoner", uid)
 		m.aggro = 0
+		m.aggro_pid = aggro_pid
 		m.home = home
 		game.pals.append(m)
 		n += 1
@@ -388,7 +392,8 @@ func wild_ai(dt: float) -> void:
 			aggro = bt2.uid
 			return
 		if dist < 14.0:
-			aggro = 0 # base wiped of defenders — turn on the player
+			aggro = 0 # base wiped of defenders — turn on the nearest warm body
+			aggro_pid = nearest_body_pid()
 			return
 	# bait: a tossed mash pulls hungry wild kin off their wander — the
 	# first snout to reach the pile wolfs it down (the island chum play)
@@ -417,16 +422,33 @@ func wild_ai(dt: float) -> void:
 	var near_pid := 0
 	var nd := dist
 	if game.net != null:
-		for pid in game.net.ghosts:
-			var g2 = game.net.ghosts[pid]
-			if g2 == null or g2.net_pos.x < 0:
-				continue
-			var gd := pos.distance_to(Vector2(g2.net_pos.x, g2.net_pos.y))
-			if gd < nd:
-				nd = gd; near_pid = pid
+		near_pid = nearest_body_pid()
+		if near_pid > 0:
+			nd = pos.distance_to(target_pos_for(near_pid))
 	if hostile() >= 1 and nd < trigger and not has_status("sleep"):
 		aggro = 0
 		aggro_pid = near_pid
+
+func nearest_body_pid() -> int:
+	# the nearest living guest ghost, or 0 when the host player is closest —
+	# every "turn on the player" provoke runs through here so a raid can't
+	# be kited onto the host while a guest throws the punches
+	var best := 0
+	var bd := pos.distance_to(game.player.pos)
+	if game.net == null:
+		return 0
+	for pid in game.net.ghosts:
+		var g = game.net.ghosts[pid]
+		if g == null or g.net_pos.x < 0:
+			continue
+		var gd := pos.distance_to(Vector2(g.net_pos.x, g.net_pos.y))
+		if gd < bd:
+			bd = gd; best = pid
+	return best
+
+func target_pos_for(pid: int) -> Vector2:
+	var g = game.net.ghosts.get(pid)
+	return Vector2(g.net_pos.x, g.net_pos.y) if g != null else game.player.pos
 
 var aggro_pid := 0 # engaged target: 0 = local player, >0 = a guest's ghost peer id
 func target_pos() -> Vector2:

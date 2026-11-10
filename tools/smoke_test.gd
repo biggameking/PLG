@@ -128,6 +128,26 @@ func run() -> void:
 	if tgt.mode in ["box", "bench"]:
 		check("caught kin leaves world", tgt.get_parent() != game.entity_layer)
 
+	# a caught raider stops being an invader — without release the danger
+	# drone sticks on, sleep stays blocked, and the gauntlet never ends
+	var raider_c: Kin = game.gen_pal("fenjelly", 5, p.pos)
+	raider_c.mode = "wild"; raider_c.hp = 1
+	raider_c.raid = true; raider_c.set_meta("raid_t0", game.t)
+	raider_c.set_meta("gauntlet", true)
+	game.gauntlet = {"wave": 1, "left": 3, "t": 0.0}
+	game.pals.append(raider_c)
+	game.add_item("legendary_orb", 20)
+	for try2 in 14:
+		game.resolve_sphere({"sid": "legendary_orb", "target": raider_c})
+		if raider_c.mode != "wild":
+			break
+	check("caught raider demobilized", raider_c.mode != "wild" and not raider_c.raid
+		and not raider_c.has_meta("raid_t0") and not raider_c.has_meta("gauntlet"),
+		"mode=%s raid=%s" % [raider_c.mode, raider_c.raid])
+	check("caught raider counts the wave", game.gauntlet["left"] == 2,
+		"left=%s" % game.gauntlet.get("left"))
+	game.gauntlet = {}
+
 	# capture level gate (sphere-ladder driver): a lv30 shrugs off
 	# what would bag a lv3 — same species, same hp
 	var lo_p: Kin = game.gen_pal("fenjelly", 3, p.pos)
@@ -1685,7 +1705,7 @@ func run() -> void:
 	cmb.hp = 99999; cmb.add_status("freeze", 5.0); game.rng.s = fzs
 	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["stoneShot"])
 	var d_fz := 99999.0 - cmb.hp
-	check("freeze shatters", d_fz > d_nz and absf(d_fz - d_nz * 1.5) <= 2.0
+	check("freeze shatters", d_fz > d_nz and absf(d_fz - d_nz * 1.5) <= 1.6
 		and not cmb.has_status("freeze"), "norm=%d frozen=%d" % [int(d_nz), int(d_fz)])
 	game.pals.erase(cmb)
 	if cmb.get_parent(): cmb.get_parent().remove_child(cmb)
@@ -1702,28 +1722,28 @@ func run() -> void:
 		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["flameBurst"])
 		dmgs.append(99999 - int(wrp.hp))
-	check("rain dampens fire", dmgs[0] > 0 and absf(dmgs[1] - dmgs[0] * 0.85) <= 2.0,
+	check("rain dampens fire", dmgs[0] > 0 and absf(dmgs[1] - dmgs[0] * 0.85) <= 1.01,
 		"dry=%d wet=%d" % [dmgs[0], dmgs[1]])
 	var dmgs2 := []
 	for wv in ["clear", "rain"]:
 		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["hydroJet"])
 		dmgs2.append(99999 - int(wrp.hp))
-	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] - dmgs2[0] * 1.15) <= 2.0,
+	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] - dmgs2[0] * 1.15) <= 1.2,
 		"dry=%d wet=%d" % [dmgs2[0], dmgs2[1]])
 	var dmgs3 := []
 	for wv in ["clear", "storm"]: # thunderstorm: electric hits crackle ~1.15x
 		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["shockwave"])
 		dmgs3.append(99999 - int(wrp.hp))
-	check("storm charges electric", dmgs3[0] > 0 and absf(dmgs3[1] - dmgs3[0] * 1.15) <= 2.0,
+	check("storm charges electric", dmgs3[0] > 0 and absf(dmgs3[1] - dmgs3[0] * 1.15) <= 1.2,
 		"dry=%d storm=%d" % [dmgs3[0], dmgs3[1]])
 	var dmgs4 := []
 	for wv in ["clear", "drought"]: # a parching sky feeds flame ~1.15x
 		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["flameBurst"])
 		dmgs4.append(99999 - int(wrp.hp))
-	check("drought feeds flame", dmgs4[0] > 0 and absf(dmgs4[1] - dmgs4[0] * 1.15) <= 2.0,
+	check("drought feeds flame", dmgs4[0] > 0 and absf(dmgs4[1] - dmgs4[0] * 1.15) <= 1.2,
 		"dry=%d parch=%d" % [dmgs4[0], dmgs4[1]])
 	# STAB (the island): a kin in its own element hits ~1.2x — same seed, same power
 	var stabc: Kin = game.gen_pal("cindlump", 10, p.pos)
@@ -1734,7 +1754,7 @@ func run() -> void:
 		game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(stabc, wrp, {"power": 50, "element": el})
 		stab_d.append(99999 - int(wrp.hp))
-	check("own element hits harder", stab_d[0] > 0 and absf(stab_d[1] - stab_d[0] * 1.2) <= 2.0,
+	check("own element hits harder", stab_d[0] > 0 and absf(stab_d[1] - stab_d[0] * 1.2) <= 1.3,
 		"neutral=%d stab=%d" % [stab_d[0], stab_d[1]])
 	game.pals.erase(stabc)
 	if stabc.get_parent(): stabc.get_parent().remove_child(stabc)
@@ -4390,6 +4410,7 @@ func run() -> void:
 	# Input.action_press drives ui_down the same way a held dpad does
 	game.state = "title"
 	var hudn: Node = main.get_node("UILayer/HUD")
+	hudn._process(0.01) # flush the state|panel transition — _process voids stale rows there too
 	hudn.click_rects = [{"rect": Rect2(), "act": "resume"}, {"rect": Rect2(), "act": "new_game"}, {"rect": Rect2(), "act": "quit"}]
 	hudn.menu_sel = 0
 	Input.action_press("ui_down")
@@ -4530,6 +4551,26 @@ func run() -> void:
 	game.net.is_host = false
 	game.net.multiplayer.multiplayer_peer = fake_peer
 	check("client context flips", game.net.is_client())
+	# danger mirrors host truth over env_sync — a client can't read raid flags
+	game.net_danger = true
+	check("client danger mirrors", game.danger_active())
+	game.net_danger = false
+	# sync_pos is the only input every proximity gate trusts — spoofed
+	# coordinates must die at the door (id 0 = a headless sender)
+	game.net.spawn_ghost(0)
+	var g0 = game.net.ghosts[0]
+	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — first packet always lands
+	game.net.sync_pos(150.0, 150.0, 0.0)
+	check("sync_pos accepts first fix", g0.net_pos == Vector3(150, 150, 0))
+	game.net.sync_pos(200.0, 200.0, 0.0) # 70-tile jump: no legit teleport exists
+	check("sync_pos kills teleports", g0.net_pos == Vector3(150, 150, 0))
+	game.net.sync_pos(NAN, 50.0, 0.0)
+	check("sync_pos kills NaN", g0.net_pos == Vector3(150, 150, 0))
+	game.net.sync_pos(-5.0, 50.0, 0.0)
+	check("sync_pos kills out-of-bounds", g0.net_pos == Vector3(150, 150, 0))
+	game.net.sync_pos(152.0, 150.0, 0.0) # a normal step still lands
+	check("sync_pos accepts steps", g0.net_pos == Vector3(152, 150, 0))
+	g0.queue_free(); game.net.ghosts.erase(0)
 	if game.item_count("kin_egg") == 0:
 		game.add_item("kin_egg", 1)
 	var eggs_have: int = game.item_count("kin_egg")

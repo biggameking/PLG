@@ -180,3 +180,20 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     while its downstream effects (real AI, real loot, roster capacity,
     catchability, uid-space collision) were never owned. If an exception
     survives review, enumerate every consumer of the thing it produces.
+37. **Event flags must be released at capture.** `raid`/`raid_t0`/`gauntlet`
+    mark a *temporary invader*. Every catch/convert path must demobilize
+    (see `release_event_flags`): a caught raider that keeps its flag re-arms
+    `danger_active`, blocks sleep forever, and strands the gauntlet counter.
+38. **Validate untrusted input at the source, not at each consumer.**
+    `sync_pos` wrote the one coordinate every proximity gate trusted — the
+    gates were "fail closed" against a fully spoofable value. Sanitize the
+    write once (finite/bounds/step-cap) and downstream checks become honest.
+39. **Sentinel migrations are a grep-able defect class.** `aggro = 0` meant
+    "the host keeper" at ~12 sites; migrating only the proximity scan left
+    every provoke-path (hit, catch-fail, herd-pull, raid fallback) aiming
+    guest aggression at the host. When a sentinel gains a second meaning,
+    sweep every literal site of the old one in the same change.
+40. **Symmetric damage paths share one state rule.** Melee was paused-
+    immune while projectiles weren't. If two hit paths disagree about a
+    gate (`state`, dodge, god-mode), they share one predicate or the
+    difference is a documented asymmetry.

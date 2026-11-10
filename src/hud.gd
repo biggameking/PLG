@@ -59,6 +59,14 @@ func _ready() -> void:
 var nav_hold := 0.0 # menu hold-to-repeat clock — edge press moves once, hold marches
 func _process(dt: float) -> void:
 	queue_redraw()
+	# a held direction emits no events — catch the transition here too or the
+	# old hold would keep marching into the new menu with no fresh 0.42s delay
+	var mk2 := "%s|%s" % [game.state, game.panel]
+	if game != null and mk2 != _menu_key:
+		_menu_key = mk2
+		click_rects.clear()
+		menu_sel = 0
+		nav_hold = 0.0
 	# arrows and dpad share the ui_* actions; after a 0.42s first step the
 	# cursor keeps marching on a 0.09s cadence — a long list stops being a
 	# button-mash. Edge presses still come from _input's action_pressed.

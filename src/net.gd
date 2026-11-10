@@ -99,10 +99,12 @@ func net_floater(x: float, y: float, txt: String, col: String) -> void:
 	game.floater(Vector2(float(x), float(y)), str(txt).substr(0, 24), str(col))
 
 @rpc("authority", "call_remote", "reliable")
-func guest_hit(dmg: float) -> void:
+func guest_hit(dmg: float, status_kind: String = "", status_dur: float = 0.0) -> void:
 	if multiplayer.is_server():
 		return # host wildlife only bites through the wire toward guests
 	game.hurt_player(clampf(float(dmg), 1.0, 500.0), null)
+	if status_kind in ["burn", "soak", "freeze"] and status_dur > 0.0:
+		game.player_status(status_kind, clampf(status_dur, 0.5, 12.0))
 
 func _on_peer_disconnected(id: int) -> void:
 	if ghosts.has(id):
@@ -201,17 +203,20 @@ func pal_sync(arr: Array) -> void:
 			p.queue_free()
 
 @rpc("authority", "call_remote", "unreliable")
-func env_sync(tod: float, day: int, weather: String) -> void:
+func env_sync(tod: float, day: int, weather: String, danger: bool = false) -> void:
 	if is_host:
 		return
 	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
 	game.day = int(day)
+	game.net_danger = danger == true # raids are host truth; the drone mirrors it
 	var w := str(weather)
 	if w in ["clear", "rain", "storm", "drought"]:
 		game.weather = w
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
+	if not (is_finite(float(x)) and is_finite(float(y))):
+		return
 	if ghosts.has(id):
 		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
 
@@ -242,13 +247,22 @@ func world_sync(s: int) -> void:
 @rpc("any_peer", "call_remote", "unreliable")
 func sync_pos(x: float, y: float, elev: float) -> void:
 	var id := multiplayer.get_remote_sender_id()
-	if ghosts.has(id):
-		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
+	if not ghosts.has(id):
+		return
+	var nx := float(x); var ny := float(y)
+	if not (is_finite(nx) and is_finite(ny)):
+		return # NaN/infinity coordinates are not a place anyone can stand
+	if nx < 0.0 or ny < 0.0 or nx >= World.WORLD_W or ny >= World.WORLD_H:
+		return # every proximity gate trusts this position — keep it inside the island
+	var g = ghosts[id]
+	if g.net_pos.x >= 0 and Vector2(nx, ny).distance_to(Vector2(g.net_pos.x, g.net_pos.y)) > 12.0:
+		return # guests have no legit teleport — a jump this big is a spoofed anchor
+	g.net_pos = Vector3(nx, ny, float(elev))
 	if is_host:
-		rpc("peer_pos", id, float(x), float(y), float(elev))  # relay so clients see each other
+		rpc("peer_pos", id, nx, ny, float(elev))  # relay so clients see each other
 
 @rpc("any_peer", "call_remote", "unreliable")
-func pal_hit(nid: int, dmg: float) -> void:
+func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	# Client→host combat relay: a client's swing lands on the host's real kin.
 	# The wire id IS the host uid (clients mirror it into net_id) — find_pal,
 	# not find_net_pal: host-side kin carry net_id=0.
@@ -261,7 +275,10 @@ func pal_hit(nid: int, dmg: float) -> void:
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
 		return # fail closed: the swing has to come from somewhere real
-	p.hit(clampf(float(dmg), 0.0, 2000.0), 1.0, false)
+	p.hit(clampf(float(dmg), 0.0, 2000.0), 1.0, false, pid) # the guest who swung takes the aggro — the host doesn't tank for remote blows
+	if sleep_s > 0.0 and p.hp > 0: # a tranq dart lands after the sting — same rule as the host's own shot
+		p.statuses["sleep"] = game.t + clampf(float(sleep_s), 0.5, 15.0)
+		game.floater(p.pos, "zzz", "#9ad8ff")
 
 @rpc("any_peer", "call_remote", "reliable")
 func sphere_catch(nid: int, sid: String, behind: bool, cap_lv: int) -> void:
@@ -494,11 +511,12 @@ func chat(t: String, from_id: int = 0) -> void:
 	if real_from == multiplayer.get_unique_id():
 		return # the server relayed your own line back — hud already echoed it
 	var line: String = str(t).left(160) # the log window can't hold a novel
-	game.log_msg("[friend] " + line)
 	if multiplayer.is_server():
 		if Time.get_ticks_msec() / 1000.0 - chat_last < 0.25:
-			return # a peer spamming chat gets exactly one relay per beat
+			return # a peer spamming chat gets exactly one relay per beat — and no log line either
 		chat_last = Time.get_ticks_msec() / 1000.0
+	game.log_msg("[friend] " + line)
+	if multiplayer.is_server():
 		rpc("chat", line, int(real_from)) # ENet is a star: relay to other clients
 
 var pal_sync_t := 0.0
@@ -513,7 +531,7 @@ func _process(dt: float) -> void:
 			rpc("pal_sync", pal_state_pack())
 			rpc("drop_sync", drop_state_pack())
 			rpc("struct_sync", struct_state_pack())
-			rpc("env_sync", game.tod, game.day, game.weather) # clock + sky are host truth
+			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active()) # clock + sky + threat are host truth
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
