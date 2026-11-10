@@ -176,11 +176,10 @@ func pact_slam() -> void:
 	if pl != null and pos.distance_to(pl.pos) <= 2.6:
 		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
 	var ail := ""
-	if spire_tag != "":
+	if game.spire_tag_ok(spire_tag): # int() eats garbage→0; the validator doesn't
 		var si := int(spire_tag.trim_prefix("spire_"))
-		if si >= 0 and si < game.SPIRE_DEFS.size():
-			ail = {"fire": "burn", "water": "soak", "grass": "poison",
-				"dark": "sleep", "dragon": ""}.get(str(game.SPIRE_DEFS[si]["elem"]), "")
+		ail = {"fire": "burn", "water": "soak", "grass": "poison",
+			"dark": "sleep", "dragon": ""}.get(str(game.SPIRE_DEFS[si]["elem"]), "")
 	for q in game.pals:
 		if q != self and q.hp > 0 and q.mode == "partner" \
 				and pos.distance_to(q.pos) <= 2.6: # punish the pile-up, not parked farmhands

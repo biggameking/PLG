@@ -240,8 +240,12 @@ func pal_hit(nid: int, dmg: float) -> void:
 	if not is_host:
 		return
 	var p := game.find_pal(int(nid))
-	if p == null or p.hp <= 0:
-		return
+	if p == null or p.hp <= 0 or p.mode != "wild":
+		return # guests can fight the wilds — not another keeper's roster or base crew
+	var pid := multiplayer.get_remote_sender_id()
+	var gp = ghosts.get(pid)
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
+		return # fail closed: the swing has to come from somewhere real
 	p.hit(clampf(float(dmg), 0.0, 2000.0), 1.0, false)
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -278,8 +282,8 @@ func take_drop(did: int) -> void:
 	for d in game.drops:
 		if d.get("did", -1) != int(did):
 			continue
-		if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(d["pos"]) > 2.5:
-			return # teleport-looting: too far to have really walked over it
+		if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(d["pos"]) > 2.5:
+			return # fail closed: loot needs a witnessed ghost within arm's reach
 		var id := String(d["id"]); var n := int(d["n"])
 		game.take_drop(d)
 		rpc_id(pid, "got_loot", id, n)

@@ -117,3 +117,54 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 24. **No dead predicates.** Match canonical ids (`ironpact_*`), never display
     or theme strings ("Iron Pact"). Every predicate added gets at least one
     smoke check that fires it positively.
+
+## Multiplayer authority contract (from the S8–S12 audit)
+
+25. **Every load/teardown clears every runtime collection, or names the
+    exception in a checklist at the function head** (`pals`, `box`, `bench`,
+    `party`, `remote_parties`, `drops`, `net_drops`, `drops_wanted`,
+    `spheres_flying`, `projectiles`, `structures`, `boss_respawns`,
+    `spires_done`, `crowned`, `lure`, `treasure`, `focus_target`, merchant,
+    `gauntlet`, `hint_seen`, `explored`). A new collection adds its reset at
+    `load_game` AND `regenerate` in the same PR — `bench` proved the
+    checklist matters.
+26. **Proximity-gated RPCs fail closed.** `ghosts.get(pid)` returning null
+    refuses the op (`gp == null or dist > R`), never skips the check — one
+    helper shape, applied at every request handler (`take_drop`,
+    `net_harvest`, `net_place`, `net_demolish`, `assign_req`, `pal_hit`).
+27. **Client-claimed values are untrusted input.** Handlers re-derive or
+    bound anything the client asserts (behind flags, item ownership, tech
+    unlocks, hit damage, positions). `cap_lv`'s clamp is the shape — extend
+    the shape.
+28. **A probe/sim gate must call production code or it gates nothing.**
+    Un-callable formulas get extracted to a shared static
+    (`Combat.raid_day_bonus(day)`) used by both sides. A gate over a local
+    copy is a tautology; "keep in lockstep" comments don't count.
+29. **Kill/box/destroy paths scrub every roster the uid can appear in** —
+    `party`, every `remote_parties` row, `bench`, `pals`,
+    `job_site.workers`. Before closing, grep `\.erase\(.*uid` across every
+    verb of the same class.
+30. **Tests leave no dirty state — all of `user://`, not just settings.cfg.**
+    `savegame.plg` gets backup/restore too; no real sockets left bound
+    (loopback-free stub or close post-check); a finally-position cleanup runs
+    even on mid-run abort.
+31. **Serialized/whitelisted string ids carry the full three-part check** —
+    `begins_with(prefix)` + `is_valid_int` + `0 <= int(rest) < size` —
+    copied whole to every site (save loader, wire validator, predicate
+    reader). `int()` accepts garbage→0 and negatives. One validator
+    (`spire_tag_ok`) for all readers.
+32. **tr() slices ship a coverage inventory.** A locale PR lists every
+    user-visible emit site (`log_msg`, `floater`, `draw_string` literal,
+    `menu_row` label, data strings) and wraps it or records the exclusion in
+    the CSV header/docs. A CSV key with no producing `tr()` call is dead —
+    grep `tr("` vs keys as the lint. CSV fields containing commas must be
+    quoted — `\,` escapes are literal, not escapes.
+33. **Deterministic worldgen produces each synced entity through exactly one
+    channel on clients.** If a replica system carries it (drops→`net_drops`,
+    structures→`struct_sync`, kin→`pal_sync`), the client's `regenerate` must
+    not also spawn a local copy — or name the deliberate exception like
+    `tick_migration` did, in the commit.
+34. **Every wiring check ships its negative.** Slam outside phase 2, catch
+    on boss/legend, box op on a non-owned uid, harvest with no ghost, strike
+    during a panel, load with non-empty bench — the positive assertion
+    without its gate-check certifies half the contract.

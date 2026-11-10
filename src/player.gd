@@ -48,8 +48,9 @@ func setup(g: Game, at: Vector2) -> void:
 	setup_visuals("res://assets/kin/player_f0.png", "res://assets/kin/player_f1.png")
 
 func _unhandled_input(event: InputEvent) -> void:
-	if game.state != "play":
-		return # the shell owns input on title/pause — nothing leaks to the sim
+	if game.state != "play" or game.panel != "":
+		return # the shell owns input on title/pause, and an open panel owns the
+		# world verbs — you can't dodge out of your inventory or ride a menu
 	if event.is_action_pressed("aim"):
 		aiming = not aiming
 	if event.is_action_pressed("ride"):

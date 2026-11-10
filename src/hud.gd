@@ -120,8 +120,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			chat_buf = ""; game.panel = ""
 		elif event.keycode == KEY_BACKSPACE:
 			chat_buf = chat_buf.left(-1)
-		elif event.unicode >= 32 and event.unicode < 127:
-			chat_buf += char(event.unicode)
+		elif event.unicode >= 32:
+			chat_buf += char(event.unicode) # CJK keepers chat too — ASCII-only was a cage
 		get_viewport().set_input_as_handled()
 		return
 	# join-ip input mode
@@ -187,12 +187,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	if event.is_action_pressed("party_toggle"):
+		if game.panel != "":
+			return # assigning crew while reading the roster is a misclick
 		if game.net != null and game.net.is_client():
 			game.net.rpc("assign_req", game.player.pos.x, game.player.pos.y)
 		else:
 			game.assign_worker()
 		return
 	if event.is_action_pressed("pal_stance"):
+		if game.panel != "":
+			return
 		# the island kin command: cycle the field kin's standing order
 		if game.net != null and game.net.is_client():
 			for d in game.net_party:
@@ -203,6 +207,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			game.cycle_stance(game.party_pal().uid)
 		return
 	if event.is_action_pressed("demolish"):
+		if game.panel != "":
+			return # razing a real structure while browsing lists is grief
 		game.demolish_at(mouse_tile())
 		return
 	if event.is_action_pressed("map"):
@@ -211,6 +217,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			bake_minimap() # rebake every open — terrain/decor change and load_game swaps the world
 		return
 	if event.is_action_pressed("interact"):
+		if game.panel != "":
+			return # E means "confirm" inside panels, not "use the world"
 		interact()
 		return
 	if event.is_action_pressed("save"):
@@ -754,7 +762,8 @@ func draw_title(r: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.55))
 	var cx := r.x / 2
 	var ty := r.y * 0.22
-	draw_string(font, Vector2(cx - font.get_string_size("KINBOUND", HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x / 2, ty), "KINBOUND",
+	var brand := tr("Kinbound").to_upper() # the logo rides the locale table like everything else
+	draw_string(font, Vector2(cx - font.get_string_size(brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x / 2, ty), brand,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color("#e8d44d"))
 	var tagline := tr("the Wildmere keeps what you catch")
 	draw_string(font, Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,

@@ -127,8 +127,9 @@ const BREED_COMBOS := {
 }
 
 func _exit_tree() -> void:
-	# Orphan sweep: nodes DETACHED from the tree are not freed by the engine —
-	# box kin are remove_child'd Node2Ds and leak at quit otherwise.
+	# Orphan sweep: the engine frees in-tree children, but anything parented to
+	# box_holder or otherwise detached needs an explicit hand — belt & suspenders
+	# over box_pal's keep-everything-parented design.
 	if OS.has_environment("PLG_ORPHANS"):
 		print("_exit_tree sweep: box=%d kin=%d" % [box.size(), pals.size()])
 	for bp in box:
@@ -618,6 +619,8 @@ func wild_lv(zone: int) -> int:
 	return rng.int_range(1 + zone * 3, 4 + zone * 5) + (2 if is_night() else 0)
 
 func spawn_wild() -> void:
+	if net != null and net.is_client():
+		return # host owns the wild roster — ours arrive as pal_sync replicas
 	var want := 42
 	var tries := 0
 	var wild_n := 0
@@ -724,10 +727,14 @@ func spawn_net_pal(d) -> void:
 		nearest_free(float(d[1]), float(d[2])), bool(d[5]) if d.size() > 5 else false)
 	np.mode = str(d[4]) if str(d[4]) in ["base", "partner", "wild"] else "wild"
 	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
+	if np.net_id > 0:
+		np.uid = -np.net_id # replicas live in negative-uid space: local uids are
+			# always positive, so find_pal's dual-space lookup can never alias
+			# a real kin with a wire shadow that shares its number
 	np.boss = bool(d[7]) if d.size() > 7 else false # den/grotto bosses keep their orb immunity on clients too
 	np.alpha = bool(d[8]) if d.size() > 8 else false
 	var nstag := str(d[9]) if d.size() > 9 else ""
-	if nstag.begins_with("spire_") and int(nstag.trim_prefix("spire_")) < SPIRE_DEFS.size():
+	if spire_tag_ok(nstag):
 		np.spire_tag = nstag # same whitelist the save path uses
 	pals.append(np)
 
@@ -747,6 +754,9 @@ func find_box_uid(uid: int) -> Kin:
 	return null
 
 func find_pal(uid: int) -> Kin:
+	# dual-space on purpose: positive uid space is local kin, a replica's
+	# net_id is its host's uid — replicas carry uid = -net_id so the two
+	# spaces can't collide (see spawn_net_pal)
 	for p in pals:
 		if p.uid == uid or (p.net_id > 0 and p.net_id == uid):
 			return p
@@ -819,6 +829,8 @@ func kill_pal(p: Kin, by_player: bool) -> void:
 		p.carry = null
 	pals.erase(p)
 	party.erase(p.uid)  # dead partners must free their party slot
+	for rp in remote_parties.values(): # a KO'd guest pal frees its slot too —
+		rp.erase(p.uid)                 # an unscrubbed uid is a phantom "Party full"
 	bench.erase(p)      # a benched pal should never die — but never trust state
 	if p.job_site:
 		if p in p.job_site["workers"]:
@@ -829,10 +841,17 @@ func kill_pal(p: Kin, by_player: bool) -> void:
 		p.statuses.clear() # a KO'd pal shouldn't come out of the box still burning
 		p.stun_t = 0.0
 		p.revive_t = t + 300.0  # the island-style revive timer
-		box.append(p)
-		box_pal(p)
-		sfx_play("ko")
-		log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
+		if box.size() < MAX_BOX + 32: # KO'd kin get a small overflow lane past the
+			box.append(p)             # catch cap — losing a downed partner to an
+			box_pal(p)                # off-by-one box eviction is not a feature
+			sfx_play("ko")
+			log_msg("%s is KO'd - it will recover in the box" % p.spec["name"])
+		else: # even the overflow lane is full — the wild reclaims it, KO'd
+			p.mode = "wild"
+			p.owner_id = 0
+			p.hp = 1
+			pals.append(p) # pals.erase ran above — re-enter or it orphans in-tree
+			log_msg("%s is KO'd - the full kinbox can't take it; it limps back to the wild" % p.spec["name"])
 	else:
 		if p.has_meta("gauntlet") and not gauntlet.is_empty():
 			gauntlet["left"] -= 1
@@ -851,6 +870,8 @@ const MAX_RESPAWNS := 64 # scheduled den refills — bounded like every runtime 
 var boss_respawns := []  # {sid,lv,pos:[x,y],alpha,boss,at}
 
 func tick_boss_respawns() -> void:
+	if net != null and net.is_client():
+		return # respawn timers are world state — the host decides who comes back
 	for i in range(boss_respawns.size() - 1, -1, -1):
 		var br: Dictionary = boss_respawns[i]
 		if t < br.get("at", INF):
@@ -920,6 +941,8 @@ func gauntlet_next_wave() -> void:
 	log_msg("Gauntlet wave %d! %d foes" % [w, gauntlet["left"]])
 
 func tick_gauntlet() -> void:
+	if net != null and net.is_client():
+		return # the trial is a host event — its raiders arrive as replicas
 	if gauntlet.is_empty() or gauntlet["left"] > 0:
 		return
 	if gauntlet["wave"] < 3:
@@ -1020,6 +1043,8 @@ func reveal_at(c: Vector2, r: float) -> void:
 				explored[y * world.WORLD_W + x] = 1
 
 func tick_weather(dt: float) -> void:
+	if net != null and net.is_client():
+		return # env_sync carries the host's sky — a local roll would thrash it
 	# four-state sky, ~half a game day per roll — rain waters the fields,
 	# a drought parches them, and every loud or dry sky has its kin
 	weather_t += dt
@@ -1063,17 +1088,21 @@ func hurt_player(atk: float, from: Kin) -> void:
 	if player.hp <= 0:
 		respawn_player()
 
+var _sphere_tex := {} # sid -> orb sprite texture — same create-once contract as _drop_tex
+
 func sphere_fly(sid: String, target: Kin) -> void:
 	var spr := Sprite2D.new()
-	var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
-	var c := Color(ItemData.ITEMS.get(sid, {}).get("col", "#e05050"))
-	img.fill(Color(0, 0, 0, 0))
-	for yy in range(2, 8):
-		for xx in range(2, 8):
-			img.set_pixel(xx, yy, c)
-	for xx in range(3, 7):
-		img.set_pixel(xx, 2, Color.WHITE) # top glint
-	spr.texture = ImageTexture.create_from_image(img)
+	if not _sphere_tex.has(sid):
+		var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
+		var c := Color(ItemData.ITEMS.get(sid, {}).get("col", "#e05050"))
+		img.fill(Color(0, 0, 0, 0))
+		for yy in range(2, 8):
+			for xx in range(2, 8):
+				img.set_pixel(xx, yy, c)
+		for xx in range(3, 7):
+			img.set_pixel(xx, 2, Color.WHITE) # top glint
+		_sphere_tex[sid] = ImageTexture.create_from_image(img)
+	spr.texture = _sphere_tex[sid]
 	var p0 := Iso.to_screen(player.pos.x, player.pos.y, world.elev_at(int(player.pos.x), int(player.pos.y)))
 	spr.position = Vector2(p0.x, p0.y - 14)
 	entity_layer.add_child(spr)
@@ -1208,6 +1237,8 @@ func sleep_to_morning() -> void:
 	log_msg("You sleep until dawn. Day %d" % day)
 
 func summon_raid() -> bool:
+	if net != null and net.is_client():
+		return false # the horn is the host's to sound
 	if kinbox_pos.x < 0:
 		log_msg("Need a kinbox to summon the raid")
 		return false
@@ -1357,10 +1388,7 @@ func fertilize() -> void:
 	log_msg("%s surges for five minutes" % StructureData.STRUCTURES[structures[best]["id"]]["name"])
 
 func cap_power_of(target: Kin) -> float:
-	# luckies resist; real gate is level — a lv50 shrugs off a
-	# ball that would bag a lv5, which is what pushes the orb ladder
-	return float(target.spec["capturePower"]) * (1.35 if target.lucky else 1.0) \
-		* (1.0 + 0.05 * maxf(0.0, target.level - 1.0))
+	return Combat.cap_power(float(target.spec["capturePower"]), target.level, target.lucky)
 
 func resolve_sphere(sp) -> void:
 	var target: Kin = sp["target"]
@@ -1452,9 +1480,15 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss \
 			or not acquirable(target.species_id): # the ownable gate — same rule as resolve_sphere
 		return
+	var gp = net.ghosts.get(pid) if net != null else null
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(target.pos) > 9.0:
+		return # fail closed: an orb can't land nine tiles from the thrower
 	var sp_pow: float = float(ItemData.ITEMS.get(sid, {}).get("spherePower", 0.0))
 	if sp_pow <= 0.0:
 		return # forged item ids don't get free rolls
+	# the client claims "behind" — the host re-derives it from the ghost it
+	# actually saw; trust inputs, not conclusions
+	behind = sign(gp.net_pos.x - target.pos.x) == -target.dir
 	var hp_frac := maxf(0, target.hp) / target.max_hp
 	var cap_pow: float = cap_power_of(target)
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
@@ -1479,7 +1513,6 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 					mp.apply_bonuses()
 		target.statuses.clear()
 		target.aggro = -1
-		target.net_id = 0 # it's a keeper's pal now — replicas stop being tracked
 		target.owner_id = pid
 		target.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
 		if rp.size() < 5: # a catch joins the party until the strip is full
@@ -1545,6 +1578,9 @@ func dirty_decor_pack() -> Array:
 	return arr
 
 func spawn_drop(id: String, n: int, at: Vector2) -> void:
+	if net != null and net.is_client():
+		return # every synced bag arrives via net_drops — a local copy would
+		# pay twice: once on walk-over, once through the take_drop RPC
 	# tiny tinted bag icon; drops persist until picked up (player or hauler kin)
 	if drops.size() >= MAX_DROPS:
 		take_drop(drops.front()) # flood backstop: oldest bag evaporates
@@ -1581,6 +1617,8 @@ func drop_sync(arr: Array) -> void:
 			continue
 		var id := str(e[1])
 		var at := Vector2(float(e[3]), float(e[4]))
+		if net_drops.size() >= MAX_DROPS:
+			continue # a hostile or buggy host can't stuff our sprite RAM either
 		net_drops[did] = {"id": id, "n": int(e[2]), "pos": at, "node": drop_sprite(id, at)}
 	for did in net_drops.keys():
 		if not seen.has(did):
@@ -1910,22 +1948,24 @@ func _process(dt: float) -> void:
 	for f in floaters:
 		f["age"] += dt
 	floaters = floaters.filter(func(f): return f["age"] < 1.2)
-	# ground-drop pickup on walk-over
-	for i in range(drops.size() - 1, -1, -1):
-		var d: Dictionary = drops[i]
-		d["age"] = d.get("age", 0.0) + dt
-		if d["age"] > 600.0: # old loot decays — else the world fills with bags
-			take_drop(d)
-			continue
-		if d["cool"] > 0.0:
-			d["cool"] = d["cool"] - dt
-			continue
-		if player.pos.distance_squared_to(d["pos"]) < 0.55:
-			add_item(d["id"], d["n"])
-			floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
-			if "egg" in d["id"]:
-				anger_nesters(d["pos"]) # the island: parents guard their nests — egg thieves get swarmed
-			take_drop(d)
+	# ground-drop pickup on walk-over (host only — a client's bags live in
+	# net_drops and pay through the take_drop RPC, never this loop)
+	if net == null or not net.is_client():
+		for i in range(drops.size() - 1, -1, -1):
+			var d: Dictionary = drops[i]
+			d["age"] = d.get("age", 0.0) + dt
+			if d["age"] > 600.0: # old loot decays — else the world fills with bags
+				take_drop(d)
+				continue
+			if d["cool"] > 0.0:
+				d["cool"] = d["cool"] - dt
+				continue
+			if player.pos.distance_squared_to(d["pos"]) < 0.55:
+				add_item(d["id"], d["n"])
+				floater(d["pos"], "+%d %s" % [d["n"], ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])], "#ffe08a")
+				if "egg" in d["id"]:
+					anger_nesters(d["pos"]) # the island: parents guard their nests — egg thieves get swarmed
+				take_drop(d)
 	# client-side drop replicas: we ask, the host decides (and pays via got_loot)
 	if net != null and net.is_client():
 		for did in net_drops.keys():
@@ -1935,29 +1975,31 @@ func _process(dt: float) -> void:
 			if player.pos.distance_squared_to(dd["pos"]) < 0.55:
 				drops_wanted[did] = t
 				net.rpc("take_drop", did)
-	# respawn trickle
-	var wild_n := 0
-	for wp in pals:
-		if wp.mode == "wild":
-			wild_n += 1
-	if wild_n < 30 and rng.chance(dt * 0.15):
-		spawn_wild()
-	# stumps regrow into trees over a few in-game days
-	if rng.chance(dt * 0.02):
-		var ri := rng.int_range(0, world.decor.size() - 1)
-		if world.decor[ri] == World.Decor.STUMP:
-			world.decor[ri] = World.Decor.TREE_A if rng.chance(0.5) else World.Decor.TREE_B
-			mark_decor(ri)
-			world.hp[ri] = 30
-			queue_redraw_decor()
-	# base raid waves
-	tick_raid(dt)
-	tick_supply(dt)
-	tick_migration(dt)
-	for q in pals.duplicate(): # stale raiders wander off instead of stacking up
-		if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
-			pals.erase(q)
-			q.queue_free()
+	# respawn trickle + stump regrow + raid sweep are world mutations —
+	# host territory; a client replays them and gets phantom divergence
+	if net == null or not net.is_client():
+		var wild_n := 0
+		for wp in pals:
+			if wp.mode == "wild":
+				wild_n += 1
+		if wild_n < 30 and rng.chance(dt * 0.15):
+			spawn_wild()
+		# stumps regrow into trees over a few in-game days
+		if rng.chance(dt * 0.02):
+			var ri := rng.int_range(0, world.decor.size() - 1)
+			if world.decor[ri] == World.Decor.STUMP:
+				world.decor[ri] = World.Decor.TREE_A if rng.chance(0.5) else World.Decor.TREE_B
+				mark_decor(ri)
+				world.hp[ri] = 30
+				queue_redraw_decor()
+		# base raid waves
+		tick_raid(dt)
+		tick_supply(dt)
+		for q in pals.duplicate(): # stale raiders wander off instead of stacking up
+			if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
+				pals.erase(q)
+				q.queue_free()
+	tick_migration(dt) # deliberate local-fauna authority — see tick_migration
 
 # ---------- building / tech / crafting / base ----------
 
@@ -2221,6 +2263,8 @@ func tick_repairs(dt: float) -> void:
 			st["hp"] = minf(mx, st.get("hp", mx) + 4.0 * fixers * dt)
 
 func hit_structure(cell: Vector2i, dmg: int) -> void:
+	if net != null and net.is_client():
+		return # structure hp is host truth — replica raiders only mime the chew
 	var st = structures.get(cell)
 	if st == null:
 		return
@@ -2523,6 +2567,8 @@ func near_banner(at: Vector2) -> bool:
 	return false
 
 func tick_production(dt: float) -> void:
+	if net != null and net.is_client():
+		return # the shared base's timers tick on the host — struct_sync mirrors them
 	var powered := 1.5 if generator_active() else 1.0 # one check — the SAN-aware helper
 	var has_stand := has_structure("monitoring_stand")
 	var stand := (1.4 * float(WORK_MODES[work_mode]["prod"])) if has_stand else 1.0
@@ -3389,7 +3435,7 @@ func to_title() -> void:
 
 func save_game() -> void:
 	if net != null and net.is_client():
-		log_msg("The world lives on the host — nothing to save locally")
+		log_msg(tr("The world lives on the host — nothing to save locally"))
 		return # a client's replica snapshot must never clobber the solo save
 	var pals_data := []
 	for p in pals:
@@ -3499,6 +3545,7 @@ func save_game() -> void:
 		"board_quest": board_quest,
 		"explored": explored,
 		"treasure": ([treasure["pos"].x, treasure["pos"].y] if treasure else null),
+		"grotto": [grotto_pos.x, grotto_pos.y], "grotto2": [grotto_room2.x, grotto_room2.y],
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger, "stamina": player.stamina,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level,
@@ -3507,12 +3554,12 @@ func save_game() -> void:
 	}
 	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 	if f == null:
-		log_msg("Save failed — %s" % error_string(FileAccess.get_open_error()))
+		log_msg(tr("SAVE FAILED") + " — %s" % error_string(FileAccess.get_open_error()))
 		return
 	f.store_var(d)
 	f.close()
 	has_save = true
-	log_msg("Saved.")
+	log_msg(tr("Saved."))
 
 func load_game() -> bool:
 	if not FileAccess.file_exists("user://savegame.plg"):
@@ -3542,6 +3589,13 @@ func load_game() -> bool:
 	for bp1 in box: # box pals aren't in the scene tree — clear() alone leaks them
 		bp1.free()
 	box.clear()
+	for bp2 in bench: # bench kin live under box_holder too — a quickload that
+		bp2.free()      # forgets them grows a phantom stable every save/load
+	bench.clear()
+	lure = {} # a live trap must not resurrect across a load
+	focus_target = null
+	raid_warned = false # a 30s horn doesn't survive the reload
+	raid_theme = ""
 	for pr in projectiles:
 		pr["node"].queue_free()
 	projectiles.clear()
@@ -3606,12 +3660,17 @@ func load_game() -> bool:
 	if spv is Array: # only real spire tags — a foreign save can't forge a crown
 		for tg in spv:
 			var stg := str(tg)
-			if stg.begins_with("spire_") and int(stg.trim_prefix("spire_")) >= 0 \
-					and int(stg.trim_prefix("spire_")) < SPIRE_DEFS.size():
+			if spire_tag_ok(stg):
 				spires_done[stg] = true
 	crowned = d.get("crowned", false) == true and spires_done.size() >= SPIRE_DEFS.size() # the crown must be earned, not written
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm", "drought"] else "clear"
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
+	var gtv = d.get("grotto", []) # dungeon markers ride the save like everything else
+	grotto_pos = Vector2i(int(gtv[0]), int(gtv[1])) \
+		if gtv is Array and gtv.size() == 2 and (gtv[0] is float or gtv[0] is int) else Vector2i(-1, -1)
+	var gv2 = d.get("grotto2", [])
+	grotto_room2 = Vector2i(int(gv2[0]), int(gv2[1])) \
+		if gv2 is Array and gv2.size() == 2 and (gv2[0] is float or gv2[0] is int) else Vector2i(-1, -1)
 	pray_cd = t + clampf(float(d.get("pray_left", 0.0)), 0.0, 600.0)
 	var bq = d.get("board_quest", {})
 	board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
@@ -3665,7 +3724,7 @@ func load_game() -> bool:
 	player.meal_buff = d["player"].get("meal", {})
 	player.meal_t = clampf(float(d["player"].get("meal_t", 0.0)), 0.0, 600.0) # cap restored buffs
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
-	player.hp = minf(player.hp, player.max_hp)
+	player.hp = clampf(player.hp, 0.0, player.max_hp) # forged saves can't make you immortal or limbo-dead
 	var pending_jobs := []
 	var loaded := []
 	for pd in d["kin"]:
@@ -3693,7 +3752,7 @@ func load_game() -> bool:
 		np.mode = m0 if m0 in ["wild", "partner", "base", "box", "bench", "expedition"] else "wild" # foreign strings would poison every mode check
 		if np.mode == "expedition":
 			np.visible = false # off-map until its post calls it home
-		np.hp = float(pd.get("hp", np.max_hp)); np.talent = clampi(int(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
+		np.hp = clampf(float(pd.get("hp", np.max_hp)), 0.0, np.max_hp); np.talent = clampi(int(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
 		if pd.get("sex") != null:
 			np.sex = "F" if str(pd["sex"]) == "F" else "M"
 		if pd.get("passives") is Array:
@@ -3704,7 +3763,7 @@ func load_game() -> bool:
 		if pd.get("boss") is bool:
 			np.boss = pd["boss"] # only a real bool assigns — GDScript has no bool() ctor and String==true throws
 		var pstg := str(pd.get("stag", ""))
-		if pstg.begins_with("spire_") and int(pstg.trim_prefix("spire_")) < SPIRE_DEFS.size():
+		if spire_tag_ok(pstg):
 			np.spire_tag = pstg # same whitelist as the spires_done restore — foreign tags can't forge campaign progress
 		np.phase = clampi(int(pd.get("ph", 1)), 1, 2) # a phase-2 boss reloading at 1 would re-run its summon
 		np.san = clampf(float(pd.get("san", np.san)), 0.0, 200.0)
@@ -3882,7 +3941,7 @@ func load_game() -> bool:
 	if player != null:
 		player.aiming = false
 		player.dodge_t = 0.0
-	log_msg("Loaded.")
+	log_msg(tr("Loaded."))
 	return true
 
 # monitoring stand work pace (the island: normal/hard/super-hard). Needs the
@@ -3906,6 +3965,8 @@ func cycle_work_mode() -> void:
 
 var supply_t := 300.0 # wandering care package — lands near the player
 func tick_supply(dt: float) -> void:
+	if net != null and net.is_client():
+		return # crate drops are host spawns — replicas arrive via drop_sync
 	supply_t -= dt
 	if supply_t > 0.0:
 		return
@@ -3990,6 +4051,9 @@ const RAID_WARN_T := 30.0 # seconds of horn before the wave lands
 var raid_warned := false # 30s heads-up — the island flashes the raid horn early
 var raid_theme := ""     # element pack for the incoming wave; "" = mixed
 func tick_raid(dt: float) -> void:
+	if net != null and net.is_client():
+		return # raid_t is not synced — a client wave would be phantoms the host
+		# never heard of, chewing synced structures it can't really damage
 	if kinbox_pos.x < 0:
 		return
 	if not settings.get("raids", true):
@@ -4018,12 +4082,13 @@ func tick_raid(dt: float) -> void:
 		start_raid()
 
 func start_raid() -> void:
+	if net != null and net.is_client():
+		return # only the host field-promotes raiders
 	var c := Vector2(kinbox_pos.x + 0.5, kinbox_pos.y + 0.5)
-	# the island escalation: raids grow with the campaign — the curve squares
-	# with day so a day-one wave is survivable on a wooden club and a lamb,
-	# while deep-campaign raids still out-level a complacent base
-	var day_bonus := mini(day * day / 20, 25)
-	var n := 3 + rng.int_range(0, 2) + mini(day / 4, 4)
+	# the island escalation: raids grow with the campaign — formulas live in
+	# Combat so the sim gates the shipped math, not a copy of it
+	var day_bonus := Combat.raid_day_bonus(day)
+	var n := 3 + rng.int_range(0, 2) + Combat.raid_wave_bonus(day)
 	var spawned := 0
 	for i in n:
 		var placed := false
@@ -4771,27 +4836,36 @@ func spire_pick(elem: String) -> String:
 
 func spawn_pact_spires() -> void:
 	var placed := 0
-	# strict pass wants a clear 7x7; the relaxed pass only needs the right zone —
-	# five spires is a campaign contract, a map may never ship fewer
-	for relaxed in [false, true]:
-		var tries := 0
-		while tries < 8000 and placed < SPIRE_DEFS.size():
-			tries += 1
-			var tx := rng.int_range(8, World.WORLD_W - 10)
-			var ty := rng.int_range(8, World.WORLD_H - 10)
-			var sd: Dictionary = SPIRE_DEFS[placed]
-			if world.zone_at(tx, ty) != int(sd["zone"]):
-				continue
-			var ok := true
-			if not relaxed:
-				for dy in range(-3, 4):
-					for dx in range(-3, 4):
-						if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
-							ok = false
-			if not ok:
-				continue
-			_place_spire(sd, tx, ty, placed)
-			placed += 1
+	# each spire gets its own strict→relaxed attempt — one stubborn index must
+	# never block the rest: five spires is a campaign contract
+	for si in SPIRE_DEFS.size():
+		var sd: Dictionary = SPIRE_DEFS[si]
+		for relaxed in [false, true]:
+			var done := false
+			var tries := 0
+			while tries < 8000 and not done:
+				tries += 1
+				var tx := rng.int_range(8, World.WORLD_W - 10)
+				var ty := rng.int_range(8, World.WORLD_H - 10)
+				if world.zone_at(tx, ty) != int(sd["zone"]):
+					continue
+				# relaxed still insists the arena floor itself is standable —
+				# a guardian ringing itself inside rock is unreachable
+				if world.blocked(tx, ty) or structures.has(Vector2i(tx, ty)):
+					continue
+				var ok := true
+				if not relaxed:
+					for dy in range(-3, 4):
+						for dx in range(-3, 4):
+							if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
+								ok = false
+				if not ok:
+					continue
+				_place_spire(sd, tx, ty, si)
+				placed += 1
+				done = true
+			if done:
+				break
 	if placed < SPIRE_DEFS.size():
 		push_warning("only %d of %d pact spires placed — campaign uncompletable on this map" % [placed, SPIRE_DEFS.size()])
 	if placed > 0:
@@ -4819,6 +4893,17 @@ func _place_spire(sd: Dictionary, tx: int, ty: int, placed: int) -> void:
 		st["loot"] = true
 		st["store"] = {"gold_coin": 30 + placed * 15, "legendary_orb": 1,
 			"ancient_part": 1 + placed}
+	else:
+		push_warning("spire_%d chest didn't fit — the guardian stands but its tribute is gone" % placed)
+
+func spire_tag_ok(s: String) -> bool:
+	# one validator for every reader (save/wire/kill paths): "spire_" + a REAL
+	# non-negative int inside the defs table. int() eats "abc"→0 and "-1"→-1 —
+	# both forged spire_0 tags without this three-part check
+	if not s.begins_with("spire_"):
+		return false
+	var rest := s.trim_prefix("spire_")
+	return rest.is_valid_int() and int(rest) >= 0 and int(rest) < SPIRE_DEFS.size()
 
 func record_spire(tag: String) -> void:
 	spires_done[tag] = true
@@ -4913,6 +4998,8 @@ func regenerate(s: int) -> void:
 	spires_done.clear() # a fresh island raises fresh spires
 	crowned = false
 	gauntlet = {} # and so did any trial in progress
+	remote_parties.clear() # guest rosters describe the old world's kin
+	clear_net_drops()
 	craft_queue.clear() # queued builds die with the world too
 	mission_idx = 0 # missions belong to the world they were earned in
 	mission_flags.clear()
@@ -5163,17 +5250,17 @@ func net_harvest(tx: int, ty: int, pid: int) -> void:
 	if not world.in_bounds(tx, ty):
 		return
 	var gp = net.ghosts.get(pid)
-	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 4.0:
-		return # swinging at a tree across the map is a no
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 4.0:
+		return # fail closed: no registered ghost means no proximity proof — refuse
 	harvest_cell(tx, ty)
 
 func net_place(sid: String, tx: int, ty: int, pid: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
-	if s.is_empty():
-		return false
+	if s.is_empty() or sid not in unlocked:
+		return false # shared tech is host truth — "paid locally" doesn't research
 	var gp = net.ghosts.get(pid)
-	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 9.0:
-		return false # build where you stand, not across the map
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 9.0:
+		return false # fail closed: no ghost, no build — proximity is mandatory
 	var seen_st := []
 	for k in structures:
 		if structures[k] not in seen_st:
@@ -5192,8 +5279,8 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 	if st == null:
 		return
 	var gp = net.ghosts.get(pid)
-	if gp != null and Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
-		return
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
+		return # fail closed: razing needs a witnessed ghost in range
 	# shared world: chest contents spill as drops (anyone can haul them),
 	# no bag refund — the builder isn't here to catch it
 	for it in st.get("store", {}).keys():
@@ -5543,6 +5630,8 @@ func hit_merchant(dmg: float) -> void:
 		despawn_merchant()
 
 func tick_merchant(dt: float) -> void:
+	if net != null and net.is_client():
+		return # the trader's visit is a host-scheduled event
 	# arrival roll at 07:00 once per day from day 2 onward; leaves at dusk
 	if tod >= 7.0 and _tod_prev < 7.0 and day >= 2 and last_merchant_day != day:
 		last_merchant_day = day

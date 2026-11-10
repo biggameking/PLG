@@ -50,6 +50,11 @@ func check(name: String, ok: bool, detail: String = "") -> void:
 		fo.close()
 
 func run() -> void:
+	# suite hygiene: the log truncates per run (it appended forever), and the
+	# dev's real savegame gets backed up — several tests write user:// saves
+	FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE).close()
+	var save_backup := FileAccess.get_file_as_bytes("user://savegame.plg") \
+		if FileAccess.file_exists("user://savegame.plg") else PackedByteArray()
 	results.append("main=%s" % main)
 	game = main.get_node("Game")
 	game.state = "play" # boot lands on the title screen; tests drive the sim itself
@@ -364,10 +369,14 @@ func run() -> void:
 		var cap0: float = p.carry_cap()
 		var cm: Kin = game.gen_pal("puffmite", 5, p.pos)
 		cm.mode = "box"; game.box.append(cm); game.box_pal(cm)
-		game.box_to_party(cm); game.send_out(cm.uid)
-		# absolute check: the deployed mule adds exactly its aura to the
-		# level-scaled base, no matter who was out before
-		var want_cap: float = cap0 + 120.0 # relative: earlier auras may already ride the cap
+		while game.party.size() >= 5: # a full strip silently refuses the mule —
+			game.party_to_box(game.party[0]) # make room or the aura never fields
+		game.box_to_party(cm)
+		if game.party_pal() != cm: # box_to_party auto-fields an empty strip —
+			game.send_out(cm.uid)  # a second tap on the out pal recalls it
+		# absolute check: the fielded mule IS the cap — the outgoing pal's aura
+		# leaves with it, so mirror carry_cap's own formula, not a +120 delta
+		var want_cap: float = 300.0 + (p.level - 1) * 10.0 + 120.0
 		check("pack mule lifts cap", absf(p.carry_cap() - want_cap) < 0.01
 			and p.carry_wt() < p.carry_cap(), "cap=%.0f want=%.0f base=%.0f" % [p.carry_cap(), want_cap, cap0])
 		game.retract_out()
@@ -1972,6 +1981,8 @@ func run() -> void:
 	# private rosters mean the keeper's box stays untouched
 	var ncp: Kin = game.gen_pal("fenlump", 3, p.pos)
 	ncp.mode = "wild"; ncp.hp = 1; game.pals.append(ncp)
+	game.net.spawn_ghost(7) # fail-closed: the throw needs a witnessed ghost
+	game.net.ghosts[7].net_pos = Vector3(p.pos.x, p.pos.y, 0)
 	var nc_box0 := game.box.size()
 	var tries_c := 0
 	while tries_c < 400 and ncp.mode == "wild": # ~97%/try — effectively deterministic
@@ -1984,11 +1995,18 @@ func run() -> void:
 	game.pals.erase(ncp)
 	if ncp.get_parent(): ncp.get_parent().remove_child(ncp)
 	ncp.free()
-	# forged item ids never get a roll
+	# forged item ids never get a roll — and a ghostless pid doesn't even ask
 	var ncp2: Kin = game.gen_pal("fenlump", 3, p.pos)
 	ncp2.mode = "wild"; ncp2.hp = 1; game.pals.append(ncp2)
-	game.net_catch(ncp2.uid, "wood", false, 5, 7)
+	game.net_catch(ncp2.uid, "wood", false, 5, 77)
 	check("net catch validates item", ncp2 in game.pals)
+	game.net_catch(ncp2.uid, "kin_orb", false, 5, 77)
+	check("ghostless catch refused", ncp2 in game.pals and ncp2.mode == "wild")
+	game.net.ghosts[7].net_pos = Vector3(p.pos.x + 50.0, p.pos.y, 0) # out of range
+	game.net_catch(ncp2.uid, "kin_orb", false, 5, 7)
+	check("out-of-range catch refused", ncp2 in game.pals and ncp2.mode == "wild")
+	if game.net.ghosts.has(7):
+		game.net.ghosts[7].queue_free(); game.net.ghosts.erase(7)
 	game.pals.erase(ncp2)
 	if ncp2.get_parent(): ncp2.get_parent().remove_child(ncp2)
 	ncp2.free()
@@ -2010,6 +2028,8 @@ func run() -> void:
 			break
 	if hc.x >= 0:
 		var drops0 := game.drops.size()
+		game.net.spawn_ghost(99) # fail-closed guards need a witnessed ghost
+		game.net.ghosts[99].net_pos = Vector3(hc.x, hc.y, 0)
 		var guard := 0
 		while game.world.decor_at(hc.x, hc.y) in [World.Decor.TREE_A, World.Decor.TREE_B] and guard < 20:
 			game.net_harvest(hc.x, hc.y, 99)
@@ -2034,10 +2054,17 @@ func run() -> void:
 		check("struct sync adds", game.structures.has(free_spot))
 		game.struct_sync(pk1.slice(0, pk1.size() - 1))
 		check("struct sync despawns", not game.structures.has(free_spot))
+		if not game.net.ghosts.has(99):
+			game.net.spawn_ghost(99) # no tree above → the ghost was never planted
+		game.net.ghosts[99].net_pos = Vector3(free_spot.x, free_spot.y, 0)
 		game.net_place("campfire", free_spot.x, free_spot.y, 99)
 		check("net place", game.structures.has(free_spot))
 		game.net_demolish(free_spot.x, free_spot.y, 99)
 		check("net demolish", not game.structures.has(free_spot))
+		# fail-closed: a pid with no registered ghost gets nothing, no matter
+		# how politely it asks — proximity proofs are mandatory, not optional
+		game.net_place("campfire", free_spot.x, free_spot.y, 77)
+		check("ghostless place refused", not game.structures.has(free_spot))
 	# decor deltas apply by cell index
 	var dci := game.world.idx(clampi(int(p.pos.x), 0, World.WORLD_W - 1),
 		clampi(int(p.pos.y) + 4, 0, World.WORLD_H - 1))
@@ -3806,6 +3833,30 @@ func run() -> void:
 		for q in game.pals: # don't leave a campaign pin on a random wild kin
 			if q.spire_tag == "spire_0":
 				q.spire_tag = ""; q.phase = 1
+	# forged campaign tags die at the validator — int() alone eats "abc"→0
+	check("forged spire tag refused", not game.spire_tag_ok("spire_-1")
+		and not game.spire_tag_ok("spire_abc") and not game.spire_tag_ok("spire_9")
+		and game.spire_tag_ok("spire_4"))
+	# a quickload must clear the bench too — stale orbs were phantom roster rows
+	var bj: Kin = game.gen_pal("fenjelly", 4, p.pos)
+	bj.mode = "bench"; game.bench.append(bj)
+	var bench_sv := game.bench.size()
+	game.save_game()
+	var ghostb: Kin = game.gen_pal("fenjelly", 4, p.pos) # post-save stray orb
+	ghostb.mode = "bench"; game.bench.append(ghostb)
+	game.load_game()
+	check("load clears stale bench", game.bench.size() == bench_sv,
+		"bench=%d saved=%d" % [game.bench.size(), bench_sv])
+	# a KO'd guest pal frees its remote party slot — else "Party full" forever
+	var rpv: Kin = game.gen_pal("fenlump", 5, p.pos)
+	rpv.mode = "partner"; rpv.owner_id = 9; game.pals.append(rpv)
+	game.rparty_for(9).append(rpv.uid)
+	game.kill_pal(rpv, true)
+	check("KO frees guest party slot", not game.rparty_for(9).has(rpv.uid))
+	game.remote_parties.erase(9)
+	game.pals.erase(rpv); game.box.erase(rpv); game.bench.erase(rpv)
+	if rpv.get_parent(): rpv.get_parent().remove_child(rpv)
+	rpv.free()
 
 	# corrupt save: missing fields / wrong types must be refused, not crash the world
 	var pals_before := game.pals.size()
@@ -4376,9 +4427,19 @@ func run() -> void:
 		and game.CRIES["fenjelly"].data.size() > 0
 		and game.CRIES.size() <= SpeciesData.SPECIES.size() + SpeciesGen.SPECIES.size()) # bounded by the species set
 
-	# net host (no client join in same proc)
+	# net host (no client join in same proc) — close the socket too: a bound
+	# :7777 outlives the suite and breaks the next run on a busy machine
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)
+	game.net.multiplayer.multiplayer_peer.close()
+	game.net.multiplayer.multiplayer_peer = null
+
+	# restore the dev's real save — the load/corrupt-save tests clobbered it
+	if save_backup.is_empty():
+		DirAccess.remove_absolute("user://savegame.plg")
+	else:
+		var sv2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+		sv2.store_buffer(save_backup); sv2.close()
 
 	var fails := 0
 	for r in results:

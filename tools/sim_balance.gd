@@ -19,8 +19,7 @@ func gate(name: String, cond: bool, info := "") -> void:
 		fails += 1
 
 func cap_pow(base: float, lv: int, lucky := false) -> float:
-	# mirrors game.gd cap_power_of — keep in lockstep or the probe lies
-	return base * (1.35 if lucky else 1.0) * (1.0 + 0.05 * maxf(0.0, lv - 1.0))
+	return Combat.cap_power(base, lv, lucky) # the shipped formula, not a mirror
 
 func pct(hp_frac: float, cp: float, sp: float, st := false, bh := false, cl := 1) -> float:
 	return Combat.catch_chance(hp_frac, cp, sp, st, bh, cl) * 100.0
@@ -70,13 +69,14 @@ func _init() -> void:
 		cps[0], cps[cps.size() / 4], cps[cps.size() / 2],
 		cps[cps.size() * 3 / 4], cps[-1]])
 
-	print("\n== raid escalation: day_bonus = min(day^2/20, 25) ==")
+	print("\n== raid escalation (real Combat formulas — no mirror copies) ==")
 	for d in [1, 3, 5, 8, 10, 15, 20, 30]:
-		var bonus := mini(d * d / 20, 25)
-		var n := 3 + mini(d / 4, 4)
+		var bonus := Combat.raid_day_bonus(d)
+		var n := 3 + Combat.raid_wave_bonus(d)
 		print("day %2d: +%2d lv, wave size ~%d-%d (zone lv on top)" % [d, bonus, n, n + 2])
-	gate("day-1 raid survivable", mini(1 * 1 / 20, 25) <= 0) # +0 lv bonus
-	gate("raid curve saturates", mini(30 * 30 / 20, 25) == 25) # cap holds the ceiling
+	gate("day-1 raid survivable", Combat.raid_day_bonus(1) <= 0) # +0 lv bonus
+	gate("raid curve saturates", Combat.raid_day_bonus(30) == 25) # cap holds the ceiling
+	gate("wave size saturates", Combat.raid_wave_bonus(30) == 4)
 
 	print("\n==== SIM: %d failures ====" % fails)
 	quit(1 if fails > 0 else 0)
