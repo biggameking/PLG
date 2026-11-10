@@ -46,10 +46,15 @@ the interaction-verb layer was not. Closed in this pass:
 ## Deferred — honest list
 
 - **Android preset unverified**: local SDK lacks `build-tools`/`apksigner`; also zero touch input implemented — treat mobile as not-a-target for this release.
-- **Pad**: navigation/action layer works; rumble and hold-to-repeat not implemented.
+- **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence) and rumble on
+  catch/hit all ship; UI rows aren't pad-scrollable inside panels yet.
 - **UI art**: still default-font panels + procedural icons; hero-species polish is procedural accessory layer only.
 - **BGM**: two procedural pads (day/night) — functional, not a produced score.
-- **MP — guests can't be hurt by host wildlife**: replica kin run no AI on clients (hostiles only threaten the host). Fixing it means shipping a real client-side threat model — deferred, documented.
+- **MP — guest threat is melee-only**: host wildlife now engages the nearest
+  warm body (player OR ghost) and bites guests via `guest_hit` RPC — but
+  ranged skills still aim only the local player, and a guest's own projectiles
+  can't wound host wildlife. Full combat parity needs a real client-side
+  combat model — partially deferred.
 - **MP — orb claims aren't inventory-verified**: `sphere_catch`'s `sid` is client-claimed; the host validates it's a real sphere type but can't check the guest actually owns one (private rosters are client-side). Design limit.
 - **MP — no lobby/NAT traversal; client drop-reconciliation unimplemented** (drops only exist as host-synced replicas).
 - **Cosmetic phantom damage**: `tick_shadelump`/`update_projectiles` can flash damage on replicas; `pal_sync` reverts within a sync beat. Visual only.

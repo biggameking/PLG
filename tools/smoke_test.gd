@@ -2007,6 +2007,27 @@ func run() -> void:
 	game.pals.erase(ncp2)
 	if ncp2.get_parent(): ncp2.get_parent().remove_child(ncp2)
 	ncp2.free()
+	# host wildlife hunts the nearest warm body — a guest's ghost included;
+	# at melee range the bite goes down the wire, not into the host's hp
+	game.net.spawn_ghost(7)
+	var hunter: Kin = game.gen_pal("loampuff", 8, p.pos + Vector2(30.0, 0))
+	hunter.mode = "wild"; hunter.hit_flash = 1.0 # flash suppresses the clock-nap
+	game.pals.append(hunter)
+	game.net.ghosts[7].net_pos = Vector3(hunter.pos.x + 0.6, hunter.pos.y, 0)
+	var hp_g0: int = p.hp
+	hunter.wild_ai(0.1)
+	check("wild kin engages the ghost", hunter.aggro == 0 and hunter.aggro_pid == 7,
+		"aggro=%s pid=%s" % [hunter.aggro, hunter.aggro_pid])
+	hunter.atk_cd = 0.0
+	hunter.wild_ai(0.1)
+	check("guest bite stays off the host", p.hp == hp_g0 and hunter.atk_cd > 0,
+		"hp=%d->%d cd=%.2f" % [hp_g0, p.hp, hunter.atk_cd])
+	game.net.ghosts[7].net_pos = Vector3(-1, -1, 0)
+	check("lost ghost falls back", hunter.target_pos().distance_to(p.pos) < 0.01)
+	game.net.ghosts[7].queue_free(); game.net.ghosts.erase(7)
+	game.pals.erase(hunter)
+	if hunter.get_parent(): hunter.get_parent().remove_child(hunter)
+	hunter.free()
 	# drop sync: replicas spawn from the wire, despawn when the host drops them
 	game.drop_sync([[55, "wood", 2, p.pos.x + 1, p.pos.y], "garbage"])
 	check("drop sync spawns", game.net_drops.has(55) and game.net_drops.size() == 1)
@@ -4331,6 +4352,28 @@ func run() -> void:
 	game.player._unhandled_input(pev)
 	check("pause swallows strikes", game.player.atk_cd == ac0)
 	game.state = "play"
+
+	# menu hold-to-repeat: an edge press steps once, holding keeps marching —
+	# Input.action_press drives ui_down the same way a held dpad does
+	game.state = "title"
+	var hudn: Node = main.get_node("UILayer/HUD")
+	hudn.click_rects = [{"rect": Rect2(), "act": "resume"}, {"rect": Rect2(), "act": "new_game"}, {"rect": Rect2(), "act": "quit"}]
+	hudn.menu_sel = 0
+	Input.action_press("ui_down")
+	hudn._process(0.5)
+	check("menu hold marches", hudn.menu_sel == 1, "sel=%d" % hudn.menu_sel)
+	hudn._process(0.1)
+	check("repeat cadence", hudn.menu_sel == 2, "sel=%d" % hudn.menu_sel)
+	Input.action_release("ui_down")
+	hudn._process(0.5)
+	check("release stops marching", hudn.menu_sel == 2)
+	hudn.click_rects.clear(); hudn.menu_sel = 0
+	game.state = "play"
+
+	# rumble is a pad-only helper: headless it must no-op cleanly both ways
+	game.using_pad = false; game.rumble(0.5, 0.5, 0.1)
+	game.using_pad = true; game.rumble(0.2, 0.7, 0.3) # no pads connected — survives
+	game.using_pad = false
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))

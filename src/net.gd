@@ -98,6 +98,12 @@ func net_note(msg: String) -> void:
 func net_floater(x: float, y: float, txt: String, col: String) -> void:
 	game.floater(Vector2(float(x), float(y)), str(txt).substr(0, 24), str(col))
 
+@rpc("authority", "call_remote", "reliable")
+func guest_hit(dmg: float) -> void:
+	if multiplayer.is_server():
+		return # host wildlife only bites through the wire toward guests
+	game.hurt_player(clampf(float(dmg), 1.0, 500.0), null)
+
 func _on_peer_disconnected(id: int) -> void:
 	if ghosts.has(id):
 		ghosts[id].queue_free()

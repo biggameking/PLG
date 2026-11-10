@@ -606,6 +606,15 @@ func floater(pos: Vector2, text: String, color: String) -> void:
 		floaters.pop_front() # cosmetic spam is evictable
 	floaters.push_back({"p": pos, "t": text, "c": color, "age": 0.0})
 
+func rumble(weak: float, strong: float, dur: float) -> void:
+	# pad feedback: first connected pad only, and only when the last-seen
+	# device was a pad — a kb/m player never paid for a motor
+	if not using_pad:
+		return
+	var pads := Input.get_connected_joypads()
+	if pads.size() > 0:
+		Input.start_joy_vibration(pads[0], weak, strong, dur)
+
 func client_locked() -> bool:
 	# the island authority contract: a guest may LOOK at a replica chest,
 	# egg slot, fossil bed, cage, shrine or statue — but verbs that spend
@@ -1095,6 +1104,7 @@ func hurt_player(atk: float, from: Kin) -> void:
 		return # the bubble ate it whole — no wear, no flash
 	player.hp -= final
 	player.hit_flash = 0.4
+	rumble(0.0, 0.45, 0.15) # getting bit should thump, not just flash
 	floater(player.pos, "-" + str(final), "#e64533")
 	player.wear_armor() # the island: the plate takes the wear, not the skin
 	if player.hp <= 0:
@@ -1446,6 +1456,7 @@ func resolve_sphere(sp) -> void:
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		sfx_play("catch")
+		rumble(0.2, 0.7, 0.3) # a catch lands in the hand, not just the log
 		cry_for(target.species_id) # a new friend announces itself
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
 		gain_xp(catch_xp(target.level))

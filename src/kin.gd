@@ -312,30 +312,39 @@ func wild_ai(dt: float) -> void:
 				if not cast_skills(bt, dt):
 					step_toward(bt.pos, dt)
 				return
-		# fight player if aggressive; timid flees
+		# fight player if aggressive; timid flees — the target is the nearest
+		# warm body: the local player or a connected guest's ghost
 		if hostile() >= 1:
+			var tpos := target_pos()
+			var tdist := pos.distance_to(tpos)
 			# the island: beaten-down prey bolts — ordinary hostiles turn tail at
 			# low hp; alphas, bosses, raiders and apex species never break
 			if hostile() == 1 and hp < max_hp * 0.25 and not alpha and not boss and not raid:
-				step_toward(pos + (pos - pl.pos).normalized() * 5.0, dt)
-				if dist > 16:
-					aggro = -1
+				step_toward(pos + (pos - tpos).normalized() * 5.0, dt)
+				if tdist > 16:
+					aggro = -1; aggro_pid = 0
 				return
-			if not cast_skills(pl, dt):
-				if dist > 1.1:
-					step_toward(pl.pos, dt)
+			# skills still aim the local player — a ghost gets the melee bite
+			var shot: bool = aggro_pid == 0 and cast_skills(pl, dt)
+			if not shot:
+				if tdist > 1.1:
+					step_toward(tpos, dt)
 				elif atk_cd <= 0:
 					atk_cd = 1.1
-					game.hurt_player(spec.get("atk", 50) * rage_mult(), self)
-			elif dist > spec.get("reach", 4.0):
-				step_toward(pl.pos, dt)
+					if aggro_pid > 0:
+						game.net.rpc_id(aggro_pid, "guest_hit",
+							spec.get("atk", 50) * rage_mult()) # the host's bite lands on the guest
+					else:
+						game.hurt_player(spec.get("atk", 50) * rage_mult(), self)
+			elif tdist > spec.get("reach", 4.0):
+				step_toward(tpos, dt)
 			if boss and phase == 2:
 				summon_t += dt
 				if summon_t >= 5.0:
 					summon_t = 0.0
 					pact_slam()
-			if dist > 14:
-				aggro = -1
+			if tdist > 14:
+				aggro = -1; aggro_pid = 0
 		else:
 			step_toward(pos + (pos - pl.pos).normalized() * 5.0, dt)
 			if dist > 10:
@@ -400,12 +409,33 @@ func wild_ai(dt: float) -> void:
 		var a := game.rng.next() * TAU
 		target = pos + Vector2(cos(a), sin(a)) * (1.5 + game.rng.next() * 3.0)
 	step_toward(target, dt)
-	# aggro check — apex pounces from further out, ordinary hostiles at arm's length
+	# aggro check — apex pounces from further out, ordinary hostiles at arm's
+	# length; the nearest warm body wins, host player or a guest's ghost
 	var trigger := 5.0 if hostile() == 2 else 3.5
 	if game.is_night() and "dark" in spec.get("elements", []):
 		trigger += 2.0 # the island nocturnals: dark pals hunt wider after dusk
-	if hostile() >= 1 and dist < trigger and not has_status("sleep"):
+	var near_pid := 0
+	var nd := dist
+	if game.net != null:
+		for pid in game.net.ghosts:
+			var g2 = game.net.ghosts[pid]
+			if g2 == null or g2.net_pos.x < 0:
+				continue
+			var gd := pos.distance_to(Vector2(g2.net_pos.x, g2.net_pos.y))
+			if gd < nd:
+				nd = gd; near_pid = pid
+	if hostile() >= 1 and nd < trigger and not has_status("sleep"):
 		aggro = 0
+		aggro_pid = near_pid
+
+var aggro_pid := 0 # engaged target: 0 = local player, >0 = a guest's ghost peer id
+func target_pos() -> Vector2:
+	if aggro_pid > 0 and game.net != null:
+		var g = game.net.ghosts.get(aggro_pid)
+		if g != null and g.net_pos.x >= 0:
+			return Vector2(g.net_pos.x, g.net_pos.y)
+		aggro_pid = 0 # the ghost left — fall back to the player
+	return game.player.pos
 
 func anchor_pos() -> Vector2:
 	# a guest's partner heels to its keeper's ghost, not to our player —

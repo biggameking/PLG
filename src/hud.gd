@@ -56,8 +56,23 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-func _process(_dt: float) -> void:
+var nav_hold := 0.0 # menu hold-to-repeat clock — edge press moves once, hold marches
+func _process(dt: float) -> void:
 	queue_redraw()
+	# arrows and dpad share the ui_* actions; after a 0.42s first step the
+	# cursor keeps marching on a 0.09s cadence — a long list stops being a
+	# button-mash. Edge presses still come from _input's action_pressed.
+	if game != null and game.state in ["title", "paused"] and not click_rects.is_empty():
+		var dir := int(Input.is_action_pressed("ui_down")) - int(Input.is_action_pressed("ui_up"))
+		if dir == 0:
+			nav_hold = 0.0
+		else:
+			nav_hold += dt
+			if nav_hold >= 0.42:
+				menu_sel = wrapi(menu_sel + dir, 0, click_rects.size())
+				nav_hold = 0.33
+	else:
+		nav_hold = 0.0
 
 var _menu_key := "" # last drawn "state|panel" — rects belong to exactly one menu
 
