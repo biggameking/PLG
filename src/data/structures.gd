@@ -460,6 +460,27 @@ const STRUCTURES = {
   ],
   "desc": "A straw sparring partner — idle pals swing on it and grow a little stronger."
  },
+"guard_post": {
+  "id": "guard_post",
+  "name": "Guard Post",
+  "glyph": "⚑",
+  "color": "#b06a50",
+  "w": 1,
+  "h": 1,
+  "hp": 150,
+  "cost": [
+   [
+    "wood",
+    12
+   ],
+   [
+    "stone",
+    6
+   ]
+  ],
+  "job": {"kind": "guard", "workType": "", "amount": 0},
+  "desc": "A watch platform — post a pal here and it patrols a wider beat."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1293,6 +1314,12 @@ const TECH = [
   "name": "Weather Shrine",
   "tier": 6,
   "cost": 2
+ },
+ {
+  "id": "guard_post",
+  "name": "Guard Post",
+  "tier": 4,
+  "cost": 1
  }
 ]
 

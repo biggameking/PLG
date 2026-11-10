@@ -410,7 +410,9 @@ func base_ai(dt: float) -> void:
 	# never let a nocturnal pal's 6s walk budget run out before dusk
 	# defend the base: raiders beating on workers get fought back (Palworld's
 	# crew covers the yard, not just arm's reach)
-	var foe: Pal = null; var fbd := 7.0
+	# a posted guard watches a wider beat than a yard hand — Palworld's
+	# sentries pull raids off the workers, not just off their own toes
+	var foe: Pal = null; var fbd := 12.0 if (job_site is Dictionary and job_site.get("id") == "guard_post") else 7.0
 	for p in game.pals:
 		if p.mode != "wild" or p.hp <= 0:
 			continue

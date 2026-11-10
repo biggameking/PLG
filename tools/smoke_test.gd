@@ -1110,6 +1110,36 @@ func run() -> void:
 		game.weather = w0 # hand the sky back — later checks assume a neutral one
 	check("shrine calls weather", ws_ok, "w=%s cd=%.0f" % [game.weather, game.pray_cd - game.t])
 
+	# guard post: a posted pal pulls threats off a wider beat — 12 vs the
+	# yard's 7 — and holds the platform between fights
+	var gp_k: Vector2i = free_xy.call("guard_post")
+	var gp_st = game.structures.get(gp_k) if gp_k.x >= 0 else null
+	var gp_ok := false
+	var tod_gp: float = game.tod
+	game.tod = 12.0 # sentries doze at night like everyone else — pin the sun
+	for wp10 in game.pals: # quiet the yard so the only flag on the beat is ours
+		if wp10.mode == "wild":
+			wp10.aggro = -1; wp10.raid = false
+	if gp_st != null:
+		var sentry: Pal = game.gen_pal("rushoar", 5, Vector2(gp_k.x + 0.5, gp_k.y + 0.5))
+		sentry.mode = "base"; sentry.san = 90.0; sentry.hunger = 10.0; sentry.ailment = ""
+		sentry.passives = []; sentry.statuses.clear(); sentry.job_site = gp_st
+		gp_st["workers"] = [sentry]
+		var raider: Pal = game.gen_pal("loupmoon", 5, sentry.pos + Vector2(9, 0))
+		raider.mode = "wild"; raider.raid = true # the wider beat sees raid flags
+		game.pals.append(raider); game.pals.append(sentry) # gen_pal is a factory — the yard's eyes only see the roster
+		var d0: float = sentry.pos.distance_to(raider.pos)
+		for i11 in range(20):
+			sentry.base_ai(0.1)
+		# the wider beat engaged — either it stepped off the post or a skill
+		# already reached the threat at range
+		gp_ok = sentry.pos.distance_to(raider.pos) < d0 - 0.5 or raider.hp < raider.max_hp
+		game.pals.erase(raider); raider.free()
+		gp_st["workers"] = []; sentry.job_site = null
+		game.pals.erase(sentry); sentry.free()
+	game.tod = tod_gp
+	check("guard widens beat", gp_ok, "gp=%s" % (gp_st != null))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

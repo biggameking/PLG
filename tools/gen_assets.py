@@ -821,6 +821,14 @@ def make_structure(sid, color, w, h):
         d.ellipse([W//2 - 6, 12, W//2 + 6, 24], fill=hxc("#d8b84a") + (255,))
         d.rectangle([W//2 - 7, 20, W//2 + 7, 23], fill=hxc("#a08050") + (255,))
         d.line([(W//2 - 3, 15), (W//2 + 3, 19)], fill=hxc("#8a6d4d") + (255,), width=1)
+    elif sid == "guard_post":
+        # a raised watch platform — posts, slats, a little pennant
+        for px2 in (-10, 10):
+            d.line([(W//2 + px2, 26), (W//2 + px2, 44)], fill=hxc("#5e462e") + (255,), width=3)
+        d.rectangle([W//2 - 14, 24, W//2 + 14, 30], fill=hxc("#8a6d4d") + (255,))
+        d.rectangle([W//2 - 14, 30, W//2 + 14, 32], fill=hxc("#5e462e") + (255,))
+        d.line([(W//2 + 12, 8), (W//2 + 12, 26)], fill=hxc("#5e462e") + (255,), width=2)
+        d.polygon([(W//2 + 12, 8), (W//2 + 22, 11), (W//2 + 12, 15)], fill=hxc("#b06a50") + (255,))
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -895,6 +903,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "fish_trap": ("#5a8ac0", 1, 1),
     "apiary": ("#d8b830", 1, 1),
     "weather_shrine": ("#7fb8d8", 1, 1),
+    "guard_post": ("#b06a50", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }

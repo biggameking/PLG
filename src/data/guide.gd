@@ -78,7 +78,9 @@ need medicine; the box heals the KO'd on a timer.
 Sleep heals: a real bed knits wounds thrice as fast as the
 floor. Dark pals keep night hours and nap by day. And a pal
 with no trade should not idle — set a training dummy in the
-yard and watch it spar itself stronger between raids.""",
+yard and watch it spar itself stronger between raids. And when
+the horns sound, a posted guard earns its keep — pals on a
+guard platform patrol a wider beat than the yard crew.""",
 """— VOL. V —
 BREEDING, EGGS AND LUCK
 

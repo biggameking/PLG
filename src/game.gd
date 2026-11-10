@@ -2566,7 +2566,7 @@ func find_work_site(p: Pal, reach: float) -> Variant:
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
 		var jb: Dictionary = s.get("job", {})
-		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition":
+		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition" and jb.get("kind") != "guard":
 			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
 		var need: String = jb.get("workType", "")
 		if need != "" and p.spec.get("work", {}).get(need, 0) == 0 \
