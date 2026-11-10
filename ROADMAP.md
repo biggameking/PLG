@@ -109,6 +109,13 @@ Fixes shipped in `c775b20`; the authority contract is AGENTS.md rules 25–34.
 Deferred honestly: pad rumble, panel-gate coverage now complete but
 hold-to-repeat not implemented, Android preset unverified (local SDK lacks
 build-tools/apksigner).
+- S22 touch layer + placed_by persistence — DONE: on-screen stick (rim-push =
+  sprint, multi-touch index-tracked) + ATK/AIM/ROLL/E/ORB/☰ verb buttons;
+  `settings["touch"]` auto/on/off resolved in `apply_settings` against
+  `DisplayServer.is_touchscreen_available()`; touch taps no longer double-fire
+  as emulated LMB strikes; `placed_by` structure ownership now serializes
+  (`"by"` key) so guest demolition rights survive save/reload. 9 new smoke
+  checks, suite 533–537 / 0 failures ×6.
 - S18 MP parity + reactive danger layer — DONE: wild projectiles now bite
   guests (`update_projectiles` checks `net.ghosts`, relayed per-guest);
   third procedural pad `music_danger` swallows the

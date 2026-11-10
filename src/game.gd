@@ -63,7 +63,7 @@ var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
 var state := "title" # title | play | paused — sim and player input gate on this
 var panel := ""
-var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true, "lang": "en"}
+var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true, "lang": "en", "touch": "auto"}
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
@@ -1939,6 +1939,7 @@ var HINTS := [
 ]
 var hint_seen := {} # id -> cumulative seconds shown
 var using_pad := false # last-seen device: hints swap Q/click for X/RT
+var touch_ui := false    # on-screen stick + verb buttons (auto = touchscreen present)
 
 func active_hints() -> Array:
 	if state != "play" or player == null:
@@ -3531,6 +3532,8 @@ func load_settings() -> void:
 			# settings.cfg is untrusted like any save file — coerce per key
 			if k == "lang":
 				settings[k] = str(v) if str(v) in ["en", "zh"] else "en"
+			elif k == "touch":
+				settings[k] = str(v) if str(v) in ["auto", "on", "off"] else "auto"
 			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:
@@ -3550,6 +3553,8 @@ func apply_settings() -> void:
 		if bi >= 0:
 			AudioServer.set_bus_volume_db(bi, linear_to_db(maxf(settings[b.to_lower()], 0.001)))
 	TranslationServer.set_locale("zh" if settings.get("lang", "en") == "zh" else "en")
+	var tmode := str(settings.get("touch", "auto"))
+	touch_ui = tmode == "on" or (tmode == "auto" and DisplayServer.is_touchscreen_available())
 	var w := get_window()
 	if w != null and DisplayServer.get_name() != "headless" \
 			and (w.mode == Window.MODE_FULLSCREEN) != settings["fullscreen"]:
@@ -3643,6 +3648,7 @@ func save_game() -> void:
 			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
 			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null,
 			"cap": st.get("captive") if st["id"] == "kin_cage" else null,
+			"by": int(st.get("placed_by", 0)) if int(st.get("placed_by", 0)) != 0 else null,
 			"mimic": st.get("mimic") if st["id"] == "chest" else null}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
@@ -4038,6 +4044,8 @@ func load_game() -> bool:
 				var inc_d: Dictionary = sv["inc"]
 				st["egg_inc"] = {"pair": inc_d.get("pair"), "huge": inc_d.get("huge") == true,
 					"ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0)}
+			if sv.get("by") is float or sv.get("by") is int:
+				st["placed_by"] = maxi(int(sv["by"]), 0) # guest builds keep their owner's raze rights
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st

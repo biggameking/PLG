@@ -36,6 +36,8 @@ var armor_wear := -1.0        # hits absorbed left; -1 = unarmored/unbreakable
 var atk_cd := 0.0
 var sphere_sel := 0
 var aiming := false
+var touch_vec := Vector2.ZERO   # live on-screen stick — overrides keys while held
+var touch_sprint := false       # stick pushed to the rim counts as sprint
 var statuses := {}
 var meal_buff := {}          # one active food buff {atk|def|spd: frac} — the island meal bonus
 var meal_t := 0.0            # seconds left on the meal buff
@@ -64,7 +66,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("dodge") and dodge_t <= 0 and stamina >= 15.0:
 		dodge_t = 0.35
 		stamina -= 15.0; stam_wait = 0.8 # a roll costs a chunk of stamina
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
+			and not game.touch_ui: # on touch rigs the tap emulates LMB — the ATK button owns strikes
 		if game.panel != "":
 			return
 		if aiming:
@@ -277,6 +280,8 @@ func _physics_process(dt: float) -> void:
 	if statuses.get("poison", 0) > game.t and int(game.t * 3) != int((game.t - dt) * 3):
 		hp = maxf(1.0, hp - max_hp * 0.012)
 	var iv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if touch_vec.length_squared() > 0.01: # a live stick overrides keys for the frame
+		iv = touch_vec
 	if iv.length_squared() > 0.01:
 		facing = iv.normalized()
 	hunger = maxf(0.0, hunger - dt * 0.075 * (3.0 if swimming() else 1.0)) # a swim works up an appetite
@@ -290,7 +295,7 @@ func _physics_process(dt: float) -> void:
 		stam_drain = 4.0 * dt
 		if stamina <= 0.0:
 			hp = maxf(1.0, hp - dt * 3.0) # exhausted swimmer: sinking damage
-	if iv.length() > 0 and Input.is_action_pressed("sprint") and mount == null:
+	if iv.length() > 0 and (Input.is_action_pressed("sprint") or touch_sprint) and mount == null:
 		stam_drain += 12.0 * dt
 	if stam_drain > 0.0:
 		stamina = maxf(0.0, stamina - stam_drain); stam_wait = 0.8

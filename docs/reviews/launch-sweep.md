@@ -45,7 +45,7 @@ the interaction-verb layer was not. Closed in this pass:
 
 ## Deferred — honest list
 
-- **Android preset unverified**: local SDK lacks `build-tools`/`apksigner`; also zero touch input implemented — treat mobile as not-a-target for this release.
+- **Android preset unverified**: local SDK lacks `build-tools`/`apksigner` — treat mobile as not-a-target for this release. Touch input itself now ships: on-screen stick (rim = sprint) + ATK/AIM/ROLL/E/ORB/☰ buttons, `settings["touch"]` auto/on/off (auto = `DisplayServer.is_touchscreen_available()`), verified headless via `hud.touch_down/move/up` (9 checks).
 - **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence), rumble on
   catch/hit, and panel row navigation (dpad steps, A confirms) all ship.
 - **UI art**: default font, but the shell got a real pass — pixel brand type

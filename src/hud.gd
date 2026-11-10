@@ -12,6 +12,9 @@ var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
 var join_buf := ""
+var joy_idx := -1        # which finger owns the on-screen stick
+const JOY_R := 56.0      # stick travel radius (screen px)
+const BTN_R := 27.0      # verb button radius (atk is bigger)
 
 var map_img: Image = null
 var map_tex: ImageTexture = null # cached — was rebuilt every frame the map was open
@@ -104,6 +107,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		_menu_key = mk
 		click_rects.clear()
 		menu_sel = 0
+		if joy_idx >= 0: # a panel/state swap mid-drift releases the stick
+			joy_idx = -1
+			if game.player:
+				game.player.touch_vec = Vector2.ZERO
+				game.player.touch_sprint = false
+	if game.touch_ui and game.state == "play":
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				touch_down(event.position, event.index)
+			else:
+				touch_up(event.index)
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventScreenDrag:
+			touch_move(event.position, event.index)
+			get_viewport().set_input_as_handled()
+			return
 	# shell states own the whole input stack — menus don't leak to gameplay
 	if game.state == "title" or game.state == "paused":
 		if event.is_action_pressed("ui_cancel"):
@@ -383,7 +403,7 @@ func run_click(cr: Dictionary) -> void:
 
 const SHELL_ACTS := ["new_game", "continue", "m_settings", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
-	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl"]
+	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
 
 func shell_act(act: String) -> void:
 	match act:
@@ -420,6 +440,10 @@ func shell_act(act: String) -> void:
 			game.apply_settings(); game.save_settings()
 		"lang_tgl":
 			game.settings["lang"] = "zh" if game.settings.get("lang", "en") == "en" else "en"
+			game.apply_settings(); game.save_settings()
+		"touch_tgl":
+			var order := ["auto", "on", "off"]
+			game.settings["touch"] = order[(order.find(game.settings.get("touch", "auto")) + 1) % 3]
 			game.apply_settings(); game.save_settings()
 
 func chest_bulk(act: String) -> void:
@@ -783,6 +807,7 @@ func _draw() -> void:
 			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Color(1.0, 0.84, 0.28))
 
 	draw_weather_fx(r)
+	draw_touch(r)
 
 	# shell overlays come last — they sit over the whole HUD
 	if game.state == "title" and game.panel == "":
@@ -795,6 +820,86 @@ func _draw() -> void:
 		draw_rect(msel, Color(0.55, 0.7, 0.95, 0.9), false, 2.0) # pad/arrow-key cursor
 		draw_string(font, Vector2(msel.position.x - 16, msel.position.y + 20), "»",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#8ef0ff"))
+
+# ---------- on-screen touch controls ----------
+func touch_layout(r: Vector2) -> Dictionary:
+	return {"joy": Vector2(92, r.y - 108), "btns": {
+		"atk": Vector2(r.x - 72, r.y - 92),
+		"aim": Vector2(r.x - 152, r.y - 52),
+		"roll": Vector2(r.x - 66, r.y - 164),
+		"e": Vector2(r.x - 156, r.y - 140),
+		"orb": Vector2(r.x - 226, r.y - 92),
+		"menu": Vector2(r.x - 38, 44)}}
+
+func touch_down(p: Vector2, idx: int) -> void:
+	if game.panel != "": # panels own taps — they arrive as emulated LMB too
+		return
+	var lay := touch_layout(get_viewport_rect().size)
+	if joy_idx < 0 and p.distance_to(lay["joy"]) <= JOY_R * 1.7:
+		joy_idx = idx
+		touch_steer(p)
+		return
+	for b in lay["btns"]:
+		if p.distance_to(lay["btns"][b]) <= (36.0 if b == "atk" else BTN_R):
+			touch_verb(b)
+			return
+
+func touch_move(p: Vector2, idx: int) -> void:
+	if idx == joy_idx:
+		touch_steer(p)
+
+func touch_up(idx: int) -> void:
+	if idx == joy_idx:
+		joy_idx = -1
+		game.player.touch_vec = Vector2.ZERO
+		game.player.touch_sprint = false
+
+func touch_steer(p: Vector2) -> void:
+	var d: Vector2 = p - touch_layout(get_viewport_rect().size)["joy"]
+	var v: Vector2 = d / JOY_R
+	game.player.touch_sprint = v.length() >= 0.9 # rim-push = sprint
+	game.player.touch_vec = v.limit_length(1.0)
+
+func touch_verb(b: String) -> void:
+	var pl := game.player
+	match b:
+		"menu":
+			game.state = "paused"
+		"aim":
+			pl.aiming = not pl.aiming
+		"orb":
+			pl.sphere_sel = (pl.sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
+		"e":
+			interact()
+		"roll":
+			if pl.statuses.get("sleep", 0) <= game.t and pl.dodge_t <= 0 and pl.stamina >= 15.0:
+				pl.dodge_t = 0.35; pl.stamina -= 15.0; pl.stam_wait = 0.8
+		"atk":
+			if pl.statuses.get("sleep", 0) > game.t:
+				return
+			if pl.aiming:
+				pl.throw_sphere(true)
+			else:
+				pl.melee()
+
+func draw_touch(r: Vector2) -> void:
+	if not game.touch_ui or game.state != "play" or game.panel != "":
+		return
+	var lay := touch_layout(r)
+	var jc: Vector2 = lay["joy"]
+	draw_circle(jc, JOY_R, Color(0.9, 0.95, 1.0, 0.10))
+	draw_arc(jc, JOY_R, 0, TAU, 24, Color(0.9, 0.95, 1.0, 0.30), 1.5)
+	var knob := jc + game.player.touch_vec * (JOY_R * 0.55)
+	draw_circle(knob, 20, Color(0.3, 0.82, 0.88, 0.55))
+	var labels := {"atk": "ATK", "aim": "AIM", "roll": "ROLL", "e": "E", "orb": "ORB", "menu": "≡"}
+	for b in lay["btns"]:
+		var c: Vector2 = lay["btns"][b]
+		var rad := 36.0 if b == "atk" else BTN_R
+		draw_circle(c, rad, Color(0.9, 0.95, 1.0, 0.10))
+		draw_arc(c, rad, 0, TAU, 24, Color(0.9, 0.95, 1.0, 0.35), 1.5)
+		var tl: String = labels[b]
+		draw_string(font, c - Vector2(font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), tl,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.75))
 
 func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Color = Color.WHITE) -> float:
 	var rr := Rect2(cx - w / 2, y, w, 30)
@@ -953,6 +1058,11 @@ func draw_settings(r: Vector2) -> void:
 	click_rects.append({"rect": lg, "act": "lang_tgl", "arg": null})
 	draw_string(font, Vector2(lg.position.x, lg.position.y + 18), "%s  [%s]" % [tr("LANGUAGE"), "中文" if game.settings.get("lang", "en") == "zh" else "EN"],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
+	y += 32
+	var tg := Rect2(rr.position.x + 24, y, 200, 26)
+	click_rects.append({"rect": tg, "act": "touch_tgl", "arg": null})
+	draw_string(font, Vector2(tg.position.x, tg.position.y + 18), "%s  [%s]" % [tr("TOUCH CONTROLS"), tr(str(game.settings.get("touch", "auto")).to_upper())],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.touch_ui else Color(0.7, 0.7, 0.7))
 	y += 44
 	var bk := Rect2(rr.position.x + 24, y, 120, 28)
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})

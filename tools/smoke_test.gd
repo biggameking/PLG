@@ -3434,6 +3434,16 @@ func run() -> void:
 			pl2 = game.bench_pal_of(pu)
 		if pl2 == null or pl2.mode == "box":
 			lost_uids.append("%d:%s" % [pu, pl2.mode if pl2 else "?"])
+	# a guest-built structure keeps its raze-rights tag through the disk trip —
+	# plant it BEFORE the st_before census so both sides count it
+	var pb_cell := Vector2i(-1, -1)
+	for r9 in range(4, 60):
+		var c9 := Vector2i(int(p.pos.x) + r9, int(p.pos.y))
+		if game.world.in_bounds(c9.x, c9.y) and not game.world.blocked(c9.x, c9.y) \
+				and not game.structures.has(c9) and game.place_free("campfire", c9.x, c9.y):
+			pb_cell = c9; break
+	if pb_cell.x >= 0:
+		game.structures[pb_cell]["placed_by"] = 7
 	# unique structure instances before save (dedupe footprint cells)
 	var st_before := []
 	for kk11 in game.structures:
@@ -3480,6 +3490,8 @@ func run() -> void:
 			resolvable += 1
 	check("party survives reload", party_sz_before == 0 or (game.party.size() == party_sz_before and resolvable == game.party.size()), "party=%d/%d res=%d lost=%s" % [game.party.size(), party_sz_before, resolvable, str(lost_uids)])
 	check("structures rebuild 1:1", st_after.size() == st_before.size(), "%d->%d" % [st_before.size(), st_after.size()])
+	if pb_cell.x >= 0:
+		check("placed_by survives reload", int(game.structures.get(pb_cell, {}).get("placed_by", -1)) == 7)
 	var re_worker_pals := []
 	var re_detail := ""
 	var re_site_names := {}
@@ -4482,6 +4494,49 @@ func run() -> void:
 	game.using_pad = false; game.rumble(0.5, 0.5, 0.1)
 	game.using_pad = true; game.rumble(0.2, 0.7, 0.3) # no pads connected — survives
 	game.using_pad = false
+
+	# ---- touch controls: stick steers, verbs fire, panels keep their taps ----
+	var tui0 := game.touch_ui
+	game.touch_ui = true
+	var vpr: Vector2 = hudn.get_viewport_rect().size
+	var lay_t: Dictionary = hudn.touch_layout(vpr)
+	hudn.touch_down(lay_t["joy"], 0)
+	hudn.touch_move(lay_t["joy"] + Vector2(hudn.JOY_R * 0.5, 0), 0)
+	check("touch stick steers", game.player.touch_vec.length() > 0.3 and not game.player.touch_sprint,
+		"vec=%s" % game.player.touch_vec)
+	hudn.touch_move(lay_t["joy"] + Vector2(hudn.JOY_R * 1.4, 0), 0)
+	check("touch rim = sprint", game.player.touch_sprint and game.player.touch_vec.length() <= 1.01)
+	hudn.touch_up(0)
+	check("touch release parks", game.player.touch_vec == Vector2.ZERO and hudn.joy_idx < 0)
+	game.player.atk_cd = 0.0; game.player.aiming = false
+	var twp: String = game.player.equipment["weapon"]
+	game.player.equipment["weapon"] = "" # bare hands: ATK must land a swing regardless of gear
+	hudn.touch_down(lay_t["btns"]["atk"], 1); hudn.touch_up(1)
+	check("touch ATK swings", game.player.atk_cd > 0.0)
+	game.player.equipment["weapon"] = twp
+	hudn.touch_down(lay_t["btns"]["aim"], 2); hudn.touch_up(2)
+	check("touch AIM toggles", game.player.aiming)
+	game.player.aiming = false
+	var sel0 := game.player.sphere_sel
+	hudn.touch_down(lay_t["btns"]["orb"], 3); hudn.touch_up(3)
+	check("touch ORB cycles", game.player.sphere_sel != sel0 or game.sphere_tiers().size() <= 1)
+	game.player.stamina = 100.0; game.player.dodge_t = 0.0
+	hudn.touch_down(lay_t["btns"]["roll"], 4); hudn.touch_up(4)
+	check("touch ROLL dodges", game.player.dodge_t > 0.0, "dodge_t=%s" % game.player.dodge_t)
+	game.player.dodge_t = 0.0; game.player.stamina = 100.0
+	hudn.touch_down(lay_t["btns"]["menu"], 5); hudn.touch_up(5)
+	check("touch MENU pauses", game.state == "paused")
+	game.state = "play"
+	game.panel = "inv"
+	hudn.touch_down(lay_t["joy"], 6)
+	check("panel owns taps", hudn.joy_idx < 0)
+	game.panel = ""
+	var tm0 := str(game.settings["touch"])
+	hudn.shell_act("touch_tgl")
+	check("touch setting cycles", str(game.settings["touch"]) != tm0
+		and game.touch_ui == (str(game.settings["touch"]) == "on"))
+	game.settings["touch"] = tm0; game.apply_settings()
+	game.touch_ui = tui0
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))
