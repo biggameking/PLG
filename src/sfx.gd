@@ -75,6 +75,15 @@ static func pad(chords: Array, bar := 6.0, vol := 0.13) -> AudioStreamWAV:
 	return st
 
 # two-tone arpeggio — chimes (catch, level up)
+# species voice: a three-syllable warble pitched by id hash — every kin keeps
+# its own chirp, deterministic across runs so saves/tests don't hear drift
+static func cry(seed: int) -> AudioStreamWAV:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed
+	var f0: float = r.randf_range(220.0, 560.0)
+	return arp([f0, f0 * r.randf_range(1.2, 1.8), f0 * r.randf_range(0.8, 1.1)],
+		r.randf_range(0.06, 0.1), 0.4)
+
 static func arp(freqs: Array, step := 0.09, vol := 0.4) -> AudioStreamWAV:
 	var n := int(RATE * step * freqs.size()) + int(RATE * 0.15)
 	var data := PackedByteArray()

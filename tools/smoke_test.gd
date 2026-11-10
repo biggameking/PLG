@@ -4341,6 +4341,16 @@ func run() -> void:
 	hud2._input(kev2)
 	check("keyboard seen", not game.using_pad)
 
+	# species voices: lazy-synthesized, cached per id, distinct across species
+	game.cry_for("fenjelly")
+	game.cry_for("vermtrot")
+	game.cry_for("fenjelly")
+	check("cries cached + distinct", game.CRIES.has("fenjelly") and game.CRIES.has("vermtrot")
+		and game.CRIES["fenjelly"] is AudioStreamWAV
+		and game.CRIES["fenjelly"] != game.CRIES["vermtrot"]
+		and game.CRIES["fenjelly"].data.size() > 0
+		and game.CRIES.size() <= SpeciesData.SPECIES.size() + SpeciesGen.SPECIES.size()) # bounded by the species set
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)

@@ -150,6 +150,7 @@ func enter_phase_two() -> void:
 	phase = 2
 	game.floater(pos, "IT CALLS THE PACK", "#ff9966")
 	game.sfx_play("horn")
+	game.cry_for(species_id) # the boss roars in its own voice
 	# two loyal adds answer the roar — capped per boss, capped by MAX_PALS
 	var n := 0
 	for q in game.pals:

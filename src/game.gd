@@ -139,6 +139,16 @@ func _exit_tree() -> void:
 		if is_instance_valid(bp) and bp.get_parent() == null:
 			bp.free()
 	pals.clear()
+	# streams+playbacks still in flight at quit count as ObjectDB leaks —
+	# silence the pool and drop every ref the dicts/players hold
+	for ap in sfx_pool:
+		ap.stop(); ap.stream = null
+	if music_day != null:
+		music_day.stop(); music_day.stream = null
+	if music_night != null:
+		music_night.stop(); music_night.stream = null
+	SFX.clear()
+	CRIES.clear()
 
 @onready var entity_layer: Node2D = $YSort/Entities
 @onready var drawer = $World/Terrain
@@ -427,6 +437,7 @@ func r_send_out(uid: int, pid: int) -> void:
 	var anchor := peer_pos_of(pid)
 	bp.pos = nearest_free(anchor.x + 1.2, anchor.y)
 	unbox_pal(bp)
+	cry_for(bp.species_id)
 	note_remote(pid, "%s sent out!" % bp.spec["name"])
 
 func r_make_active(uid: int, pid: int) -> void:
@@ -548,6 +559,21 @@ func item_wt(sid: String) -> float:
 
 var SFX := {}
 var sfx_pool := []
+const SFX_LIB := preload("res://src/sfx.gd")
+var CRIES := {} # species_id -> one synthesized warble — bounded by species count
+
+func cry_for(sid: String) -> void:
+	# a kin keeps one voice forever: synth lazily, cache, reuse the sfx pool
+	if not CRIES.has(sid):
+		CRIES[sid] = SFX_LIB.cry(int(sid.hash()) & 0x7FFFFFFF)
+	var s: AudioStream = CRIES[sid]
+	if s == null or sfx_pool.is_empty():
+		return
+	var ap: AudioStreamPlayer = sfx_pool[sfx_idx]
+	sfx_idx = (sfx_idx + 1) % sfx_pool.size()
+	ap.stream = s
+	ap.play()
+
 var music_day: AudioStreamPlayer
 var music_night: AudioStreamPlayer
 var sfx_idx := 0
@@ -1358,6 +1384,7 @@ func resolve_sphere(sp) -> void:
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		sfx_play("catch")
+		cry_for(target.species_id) # a new friend announces itself
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
 		gain_xp(catch_xp(target.level))
 		if catch_streak >= 3:
@@ -1430,6 +1457,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 			log_msg("Kinbox is full (%d) - %s got away" % [MAX_BOX, target.spec["name"]])
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
+		cry_for(target.species_id)
 		if net != null and multiplayer.get_peers().has(pid):
 			net.rpc_id(pid, "net_floater", target.pos.x, target.pos.y, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Player %d caught %s Lv%d — into their kinbox" % [pid, target.spec["name"], target.level])
@@ -2905,6 +2933,7 @@ func send_out(uid: int) -> void:
 	bp.mode = "partner"
 	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y)
 	unbox_pal(bp)
+	cry_for(bp.species_id)
 	log_msg("%s sent out!" % bp.spec["name"])
 
 func box_to_party(bp: Kin) -> void:
