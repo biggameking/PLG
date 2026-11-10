@@ -2124,6 +2124,18 @@ func run() -> void:
 				or game.item_count("pal_fluid") + game.item_count("gold_coin") + game.item_count("red_berries") > items_f) \
 				and game.item_count("fishing_rod") == 1,
 			"bites=%d pals=%d" % [bit, game.pals.size() - pals_f])
+		var wthr0: String = game.weather
+		game.weather = "rain"
+		var bite_r: float = game.fish_bite_p()
+		game.weather = "clear"
+		var bite_c: float = game.fish_bite_p()
+		var maps0: int = game.item_count("treasure_map")
+		for _ci2 in 300: # the corked promise is a 5% tail — 300 casts can't miss it
+			game.cast_line()
+		check("rain feeds the bite and the sea mails maps", bite_r > bite_c \
+			and game.item_count("treasure_map") > maps0,
+			"bite=%.2f/%.2f maps=%d" % [bite_r, bite_c, game.item_count("treasure_map") - maps0])
+		game.weather = wthr0
 		p.pos = pos_f
 	else:
 		check("fishing", false, "no shoreline")

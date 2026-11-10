@@ -2320,6 +2320,9 @@ func nearest_bed_cell(at: Vector2) -> Vector2i:
 			bd = d; best = k
 	return best
 
+func fish_bite_p() -> float:
+	return 0.55 if weather != "clear" else 0.4
+
 func cast_line() -> bool:
 	# Palworld fishing: stand at the water's edge, wait for a bite — mostly
 	# loot, sometimes a live aquatic pal surfaces to fight or catch
@@ -2334,7 +2337,8 @@ func cast_line() -> bool:
 		log_msg("Cast at the water's edge")
 		return false
 	var roll := rng.next()
-	if roll < 0.4 and pals.size() < MAX_PALS:
+	var bite := fish_bite_p() # fish feed in the rain
+	if roll < bite and pals.size() < MAX_PALS:
 		# a live catch: an aquatic pal from this zone's pool surfaces
 		var zone := world.zone_at(wc.x, wc.y)
 		var pool: Array = (ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
@@ -2359,9 +2363,12 @@ func cast_line() -> bool:
 	elif roll < 0.9:
 		add_item("gold_coin", rng.int_range(4, 12))
 		log_msg("A soggy coin purse!")
-	else:
+	elif roll < 0.95:
 		add_item("red_berries", 2)
 		log_msg("Just weeds and berries.")
+	else: # the sea keeps the odd corked promise
+		add_item("treasure_map", 1)
+		log_msg("A corked bottle — inside, a faded treasure chart!")
 	floater(Vector2(wc.x + 0.5, wc.y + 0.5), "~splash~", "#9fd8ff")
 	return true
 

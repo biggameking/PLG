@@ -19,6 +19,9 @@ a meal that puts wind in your boots. A skep of bees rounds out
 the pantry — honey bakes into buns that quicken the step. And
 a well sunk near the beds keeps them watered in fair skies —
 the same quarter rain gives, without waiting on the weather.
+And the sea feeds those who ask: cast a line from any shore —
+fish bite harder when it rains, and once in a long while the
+water gives back a corked bottle holding somebody's map.
 
 The island keeps a clock. Daylight is for building; night is
 when the dark element pals wake and hunt wide. Cold bites past
