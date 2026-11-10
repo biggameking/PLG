@@ -1165,6 +1165,29 @@ func run() -> void:
 		game.pals.erase(teach); teach.free()
 	check("dojo teaches a move", th_ok, "th=%s" % (th_st != null))
 
+	# sparring ring — two posted pals trade a bout on the bell: xp in, san out
+	game.add_item("wood", 15); game.add_item("cloth", 4)
+	var sr_k: Vector2i = free_xy.call("sparring_ring")
+	var sr_st = game.structures.get(sr_k) if sr_k.x >= 0 else null
+	var sr_ok := false
+	if sr_st != null:
+		var spa: Pal = game.gen_pal("rushoar", 10, Vector2(sr_k.x + 0.5, sr_k.y + 0.5))
+		var spb: Pal = game.gen_pal("lamball", 10, Vector2(sr_k.x + 1.5, sr_k.y + 0.5))
+		for spx in [spa, spb]:
+			spx.mode = "base"; spx.san = 80.0; spx.hunger = 10.0
+			spx.statuses.clear(); spx.job_site = sr_st
+		sr_st["workers"] = [spa, spb]
+		game.pals.append(spa); game.pals.append(spb)
+		var san0: float = spa.san + spb.san
+		var xp0: int = spa.xp + spa.level * 1000 + spb.xp + spb.level * 1000
+		sr_st["timer"] = 59.9
+		game.tick_production(0.2)
+		sr_ok = (spa.san + spb.san) < san0 \
+			and (spa.xp + spa.level * 1000 + spb.xp + spb.level * 1000) > xp0
+		sr_st["workers"] = []; spa.job_site = null; spb.job_site = null
+		game.pals.erase(spa); spa.free(); game.pals.erase(spb); spb.free()
+	check("ring pairs a bout", sr_ok, "sr=%s" % (sr_st != null))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

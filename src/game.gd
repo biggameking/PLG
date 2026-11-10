@@ -2031,6 +2031,9 @@ func tick_production(dt: float) -> void:
 		if job.get("kind", "") == "mentor":
 			tick_dojo(key, st, job, dt)
 			continue
+		if job.get("kind", "") == "spar":
+			tick_spar(key, st, job, dt)
+			continue
 		if st["id"] == "incubator":
 			var inc = st.get("egg_inc")
 			if inc is Dictionary:
@@ -2569,7 +2572,7 @@ func find_work_site(p: Pal, reach: float) -> Variant:
 	for k in structures:
 		var s: Dictionary = StructureData.STRUCTURES.get(structures[k]["id"], {})
 		var jb: Dictionary = s.get("job", {})
-		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition" and jb.get("kind") != "guard" and jb.get("kind") != "mentor":
+		if jb.get("produces", []).is_empty() and structures[k]["id"] != "ranch" and jb.get("kind") != "power" and jb.get("kind") != "expedition" and jb.get("kind") != "guard" and jb.get("kind") != "mentor" and jb.get("kind") != "spar":
 			continue # sites with no output aren't assignable (except generator/ranch) — campfire's [] sneaks past a null check
 		var need: String = jb.get("workType", "")
 		if need != "" and p.spec.get("work", {}).get(need, 0) == 0 \
@@ -3431,6 +3434,33 @@ func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 	floater(center, "%s learns %s!" % [pupil.spec.get("name", pupil.species_id), sname], "#ffd97a")
 	log_msg("%s taught %s %s" % [teacher.spec.get("name", teacher.species_id),
 		pupil.spec.get("name", pupil.species_id), sname])
+
+func tick_spar(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> void:
+	# paired drills, not solo reps — two posted pals spar on the bell: the
+	# winner banks more experience and both walk out a little wearier
+	var pair := []
+	for w in st["workers"]:
+		if is_instance_valid(w) and w.job_site == st and w.mode == "base" \
+				and w.san >= 15.0 and w.hunger < 80.0 and not w.has_status("sleep"):
+			pair.append(w)
+	if pair.size() < 2:
+		st["timer"] = 0.0
+		return
+	st["timer"] += dt
+	var rate: float = job.get("amount", 60)
+	if st["timer"] < rate:
+		return
+	st["timer"] -= rate
+	var a: Pal = pair[0]; var b: Pal = pair[1]
+	# level weighs the bout — a veteran usually wins, but upsets happen
+	var a_wins := rng.next() * (a.level + b.level) < a.level
+	var champ: Pal = a if a_wins else b
+	var loser: Pal = b if a_wins else a
+	pal_gain_xp(champ, 8)
+	pal_gain_xp(loser, 4)
+	for w in [a, b]:
+		w.san = maxf(0.0, w.san - 4.0) # a bout costs spirit, not blood
+	floater(Vector2(key.x + 0.5, key.y + 0.5), "%s wins the bout!" % champ.spec.get("name", champ.species_id), "#ffd97a")
 
 func pull_from_storage(id: String, need: int) -> int:
 	# shared consumer: production inputs and cake come out of chests/feed boxes

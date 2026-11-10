@@ -506,6 +506,27 @@ const STRUCTURES = {
   "job": {"kind": "mentor", "workType": "", "amount": 90},
   "desc": "A drill hall — post a veteran and it passes its moves to the yard's youngsters."
  },
+"sparring_ring": {
+  "id": "sparring_ring",
+  "name": "Sparring Ring",
+  "glyph": "⊗",
+  "color": "#a87848",
+  "w": 2,
+  "h": 2,
+  "hp": 180,
+  "cost": [
+   [
+    "wood",
+    15
+   ],
+   [
+    "cloth",
+    4
+   ]
+  ],
+  "job": {"kind": "spar", "workType": "", "amount": 60},
+  "desc": "A roped pit — pair two pals here and they spar on the bell: the winner learns more, both spend spirit."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1351,6 +1372,12 @@ const TECH = [
   "name": "Training Hall",
   "tier": 5,
   "cost": 2
+ },
+ {
+  "id": "sparring_ring",
+  "name": "Sparring Ring",
+  "tier": 4,
+  "cost": 1
  }
 ]
 

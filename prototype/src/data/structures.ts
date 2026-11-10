@@ -232,6 +232,13 @@ export const STRUCTURES: Record<string, StructureDef> = {
     job: { kind: "mentor", workType: "", amount: 90 },
     desc: "A drill hall — post a veteran and it passes its moves to the yard's youngsters.",
   },
+  sparring_ring: {
+    id: "sparring_ring", name: "Sparring Ring", glyph: "⊗", color: "#a87848", w: 2, h: 2,
+    hp: 180,
+    cost: [["wood", 15], ["cloth", 4]],
+    job: { kind: "spar", workType: "", amount: 60 },
+    desc: "A roped pit — pair two pals here and they spar on the bell: the winner learns more, both spend spirit.",
+  },
   weather_shrine: {
     id: "weather_shrine", name: "Weather Shrine", glyph: "☂", color: "#7fb8d8", w: 1, h: 1,
     cost: [["stone", 20], ["paldium", 10]],
@@ -321,4 +328,5 @@ export const TECH: TechNode[] = [
   { id: "weather_shrine", name: "Weather Shrine", tier: 6, cost: 2 },
   { id: "guard_post", name: "Guard Post", tier: 4, cost: 1 },
   { id: "training_hall", name: "Training Hall", tier: 5, cost: 2 },
+  { id: "sparring_ring", name: "Sparring Ring", tier: 4, cost: 1 },
 ];

@@ -85,7 +85,9 @@ the horns sound, a posted guard earns its keep — pals on a
 guard platform patrol a wider beat than the yard crew. Veterans
 serve twice: post one to the drill hall and, each time the bell
 tolls, it will pass one of its own moves to a youngster standing
-nearby — up to three lessons per pupil.""",
+nearby — up to three lessons per pupil. And a roped pit settles
+the rest: pair two pals in the sparring ring and every bell ends
+in a bout — the winner banks the most, both spend a little spirit.""",
 """— VOL. V —
 BREEDING, EGGS AND LUCK
 
