@@ -88,7 +88,8 @@ Pals are not machines — but they do love a scratch. A petted
 pal works a tenth lighter for the next minute (and the pat
 itself tops up SAN). Hunger drains them — keep the feed box
 stocked. SAN frays under grind — hot springs, beds, and the
-monitoring stand's gentler shifts keep minds whole. Sick pals
+monitoring stand's gentler shifts keep minds whole. Stand in
+the steam yourself and the water knits your own cuts too. Sick pals
 need medicine; the box heals the KO'd on a timer. And mind the
 depressed ones at the bottom of the tank — left at empty SAN
 with no medicine in reach, they snap and chew the very walls

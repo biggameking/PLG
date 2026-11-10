@@ -1376,6 +1376,28 @@ func run() -> void:
 	tg_p.queue_free()
 	game.pals.erase(tg_p)
 
+	# hot spring soak: standing in the steam mends the keeper too
+	var hs_k := Vector2i(-1, -1)
+	for k7 in game.structures:
+		if game.structures[k7]["id"] == "hot_spring":
+			hs_k = k7
+			break
+	if hs_k.x < 0: # none built yet — raise one for the soak
+		game.add_item("stone", 20); game.add_item("wood", 10); game.add_item("paldium", 3)
+		hs_k = free_xy.call("hot_spring")
+	var soak_ok := true
+	if hs_k.x >= 0:
+		var old_pos := p.pos
+		var old_hp := p.hp
+		p.pos = Vector2(hs_k.x + 0.5, hs_k.y + 0.5)
+		p.hp = p.max_hp * 0.5
+		for i17 in range(40):
+			p._physics_process(0.1)
+		soak_ok = p.hp > p.max_hp * 0.52
+		p.pos = old_pos
+		p.hp = old_hp
+	check("spring soak mends the keeper", soak_ok, "hs=%s" % (hs_k.x >= 0))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

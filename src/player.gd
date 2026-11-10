@@ -272,6 +272,13 @@ func _physics_process(dt: float) -> void:
 			stamina = minf(100.0, stamina + 25.0 * dt) # quick catch-up
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
+	# a soak in the spring mends the keeper too (Palworld bath comfort)
+	if hp < max_hp:
+		for k in game.structures:
+			var st4: Dictionary = game.structures[k]
+			if st4["id"] == "hot_spring" and Vector2(k).distance_to(pos) <= 2.5:
+				hp = minf(max_hp, hp + max_hp * 0.02 * dt)
+				break
 	# Palworld night chill + latitude bands: past dusk and away from
 	# firelight the cold bleeds hp — never below 30%. The far north freezes
 	# all day; the far south scorches by day (a swim or cooling armor saves
