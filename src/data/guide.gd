@@ -47,7 +47,10 @@ Spheres must hit home — nothing is spent on a miss. The
 launcher flings the selected ball downrange. Sleeping pals
 catch asleep; they wake swinging. Shy prey? Toss a bait mash
 ahead of you: hunger beats caution, and the first snout to
-the pile holds still while it chews.""",
+the pile holds still while it chews. Pair the bait with a
+leaf-litter snare and the meal walks to you — whatever steps
+in is held fast for a few heartbeats, one bite and the spring
+is spent.""",
 """— VOL. III —
 PARTY, BOX AND BENCH
 

@@ -547,6 +547,28 @@ const STRUCTURES = {
   ],
   "desc": "A pitch-pine board — each dawn a fresh request goes up: fill it for coin and credit."
  },
+"snare_trap": {
+  "id": "snare_trap",
+  "name": "Snare Trap",
+  "glyph": "⋔",
+  "color": "#8a7a5a",
+  "w": 1,
+  "h": 1,
+  "hp": 40,
+  "walkable": true,
+  "snare": true,
+  "cost": [
+   [
+    "wood",
+    5
+   ],
+   [
+    "fiber",
+    2
+   ]
+  ],
+  "desc": "A leaf-litter snare — the first wild pal to step on it is held fast a few seconds. One bite and it's spent."
+ },
 "weather_shrine": {
   "id": "weather_shrine",
   "name": "Weather Shrine",
@@ -1402,6 +1424,12 @@ const TECH = [
  {
   "id": "notice_board",
   "name": "Notice Board",
+  "tier": 2,
+  "cost": 1
+ },
+ {
+  "id": "snare_trap",
+  "name": "Snare Trap",
   "tier": 2,
   "cost": 1
  }

@@ -1202,6 +1202,22 @@ func run() -> void:
 		game.board_quest = {}
 	check("board pays the ask", nb_ok, "nb=%s" % (nb_k.x >= 0))
 
+	# snare trap: a wild foot on the plate is held fast — and the spring is spent
+	game.add_item("wood", 5); game.add_item("fiber", 2)
+	var sn_k: Vector2i = free_xy.call("snare_trap")
+	var sn_st = game.structures.get(sn_k) if sn_k.x >= 0 else null
+	var sn_ok := false
+	if sn_st != null:
+		var prey: Pal = game.gen_pal("lamball", 3, Vector2(sn_k.x + 0.5, sn_k.y + 0.5))
+		prey.mode = "wild"
+		game.pals.append(prey)
+		game.tick_production(0.1)
+		sn_ok = prey.stun_t > 0.0 and sn_st.get("snare", true) == false
+		game.pals.erase(prey); prey.free()
+		await process_frame # the spent spring is removed after the tick
+		sn_ok = sn_ok and not game.structures.has(sn_k)
+	check("snare holds a foot", sn_ok, "sn=%s" % (sn_st != null))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

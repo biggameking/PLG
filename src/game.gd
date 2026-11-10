@@ -1587,7 +1587,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
 		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
 		"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
-		"turret": s.get("turret", 0),
+		"turret": s.get("turret", 0), "snare": s.get("snare", false),
 		"pos": Vector2i(tx, ty)}
 	for dy in range(h):
 		for dx in range(w):
@@ -1633,7 +1633,7 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
 		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
 		"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
-		"turret": s.get("turret", 0),
+		"turret": s.get("turret", 0), "snare": s.get("snare", false),
 		"pos": Vector2i(tx, ty)}
 	for dy in range(h):
 		for dx in range(w):
@@ -2068,6 +2068,18 @@ func tick_production(dt: float) -> void:
 					if p.mode == "wild" and p.hp > 0 and (p.raid or p.aggro >= 0) \
 							and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
 						p.take_dps(int(st["spike"]))
+		if st.get("snare", false):
+			var snared: Pal = null
+			for p in pals:
+				if p.mode == "wild" and p.hp > 0 and Vector2i(int(p.pos.x), int(p.pos.y)) == key:
+					snared = p; break # curious feet count too — the snare doesn't check flags
+			if snared != null:
+				snared.stun_t = 4.0
+				snared.hit(4, 1.0, false)
+				floater(Vector2(key.x + 0.5, key.y + 0.5), "Snared!", "#ffd76e")
+				log_msg("%s is caught in the snare!" % snared.spec.get("name", snared.species_id))
+				st["snare"] = false # spent — disarm now, remove after the tick (no mid-iteration erase)
+				call_deferred("net_remove_structure", st) # one bite and the trap is spent
 		if int(st.get("turret", 0)) > 0:
 			st["turret_cd"] = float(st.get("turret_cd", 0.0)) - dt
 			if float(st["turret_cd"]) <= 0.0:
@@ -3140,6 +3152,7 @@ func load_game() -> bool:
 		var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
 			"hp": clampi(int(sv.get("hp", 200)) if sv is Dictionary else 200, 1, 99999),
 			"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
+			"snare": s.get("snare", false),
 			"loot": sv.get("loot", false) == true if sv is Dictionary else false}
 		if sv is Dictionary:
 			if sv.get("store") is Dictionary:

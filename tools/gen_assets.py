@@ -858,6 +858,13 @@ def make_structure(sid, color, w, h):
         for sx in (-8, -1, 6):
             d.rectangle([W//2 + sx - 2, 19 + (sx % 3), W//2 + sx + 2, 26 + (sx % 3)], fill=hxc("#e8dcc0") + (255,))
         d.rectangle([W//2 - 13, 28, W//2 + 13, 30], fill=hxc("#5e462e") + (255,))
+    elif sid == "snare_trap":
+        # leaf litter over steel jaws — the trap hides until it bites
+        d.ellipse([W//2 - 14, 30, W//2 + 14, 42], fill=hxc("#7a8a4a") + (255,))
+        d.polygon([(W//2 - 10, 36), (W//2 - 3, 30), (W//2 - 1, 36)], fill=hxc("#8a7a5a") + (255,))
+        d.polygon([(W//2 + 10, 36), (W//2 + 3, 30), (W//2 + 1, 36)], fill=hxc("#8a7a5a") + (255,))
+        for tx6 in range(-8, 9, 4):
+            d.polygon([(W//2 + tx6, 40), (W//2 + tx6 + 2, 44), (W//2 + tx6 + 4, 40)], fill=hxc("#c9cdd2") + (255,))
     elif sid == "weather_shrine":
         # stone altar with a floating paldium crystal and swirling wind lines
         d.rectangle([W//2 - 12, 36, W//2 + 12, 44], fill=hxc("#6b6f72") + (255,))
@@ -936,6 +943,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "training_hall": ("#8a6a4a", 2, 2),
     "sparring_ring": ("#a87848", 2, 2),
     "notice_board": ("#c9a15a", 1, 1),
+    "snare_trap": ("#8a7a5a", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
