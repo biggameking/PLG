@@ -1024,6 +1024,16 @@ const ITEMS = {
   "stack": 1,
   "price": 90
  },
+ "miner_cap": {
+  "id": "miner_cap",
+  "name": "Miner's Cap",
+  "kind": "armor",
+  "armor": {"def": 3, "dur": 140},
+  "light": 6,
+  "desc": "A leather cap with a carbide lamp — both hands free in the dark.",
+  "stack": 1,
+  "price": 120
+ },
  "dragon_scale": {
   "id": "dragon_scale",
   "name": "Dragonscale Armor",
@@ -1904,4 +1914,11 @@ const RECIPES = [
   "cost": [["cloth", 3], ["paldium", 6], ["gold_coin", 30]],
   "station": "workbench",
   "work": 160
+ },
+ {
+  "id": "miner_cap",
+  "out": ["miner_cap", 1],
+  "cost": [["leather", 6], ["ingot", 4], ["paldium", 3]],
+  "station": "workbench",
+  "work": 140
  }]

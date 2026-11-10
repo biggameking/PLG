@@ -11,6 +11,7 @@ var stam_wait := 0.0        # regen delay after a drain
 var cold_t := 0.0           # night-chill accumulator — resets by the fire
 var shield_t := 0.0         # Roly Poly bubble: deadline (game.t)
 var shield_n := 0.0         # absorb pool left in the bubble
+var _lamp: PointLight2D = null # miner's cap light — one node, swapped on armor change
 
 func absorb_hit(final: int) -> int:
 	# Palworld's Lamball partner skill — a plush ball eats the hit for you
@@ -272,6 +273,18 @@ func _physics_process(dt: float) -> void:
 			stamina = minf(100.0, stamina + 25.0 * dt) # quick catch-up
 	if hunger <= 0.0:
 		hp = maxf(1.0, hp - dt * 0.4)   # starving: slow drain to 1hp
+	# miner's cap: the lamp rides on the armor, swapped in and out with the set
+	var lamp_r := int(ItemData.ITEMS.get(equipment["armor"], {}).get("light", 0))
+	if lamp_r > 0 and _lamp == null:
+		_lamp = PointLight2D.new()
+		_lamp.texture = game.light_tex()
+		_lamp.texture_scale = lamp_r * 0.8
+		_lamp.energy = 0.9
+		_lamp.color = Color(1.0, 0.85, 0.55)
+		sprite.add_child(_lamp)
+	elif lamp_r <= 0 and _lamp != null:
+		_lamp.queue_free()
+		_lamp = null
 	# a soak in the spring mends the keeper too (Palworld bath comfort)
 	if hp < max_hp:
 		for k in game.structures:

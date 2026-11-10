@@ -1415,6 +1415,16 @@ func run() -> void:
 			and game.box[-1].species_id == free_sp
 	check("camp captive joins the box", camp_ok, "cage=%s" % (cage_st != null))
 
+	# miner's cap: the lamp rides on the armor slot, swapped out with the set
+	var mc_armor0: String = p.equipment["armor"]
+	p.equipment["armor"] = "miner_cap"
+	p._physics_process(0.1)
+	var lamp_on: bool = p._lamp != null
+	p.equipment["armor"] = mc_armor0
+	p._physics_process(0.1)
+	check("miner cap lamp swaps with armor", lamp_on and p._lamp == null,
+		"on=%s off=%s" % [lamp_on, p._lamp == null])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
