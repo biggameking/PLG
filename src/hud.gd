@@ -309,7 +309,7 @@ func run_click(cr: Dictionary) -> void:
 
 const SHELL_ACTS := ["new_game", "continue", "m_settings", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
-	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl"]
+	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl"]
 
 func shell_act(act: String) -> void:
 	match act:
@@ -343,6 +343,9 @@ func shell_act(act: String) -> void:
 			game.apply_settings(); game.save_settings()
 		"raids_tgl":
 			game.settings["raids"] = not game.settings["raids"]
+			game.apply_settings(); game.save_settings()
+		"lang_tgl":
+			game.settings["lang"] = "zh" if game.settings.get("lang", "en") == "en" else "en"
 			game.apply_settings(); game.save_settings()
 
 func chest_bulk(act: String) -> void:
@@ -584,14 +587,14 @@ func _draw() -> void:
 	var hy := 62.0
 	for h in game.active_hints(): # contextual nudges — retire themselves
 		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
-		draw_string(font, Vector2(r.x - 212, hy), "» " + h["text"],
+		draw_string(font, Vector2(r.x - 212, hy), "» " + tr(h["text"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.85, 0.9, 0.95))
 		hy += 17
 	if game.spires_done.size() > 0 or game.crowned: # the campaign spine's tally
 		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
 		draw_string(font, Vector2(r.x - 212, hy),
-			"SPIRES %d/%d%s" % [game.spires_done.size(), game.SPIRE_DEFS.size(),
-				" — CROWNED" if game.crowned else ""],
+			tr("SPIRES %d/%d") % [game.spires_done.size(), game.SPIRE_DEFS.size()]
+				+ (tr(" — CROWNED") if game.crowned else ""),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e"))
 	var my := r.y - 24
 	for i in range(game.messages.size()):
@@ -722,7 +725,8 @@ func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Co
 	draw_rect(rr, Color(0.09, 0.12, 0.16, 0.95) if hov else Color(0.05, 0.05, 0.07, 0.9))
 	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
 	click_rects.append({"rect": rr, "act": act, "arg": null})
-	draw_string(font, Vector2(cx - font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), label,
+	var tl := tr(label)
+	draw_string(font, Vector2(cx - font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), tl,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col)
 	return y + 40
 
@@ -732,7 +736,8 @@ func draw_title(r: Vector2) -> void:
 	var ty := r.y * 0.22
 	draw_string(font, Vector2(cx - font.get_string_size("KINBOUND", HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x / 2, ty), "KINBOUND",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color("#e8d44d"))
-	draw_string(font, Vector2(cx - font.get_string_size("the Wildmere keeps what you catch", HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), "the Wildmere keeps what you catch",
+	var tagline := tr("the Wildmere keeps what you catch")
+	draw_string(font, Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.8, 0.85))
 	var y := r.y * 0.42
 	if FileAccess.file_exists("user://savegame.plg"):
@@ -740,12 +745,12 @@ func draw_title(r: Vector2) -> void:
 	y = menu_row(cx, y, 220, "NEW GAME", "new_game")
 	y = menu_row(cx, y, 220, "SETTINGS", "m_settings")
 	y = menu_row(cx, y, 220, "QUIT", "quit", Color(0.85, 0.6, 0.6))
-	draw_string(font, Vector2(14, r.y - 12), "enter = continue · click a row", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 0.55, 0.6))
+	draw_string(font, Vector2(14, r.y - 12), tr("enter = continue · click a row"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 0.55, 0.6))
 
 func draw_pause(r: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.6))
 	var cx := r.x / 2
-	var ptxt := "MENU — the world keeps running" if game.net_live() else "PAUSED"
+	var ptxt := tr("MENU — the world keeps running") if game.net_live() else tr("PAUSED")
 	draw_string(font, Vector2(cx - font.get_string_size(ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x / 2, r.y * 0.3), ptxt,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
 	var y := r.y * 0.42
@@ -759,11 +764,11 @@ func draw_settings(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 190, r.y * 0.25, 380, 300)
 	draw_rect(rr, Color(0.04, 0.05, 0.07, 0.95))
 	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
-	draw_string(font, Vector2(rr.position + Vector2(16, 26)), "SETTINGS", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#e8d44d"))
+	draw_string(font, Vector2(rr.position + Vector2(16, 26)), tr("SETTINGS"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#e8d44d"))
 	var y := rr.position.y + 54
 	for b in [["master", "MASTER"], ["music", "MUSIC"], ["sfx", "SFX"]]:
 		var v: float = game.settings[b[0]]
-		draw_string(font, Vector2(rr.position.x + 24, y + 14), "%s  %d%%" % [b[1], int(v * 100)],
+		draw_string(font, Vector2(rr.position.x + 24, y + 14), "%s  %d%%" % [tr(b[1]), int(v * 100)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Color(0.12, 0.14, 0.16))
 		draw_rect(Rect2(rr.position.x + 140, y + 4, 150.0 * v, 14), Color("#4dd0e1"))
@@ -777,17 +782,22 @@ func draw_settings(r: Vector2) -> void:
 	y += 8
 	var fs := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": fs, "act": "fullscreen", "arg": null})
-	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), "FULLSCREEN  [%s]" % ("ON" if game.settings["fullscreen"] else "off"),
+	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), "%s  [%s]" % [tr("FULLSCREEN"), tr("ON") if game.settings["fullscreen"] else tr("off")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["fullscreen"] else Color.WHITE)
 	y += 32
 	var rd := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": rd, "act": "raids_tgl", "arg": null})
-	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), "BASE RAIDS  [%s]" % ("ON" if game.settings["raids"] else "off"),
+	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), "%s  [%s]" % [tr("BASE RAIDS"), tr("ON") if game.settings["raids"] else tr("off")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["raids"] else Color(0.7, 0.7, 0.7))
+	y += 32
+	var lg := Rect2(rr.position.x + 24, y, 200, 26)
+	click_rects.append({"rect": lg, "act": "lang_tgl", "arg": null})
+	draw_string(font, Vector2(lg.position.x, lg.position.y + 18), "%s  [%s]" % [tr("LANGUAGE"), "中文" if game.settings.get("lang", "en") == "zh" else "EN"],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	y += 44
 	var bk := Rect2(rr.position.x + 24, y, 120, 28)
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})
-	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), "[ BACK ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
+	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), "[ %s ]" % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()

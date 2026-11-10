@@ -4265,6 +4265,16 @@ func run() -> void:
 	game.crowned = false
 	game.spires_done.clear()
 
+	# i18n — zh translation registered, toggle swaps tr() output, garbage coerced
+	check("zh translation loaded", "zh" in TranslationServer.get_loaded_locales())
+	game.settings["lang"] = "zh"; game.apply_settings()
+	check("tr zh", tr("SETTINGS") == "设置")
+	check("tr fallback", tr("NO_SUCH_KEY_XYZ") == "NO_SUCH_KEY_XYZ")
+	game.settings["lang"] = "bogus"; game.apply_settings()
+	check("bad lang falls back", TranslationServer.get_locale().begins_with("en") or tr("SETTINGS") == "SETTINGS")
+	game.settings["lang"] = "en"; game.apply_settings()
+	check("tr en", tr("SETTINGS") == "SETTINGS")
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)

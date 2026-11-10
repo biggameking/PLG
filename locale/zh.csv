@@ -1,0 +1,36 @@
+keys,en,zh
+CONTINUE,CONTINUE,继续游戏
+NEW GAME,NEW GAME,新游戏
+SETTINGS,SETTINGS,设置
+QUIT,QUIT,退出
+RESUME,RESUME,继续
+SAVE GAME,SAVE GAME,保存游戏
+SAVE & QUIT TO TITLE,SAVE & QUIT TO TITLE,保存并回到标题
+SAVE & QUIT GAME,SAVE & QUIT GAME,保存并退出
+PAUSED,PAUSED,已暂停
+MENU — the world keeps running,MENU — the world keeps running,菜单 — 世界仍在运转
+MASTER,MASTER,主音量
+MUSIC,MUSIC,音乐
+SFX,SFX,音效
+FULLSCREEN,FULLSCREEN,全屏
+BASE RAIDS,BASE RAIDS,基地袭击
+LANGUAGE,LANGUAGE,语言
+ON,ON,开
+off,off,关
+BACK,BACK,返回
+Day 1 on the Wildmere — catch a kin, feed it, put it to work.,Day 1 on the Wildmere — catch a kin\, feed it\, put it to work.,荒野第一天——抓一只精灵，喂饱它，让它干活。
+Welcome to Kinbound. Press H for help.,Welcome to Kinbound. Press H for help.,欢迎来到《Kinbound》。按 H 查看帮助。
+Q aims — click a wild kin to throw an orb,Q aims — click a wild kin to throw an orb,按 Q 瞄准——点击野生精灵丢出精灵球
+B builds — a workbench turns wood + stone into gear,B builds — a workbench turns wood + stone into gear,按 B 建造——工作台把木头和石头变成装备
+You're starving — eat berries or cooked food (I opens the bag),You're starving — eat berries or cooked food (I opens the bag),你快饿死了——吃点浆果或熟食（按 I 打开背包）
+Night bites cold — carry a torch or stand by a fire,Night bites cold — carry a torch or stand by a fire,夜晚寒冷刺骨——带上火把或站在火边
+A kin is flagging — feed it and let it rest,A kin is flagging — feed it and let it rest,有只精灵蔫了——喂喂它，让它歇会儿
+SPIRES %d/%d,SPIRES %d/%d,尖塔 %d/%d
+ — CROWNED, — CROWNED, — 已加冕
+Saved.,Saved.,已保存。
+Loaded.,Loaded.,已读取。
+The world lives on the host — nothing to save locally,The world lives on the host — nothing to save locally,世界在主机上——本地无存档
+Kinbound,Kinbound,Kinbound
+the Wildmere keeps what you catch,the Wildmere keeps what you catch,荒野会留下你所捕获的一切
+enter = continue · click a row,enter = continue · click a row,回车=继续 · 点击菜单项
+SAVE FAILED,SAVE FAILED,保存失败

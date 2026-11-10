@@ -63,7 +63,7 @@ var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
 var state := "title" # title | play | paused — sim and player input gate on this
 var panel := ""
-var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true}
+var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true, "lang": "en"}
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
@@ -3283,7 +3283,9 @@ func load_settings() -> void:
 		for k in settings:
 			var v = cf.get_value("main", k, settings[k])
 			# settings.cfg is untrusted like any save file — coerce per key
-			if settings[k] is bool:
+			if k == "lang":
+				settings[k] = str(v) if str(v) in ["en", "zh"] else "en"
+			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:
 				settings[k] = clampf(float(v) if v is float or v is int else settings[k], 0.0, 1.0)
@@ -3301,6 +3303,7 @@ func apply_settings() -> void:
 		var bi := AudioServer.get_bus_index(b)
 		if bi >= 0:
 			AudioServer.set_bus_volume_db(bi, linear_to_db(maxf(settings[b.to_lower()], 0.001)))
+	TranslationServer.set_locale("zh" if settings.get("lang", "en") == "zh" else "en")
 	var w := get_window()
 	if w != null and DisplayServer.get_name() != "headless" \
 			and (w.mode == Window.MODE_FULLSCREEN) != settings["fullscreen"]:
