@@ -55,12 +55,14 @@ the interaction-verb layer was not. Closed in this pass:
   screen-space rain/storm/drought FX, pulsing danger vignette. Hero-species
   polish remains the procedural accessory layer.
 - **MP — guest combat parity is approximate**: host wildlife engages the
-  nearest warm body (player OR ghost), melee bites AND wild projectiles reach
-  guests via `guest_hit` (projectile damage sent as atk-equivalent —
-  `power * 1.2` — burn/soak/freeze statuses now transfer). Guest shots relay
-  through `pal_hit` (guest bows/muskets/tranq darts work; a client claims the
-  damage number — host clamps it, can't re-derive guest gear math). Guest
-  melee statuses still don't transfer; `danger` reaches clients via env_sync.
+  nearest warm body (player OR ghost), melee bites reach guests via
+  `guest_hit`, and wild projectiles relay through `guest_skill_hit` — the
+  guest applies the same `power*0.6` keeper pipeline locally (own armor/
+  absorb, statuses only when damage lands, chance rolled host-side). Guest
+  shots relay through `pal_hit` (guest bows/muskets/tranq darts work; a
+  client claims the damage number — host clamps it, can't re-derive guest
+  gear math). Guest melee statuses still don't transfer; `danger` reaches
+  clients via env_sync.
 - **BGM**: three procedural pads — day, night, and a minor danger drone that
   swallows the mix during raids/gauntlets/phase-2 bosses — each with a
   plucked arp layer so the drones carry a line. Reactive, still not produced.

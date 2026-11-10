@@ -110,8 +110,8 @@ Deferred honestly: pad rumble, panel-gate coverage now complete but
 hold-to-repeat not implemented, Android preset unverified (local SDK lacks
 build-tools/apksigner).
 - S18 MP parity + reactive danger layer — DONE: wild projectiles now bite
-  guests (`update_projectiles` checks `net.ghosts`, `guest_hit` RPC sends
-  atk-equivalent damage); third procedural pad `music_danger` swallows the
+  guests (`update_projectiles` checks `net.ghosts`, relayed per-guest);
+  third procedural pad `music_danger` swallows the
   mix during raids/gauntlets/phase-2 bosses and lifts when danger ends;
   weather/STAB/freeze smoke assertions rewritten as absolute-delta checks —
   double `int()` truncation at low base damage was producing seeded 1.2-vs-
@@ -133,6 +133,14 @@ build-tools/apksigner).
   smoke tolerances tightened to the real truncation bounds; nav-hold resets
   on mid-hold transitions; ambient pads recover without dead air; one
   pal snapshot per projectile tick; chat brake precedes the host log.
+- S19b guest skill parity — DONE: `apply_player_damage` is now the single
+  keeper-hit pipeline (absorb → armor → flash → shake → floater → wear →
+  death) shared by `hurt_player`, `skill_hit`'s player branch and the new
+  `hurt_player_skill`; wild skill shots on guests moved off `guest_hit`
+  onto `guest_skill_hit` — host rolls status chance, guest applies the
+  same power*0.6 formula against its own armor/absorb locally (real
+  parity gain: the guest's plate actually protects it now, and statuses
+  only land when damage does). Smoke asserts the guest-side pipeline.
   Deferred honestly: guest claims damage numbers (host clamps), guest melee
   statuses don't transfer, guest armor invisible to host.
 - S20 shell visual pass — DONE: procedural animated dawn behind the title

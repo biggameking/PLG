@@ -1117,9 +1117,14 @@ func hurt_player(atk: float, from: Kin) -> void:
 		return # the title's ambient wildlife never bleeds into the run
 	var def := 20.0 + player.level * 3.0
 	var d := maxi(1, int(round(25.0 * (2.0 * atk) / maxf(1.0, atk + 2.0 * def) * (0.9 + rng.next() * 0.2))))
-	var final := player.absorb_hit(maxi(1, d - player.armor_def()))
+	apply_player_damage(d)
+
+func apply_player_damage(dmg_before_armor: int) -> int:
+	# shared keeper-hit pipeline: absorb bubble, then plate wear, flash,
+	# thump and death — melee, wild skills and guest relays must not fork it
+	var final := player.absorb_hit(maxi(1, dmg_before_armor - player.armor_def()))
 	if final <= 0:
-		return # the bubble ate it whole — no wear, no flash
+		return 0 # the bubble ate it whole — no wear, no flash
 	player.hp -= final
 	player.hit_flash = 0.4
 	screen_shake(0.35)
@@ -1128,6 +1133,17 @@ func hurt_player(atk: float, from: Kin) -> void:
 	player.wear_armor() # the island: the plate takes the wear, not the skin
 	if player.hp <= 0:
 		respawn_player()
+	return final
+
+func hurt_player_skill(power: float, status_kind: String, status_dur: float) -> void:
+	# guest-side mirror of skill_hit's player branch: same power*0.6 rule,
+	# applied against the guest's own armor/absorb locally (host never sees them)
+	if (state != "play" and not net_live()) or player.dodge_t > 0:
+		return
+	if apply_player_damage(maxi(1, int(power * 0.6))) <= 0:
+		return
+	if status_kind != "":
+		player_status(status_kind, status_dur) # the host already rolled the chance
 
 var _sphere_tex := {} # sid -> orb sprite texture — same create-once contract as _drop_tex
 
@@ -3369,13 +3385,9 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 	if target_ent is Player:
 		if (state != "play" and not net_live()) or player.dodge_t > 0:
 			return
-		var final := player.absorb_hit(maxi(1, int(sk.get("power", 10) * 0.6) - player.armor_def()))
+		var final := apply_player_damage(maxi(1, int(sk.get("power", 10) * 0.6)))
 		if final <= 0:
 			return
-		player.hp -= final
-		player.hit_flash = 0.4
-		floater(player.pos, "-" + str(final), "#e64533") # show post-armor damage like hurt_player
-		player.wear_armor() # skills chew the plate same as claws do
 		var st = sk.get("status")
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
@@ -3478,10 +3490,12 @@ func update_projectiles(dt: float) -> void:
 						if g != null and g.net_pos.x >= 0 \
 								and pp.distance_to(Vector2(g.net_pos.x, g.net_pos.y)) < 0.55:
 							var gk_st: Dictionary = pr["skill"].get("status", {})
-							net.rpc_id(pid, "guest_hit",
-								float(pr["skill"].get("power", 10)) * 1.2,
-								str(gk_st.get("kind", "")) if gk_st is Dictionary else "",
-								float(gk_st.get("dur", 0.0)) if gk_st is Dictionary else 0.0)
+							var gk_apply: bool = not gk_st.is_empty() \
+								and rng.chance(gk_st.get("chance", 1.0))
+							net.rpc_id(pid, "guest_skill_hit",
+								float(pr["skill"].get("power", 10)),
+								str(gk_st.get("kind", "")) if gk_apply else "",
+								float(gk_st.get("dur", 0.0)) if gk_apply else 0.0)
 							dead = true
 							break
 				if not dead:

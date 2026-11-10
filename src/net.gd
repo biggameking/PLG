@@ -99,12 +99,19 @@ func net_floater(x: float, y: float, txt: String, col: String) -> void:
 	game.floater(Vector2(float(x), float(y)), str(txt).substr(0, 24), str(col))
 
 @rpc("authority", "call_remote", "reliable")
-func guest_hit(dmg: float, status_kind: String = "", status_dur: float = 0.0) -> void:
+func guest_hit(dmg: float) -> void:
 	if multiplayer.is_server():
 		return # host wildlife only bites through the wire toward guests
 	game.hurt_player(clampf(float(dmg), 1.0, 500.0), null)
-	if status_kind in ["burn", "soak", "freeze"] and status_dur > 0.0:
-		game.player_status(status_kind, clampf(status_dur, 0.5, 12.0))
+
+@rpc("authority", "call_remote", "reliable")
+func guest_skill_hit(power: float, status_kind: String = "", status_dur: float = 0.0) -> void:
+	if multiplayer.is_server():
+		return # a skill shot mirrors the same formula on the guest's own armor
+	if status_kind != "" and status_kind not in ["burn", "soak", "freeze"]:
+		status_kind = ""
+	game.hurt_player_skill(clampf(float(power), 0.0, 500.0), status_kind,
+		clampf(status_dur, 0.0, 12.0))
 
 func _on_peer_disconnected(id: int) -> void:
 	if ghosts.has(id):

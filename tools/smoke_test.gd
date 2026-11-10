@@ -493,6 +493,18 @@ func run() -> void:
 		game._process(0.2)
 		check("camera shake decays", game.shake < shake0, "shake=%.2f" % game.shake)
 		game.shake = 0.0
+		# guest skill relay uses the shared keeper pipeline: power*0.6, own
+		# armor/absorb, then the host-rolled status lands on the player
+		p.statuses.clear()
+		var hp_gs := p.hp
+		game.hurt_player_skill(10.0, "freeze", 2.0)
+		check("guest skill bites keeper", p.hp < hp_gs, "hp=%.0f" % p.hp)
+		check("guest skill carries status", p.statuses.get("freeze", 0.0) > game.t)
+		p.statuses.clear()
+		var hp_gs2 := p.hp
+		game.hurt_player_skill(10.0, "", 0.0)
+		check("guest skill without status", p.hp < hp_gs2 and p.statuses.is_empty())
+		p.hp = hp_gs # leave the keeper as the test found him
 		# Dream Chaser (shadelump trick): BENCHED party shadelump
 		# still snipes at the deployed partner's fight
 		var dd: Kin = game.gen_pal("shadelump", 10, p.pos)
