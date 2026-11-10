@@ -71,3 +71,10 @@ warning reset shipped in `2f41030`.
 - S6 gamepad layer — IN PROGRESS (stick/dpad/buttons + menu nav)
 - S7 boss/endgame spine — NEXT
 - S8 numbers sim + platform/readiness — NEXT
+
+## Stage status (update 2)
+
+- S7 boss/endgame — DONE (phase-2 summons+slam, five Pact spires, crown state, HUD tally, save persistence)
+- S8 numbers sim — DONE (`tools/sim_balance.gd` — real-formula probe; found+buffed legendary_orb 95→110)
+- S9 localization + store shell — NEXT
+- S10 hero art/audio depth — NEXT
