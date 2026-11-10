@@ -235,6 +235,7 @@ func _on_server_disconnected() -> void:
 	game.clear_net_drops() # replica loot dies with the session too
 	is_host = false
 	multiplayer.multiplayer_peer = null # a dead peer must not keep net_live() true
+	game.net_danger = false # the raid verdict belonged to the session — rejoin clean
 	game.log_msg("Host disconnected")
 
 func spawn_ghost(id: int) -> void:
