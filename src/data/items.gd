@@ -544,7 +544,7 @@ const ITEMS = {
   "color": "#e64533",
   "kind": "orb",
   "stack": 50,
-  "spherePower": 95,
+  "spherePower": 110,
   "desc": "Best orb."
  },
  "wooden_club": {
