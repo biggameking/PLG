@@ -581,6 +581,9 @@ func _draw() -> void:
 		for dm in game.death_marks: # Palworld tombstones — guide the corpse run
 			var dp := mr.position + Vector2(dm.x / game.world.WORLD_W * ms, dm.y / game.world.WORLD_H * ms)
 			draw_rect(Rect2(dp - Vector2(2, 2), Vector2(4, 4)), Color(0.95, 0.2, 0.2))
+		if game.treasure: # the surveyor's X — follow it and dig
+			var tp := mr.position + Vector2(game.treasure["pos"].x / game.world.WORLD_W * ms, game.treasure["pos"].y / game.world.WORLD_H * ms)
+			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Color(1.0, 0.84, 0.28))
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()
@@ -975,6 +978,8 @@ func use_item(k: String) -> void:
 			game.fertilize()
 		"pal_bait":
 			game.throw_bait()
+		"treasure_map":
+			game.use_treasure_map()
 		_:
 			if k.begins_with("skill_fruit_"):
 				game.teach_skill_fruit(k)

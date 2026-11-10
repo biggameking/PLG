@@ -616,6 +616,7 @@ var weather := "clear"  # "clear" | "rain" | "storm" — rolls every couple of g
 var weather_t := 0.0
 var explored := PackedByteArray() # fog of war — one byte per world cell
 var lure := {}                   # thrown bait {pos, till} — one pile at a time
+var treasure := {}               # treasure-map dig spot {pos} — one chart at a time
 var reveal_t := 0.0               # throttle: sight updates twice a second
 var focus_target: Pal = null      # Palworld focus fire: the pal you last hit
 var focus_t := 0.0                # ...stays the partner's priority for 4s
@@ -906,6 +907,52 @@ func tick_daedream() -> void:
 	tgt.hit(Combat.damage(datk, 14, Combat.stat_at(tgt.spec["def"],
 		tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult(), 1.0, rng), 1.0, true)
 	floater(tgt.pos, "dream chaser!", "#b06ee8")
+
+func use_treasure_map() -> void:
+	if not items.get("treasure_map", 0):
+		return
+	# a surveyor's chart picks real ground: open land, a decent walk away
+	var spot := Vector2(-1, -1)
+	for i in range(60):
+		var a: float = rng.next() * TAU
+		var d: float = 30.0 + rng.next() * 45.0
+		var c := player.pos + Vector2(cos(a), sin(a)) * d
+		var ix := int(c.x); var iy := int(c.y)
+		if world.in_bounds(ix, iy) and world.tile_at(ix, iy) != World.Tile.WATER:
+			spot = Vector2(ix + 0.5, iy + 0.5)
+			break
+	if spot.x < 0:
+		log_msg("The chart is illegible here — nothing to mark")
+		return # map stays in the pack
+	items["treasure_map"] -= 1
+	if items["treasure_map"] <= 0:
+		items.erase("treasure_map")
+	treasure = {"pos": spot}
+	log_msg("The chart marks a spot — check your map")
+	sfx_play("drop")
+
+func dig_check() -> void: # called on the frame tick — standing on the X digs
+	if lure and t > float(lure.get("till", 0.0)):
+		lure = {} # the mash went cold — clear the stale pile
+	if not treasure:
+		return
+	if player.pos.distance_to(treasure["pos"]) > 1.4:
+		return
+	treasure = {}
+	var coin := rng.int_range(15, 40)
+	add_item("gold_coin", coin)
+	var bonus := rng.next()
+	if bonus < 0.10:
+		add_item("huge_pal_egg", 1)
+	elif bonus < 0.45:
+		add_item("paldium", 4)
+	elif bonus < 0.80:
+		add_item("ingot", 3)
+	else:
+		add_item("mega_sphere", 2)
+	floater(player.pos, "TREASURE!", "#ffd76e")
+	log_msg("Unearthed a cache: %d gold and a keepsake" % coin)
+	sfx_play("level")
 
 func throw_bait() -> void:
 	if not items.get("pal_bait", 0):
@@ -1317,6 +1364,7 @@ func _process(dt: float) -> void:
 			resolve_sphere(sp)
 			spheres_flying.erase(sp)
 	tick_production(dt)
+	dig_check()
 	tick_merchant(dt)
 	tick_boss_respawns()
 	assist_t += dt
@@ -2787,6 +2835,7 @@ func save_game() -> void:
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"explored": explored,
+		"treasure": ([treasure["pos"].x, treasure["pos"].y] if treasure else null),
 		"player": {"pos": [player.pos.x, player.pos.y], "hp": player.hp,
 			"hunger": player.hunger, "stamina": player.stamina,
 			"level": player.level, "xp": player.xp, "cap_lv": player.capture_level,
@@ -2892,6 +2941,8 @@ func load_game() -> bool:
 		explored = ex
 	else:
 		explored.clear(); explored.resize(world.WORLD_W * world.WORLD_H)
+	var tr = d.get("treasure", null) # a marked X rides the save too
+	treasure = {"pos": Vector2(float(tr[0]), float(tr[1]))} if tr is Array and tr.size() == 2 else {}
 	work_mode = clampi(int(d.get("wmode", 1)), 0, WORK_MODES.size() - 1)
 	base_level = clampi(int(d.get("blev", 1)), 1, BASE_LEVEL_MAX) # foreign save can't over-level the base
 	mission_idx = clampi(int(d.get("missions", 0)), 0, MISSIONS.size())
@@ -3804,6 +3855,7 @@ func regenerate(s: int) -> void:
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
+	lure = {}; treasure = {} # tossed bait and marked charts belong to the old world
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
 	drawer.setup(world)
@@ -4243,7 +4295,7 @@ const MERCH_POOL := ["pal_sphere", "mega_sphere", "low_medical", "medical_suppli
 	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",
 	"skill_fruit_neutral", "skill_fruit_fire", "skill_fruit_water", "skill_fruit_grass",
 	"skill_fruit_electric", "skill_fruit_ice", "skill_fruit_ground", "skill_fruit_dark",
-	"skill_fruit_dragon", "cake", "pal_egg", "memory_wipe"]
+	"skill_fruit_dragon", "cake", "pal_egg", "memory_wipe", "treasure_map"]
 
 func gen_merchant_stock() -> void:
 	merchant_stock.clear()

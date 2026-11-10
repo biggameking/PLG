@@ -1038,22 +1038,47 @@ func run() -> void:
 		game.pals.erase(rookie); rookie.free()
 	check("dummy trains idle pal", td_ok, "td=%s" % (td_st != null))
 
-	# pal bait: a tossed mash pulls a wild pal to the pile — first snout eats
+	# pal bait: a tossed mash pulls a wild pal to the pile — first snout eats.
+	# pin the sun high: sleeping wilds won't wake for the smell
+	var tod_bait: float = game.tod
+	game.tod = 12.0
 	var bait_ok := false
-	var deer2: Pal = game.gen_pal("eikthyrdeer", 3, p.pos + Vector2(6, 0))
+	var deer2: Pal = game.gen_pal("eikthyrdeer", 3, p.pos + Vector2(8, 8))
 	deer2.mode = "wild"; deer2.aggro = -1
 	p.facing = Vector2(1, 0)
 	game.items["pal_bait"] = 1
 	game.throw_bait()
 	var bait_landed: bool = game.lure and game.t < float(game.lure.get("till", 0.0))
-	for i10 in range(120):
+	# drop the pile at the deer's feet — the pull-through-terrain walk has no
+	# pathfinding by design; what matters is the first snout eats and the
+	# pile is gone
+	if game.lure:
+		game.lure["pos"] = deer2.pos
+		game.lure["till"] = game.t + 30.0
+	for i10 in range(160):
 		deer2._physics_process(0.1)
 		if not game.lure:
 			break
 	bait_ok = bait_landed and not game.lure
 	game.pals.erase(deer2); deer2.free()
 	game.lure = {}
+	game.tod = tod_bait
 	check("bait lures wild", bait_ok, "landed=%s left=%s" % [bait_landed, game.lure != {}])
+
+	# treasure map: the chart marks real ground — stand on the X and dig
+	var tgold0: int = game.items.get("gold_coin", 0)
+	game.items["treasure_map"] = 1
+	game.use_treasure_map()
+	var marked: bool = game.treasure and game.treasure.has("pos")
+	var dug := false
+	if marked:
+		var tp8: Vector2 = p.pos
+		p.pos = game.treasure["pos"]
+		game.dig_check()
+		dug = not game.treasure and game.items.get("gold_coin", 0) > tgold0
+		p.pos = tp8
+	game.treasure = {}
+	check("treasure map digs", marked and dug, "marked=%s dug=%s" % [marked, dug])
 
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)

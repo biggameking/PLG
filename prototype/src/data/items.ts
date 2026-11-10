@@ -29,6 +29,7 @@ export const ITEMS: Record<string, ItemDef> = {
   raw_fish: { id: "raw_fish", name: "Raw Fish", glyph: "≋", color: "#6aa8d8", kind: "food", perish: true, stack: 999, food: 25, desc: "Fresh from the weir — better cooked." },
   fried_fish: { id: "fried_fish", name: "Fried Fish", glyph: "≋", color: "#d8a84a", kind: "food", stack: 999, food: 55, buff: { spd: 0.15, t: 300 }, desc: "Crisp shore-side fare — +15% speed for a while." },
   pal_bait: { id: "pal_bait", name: "Pal Bait", glyph: "❁", color: "#d8b84a", kind: "material", stack: 999, price: 8, desc: "A honeyed berry mash — toss it out and hungry wild pals come sniffing." },
+  treasure_map: { id: "treasure_map", name: "Treasure Map", glyph: "✕", color: "#c9a15a", kind: "material", stack: 999, price: 60, desc: "A surveyor's faded chart — follow the gold mark and dig where it lands." },
   fiber: { id: "fiber", name: "Fiber", glyph: "∽", color: "#9acd32", kind: "material", stack: 999, desc: "Plant fibers for cordage." },
   paldium: { id: "paldium", name: "Paldium Fragment", glyph: "◊", color: "#4dd0e1", kind: "material", stack: 999, desc: "Glowing fragment; sphere crafting." },
   ore: { id: "ore", name: "Ore", glyph: "▓", color: "#a0622d", kind: "material", stack: 999, desc: "Smelt into ingots." },

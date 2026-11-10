@@ -127,7 +127,9 @@ MAPS, WILDS AND THE LONG GAME
 
 Your map fills as you walk — fog lifts only where you've
 been. Waypoints blink you between bases; more palboxes mean
-more yards, all sharing the one box.
+more yards, all sharing the one box. A trader may sell you
+a faded treasure chart — follow the gold X on your map and
+dig where it lands.
 
 The expedition post sends a gatherer off-map for ten minutes
 and brings back a haul keyed to its element. The statues

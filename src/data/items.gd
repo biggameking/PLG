@@ -29,7 +29,17 @@ const ITEMS = {
   "price": 1,
   "desc": "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it."
  },
-"pal_bait": {
+"treasure_map": {
+  "id": "treasure_map",
+  "name": "Treasure Map",
+  "glyph": "✕",
+  "color": "#c9a15a",
+  "kind": "material",
+  "stack": 999,
+  "price": 60,
+  "desc": "A surveyor's faded chart — follow the gold mark and dig where it lands."
+ },
+ "pal_bait": {
   "id": "pal_bait",
   "name": "Pal Bait",
   "glyph": "❁",
