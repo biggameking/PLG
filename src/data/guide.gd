@@ -172,7 +172,9 @@ can take the escort.
 Chests hide in grottos and lairs; the third chamber guards
 something old. And keep a notice board by the gate: each dawn
 a fresh request goes up — fill it before dark for coin and
-credit worth more than the goods.""",
+credit worth more than the goods. Some mornings the guild
+posts a cull instead: thin a named species and the board pays
+out in the field — a bag or a box both count as thinning.""",
 """— VOL. VIII —
 MAPS, WILDS AND THE LONG GAME
 

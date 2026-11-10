@@ -1202,6 +1202,20 @@ func run() -> void:
 		game.board_quest = {}
 	check("board pays the ask", nb_ok, "nb=%s" % (nb_k.x >= 0))
 
+	# hunt posting: the guild pays in the field — bag or box both thin the herd
+	var hq0: Dictionary = game.board_quest
+	game.board_quest = {"kind": "hunt", "sp": "lamball", "n": 2, "got": 0, "day": game.day}
+	var hq_gold0: int = game.item_count("gold_coin")
+	game.board_hunt_credit("chikipi") # wrong species must not move the count
+	game.board_hunt_credit("lamball")
+	var hq_mid: int = int(game.board_quest["got"])
+	game.board_hunt_credit("lamball")
+	check("hunt posting fills in the field", hq_mid == 1 \
+		and str(game.board_quest.get("kind", "")) == "done" \
+		and game.item_count("gold_coin") > hq_gold0,
+		"got=%d kind=%s" % [hq_mid, game.board_quest.get("kind", "")])
+	game.board_quest = hq0
+
 	# snare trap: a wild foot on the plate is held fast — and the spring is spent
 	game.add_item("wood", 5); game.add_item("fiber", 2)
 	var sn_k: Vector2i = free_xy.call("snare_trap")

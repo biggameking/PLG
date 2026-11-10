@@ -473,6 +473,8 @@ func kill_pal(p: Pal, by_player: bool) -> void:
 			log_msg("Found a %s!" % ItemData.ITEMS[sch2]["name"])
 		if p.boss:
 			add_item("ancient_part", rng.int_range(2, 4))
+		if by_player:
+			board_hunt_credit(p.species_id)
 		gain_xp(p.level * 4)
 	if p.carry != null: # a hauler's load doesn't die with it
 		spawn_drop(p.carry["id"], p.carry["n"], p.pos)
@@ -1051,6 +1053,7 @@ func resolve_sphere(sp) -> void:
 			floater(target.pos, "STREAK x%d!" % catch_streak, "#ffd76e")
 		# Palworld catch-count bonus: every 10th of a species pays a fat bonus
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
+		board_hunt_credit(target.species_id) # a boxed pal still thins the herd
 		if catch_counts[target.species_id] % 10 == 0:
 			var bonus := target.level * 8
 			gain_xp(bonus)
@@ -3040,7 +3043,9 @@ func load_game() -> bool:
 	weather_t = clampf(float(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	pray_cd = t + clampf(float(d.get("pray_left", 0.0)), 0.0, 600.0)
 	var bq = d.get("board_quest", {})
-	board_quest = {"id": str(bq.get("id", "")), "n": clampi(int(bq.get("n", 0)), 0, 999),
+	board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
+		"sp": str(bq.get("sp", "")), "n": clampi(int(bq.get("n", 0)), 0, 999),
+		"got": clampi(int(bq.get("got", 0)), 0, 999),
 		"day": int(bq.get("day", -1))} if bq is Dictionary else {} # foreign saves can't mint an open contract
 	var ex = d.get("explored", null) # fog of war rides the save — or starts dark
 	if ex is PackedByteArray and ex.size() == world.WORLD_W * world.WORLD_H:
@@ -4532,13 +4537,27 @@ var catch_streak := 0 # consecutive captures — a hand that never fumbles earns
 
 const BOARD_POOL := [["wood", 10], ["stone", 8], ["fiber", 8], ["red_berries", 8],
 	["mushroom", 5], ["wool", 3], ["raw_fish", 3], ["honey", 2], ["milk", 3]]
-var board_quest := {} # {id,n,day} — one standing request per dawn, rolled lazily
+var board_quest := {} # supply:{kind,id,n,day} hunt:{kind,sp,n,got,day} — one per dawn
+
+const HUNT_POOL := ["lamball", "chikipi", "lifmunk", "cattiva", "tanzee",
+	"foxparks", "jolthog", "fuack", "pengullet", "cremis", "sparkit", "mau",
+	"rushoar", "eikthyrdeer", "mozzarina", "depresso", "daedream", "dumud", "penking"]
 
 func notice_board_action() -> void:
 	if int(board_quest.get("day", -1)) != day:
-		var pick: Array = BOARD_POOL[rng.int_range(0, BOARD_POOL.size() - 1)]
-		board_quest = {"id": pick[0], "n": pick[1], "day": day}
-	var qid: String = board_quest.get("id", "")
+		if rng.chance(0.5): # half the mornings want goods, half want thinning
+			var pick: Array = BOARD_POOL[rng.int_range(0, BOARD_POOL.size() - 1)]
+			board_quest = {"kind": "supply", "id": pick[0], "n": pick[1], "day": day}
+		else:
+			board_quest = {"kind": "hunt", "sp": HUNT_POOL[rng.int_range(0, HUNT_POOL.size() - 1)],
+				"n": rng.int_range(2, 4), "got": 0, "day": day}
+	var qk: String = str(board_quest.get("kind", "supply"))
+	if qk == "hunt":
+		var sname: String = SpeciesData.species_of(board_quest["sp"]).get("name", board_quest["sp"])
+		log_msg("Notice board: cull %d %s (%d/%d) — kill or capture counts" % \
+			[int(board_quest["n"]), sname, int(board_quest.get("got", 0)), int(board_quest["n"])])
+		return
+	var qid: String = str(board_quest.get("id", ""))
 	if qid == "":
 		log_msg("Notice board: today's request is filled — come back at dawn")
 		return
@@ -4554,6 +4573,25 @@ func notice_board_action() -> void:
 	floater(player.pos, "+%d gold" % gold, "#ffd76e")
 	log_msg("Board request filled: %d %s → +%d gold" % [qn, iname, gold])
 	board_quest["id"] = "" # filled — the board stays quiet until tomorrow
+
+func board_hunt_credit(sp: String) -> void:
+	# the guild pays for thinning whether the pal leaves in a bag or a box
+	if str(board_quest.get("kind", "")) != "hunt" \
+			or str(board_quest.get("sp", "")) != sp \
+			or int(board_quest.get("day", -1)) != day:
+		return
+	board_quest["got"] = int(board_quest.get("got", 0)) + 1
+	var need: int = int(board_quest["n"])
+	var sname: String = SpeciesData.species_of(sp).get("name", sp)
+	if int(board_quest["got"]) >= need:
+		var gold: int = need * 25
+		add_item("gold_coin", gold)
+		gain_xp(need * 15)
+		floater(player.pos, "HUNT FILLED +%dg" % gold, "#ffd76e")
+		log_msg("Hunt filled: %d %s → +%d gold" % [need, sname, gold])
+		board_quest["kind"] = "done"
+	else:
+		log_msg("Hunt: %s %d/%d" % [sname, int(board_quest["got"]), need])
 
 const MERCH_POOL := ["pal_sphere", "mega_sphere", "low_medical", "medical_supplies",
 	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",
