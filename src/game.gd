@@ -1656,10 +1656,51 @@ func queue_redraw_decor() -> void:
 func net_live() -> bool:
 	return net != null and net.multiplayer.multiplayer_peer != null
 
+# ---- contextual hints: condition-driven, self-retiring nudges ----
+# Each entry: condition lambda -> text. A hint shows while its condition is
+# true; most retire permanently once their action happened (or after `once`
+# seconds of cumulative display). Max 3 on screen.
+var HINTS := [
+	{"id": "orb", "once": 20.0,
+	 "text": "Q aims — click a wild kin to throw an orb",
+	 "cond": func(g): return g.item_count("kin_orb") > 0 and g.catch_counts.is_empty() and g.player != null},
+	{"id": "build", "once": 25.0,
+	 "text": "B builds — a workbench turns wood + stone into gear",
+	 "cond": func(g): return g.kinbox_pos.x >= 0 and not g.structures.values().any(func(s): return s["id"] == "workbench")},
+	{"id": "eat", "once": 12.0,
+	 "text": "You're starving — eat berries or cooked food (I opens the bag)",
+	 "cond": func(g): return g.player != null and g.player.hunger < 25.0},
+	{"id": "night", "once": 15.0,
+	 "text": "Night bites cold — carry a torch or stand by a fire",
+	 "cond": func(g): return g.is_night() and g.player != null and g.item_count("torch") > 0 and g.player.equipment.get("weapon") != "torch"},
+	{"id": "san", "once": 15.0,
+	 "text": "A kin is flagging — feed it and let it rest",
+	 "cond": func(g): return g.pals.any(func(q): return q.mode in ["partner", "base"] and q.san < 30.0)},
+]
+var hint_seen := {} # id -> cumulative seconds shown
+
+func active_hints() -> Array:
+	if state != "play" or player == null:
+		return []
+	var out := []
+	for h in HINTS:
+		if out.size() >= 3:
+			break
+		if float(hint_seen.get(h["id"], 0.0)) >= h["once"]:
+			continue # retired after its fair share of screen time
+		if h["cond"].call(self):
+			out.append(h)
+	return out
+
+func tick_hints(dt: float) -> void:
+	for h in active_hints():
+		hint_seen[h["id"]] = float(hint_seen.get(h["id"], 0.0)) + dt
+
 func _process(dt: float) -> void:
 	if state != "play" and not net_live():
 		return # title/pause freeze the island's clock (net sessions never pause)
 	t += dt
+	tick_hints(dt)
 	if net == null or not net.is_client(): # clients take tod from env_sync — the host's clock owns the sky
 		tod += dt / DAY_LEN * 24.0
 		if tod >= 24.0:

@@ -4185,6 +4185,15 @@ func run() -> void:
 	check("migrate mimic+respawns", mst["mimic"] == "shadelump" and md["respawns"][0]["sid"] == "scalbeak")
 	check("migrate gear+flags", md["equip"]["weapon"] == "orb_launcher" and md["mflags"].has("orb"))
 
+	# ---- S4: contextual hints fire and retire ----
+	game.hint_seen.clear()
+	game.player.hunger = 10.0
+	var hts := game.active_hints()
+	check("hunger hint fires", hts.any(func(h): return h["id"] == "eat"), "%d hints" % hts.size())
+	game.tick_hints(60.0)
+	check("hint retires", not game.active_hints().any(func(h): return h["id"] == "eat"))
+	game.player.hunger = 100.0
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)

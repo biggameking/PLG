@@ -561,7 +561,13 @@ func _draw() -> void:
 	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
 		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
 		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8d44d"))
+	var hy := 62.0
+	for h in game.active_hints(): # contextual nudges — retire themselves
+		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
+		draw_string(font, Vector2(r.x - 212, hy), "» " + h["text"],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.85, 0.9, 0.95))
+		hy += 17
 	var my := r.y - 24
 	for i in range(game.messages.size()):
 		var m: String = game.messages[game.messages.size() - 1 - i]
