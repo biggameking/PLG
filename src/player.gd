@@ -276,10 +276,10 @@ func _physics_process(dt: float) -> void:
 	# all day; the far south scorches by day (a swim or cooling armor saves
 	# you) and snaps cold again after dark, desert-style.
 	var warm := float(ItemData.ITEMS.get(equipment["armor"], {}).get("warm", 0))
-	var cool := float(ItemData.ITEMS.get(equipment["armor"], {}).get("cool", 0))
+	var cool := float(ItemData.ITEMS.get(equipment["armor"], {}).get("cool", 0)) + meal_bonus("cool")
 	var cl: String = game.world.climate_at(pos)
 	var swim: bool = game.world.tile_at(int(pos.x), int(pos.y)) == World.Tile.WATER
-	var freezing: bool = cl == "cold" or game.is_night()
+	var freezing: bool = (cl == "cold" or game.is_night()) and meal_bonus("warm") <= 0.0
 	var scorching: bool = cl == "hot" and not game.is_night() and not swim and cool <= 0.0
 	if hp > max_hp * 0.3 and ((freezing and game.nearest_heat(pos) > 10.0 + warm * 4.0) or scorching):
 		cold_t += dt
@@ -379,6 +379,9 @@ func meal_bonus(stat: String) -> float:
 
 func eat_buff(b: Dictionary) -> void:
 	meal_buff = {"atk": b.get("atk", 0.0), "def": b.get("def", 0.0), "spd": b.get("spd", 0.0)}
+	for k in ["warm", "cool"]: # climate fare carries flags, not stats
+		if float(b.get(k, 0.0)) > 0.0:
+			meal_buff[k] = 1.0
 	for k in meal_buff.keys(): # keep only the stats the meal actually grants
 		if float(meal_buff[k]) <= 0.0:
 			meal_buff.erase(k)

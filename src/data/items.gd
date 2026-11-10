@@ -399,6 +399,28 @@ const ITEMS = {
   "buff": {"spd": 0.15, "t": 300},
   "desc": "Crisp shore-side fare — +15% speed for a while."
  },
+ "spicy_stew": {
+  "id": "spicy_stew",
+  "name": "Spicy Stew",
+  "glyph": "♨",
+  "color": "#c04830",
+  "kind": "food",
+  "stack": 999,
+  "food": 65,
+  "buff": {"warm": 1, "t": 300},
+  "desc": "Campfire chili — an inner hearth no chill can reach, for a while."
+ },
+ "mint_salad": {
+  "id": "mint_salad",
+  "name": "Mint Salad",
+  "glyph": "❧",
+  "color": "#7ac08a",
+  "kind": "food",
+  "stack": 999,
+  "food": 40,
+  "buff": {"cool": 1, "t": 300},
+  "desc": "Crisp leaves and cold greens — the noon sun slides off you, for a while."
+ },
  "roast_mutton": {
   "id": "roast_mutton",
   "name": "Roast Mutton",
@@ -1496,6 +1518,44 @@ const RECIPES = [
   ],
   "station": "campfire",
   "work": 50
+ },
+ {
+  "id": "spicy_stew",
+  "out": [
+   "spicy_stew",
+   1
+  ],
+  "cost": [
+   [
+    "lamball_mutton",
+    1
+   ],
+   [
+    "red_berries",
+    3
+   ]
+  ],
+  "station": "campfire",
+  "work": 50
+ },
+ {
+  "id": "mint_salad",
+  "out": [
+   "mint_salad",
+   1
+  ],
+  "cost": [
+   [
+    "mushroom",
+    2
+   ],
+   [
+    "wheat",
+    1
+   ]
+  ],
+  "station": "workbench",
+  "work": 30
  },
  {
   "id": "fried_egg",

@@ -27,7 +27,9 @@ back again — choose the sky your yard needs.
 
 The far north freezes around the clock. The far south scorches
 by day and snaps cold at night. Pack warm fur and a tropical
-weave before you go looking for the legendary dens.""",
+weave before you go looking for the legendary dens — or pack the
+kettle instead: a spicy stew keeps an inner hearth burning through
+any chill, and a cold mint salad lets the noon sun slide off.""",
 """— VOL. II —
 THE ART OF THE BALL
 

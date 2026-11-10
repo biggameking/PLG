@@ -2687,6 +2687,17 @@ func run() -> void:
 	p._physics_process(0.1)
 	check("meal buff expires", p.meal_buff.is_empty() and p.meal_bonus("atk") == 0.0,
 		"t=%.1f buff=%s" % [p.meal_t, str(p.meal_buff)])
+	# climate fare carries flags, not stats — a stew is a hearth in a bowl
+	game.add_item("spicy_stew", 1)
+	hudm.use_item("spicy_stew")
+	check("stew warms within", p.meal_bonus("warm") > 0.0,
+		"buff=%s" % str(p.meal_buff))
+	p.hunger = 30.0 # a full belly refuses dessert — room for the salad
+	game.add_item("mint_salad", 1)
+	hudm.use_item("mint_salad")
+	check("salad sheds the sun", p.meal_bonus("cool") > 0.0,
+		"buff=%s" % str(p.meal_buff))
+	p.meal_t = 0.0; p.meal_buff = {}
 	# sigil consumed on use
 	var sig0 := game.item_count("boss_sigil")
 	game.add_item("boss_sigil", 1)
