@@ -49,12 +49,14 @@ the interaction-verb layer was not. Closed in this pass:
 - **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence) and rumble on
   catch/hit all ship; UI rows aren't pad-scrollable inside panels yet.
 - **UI art**: still default-font panels + procedural icons; hero-species polish is procedural accessory layer only.
-- **BGM**: two procedural pads (day/night) — functional, not a produced score.
-- **MP — guest threat is melee-only**: host wildlife now engages the nearest
-  warm body (player OR ghost) and bites guests via `guest_hit` RPC — but
-  ranged skills still aim only the local player, and a guest's own projectiles
-  can't wound host wildlife. Full combat parity needs a real client-side
-  combat model — partially deferred.
+- **MP — guest combat parity is approximate**: host wildlife engages the
+  nearest warm body (player OR ghost), melee bites AND wild projectiles reach
+  guests via `guest_hit` (projectile damage sent as atk-equivalent —
+  `power * 1.2`, statuses don't transfer). Guest→host damage still runs
+  through `pal_hit` as before.
+- **BGM**: three procedural pads — day, night, and a minor danger drone that
+  swallows the mix during raids/gauntlets/phase-2 bosses. Reactive, not
+  produced.
 - **MP — orb claims aren't inventory-verified**: `sphere_catch`'s `sid` is client-claimed; the host validates it's a real sphere type but can't check the guest actually owns one (private rosters are client-side). Design limit.
 - **MP — no lobby/NAT traversal; client drop-reconciliation unimplemented** (drops only exist as host-synced replicas).
 - **Cosmetic phantom damage**: `tick_shadelump`/`update_projectiles` can flash damage on replicas; `pal_sync` reverts within a sync beat. Visual only.

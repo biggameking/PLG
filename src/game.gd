@@ -148,6 +148,8 @@ func _exit_tree() -> void:
 		music_day.stop(); music_day.stream = null
 	if music_night != null:
 		music_night.stop(); music_night.stream = null
+	if music_danger != null:
+		music_danger.stop(); music_danger.stream = null
 	SFX.clear()
 	CRIES.clear()
 
@@ -235,6 +237,15 @@ func _ready() -> void:
 	add_child(music_night)
 	if audio_live:
 		music_night.play()
+	# the danger layer: a low minor drone that swallows the pastoral pads when
+	# a raid wave, gauntlet or phase-two boss is on the field
+	music_danger = AudioStreamPlayer.new()
+	music_danger.stream = SfxLib.pad([[110.0, 130.8, 164.8], [103.8, 123.5, 155.6], [98.0, 116.5, 146.8], [110.0, 138.6, 164.8]])
+	music_danger.bus = "Music"
+	music_danger.volume_db = -80.0
+	add_child(music_danger)
+	if audio_live:
+		music_danger.play()
 	load_settings()
 	bind_gamepad()
 	has_save = FileAccess.file_exists("user://savegame.plg") # stat once at boot
@@ -584,6 +595,7 @@ func cry_for(sid: String) -> void:
 
 var music_day: AudioStreamPlayer
 var music_night: AudioStreamPlayer
+var music_danger: AudioStreamPlayer
 var sfx_idx := 0
 var audio_live := true
 func sfx_play(k: String) -> void:
@@ -1906,12 +1918,25 @@ func tick_hints(dt: float) -> void:
 		hint_seen[h["id"]] = float(hint_seen.get(h["id"], 0.0)) + dt
 
 # day/night pad crossfade — runs in every state so the title breathes too
+func danger_active() -> bool:
+	# what makes the island tense: a live raid wave, a running gauntlet,
+	# or an enraged (phase-2) boss still standing
+	if not gauntlet.is_empty():
+		return true
+	for q in pals:
+		if q.hp > 0 and (q.raid or (q.boss and q.phase == 2)):
+			return true
+	return false
+
 func tick_music(dt: float) -> void:
 	if music_day == null:
 		return
 	var night := is_night()
-	music_day.volume_db = move_toward(music_day.volume_db, -80.0 if night else -10.0, dt * 6.0)
-	music_night.volume_db = move_toward(music_night.volume_db, -10.0 if night else -80.0, dt * 6.0)
+	var danger := danger_active()
+	music_danger.volume_db = move_toward(music_danger.volume_db, -9.0 if danger else -80.0, dt * 8.0)
+	# while the drone is up the pastoral pads duck fully under it
+	music_day.volume_db = move_toward(music_day.volume_db, -80.0 if (night or danger) else -10.0, dt * 6.0)
+	music_night.volume_db = move_toward(music_night.volume_db, -10.0 if (night and not danger) else -80.0, dt * 6.0)
 
 func _process(dt: float) -> void:
 	tick_music(dt)
@@ -3410,7 +3435,16 @@ func update_projectiles(dt: float) -> void:
 				if pp.distance_to(player.pos) < 0.55:
 					skill_hit(caster, player, pr["skill"])
 					dead = true
-				else:
+				elif net != null: # a guest standing in the line of fire eats it —
+					for pid in net.ghosts: # host computes, the wire delivers
+						var g = net.ghosts[pid]
+						if g != null and g.net_pos.x >= 0 \
+								and pp.distance_to(Vector2(g.net_pos.x, g.net_pos.y)) < 0.55:
+							net.rpc_id(pid, "guest_hit",
+								float(pr["skill"].get("power", 10)) * 1.2)
+							dead = true
+							break
+				if not dead:
 					for p in pals.duplicate():
 						if p.mode in ["partner", "base"] and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 							skill_hit(caster, p, pr["skill"]) # wild shots hit partners AND base workers

@@ -109,3 +109,10 @@ Fixes shipped in `c775b20`; the authority contract is AGENTS.md rules 25–34.
 Deferred honestly: pad rumble, panel-gate coverage now complete but
 hold-to-repeat not implemented, Android preset unverified (local SDK lacks
 build-tools/apksigner).
+- S18 MP parity + reactive danger layer — DONE: wild projectiles now bite
+  guests (`update_projectiles` checks `net.ghosts`, `guest_hit` RPC sends
+  atk-equivalent damage); third procedural pad `music_danger` swallows the
+  mix during raids/gauntlets/phase-2 bosses and lifts when danger ends;
+  weather/STAB/freeze smoke assertions rewritten as absolute-delta checks —
+  double `int()` truncation at low base damage was producing seeded 1.2-vs-
+  1.15 ratio flakes, not a formula regression. Suite 8×0-fail, sim 0, IP CLEAN.

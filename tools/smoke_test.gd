@@ -1675,7 +1675,7 @@ func run() -> void:
 	cmb.hp = 99999; cmb.add_status("freeze", 5.0); game.rng.s = fzs
 	game.skill_hit(sp_pal, cmb, SkillData.SKILLS["stoneShot"])
 	var d_fz := 99999.0 - cmb.hp
-	check("freeze shatters", d_fz > d_nz and absf(d_fz / d_nz - 1.5) < 0.05
+	check("freeze shatters", d_fz > d_nz and absf(d_fz - d_nz * 1.5) <= 2.0
 		and not cmb.has_status("freeze"), "norm=%d frozen=%d" % [int(d_nz), int(d_fz)])
 	game.pals.erase(cmb)
 	if cmb.get_parent(): cmb.get_parent().remove_child(cmb)
@@ -1689,31 +1689,31 @@ func run() -> void:
 	var wt_held: String = game.weather
 	var dmgs := []
 	for wv in ["clear", "rain"]:
-		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["flameBurst"])
 		dmgs.append(99999 - int(wrp.hp))
-	check("rain dampens fire", dmgs[0] > 0 and absf(dmgs[1] / float(dmgs[0]) - 0.85) < 0.05,
+	check("rain dampens fire", dmgs[0] > 0 and absf(dmgs[1] - dmgs[0] * 0.85) <= 2.0,
 		"dry=%d wet=%d" % [dmgs[0], dmgs[1]])
 	var dmgs2 := []
 	for wv in ["clear", "rain"]:
-		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["hydroJet"])
 		dmgs2.append(99999 - int(wrp.hp))
-	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] / float(dmgs2[0]) - 1.15) < 0.05,
+	check("rain feeds water", dmgs2[0] > 0 and absf(dmgs2[1] - dmgs2[0] * 1.15) <= 2.0,
 		"dry=%d wet=%d" % [dmgs2[0], dmgs2[1]])
 	var dmgs3 := []
 	for wv in ["clear", "storm"]: # thunderstorm: electric hits crackle ~1.15x
-		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["shockwave"])
 		dmgs3.append(99999 - int(wrp.hp))
-	check("storm charges electric", dmgs3[0] > 0 and absf(dmgs3[1] / float(dmgs3[0]) - 1.15) < 0.05,
+	check("storm charges electric", dmgs3[0] > 0 and absf(dmgs3[1] - dmgs3[0] * 1.15) <= 2.0,
 		"dry=%d storm=%d" % [dmgs3[0], dmgs3[1]])
 	var dmgs4 := []
 	for wv in ["clear", "drought"]: # a parching sky feeds flame ~1.15x
-		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999
+		game.weather = wv; game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(wrc, wrp, SkillData.SKILLS["flameBurst"])
 		dmgs4.append(99999 - int(wrp.hp))
-	check("drought feeds flame", dmgs4[0] > 0 and absf(dmgs4[1] / float(dmgs4[0]) - 1.15) < 0.05,
+	check("drought feeds flame", dmgs4[0] > 0 and absf(dmgs4[1] - dmgs4[0] * 1.15) <= 2.0,
 		"dry=%d parch=%d" % [dmgs4[0], dmgs4[1]])
 	# STAB (the island): a kin in its own element hits ~1.2x — same seed, same power
 	var stabc: Kin = game.gen_pal("cindlump", 10, p.pos)
@@ -1721,10 +1721,10 @@ func run() -> void:
 	game.weather = "clear"
 	var stab_d := []
 	for el in ["neutral", "fire"]:
-		game.rng.s = s_held; wrp.hp = 99999
+		game.rng.s = s_held; wrp.hp = 99999; wrp.statuses.clear() # isolate: leftover soak/burn bends the next measure
 		game.skill_hit(stabc, wrp, {"power": 50, "element": el})
 		stab_d.append(99999 - int(wrp.hp))
-	check("own element hits harder", stab_d[0] > 0 and absf(stab_d[1] / float(stab_d[0]) - 1.2) < 0.05,
+	check("own element hits harder", stab_d[0] > 0 and absf(stab_d[1] - stab_d[0] * 1.2) <= 2.0,
 		"neutral=%d stab=%d" % [stab_d[0], stab_d[1]])
 	game.pals.erase(stabc)
 	if stabc.get_parent(): stabc.get_parent().remove_child(stabc)
@@ -4326,9 +4326,32 @@ func run() -> void:
 	# ---- S5: ambient score ----
 	check("music loops", game.music_day.stream != null and game.music_day.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and game.music_day.playing == game.audio_live)
 	game.tod = 22.0; game.tick_music(1.0)
-	check("night fade", game.music_day.volume_db < -10.0 and game.music_night.volume_db > -80.0)
+	# night fade: while the danger drone owns the mix both pastoral pads duck —
+	# the crossfade contract is day-ducked always, night-up only when calm
+	check("night fade", game.music_day.volume_db < -10.0
+		and (game.danger_active() or game.music_night.volume_db > -80.0))
 	game.tod = 12.0; game.tick_music(1.0)
-	check("day fade", game.music_day.volume_db > -80.0)
+	check("day fade", game.music_day.volume_db > -80.0 or game.danger_active())
+
+	# danger layer: a live raider swallows the pastoral mix until it's gone
+	var raid_pal: Kin = game.gen_pal("fenlump", 5, p.pos)
+	raid_pal.mode = "wild"; raid_pal.raid = true
+	game.pals.append(raid_pal)
+	for _i in 140: # ~0.8db/tick — the full -80→-9 climb needs the whole bar
+		game.tick_music(0.1)
+	check("danger pad swallows the mix", game.music_danger.volume_db > -20.0
+		and game.music_day.volume_db < -20.0 and game.music_night.volume_db < -20.0,
+		"dngr=%.0f day=%.0f night=%.0f" % [game.music_danger.volume_db,
+			game.music_day.volume_db, game.music_night.volume_db])
+	game.pals.erase(raid_pal)
+	if raid_pal.get_parent(): raid_pal.get_parent().remove_child(raid_pal)
+	raid_pal.free()
+	for _i in 110:
+		game.tick_music(0.1)
+	# if an earlier raid wave is still on the field the drone SHOULD stay —
+	# only assert the contract: calm means quiet
+	check("danger lifts", game.danger_active() or game.music_danger.volume_db < -60.0,
+		"dngr=%.0f active=%s" % [game.music_danger.volume_db, game.danger_active()])
 
 	# ---- S6: gamepad layer binds and routes ----
 	check("pad strike bound", InputMap.has_action("pad_strike")
