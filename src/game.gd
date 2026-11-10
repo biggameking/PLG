@@ -219,6 +219,7 @@ func _ready() -> void:
 	add_child(music_night)
 	music_night.play()
 	load_settings()
+	bind_gamepad()
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
 	# player
@@ -1685,6 +1686,40 @@ func nearest_chest_cell(at: Vector2, id: String = "") -> Vector2i:
 signal decor_dirty
 func queue_redraw_decor() -> void:
 	decor_dirty.emit()
+
+# gamepad layer: bindings are added at runtime so project.godot's input map
+# stays keyboard-clean, and headless runs bind identically. ui_* actions keep
+# Godot's built-in pad defaults (A confirm, dpad/stick nav, B cancel).
+func _pad_btn(action: String, b: int) -> void:
+	var e := InputEventJoypadButton.new()
+	e.button_index = b
+	InputMap.action_add_event(action, e)
+
+func _pad_axis(action: String, ax: int, v: float) -> void:
+	var e := InputEventJoypadMotion.new()
+	e.axis = ax
+	e.axis_value = v
+	InputMap.action_add_event(action, e)
+
+func bind_gamepad() -> void:
+	_pad_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
+	_pad_axis("move_right", JOY_AXIS_LEFT_X, 1.0)
+	_pad_axis("move_up", JOY_AXIS_LEFT_Y, -1.0)
+	_pad_axis("move_down", JOY_AXIS_LEFT_Y, 1.0)
+	_pad_axis("sprint", JOY_AXIS_TRIGGER_LEFT, 1.0) # LT held = sprint
+	if not InputMap.has_action("pad_strike"):
+		InputMap.add_action("pad_strike") # RT: swing when idle, throw when aiming
+	_pad_axis("pad_strike", JOY_AXIS_TRIGGER_RIGHT, 1.0)
+	_pad_btn("interact", JOY_BUTTON_A)
+	_pad_btn("dodge", JOY_BUTTON_B)
+	_pad_btn("aim", JOY_BUTTON_X)
+	_pad_btn("cycle_sphere", JOY_BUTTON_Y)
+	_pad_btn("party_toggle", JOY_BUTTON_RIGHT_SHOULDER)
+	_pad_btn("pal_stance", JOY_BUTTON_LEFT_SHOULDER)
+	_pad_btn("build", JOY_BUTTON_BACK)
+	_pad_btn("ui_cancel", JOY_BUTTON_START)
+	_pad_axis("zoom_in", JOY_AXIS_RIGHT_Y, -1.0)
+	_pad_axis("zoom_out", JOY_AXIS_RIGHT_Y, 1.0)
 
 func net_live() -> bool:
 	# presence is not liveness — a dropped/failed peer must not hold the sim open

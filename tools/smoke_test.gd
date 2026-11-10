@@ -4225,6 +4225,22 @@ func run() -> void:
 	game.tod = 12.0; game.tick_music(1.0)
 	check("day fade", game.music_day.volume_db > -80.0)
 
+	# ---- S6: gamepad layer binds and routes ----
+	check("pad strike bound", InputMap.has_action("pad_strike")
+		and InputMap.action_get_events("pad_strike").size() > 0)
+	check("pad move bound", InputMap.action_get_events("move_left").any(
+		func(e): return e is InputEventJoypadMotion))
+	check("pad cancel bound", InputMap.action_get_events("ui_cancel").any(
+		func(e): return e is InputEventJoypadButton))
+	# shell menus don't leak input to the sim: a swing at pause must not fire
+	game.state = "paused"
+	var ac0 := game.player.atk_cd
+	var pev := InputEventMouseButton.new()
+	pev.button_index = MOUSE_BUTTON_LEFT; pev.pressed = true
+	game.player._unhandled_input(pev)
+	check("pause swallows strikes", game.player.atk_cd == ac0)
+	game.state = "play"
+
 	# net host (no client join in same proc)
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)

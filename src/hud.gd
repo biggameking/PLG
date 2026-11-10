@@ -8,6 +8,7 @@ var show_help := false
 var guide_page := 0
 var dex_scroll := 0
 var build_sel := -1
+var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
 var join_buf := ""
@@ -60,25 +61,26 @@ func _process(_dt: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	# shell states own the whole input stack — menus don't leak to gameplay
-	if game.state == "title":
-		if event.is_action_pressed("ui_cancel") and game.panel != "":
-			game.panel = "" # Esc backs out of settings on the title
-			return
-		if event is InputEventKey and event.pressed and game.panel == "" and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
-			run_click({"act": "continue" if FileAccess.file_exists("user://savegame.plg") else "new_game", "arg": null})
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			for cr in click_rects:
-				if cr["rect"].has_point(event.position):
-					run_click(cr)
-					break
-		get_viewport().set_input_as_handled() # the shell owns every event here
-		return
-	if game.state == "paused":
+	if game.state == "title" or game.state == "paused":
 		if event.is_action_pressed("ui_cancel"):
 			if game.panel != "":
-				game.panel = "" # Esc leaves settings first, pause second
-			else:
+				game.panel = "" # Esc leaves settings first, its parent menu second
+			elif game.state == "paused":
 				game.state = "play"
+			get_viewport().set_input_as_handled()
+			return
+		# pad/dpad menu nav: stick and arrows move the cursor, A/Enter confirms
+		if event.is_action_pressed("ui_down"):
+			menu_sel = mini(menu_sel + 1, click_rects.size() - 1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_up"):
+			menu_sel = maxi(menu_sel - 1, 0)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_accept"):
+			if menu_sel < click_rects.size():
+				run_click(click_rects[menu_sel])
 			get_viewport().set_input_as_handled()
 			return
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -86,7 +88,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if cr["rect"].has_point(event.position):
 					run_click(cr)
 					break
-		get_viewport().set_input_as_handled()
+		get_viewport().set_input_as_handled() # the shell owns every event here
 		return
 	# chat input mode (net only)
 	if game.panel == "chat" and event is InputEventKey and event.pressed:
@@ -701,10 +703,17 @@ func _draw() -> void:
 		draw_title(r)
 	elif game.state == "paused" and game.panel == "":
 		draw_pause(r)
+	if game.state != "play" and not click_rects.is_empty():
+		menu_sel = clampi(menu_sel, 0, click_rects.size() - 1) # panels swap rows under the cursor
+		var msel: Rect2 = click_rects[menu_sel]["rect"]
+		draw_rect(msel, Color(0.55, 0.7, 0.95, 0.9), false, 2.0) # pad/arrow-key cursor
+		draw_string(font, Vector2(msel.position.x - 16, msel.position.y + 20), "»",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#8ef0ff"))
 
 func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Color = Color.WHITE) -> float:
 	var rr := Rect2(cx - w / 2, y, w, 30)
-	draw_rect(rr, Color(0.05, 0.05, 0.07, 0.9))
+	var hov := game.state != "play" and click_rects.size() == menu_sel # cursor row glows
+	draw_rect(rr, Color(0.09, 0.12, 0.16, 0.95) if hov else Color(0.05, 0.05, 0.07, 0.9))
 	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
 	click_rects.append({"rect": rr, "act": act, "arg": null})
 	draw_string(font, Vector2(cx - font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), label,

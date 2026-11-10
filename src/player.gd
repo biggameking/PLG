@@ -70,6 +70,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			throw_sphere()
 		else:
 			melee()
+	if event.is_action_pressed("pad_strike") and game.panel == "":
+		# the trigger is the click: swing by default, throw down the facing
+		# line while aiming — no cursor needed on a stick
+		if aiming:
+			throw_sphere(true)
+		else:
+			melee()
 
 func melee() -> void:
 	if atk_cd > 0:
@@ -142,7 +149,7 @@ func launch_sphere(wd: Dictionary) -> void:
 	game.add_item(sid, -1)
 	game.sphere_fly(sid, best)
 
-func throw_sphere() -> void:
+func throw_sphere(use_facing := false) -> void:
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
 		game.log_msg("No orbs! Craft kin_orb at a workbench.")
@@ -150,17 +157,32 @@ func throw_sphere() -> void:
 		return
 	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
 	var sid: String = tiers[sphere_sel]
-	var mpos := get_global_mouse_position()
-	var tw := Iso.from_screen(mpos.x, mpos.y, elev())
 	var best: Kin = null
-	var bd := 1.6
-	for p in game.pals:
-		if p.mode != "wild" or p.hp <= 0:
-			continue
-		var d := p.pos.distance_to(tw)
-		if d < bd:
-			bd = d
-			best = p
+	if use_facing:
+		# pad aim: the kin nearest the facing line inside ~5 tiles
+		var bd2 := 0.6
+		for p in game.pals:
+			if p.mode != "wild" or p.hp <= 0:
+				continue
+			var off: Vector2 = p.pos - pos
+			var d := off.length()
+			if d > 5.0 or d < 0.4:
+				continue
+			var dot := off.normalized().dot(facing.normalized())
+			if dot > bd2:
+				bd2 = dot
+				best = p
+	else:
+		var tw := Iso.from_screen(get_global_mouse_position().x,
+			get_global_mouse_position().y, elev())
+		var bd := 1.6
+		for p in game.pals:
+			if p.mode != "wild" or p.hp <= 0:
+				continue
+			var d := p.pos.distance_to(tw)
+			if d < bd:
+				bd = d
+				best = p
 	if not best:
 		return
 	game.add_item(sid, -1)
