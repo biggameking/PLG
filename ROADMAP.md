@@ -158,6 +158,16 @@ build-tools/apksigner).
   Deferred honestly: guest claims damage numbers (host clamps), forged
   build_req plants free unlocked structures (private-bag limit),
   guest armor invisible to host.
+- S19d–S19f movement cap + guest skill fire — DONE: sync_pos moved
+  from a per-packet cap (240 u/s effective at 20Hz) to a per-ghost
+  token bucket — 40 u/s accrual (mounted sprint peaks ~29), 6-tile
+  burst covers ~5 dropped packets, blinks drain it; host disconnect
+  now resets the mirrored net_danger; wild kin aggroed on a guest
+  cast real skills at ghost coordinates (cast_skills accepts Vector2
+  targets + a kinds filter — projectile/self only, lunge/burst need a
+  body); update_projectiles' freed-caster read reordered behind an
+  untyped is_instance_valid guard (killed the "previously freed
+  instance" error spam when a shooter died mid-flight).
 - S20 shell visual pass — DONE: procedural animated dawn behind the title
   (gradient sky, sun+glow, drifting clouds, sea, island ridge silhouette,
   rising motes — all driven by game.t); wordmark gets gold rule + twin orb
