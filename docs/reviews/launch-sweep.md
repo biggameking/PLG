@@ -48,7 +48,10 @@ the interaction-verb layer was not. Closed in this pass:
 - **Android preset unverified**: local SDK lacks `build-tools`/`apksigner`; also zero touch input implemented — treat mobile as not-a-target for this release.
 - **Pad**: nav, actions, hold-to-repeat (0.42s/0.09s cadence), rumble on
   catch/hit, and panel row navigation (dpad steps, A confirms) all ship.
-- **UI art**: still default-font panels + procedural icons; hero-species polish is procedural accessory layer only.
+- **UI art**: default font, but the shell got a real pass — animated
+  procedural dawn (sky/sea/island silhouette/motes), wordmark with gold rule
+  + orb sigils, header accents, row separators, cursor ticks. Hero-species
+  polish remains the procedural accessory layer.
 - **MP — guest combat parity is approximate**: host wildlife engages the
   nearest warm body (player OR ghost), melee bites AND wild projectiles reach
   guests via `guest_hit` (projectile damage sent as atk-equivalent —
@@ -57,8 +60,8 @@ the interaction-verb layer was not. Closed in this pass:
   damage number — host clamps it, can't re-derive guest gear math). Guest
   melee statuses still don't transfer; `danger` reaches clients via env_sync.
 - **BGM**: three procedural pads — day, night, and a minor danger drone that
-  swallows the mix during raids/gauntlets/phase-2 bosses. Reactive, not
-  produced.
+  swallows the mix during raids/gauntlets/phase-2 bosses — each with a
+  plucked arp layer so the drones carry a line. Reactive, still not produced.
 - **MP — orb claims aren't inventory-verified**: `sphere_catch`'s `sid` is client-claimed; the host validates it's a real sphere type but can't check the guest actually owns one (private rosters are client-side). Design limit.
 - **MP — no lobby/NAT traversal; client drop-reconciliation unimplemented** (drops only exist as host-synced replicas).
 - **Cosmetic phantom damage**: `tick_shadelump`/`update_projectiles` can flash damage on replicas; `pal_sync` reverts within a sync beat. Visual only.

@@ -40,8 +40,10 @@ static func noise(dur: float, vol := 0.5, decay := 8.0) -> AudioStreamWAV:
 	return s
 
 # looping ambient pad — chords crossfade inside each bar, frequencies are
-# quantized to whole cycles per bar so the loop wraps seamlessly
-static func pad(chords: Array, bar := 6.0, vol := 0.13) -> AudioStreamWAV:
+# quantized to whole cycles per bar so the loop wraps seamlessly. arp_step>0
+# layers a plucked voice walking the chord tones — the drone gets a melody
+# without leaving the loop (note slots land on buffer boundaries).
+static func pad(chords: Array, bar := 6.0, vol := 0.13, arp_step := 0.0, arp_vol := 0.05) -> AudioStreamWAV:
 	var n := int(RATE * bar * chords.size())
 	var data := PackedByteArray()
 	data.resize(n)
@@ -51,6 +53,7 @@ static func pad(chords: Array, bar := 6.0, vol := 0.13) -> AudioStreamWAV:
 		for f in ch:
 			qc.append(round(float(f) * bar) / bar)
 		q.append(qc)
+	var arp_pat := [0, 1, 2, 1, 0, 2, 1, 2] # chord-tone walk — reads like a line, not an arpeggiator demo
 	for i in n:
 		var t := float(i) / RATE
 		var ci := int(t / bar)
@@ -63,8 +66,14 @@ static func pad(chords: Array, bar := 6.0, vol := 0.13) -> AudioStreamWAV:
 			s += sin(TAU * f * lt) * out_env
 		for f in q[(ci + 1) % q.size()]:
 			s += sin(TAU * f * lt) * in_env
+		var v := vol * s / 3.0
+		if arp_step > 0.0:
+			var ni := int(t / arp_step)
+			var nt := t - ni * arp_step
+			var tone: float = q[ci][arp_pat[ni % arp_pat.size()] % q[ci].size()] * 2.0
+			v += arp_vol * exp(-6.0 * nt / arp_step) * (sin(TAU * tone * t) + 0.3 * sin(TAU * tone * 2.0 * t))
 		# gentle attack at t=0 keeps the sample edge quiet
-		data[i] = int(128 + 127 * vol * s / 3.0 * minf(1.0, t * 2.0))
+		data[i] = int(128 + 127 * v * minf(1.0, t * 2.0))
 	var st := AudioStreamWAV.new()
 	st.format = AudioStreamWAV.FORMAT_8_BITS
 	st.mix_rate = RATE

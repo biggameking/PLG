@@ -224,14 +224,14 @@ func _ready() -> void:
 	# ambient score: day and night pad loops crossfaded on the Music bus —
 	# no assets, synthesized at boot like the SFX bank
 	music_day = AudioStreamPlayer.new()
-	music_day.stream = SfxLib.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7], [164.8, 220.0, 261.6]])
+	music_day.stream = SfxLib.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7], [164.8, 220.0, 261.6]], 6.0, 0.13, 0.75, 0.05)
 	music_day.bus = "Music"
 	music_day.volume_db = -10.0
 	add_child(music_day)
 	if audio_live:
 		music_day.play()
 	music_night = AudioStreamPlayer.new()
-	music_night.stream = SfxLib.pad([[146.8, 174.6, 220.0], [130.8, 155.6, 196.0], [110.0, 146.8, 174.6], [123.5, 164.8, 196.0]])
+	music_night.stream = SfxLib.pad([[146.8, 174.6, 220.0], [130.8, 155.6, 196.0], [110.0, 146.8, 174.6], [123.5, 164.8, 196.0]], 6.0, 0.12, 1.0, 0.04)
 	music_night.bus = "Music"
 	music_night.volume_db = -80.0
 	add_child(music_night)
@@ -240,7 +240,7 @@ func _ready() -> void:
 	# the danger layer: a low minor drone that swallows the pastoral pads when
 	# a raid wave, gauntlet or phase-two boss is on the field
 	music_danger = AudioStreamPlayer.new()
-	music_danger.stream = SfxLib.pad([[110.0, 130.8, 164.8], [103.8, 123.5, 155.6], [98.0, 116.5, 146.8], [110.0, 138.6, 164.8]])
+	music_danger.stream = SfxLib.pad([[110.0, 130.8, 164.8], [103.8, 123.5, 155.6], [98.0, 116.5, 146.8], [110.0, 138.6, 164.8]], 6.0, 0.14, 0.3, 0.07)
 	music_danger.bus = "Music"
 	music_danger.volume_db = -80.0
 	add_child(music_danger)

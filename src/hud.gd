@@ -795,19 +795,70 @@ func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Co
 	var hov := (game.state != "play" or game.panel != "") and click_rects.size() == menu_sel # cursor row glows
 	draw_rect(rr, Color(0.09, 0.12, 0.16, 0.95) if hov else Color(0.05, 0.05, 0.07, 0.9))
 	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
+	if hov:
+		draw_rect(Rect2(rr.position + Vector2(2, 4), Vector2(3, 22)), Color("#8ef0ff")) # cursor tick — the eye finds the live row before the border
+	draw_rect(Rect2(cx - w / 2 + 1, y + 29, w - 2, 1), Color(1, 1, 1, 0.05)) # row separator — list rhythm without noise
 	click_rects.append({"rect": rr, "act": act, "arg": null})
 	var tl := tr(label)
 	draw_string(font, Vector2(cx - font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), tl,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col)
 	return y + 40
 
+func draw_title_sky(r: Vector2) -> void:
+	# procedural dawn over the Wildmere — the title should read as a place,
+	# not a menu on a dim rectangle. All motion runs off game.t: same seeds,
+	# same frame, on any machine.
+	var t := game.t
+	var sky_top := Color(0.10, 0.18, 0.34)
+	var sky_bot := Color(0.58, 0.40, 0.46)
+	for i in 16:
+		draw_rect(Rect2(0, r.y * i / 16.0, r.x, r.y / 16.0 + 1.0), sky_top.lerp(sky_bot, i / 15.0))
+	var sun := Vector2(r.x * 0.72, r.y * 0.28)
+	for ring in 4:
+		draw_circle(sun, 44.0 + ring * 18.0, Color(1.0, 0.85, 0.45, 0.045))
+	draw_circle(sun, 40.0, Color(1.0, 0.87, 0.5))
+	for c in 5: # clouds — each on its own slow lane, wrapping forever
+		var cxx := fposmod(r.x * (0.08 + c * 0.23) + t * (4.0 + c * 1.3), r.x + 160.0) - 80.0
+		var cyy := r.y * (0.10 + c * 0.055)
+		for b in 3:
+			draw_circle(Vector2(cxx + b * 26.0, cyy - absf(b - 1) * 8.0),
+				22.0 - absf(b - 1) * 6.0, Color(1, 1, 1, 0.10))
+	var sea_y := r.y * 0.68
+	draw_rect(Rect2(0, sea_y, r.x, r.y - sea_y), Color(0.05, 0.16, 0.24))
+	for g in 9: # sun path on the water
+		var gw := 60.0 - g * 6.0
+		draw_rect(Rect2(sun.x - gw / 2, sea_y + g * 14.0, gw, 3.0), Color(1.0, 0.85, 0.5, 0.10 - g * 0.008))
+	draw_polygon(PackedVector2Array([Vector2(0, sea_y), Vector2(r.x * 0.18, sea_y - 46),
+		Vector2(r.x * 0.34, sea_y - 20), Vector2(r.x * 0.52, sea_y - 64),
+		Vector2(r.x * 0.7, sea_y - 30), Vector2(r.x, sea_y - 56), Vector2(r.x, sea_y)]),
+		PackedColorArray([Color(0.04, 0.10, 0.14)])) # the island ridge the whole game happens on
+	for tri in 14: # tree spikes — cheap silhouette, reads as forest at a glance
+		var tx := r.x * (0.06 + tri * 0.068)
+		var th := 14.0 + sin(tri * 7.0) * 8.0
+		var ty := sea_y - 8.0 - 30.0 * maxf(0.0, sin(tri * 1.7))
+		draw_colored_polygon(PackedVector2Array([Vector2(tx, ty - th), Vector2(tx - 7, ty), Vector2(tx + 7, ty)]),
+			Color(0.05, 0.14, 0.12))
+	for m in 18: # motes drifting up off the water
+		var mx := fposmod(m * 137.0 + t * 6.0, r.x)
+		var my := r.y * 0.15 + fposmod(m * 89.0 + t * 3.0, r.y * 0.5)
+		draw_circle(Vector2(mx, my), 1.2, Color(1, 0.95, 0.7, 0.35))
+	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.06, 0.42)) # vignette — menu contrast over the scene
+
 func draw_title(r: Vector2) -> void:
-	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.55))
+	draw_title_sky(r)
 	var cx := r.x / 2
 	var ty := r.y * 0.22
 	var brand := tr("Kinbound").to_upper() # the logo rides the locale table like everything else
-	draw_string(font, Vector2(cx - font.get_string_size(brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x / 2, ty), brand,
+	var bw := font.get_string_size(brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x
+	draw_string(font, Vector2(cx - bw / 2 + 2, ty + 2), brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color(0, 0, 0, 0.55))
+	draw_string(font, Vector2(cx - bw / 2, ty), brand,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color("#e8d44d"))
+	draw_rect(Rect2(cx - bw / 2, ty + 12, bw, 3), Color("#e8d44d")) # the gold rule under the wordmark
+	for orb in [-1, 1]: # the orb motif flanking the mark — the game's own sigil
+		var ox: float = cx + orb * (bw / 2 + 34.0)
+		draw_circle(Vector2(ox, ty - 16), 10, Color("#e8d44d"))
+		draw_circle(Vector2(ox, ty - 16), 6, Color(0.08, 0.14, 0.2))
+		draw_circle(Vector2(ox - 2, ty - 19), 2, Color(1, 1, 1, 0.85))
 	var tagline := tr("the Wildmere keeps what you catch")
 	draw_string(font, Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.8, 0.85))
@@ -823,8 +874,10 @@ func draw_pause(r: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.6))
 	var cx := r.x / 2
 	var ptxt := tr("MENU — the world keeps running") if game.net_live() else tr("PAUSED")
-	draw_string(font, Vector2(cx - font.get_string_size(ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x / 2, r.y * 0.3), ptxt,
+	var pw := font.get_string_size(ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+	draw_string(font, Vector2(cx - pw / 2, r.y * 0.3), ptxt,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
+	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 6, pw, 2), Color(0.91, 0.83, 0.30, 0.4)) # gold rule under the header
 	var y := r.y * 0.42
 	y = menu_row(cx, y, 220, "RESUME", "resume")
 	y = menu_row(cx, y, 220, "SAVE GAME", "m_save")

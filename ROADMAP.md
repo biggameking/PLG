@@ -135,3 +135,9 @@ build-tools/apksigner).
   pal snapshot per projectile tick; chat brake precedes the host log.
   Deferred honestly: guest claims damage numbers (host clamps), guest melee
   statuses don't transfer, guest armor invisible to host.
+- S20 shell visual pass — DONE: procedural animated dawn behind the title
+  (gradient sky, sun+glow, drifting clouds, sea, island ridge silhouette,
+  rising motes — all driven by game.t); wordmark gets gold rule + twin orb
+  sigils; menu rows gain cursor ticks + separators; pause header gets the
+  gold rule. BGM pads gained a plucked arp voice (per-track step/vol:
+  day .75s, night 1.0s, danger .3s) — melodies stay inside the loop seam.

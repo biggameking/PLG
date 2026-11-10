@@ -4355,6 +4355,11 @@ func run() -> void:
 
 	# ---- S5: ambient score ----
 	check("music loops", game.music_day.stream != null and game.music_day.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and game.music_day.playing == game.audio_live)
+	check("pads carry melody", game.music_danger.stream != null
+		and game.music_day.stream.data.size() == game.music_day.stream.loop_end
+		and game.music_danger.stream.data != game.music_day.stream.data) # arp layer must land inside the loop, not past it
+	check("pads are distinct voices", game.music_day.stream.data != game.music_night.stream.data
+		and game.music_night.stream.data != game.music_danger.stream.data)
 	game.tod = 22.0; game.tick_music(1.0)
 	# night fade: while the danger drone owns the mix both pastoral pads duck —
 	# the crossfade contract is day-ducked always, night-up only when calm
