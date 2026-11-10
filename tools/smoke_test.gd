@@ -1233,17 +1233,36 @@ func run() -> void:
 	var sg_st = game.structures.get(sg_k) if sg_k.x >= 0 else null
 	var sg_ok := false
 	if sg_st != null:
-		var fog0 := 0
-		for b2 in game.explored:
-			fog0 += int(b2 == 0)
 		for i13 in range(3):
 			sg_st["timer"] = 29.9
 			game.tick_production(0.2)
-		var fog1 := 0
-		for b3 in game.explored:
-			fog1 += int(b3 == 0)
-		sg_ok = fog1 < fog0 and float(sg_st.get("spy_r", 0.0)) > 6.0 and float(sg_st.get("spy_r", 0.0)) <= 18.0
+		# the real contract: every cell inside the swept radius is charted
+		var ring_ok := true
+		var r_now := float(sg_st.get("spy_r", 0.0)) - 1.0
+		for a8 in range(8):
+			var rc := Vector2(sg_k.x + 0.5, sg_k.y + 0.5) + Vector2.RIGHT.rotated(TAU * a8 / 8.0) * r_now
+			var rx := int(rc.x); var ry := int(rc.y)
+			if rx >= 0 and ry >= 0 and rx < game.world.WORLD_W and ry < game.world.WORLD_H:
+				if game.explored[ry * game.world.WORLD_W + rx] == 0:
+					ring_ok = false
+		sg_ok = ring_ok and float(sg_st.get("spy_r", 0.0)) > 6.0 and float(sg_st.get("spy_r", 0.0)) <= 18.0
 	check("spyglass charts the fog", sg_ok, "sg=%s r=%s" % [sg_st != null, str(sg_st.get("spy_r", "-") if sg_st else "-")])
+
+	# ring of mercy: equipped blows floor a wild pal at 1 HP, never below
+	var mr_victim = game.gen_pal("lamball", 5, p.pos)
+	game.pals.append(mr_victim)
+	mr_victim.hp = 6
+	var mr_pre := int(p.equipment["acc1"] != "mercy_ring" and p.equipment["acc2"] != "mercy_ring")
+	var mr_slot0: String = p.equipment["acc1"]
+	p.equipment["acc1"] = "mercy_ring"
+	var mr_hit: int = p.mercy_dmg(99, mr_victim)
+	var mr_hit2: int = p.mercy_dmg(4, mr_victim)
+	p.equipment["acc1"] = mr_slot0
+	var mr_raw: int = p.mercy_dmg(99, mr_victim)
+	check("ring of mercy spares the last breath", mr_hit == 5 and mr_hit2 == 4 and mr_raw == 99 and mr_pre == 1,
+		"hit=%s/%s raw=%s" % [mr_hit, mr_hit2, mr_raw])
+	mr_victim.queue_free()
+	game.pals.erase(mr_victim)
 
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)

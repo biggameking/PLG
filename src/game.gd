@@ -2770,7 +2770,7 @@ func update_projectiles(dt: float) -> void:
 					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
 						var mult := Combat.effectiveness("neutral", p.elem())
 						var d := Combat.damage(pr["dmg"] * 2.0 * (1.0 + partner_aura("atk") + player.meal_bonus("atk")), 20, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, rng)
-						p.hit(d, mult, true)
+						p.hit(player.mercy_dmg(d, p), mult, true)
 						dead = true
 						break
 			if dead:

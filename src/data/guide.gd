@@ -40,6 +40,9 @@ odds further. Watch the ball — three shakes, then the verdict.
 A pal's LEVEL is the real gate. A lv5 lamball folds to a
 plain sphere; a lv30 alpha shrugs it off. The sphere ladder
 exists for a reason: pal < mega < giga < ultra < legendary.
+Squeamish about over-swinging? The Ring of Mercy keeps your
+blows honest — a wild pal under that charm can be whittled
+to its last breath, never past it.
 Sphere Works and Giga Works lines feed the habit — the second
 line stretches electric organs three times further.
 

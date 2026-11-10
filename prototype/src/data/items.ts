@@ -123,6 +123,7 @@ export const ITEMS: Record<string, ItemDef> = {
   attack_pendant: { id: "attack_pendant", name: "Attack Pendant", glyph: "†", color: "#e8963c", kind: "accessory", stack: 1, price: 150, desc: "Palworld trinket: +12% damage dealt." },
   defense_pendant: { id: "defense_pendant", name: "Defense Pendant", glyph: "⛨", color: "#7fb8e8", kind: "accessory", stack: 1, price: 150, desc: "Palworld trinket: +5 armor." },
   swift_charm: { id: "swift_charm", name: "Swift Charm", glyph: "≫", color: "#8ef0ff", kind: "accessory", stack: 1, price: 150, desc: "Palworld trinket: +10% move speed." },
+  mercy_ring: { id: "mercy_ring", name: "Ring of Mercy", glyph: "♡", color: "#f0a0b8", kind: "accessory", stack: 1, price: 300, desc: "Palworld trinket: your blows weaken wild pals but can never drop one below 1 HP." },
 };
 
 export interface Recipe {
@@ -178,4 +179,5 @@ export const RECIPES: Recipe[] = [
   { id: "attack_pendant", out: ["attack_pendant", 1], cost: [["cloth", 3], ["paldium", 4], ["gold_coin", 20]], station: "workbench", work: 160 },
   { id: "defense_pendant", out: ["defense_pendant", 1], cost: [["cloth", 3], ["ingot", 4], ["gold_coin", 20]], station: "workbench", work: 160 },
   { id: "swift_charm", out: ["swift_charm", 1], cost: [["cloth", 3], ["fiber", 6], ["paldium", 2]], station: "workbench", work: 160 },
+  { id: "mercy_ring", out: ["mercy_ring", 1], cost: [["cloth", 3], ["paldium", 6], ["gold_coin", 30]], station: "workbench", work: 160 },
 ];

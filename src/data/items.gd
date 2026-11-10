@@ -1032,6 +1032,15 @@ const ITEMS = {
   "desc": "Palworld trinket: +10% move speed. Two accessory slots.",
   "stack": 1,
   "price": 150
+ },
+ "mercy_ring": {
+  "id": "mercy_ring",
+  "name": "Ring of Mercy",
+  "kind": "accessory",
+  "acc": {"mercy": 1},
+  "desc": "Palworld trinket: your blows weaken wild pals but can never drop one below 1 HP.",
+  "stack": 1,
+  "price": 300
  }
 }
 
@@ -1816,6 +1825,13 @@ const RECIPES = [
   "id": "swift_charm",
   "out": ["swift_charm", 1],
   "cost": [["cloth", 3], ["fiber", 6], ["paldium", 2]],
+  "station": "workbench",
+  "work": 160
+ },
+ {
+  "id": "mercy_ring",
+  "out": ["mercy_ring", 1],
+  "cost": [["cloth", 3], ["paldium", 6], ["gold_coin", 30]],
   "station": "workbench",
   "work": 160
  }]

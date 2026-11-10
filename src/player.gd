@@ -92,6 +92,7 @@ func melee() -> void:
 			continue
 		var mult := Combat.effectiveness("neutral", p.elem())
 		var d := Combat.damage(atk, 34, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, game.rng)
+		d = mercy_dmg(d, p)
 		if p.net_id > 0 and game.net != null:
 			# host owns replica hp — relay the swing, next snapshot settles it
 			game.net.rpc("pal_hit", p.net_id, d)
@@ -405,3 +406,8 @@ func acc_total(k: String) -> float: # Palworld trinket math — both slots stack
 	for s in ["acc1", "acc2"]:
 		t += float(ItemData.ITEMS.get(equipment[s], {}).get("acc", {}).get(k, 0.0))
 	return t
+
+func mercy_dmg(d: int, p: Pal) -> int: # Ring of Mercy: my hits can weaken, never kill
+	if acc_total("mercy") > 0.0 and d >= p.hp:
+		return maxi(0, p.hp - 1)
+	return d
