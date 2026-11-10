@@ -46,3 +46,28 @@ single idempotent script; migrations are written against the serialized save
 schema, not runtime dicts; every sweep needs an id-consistency gate + fixture
 test + orphan pass. All HIGH/MED findings fixed in the same commit cycle; rules
 now live in AGENTS.md → "Rename & sweep rules".
+
+**S2 (external review, `docs/reviews/s2-shell.md`):** `return` in
+`_unhandled_input` doesn't own an event — gate every consumer or call
+`set_input_as_handled`; `reload_current_scene` isn't teardown (peer/buses/
+InputMap survive); `settings.cfg` is untrusted input; tests must restore
+`user://` state they dirty. HIGH findings (input leak to gameplay, title-screen
+kill, MP session leak into title) fixed and pushed in `2f41030`.
+
+**S3 (external review, `docs/reviews/s3-loop-fixes.md`):** enumerate every
+creation site before gating — the legendary leak lived in ~10 spawn paths, not
+the egg pool the patch touched; smoke checks must assert invariants against
+data, never reuse the production predicate; prefer accessors when data has two
+representations. Canonical `acq_pool` gate + breed-combo retargets + raid
+warning reset shipped in `2f41030`.
+
+## Stage status
+
+- S1 IP de-risk — DONE (rename + migration + `check_ip.sh` + external review)
+- S2 product shell — DONE (title/pause/settings/versioned saves + review fixes)
+- S3 loop corrections — DONE (acquirable gate, peaceful raids, review fixes)
+- S4 contextual onboarding — DONE (five retiring hints)
+- S5 audio layer — DONE (synth SFX bank + day/night pad score + bus mix)
+- S6 gamepad layer — IN PROGRESS (stick/dpad/buttons + menu nav)
+- S7 boss/endgame spine — NEXT
+- S8 numbers sim + platform/readiness — NEXT

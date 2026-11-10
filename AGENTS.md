@@ -60,3 +60,34 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 6. New mechanics need checks that would fail on the old behavior, and checks
    must isolate their fixtures (see the `apex.raid = false` hardening — tests
    that depend on random world spawns or leaked raid state flake).
+
+## Design invariants (hard rules — from the S2/S3 external reviews)
+
+9. **Enumerate before you gate.** Before restricting a species/loot/spawn
+   category, list every creation site first (`zone_pool`, `pick_wild_species`,
+   `SPECIES.keys`, `BREED_COMBOS`, `gen_pal(`, `kin.gd").new`). Each site gets
+   the filter or a written reason — put the list in the commit message.
+10. **One canonical pool per invariant.** `acquirable()` / `acq_pool()` is the
+    only "a species the player may own" gate — never per-site ad-hoc filters.
+    Intentional exceptions (dens, grotto, sigil raids) pick `LEGENDARY_DEN`
+    deliberately and say so in a comment.
+11. **Smoke checks assert invariants against DATA, not the implementation.**
+    Never reuse the production predicate in its own test — tautological checks
+    certify nothing (`spec.get("body")` vs `body_of()` was the S3 proof).
+12. **Filter fields must exist.** Before `.get("field")` in a filter, confirm
+    the key in the data; when two representations exist (inline `body` vs the
+    `BODY` table) the filter must cover both — use the accessor.
+13. **Shell input contract.** Every `_unhandled_input` consumer gates on
+    `game.state` at entry, or the owner calls `set_input_as_handled()` —
+    `return` alone does not own the event. New consumers get a smoke check
+    that shell input can't reach gameplay.
+14. **`reload_current_scene()` is not teardown.** MultiplayerAPI peers,
+    AudioServer buses and InputMap survive it — `to_title` closes the peer
+    first, and a client never `save_game()`s replica state into the solo file.
+15. **`settings.cfg` is untrusted input** — coerce per key in `load_settings`
+    (rule 5's boundary applies to every file we read, not just the savegame).
+16. **Toggles own their transitions.** A switch that freezes a countdown
+    defines what happens to armed state on re-enable (`raid_warned`/`theme`
+    reset); pins share a const with the threshold they dodge (`RAID_WARN_T`).
+17. **Tests leave no dirty state.** Anything written to `user://` in a smoke
+    run gets backed up and restored (see the settings round-trip fixture).
