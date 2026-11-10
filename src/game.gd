@@ -93,15 +93,15 @@ const BREED_COMBOS := {
 	"fernchim+zaptrot": "statchew",
 	"noctplume+terrkin": "veilplume",
 	"ripbell+statchew": "faradwisp",
-	"scalbeak+statchew": "wyrmhoof",
+	"scalbeak+statchew": "noctfang",
 	"corlmite+quackbill": "marlump",
 	"dozantler+puffmite": "bramplume",
-	"fernchim+briarmaw": "vermtrot",
+	"fernchim+briarmaw": "ripwrith",
 	"zaptrot+tammane": "statstride",
 	"scalfang+cindpaw": "pyreplume",
 	"bubwrith+bubgoo": "ripwrith",
 	"mosswisp+wortling": "mossveil",
-	"terrkin+puffchim": "shadesmith",
+	"terrkin+puffchim": "sparkhaunt",
 	"rimemane+snovfawn": "snovmool",
 	"pyrejelly+branpurr": "scalfang",
 	"loammelt+shadewisp": "lazburr",
@@ -112,10 +112,10 @@ const BREED_COMBOS := {
 	"loamquill+terrnib": "grithoof",
 	"dewpuff+bubgloom": "frostfang",
 	"wortquill+digsnout": "noctfang",
-	"marlump+branling": "terrkin",
-	"pyreplume+duskwing": "terrkin",
+	"marlump+branling": "grithoof",
+	"pyreplume+duskwing": "noctfang",
 	"fernchim+statchew": "zaptrot",
-	"zapplume+noctplume": "scalcrest",
+	"zapplume+noctplume": "frostfang",
 	"briargoo+sprigmelt": "puffchim",
 	"shadegloom+shadelump": "duskwing",
 	"shademelt+sparkwhisk": "duskpurr",
@@ -594,7 +594,7 @@ func spawn_wild() -> void:
 		if player.pos.distance_squared_to(Vector2(x, y)) < 64.0:
 			continue # don't pop a pal into existence on top of the player
 		var zone := world.zone_at(x, y)
-		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+		var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone))
 		var sid := pick_wild_species(pool)
 		var sp: Dictionary = SpeciesData.species_of(sid)
 		var aquatic: bool = "water" in sp.get("elements", [])
@@ -650,6 +650,21 @@ func pick_wild_species(pool: Array) -> String:
 			return diurnal[rng.int_range(0, diurnal.size() - 1)]
 	return pool[rng.int_range(0, pool.size() - 1)]
 
+# One canonical gate for "a species the player may own": no legends, no
+# humans. Legends live in LEGENDARY_DEN and are picked deliberately by
+# dens/grottos/sigil raids — every spawn path that can produce an OWNED or
+# CATCHABLE kin must route through acq_pool. body_of() covers both body
+# representations (inline "body" key and the BODY table the ironpact use).
+func acquirable(sid: String) -> bool:
+	return sid not in LEGENDARY_DEN and SpeciesData.body_of(sid) != "human"
+
+func acq_pool(pool: Array) -> Array:
+	var out := []
+	for s in pool:
+		if s not in out and acquirable(str(s)):
+			out.append(s)
+	return out
+
 func gen_pal(sp_id: String, lv: int, at: Vector2, lucky := false) -> Kin:
 	# test/dev factory: a live kin in the entity layer; caller picks its mode
 	var p := preload("res://src/kin.gd").new()
@@ -672,6 +687,7 @@ func spawn_net_pal(d) -> void:
 		nearest_free(float(d[1]), float(d[2])), bool(d[5]) if d.size() > 5 else false)
 	np.mode = str(d[4]) if str(d[4]) in ["base", "partner", "wild"] else "wild"
 	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
+	np.boss = bool(d[7]) if d.size() > 7 else false # den/grotto bosses keep their orb immunity on clients too
 	pals.append(np)
 
 func find_net_pal(nid: int) -> Kin:
@@ -831,10 +847,10 @@ func gauntlet_next_wave() -> void:
 	# [pool, count, [lv_lo, lv_hi], boss?] — wave 3 caps with a true boss
 	var groups := []
 	match w:
-		1: groups = [[SpeciesGen.zone_pool(2), 2, [20, 26], false]]
-		2: groups = [[SpeciesGen.zone_pool(2) + SpeciesGen.zone_pool(3), 2, [30, 36], false]]
-		_: groups = [[SpeciesGen.zone_pool(3), 2, [38, 42], false],
-			[SpeciesGen.zone_pool(3), 1, [48, 50], true]]
+		1: groups = [[acq_pool(SpeciesGen.zone_pool(2)), 2, [20, 26], false]]
+		2: groups = [[acq_pool(SpeciesGen.zone_pool(2) + SpeciesGen.zone_pool(3)), 2, [30, 36], false]]
+		_: groups = [[acq_pool(SpeciesGen.zone_pool(3)), 2, [38, 42], false],
+			[acq_pool(SpeciesGen.zone_pool(3)), 1, [48, 50], true]]
 	for grp in groups:
 		var pool: Array = grp[0]
 		for i in int(grp[1]):
@@ -988,8 +1004,8 @@ func tick_missions(dt: float) -> void:
 		floater(player.pos, "MISSION DONE", "#8ef0ff")
 
 func hurt_player(atk: float, from: Kin) -> void:
-	if player.dodge_t > 0:
-		return
+	if state != "play" or player.dodge_t > 0:
+		return # the title's ambient wildlife never bleeds into the run
 	var def := 20.0 + player.level * 3.0
 	var d := maxi(1, int(round(25.0 * (2.0 * atk) / maxf(1.0, atk + 2.0 * def) * (0.9 + rng.next() * 0.2))))
 	var final := player.absorb_hit(maxi(1, d - player.armor_def()))
@@ -1671,7 +1687,9 @@ func queue_redraw_decor() -> void:
 	decor_dirty.emit()
 
 func net_live() -> bool:
-	return net != null and net.multiplayer.multiplayer_peer != null
+	# presence is not liveness — a dropped/failed peer must not hold the sim open
+	var p = null if net == null else net.multiplayer.multiplayer_peer
+	return p != null and p.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED
 
 # ---- contextual hints: condition-driven, self-retiring nudges ----
 # Each entry: condition lambda -> text. A hint shows while its condition is
@@ -2694,7 +2712,7 @@ func cast_line() -> bool:
 	if roll < bite and pals.size() < MAX_PALS:
 		# a live catch: an aquatic kin from this zone's pool surfaces
 		var zone := world.zone_at(wc.x, wc.y)
-		var pool: Array = (ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
+		var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
 			func(s): return "water" in SpeciesData.species_of(str(s)).get("elements", []))
 		if pool.is_empty():
 			pool = SpeciesData.SPECIES.keys().filter(
@@ -3226,7 +3244,12 @@ func load_settings() -> void:
 	var cf := ConfigFile.new()
 	if cf.load("user://settings.cfg") == OK:
 		for k in settings:
-			settings[k] = cf.get_value("main", k, settings[k])
+			var v = cf.get_value("main", k, settings[k])
+			# settings.cfg is untrusted like any save file — coerce per key
+			if settings[k] is bool:
+				settings[k] = v if v is bool else settings[k]
+			elif settings[k] is float or settings[k] is int:
+				settings[k] = clampf(float(v) if v is float or v is int else settings[k], 0.0, 1.0)
 	apply_settings()
 
 func save_settings() -> void:
@@ -3252,9 +3275,18 @@ func quit_game() -> void:
 
 func to_title() -> void:
 	save_game()
+	# reload_current_scene is not teardown: the MultiplayerAPI peer, buses and
+	# InputMap all survive it. A live peer would leak the whole session into
+	# the fresh scene — close it first.
+	if net != null:
+		net.is_host = false
+		multiplayer.multiplayer_peer = null
 	get_tree().reload_current_scene() # fresh boot lands back on the title screen
 
 func save_game() -> void:
+	if net != null and net.is_client():
+		log_msg("The world lives on the host — nothing to save locally")
+		return # a client's replica snapshot must never clobber the solo save
 	var pals_data := []
 	for p in pals:
 		var jc = null
@@ -3368,6 +3400,9 @@ func save_game() -> void:
 		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
 	}
 	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	if f == null:
+		log_msg("Save failed — %s" % error_string(FileAccess.get_open_error()))
+		return
 	f.store_var(d)
 	f.close()
 	log_msg("Saved.")
@@ -3717,6 +3752,16 @@ func load_game() -> bool:
 		if not home2: # the post is gone — the pal walks back in
 			lp2.mode = "base"
 			lp2.visible = true
+	# stale shell state must not leak across a world swap: an armed raid horn,
+	# an open panel, a dead chest ref, a held aim — none of them survive the load
+	raid_warned = false
+	raid_theme = ""
+	panel = ""
+	chest_ref = null
+	skill_target = null
+	if player != null:
+		player.aiming = false
+		player.dodge_t = 0.0
 	log_msg("Loaded.")
 	return true
 
@@ -3774,7 +3819,7 @@ func tick_migration(dt: float) -> void:
 	# catchable without walking there. Wild kin are locally authoritative
 	# (same contract as spawn_wild), so this ticks on every client too.
 	var zone := rng.int_range(1, 3)
-	var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+	var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone))
 	if pool.is_empty():
 		return
 	var sid := pick_wild_species(pool)
@@ -3821,16 +3866,21 @@ func tick_migration(dt: float) -> void:
 			% [sp.get("name", sid), "ashore" if in_water else "inland", made.size()])
 		return
 
+const RAID_WARN_T := 30.0 # seconds of horn before the wave lands
 var raid_warned := false # 30s heads-up — the island flashes the raid horn early
 var raid_theme := ""     # element pack for the incoming wave; "" = mixed
 func tick_raid(dt: float) -> void:
 	if kinbox_pos.x < 0:
 		return
 	if not settings.get("raids", true):
-		raid_t = 31.0 # peaceful mode: hold the horn just above the warning line
+		# peaceful mode: hold the horn just above the warning line — and stand
+		# an already-armed warning down so re-enabling re-arms it cleanly
+		raid_t = RAID_WARN_T + 1.0
+		raid_warned = false
+		raid_theme = ""
 		return
 	raid_t -= dt
-	if raid_t < 30.0 and not raid_warned:
+	if raid_t < RAID_WARN_T and not raid_warned:
 		raid_warned = true
 		# the island raids read as packs — mostly one element, sometimes a mob
 		var themes := ["fire", "water", "electric", "grass", "dark", "ice", "ground", "dragon"]
@@ -3864,7 +3914,9 @@ func start_raid() -> void:
 			if world.blocked(tx, ty):
 				continue
 			var zone := world.zone_at(tx, ty)
-			var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+			# raiders stay catchable kin — ironpact humans included — but never legends
+			var pool: Array = (ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
+				func(s): return s not in LEGENDARY_DEN)
 			var hostile_pool := pool.filter(func(s): return SpeciesData.species_of(s).get("hostile", 0) >= 1)
 			if hostile_pool.is_empty():
 				hostile_pool = pool
@@ -4120,7 +4172,7 @@ func hatch_pool() -> Array:
 	var out := []
 	for s in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
 		var spec: Dictionary = SpeciesData.species_of(s)
-		if s in LEGENDARY_DEN or spec.get("boss", false) or spec.get("body", "") == "human":
+		if s in LEGENDARY_DEN or spec.get("boss", false) or not acquirable(s):
 			continue
 		if s not in out:
 			out.append(s)
@@ -4140,6 +4192,8 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		var combo: String = BREED_COMBOS.get("%s+%s" % [pair[0], pair[1]],
 			BREED_COMBOS.get("%s+%s" % [pair[1], pair[0]], ""))
 		sp_id = combo if combo != "" else pair[rng.int_range(0, 1)]
+		if not acquirable(sp_id): # a legendary parent can't pass its bloodline on
+			sp_id = hatch_pool()[rng.int_range(0, hatch_pool().size() - 1)]
 		talent_v = clampi((int(pair[2]) + int(pair[3])) / 2 + rng.int_range(-15, 15), 0, 100)
 		if pair.size() >= 6 and pair[4] is Array and pair[5] is Array:
 			for pk in pair[4] + pair[5]: # the island: passives run in the bloodline
@@ -4221,7 +4275,7 @@ func spawn_camps() -> void:
 			continue
 		if not place_free("kin_cage", tx, ty):
 			continue
-		var pool: Array = ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)
+		var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone))
 		var cst: Dictionary = structures[Vector2i(tx, ty)]
 		cst["captive"] = {"sp": pick_wild_species(pool), "lv": rng.int_range(8 + zone * 4, 14 + zone * 6)}
 		var gn := 2 + int(rng.chance(0.5))
@@ -4317,10 +4371,10 @@ func spawn_lairs() -> void:
 		# torch ring (8 cells around a 5x5 clearing)
 		for c in [Vector2i(tx-2,ty-2),Vector2i(tx+2,ty-2),Vector2i(tx-2,ty+2),Vector2i(tx+2,ty+2)]:
 			place_free("torch", c.x, c.y)
-		# alpha boss at center
-		var pool := SpeciesGen.zone_pool(3)
+		# alpha boss at center — alphas are catchable, so the pool is too
+		var pool := acq_pool(SpeciesGen.zone_pool(3))
 		if pool.is_empty():
-			pool = SpeciesGen.zone_pool(2)
+			pool = acq_pool(SpeciesGen.zone_pool(2))
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 		var bp := preload("res://src/kin.gd").new()
 		entity_layer.add_child(bp)
@@ -4596,7 +4650,7 @@ func spawn_legendary_den() -> void:
 		bp.sprite.position.y = -78.0
 		bp.home = bp.pos
 		pals.append(bp)
-		var guard_pool := SpeciesGen.zone_pool(3)
+		var guard_pool := acq_pool(SpeciesGen.zone_pool(3))
 		for i in mini(3, guard_pool.size()):
 			var gp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(gp)
@@ -5197,7 +5251,7 @@ func gen_merchant_stock() -> void:
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):
 		var z := rng.int_range(0, 2) if rng.chance(0.85) else 3
-		var ppool: Array = SpeciesGen.zone_pool(z)
+		var ppool: Array = acq_pool(SpeciesGen.zone_pool(z))
 		if ppool.is_empty():
 			continue
 		var sid: String = ppool[rng.int_range(0, ppool.size() - 1)]

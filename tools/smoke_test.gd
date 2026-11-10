@@ -4128,31 +4128,55 @@ func run() -> void:
 	game._process(0.5)
 	check("pause freezes the clock", game.t == tc0, "t=%s" % game.t)
 	game.state = "play"
+	# settings round-trip — keep the dev's real cfg intact: back it up first
+	var cfg_backup = FileAccess.get_file_as_bytes("user://settings.cfg") \
+		if FileAccess.file_exists("user://settings.cfg") else PackedByteArray()
 	game.settings["sfx"] = 0.4
 	game.save_settings()
 	game.settings["sfx"] = 1.0
 	game.load_settings()
 	check("settings round-trip", absf(game.settings["sfx"] - 0.4) < 0.001, "sfx=%s" % game.settings["sfx"])
+	game.settings["sfx"] = 1.0
+	if cfg_backup.is_empty():
+		DirAccess.remove_absolute("user://settings.cfg")
+	else:
+		var cf2 := FileAccess.open("user://settings.cfg", FileAccess.WRITE)
+		cf2.store_buffer(cfg_backup); cf2.close()
 	check("audio buses routed", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("SFX") >= 0)
 
 	# ---- S3: egg genetics stay mortal; peaceful mode holds the horn ----
+	# the invariants live in DATA, not in the filter's own predicate — check
+	# body_of() (covers the BODY table the ironpact use) and the den list raw
 	var egg_pool: Array = game.hatch_pool()
 	var leg_in_pool := false
 	var hum_in_pool := false
 	for es in egg_pool:
 		if es in game.LEGENDARY_DEN or bool(SpeciesData.species_of(es).get("boss", false)):
 			leg_in_pool = true
-		if SpeciesData.species_of(es).get("body", "") == "human":
+		if SpeciesData.body_of(es) == "human":
 			hum_in_pool = true
 	check("no legendary in egg pool", not leg_in_pool, "%d species" % egg_pool.size())
 	check("no humans in egg pool", not hum_in_pool)
 	check("egg pool non-empty", egg_pool.size() > 50, "%d" % egg_pool.size())
+	check("ironpact read as human", SpeciesData.body_of("ironpact_grunt") == "human"
+		and SpeciesData.body_of("ironpact_sweeper") == "human")
+	check("combos stay mortal", game.BREED_COMBOS.values().all(
+		func(s): return game.acquirable(s)), "%d combos" % game.BREED_COMBOS.size())
+	# every spawn path draws from acquirable pools — assert the gate itself
+	var acq_all := []
+	for z in 4:
+		acq_all += game.acq_pool(game.ZONE_SPECIES[z] + SpeciesGen.zone_pool(z))
+	check("zone pools carry no legends", acq_all.all(func(s): return s not in game.LEGENDARY_DEN))
+	check("zone pools carry no humans", acq_all.all(func(s): return SpeciesData.body_of(s) != "human"))
+	check("acq pool non-empty", acq_all.size() > 40, "%d" % acq_all.size())
 	game.settings["raids"] = false
 	if game.kinbox_pos.x < 0:
 		game.kinbox_pos = Vector2i(10, 10) # the horn only sounds for a founded base
 	game.raid_t = 5.0
+	game.raid_warned = true
 	game.tick_raid(1.0)
-	check("peaceful holds the horn", game.raid_t == 31.0, "raid_t=%s" % game.raid_t) # spawn itself is behind the same early return
+	check("peaceful holds the horn", game.raid_t == Game.RAID_WARN_T + 1.0, "raid_t=%s" % game.raid_t)
+	check("peaceful stands the warning down", not game.raid_warned and game.raid_theme == "")
 	game.settings["raids"] = true
 
 	# ---- S1 migration: a pre-rename save maps every id-shaped field ----

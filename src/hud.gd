@@ -70,7 +70,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			for cr in click_rects:
 				if cr["rect"].has_point(event.position):
 					run_click(cr)
-					return
+					break
+		get_viewport().set_input_as_handled() # the shell owns every event here
 		return
 	if game.state == "paused":
 		if event.is_action_pressed("ui_cancel"):
@@ -78,12 +79,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				game.panel = "" # Esc leaves settings first, pause second
 			else:
 				game.state = "play"
+			get_viewport().set_input_as_handled()
 			return
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			for cr in click_rects:
 				if cr["rect"].has_point(event.position):
 					run_click(cr)
-					return
+					break
+		get_viewport().set_input_as_handled()
 		return
 	# chat input mode (net only)
 	if game.panel == "chat" and event is InputEventKey and event.pressed:
@@ -727,7 +730,8 @@ func draw_title(r: Vector2) -> void:
 func draw_pause(r: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.6))
 	var cx := r.x / 2
-	draw_string(font, Vector2(cx - font.get_string_size("PAUSED", HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x / 2, r.y * 0.3), "PAUSED",
+	var ptxt := "MENU — the world keeps running" if game.net_live() else "PAUSED"
+	draw_string(font, Vector2(cx - font.get_string_size(ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x / 2, r.y * 0.3), ptxt,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
 	var y := r.y * 0.42
 	y = menu_row(cx, y, 220, "RESUME", "resume")

@@ -154,7 +154,7 @@ func pal_state_pack() -> Array:
 	var arr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky])
+			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky, p.boss])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -171,7 +171,8 @@ func pal_sync(arr: Array) -> void:
 		if p == null:
 			# [species, x, y, lv, mode, lucky, net_id] — spawn_net_pal's wire shape
 			game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
-				e[7] if e.size() > 7 else false, nid])
+				e[7] if e.size() > 7 else false, nid,
+				e[8] if e.size() > 8 else false])
 		else:
 			p.net_target = Vector2(float(e[2]), float(e[3]))
 			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp
@@ -202,6 +203,7 @@ func _on_server_disconnected() -> void:
 	ghosts.clear()
 	game.clear_net_drops() # replica loot dies with the session too
 	is_host = false
+	multiplayer.multiplayer_peer = null # a dead peer must not keep net_live() true
 	game.log_msg("Host disconnected")
 
 func spawn_ghost(id: int) -> void:
