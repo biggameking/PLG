@@ -29,7 +29,29 @@ const ITEMS = {
   "price": 1,
   "desc": "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it."
  },
-"treasure_map": {
+"honey": {
+  "id": "honey",
+  "name": "Honey",
+  "glyph": "◍",
+  "color": "#e8b830",
+  "kind": "food",
+  "stack": 999,
+  "food": 15,
+  "price": 10,
+  "desc": "Sweet comb straight from the apiary."
+ },
+ "honey_bun": {
+  "id": "honey_bun",
+  "name": "Honey Bun",
+  "glyph": "◍",
+  "color": "#d89a40",
+  "kind": "food",
+  "stack": 999,
+  "food": 45,
+  "buff": {"spd": 0.1, "t": 300},
+  "desc": "Glazed and golden — +10% speed for a while."
+ },
+ "treasure_map": {
   "id": "treasure_map",
   "name": "Treasure Map",
   "glyph": "✕",
@@ -1455,6 +1477,25 @@ const RECIPES = [
   ],
   "station": "workbench",
   "work": 20
+ },
+ {
+  "id": "honey_bun",
+  "out": [
+   "honey_bun",
+   1
+  ],
+  "cost": [
+   [
+    "honey",
+    2
+   ],
+   [
+    "flour",
+    1
+   ]
+  ],
+  "station": "campfire",
+  "work": 50
  },
  {
   "id": "fried_egg",

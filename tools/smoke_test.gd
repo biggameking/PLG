@@ -1080,6 +1080,22 @@ func run() -> void:
 	game.treasure = {}
 	check("treasure map digs", marked and dug, "marked=%s dug=%s" % [marked, dug])
 
+	# apiary: a planting pal keeps the comb full on the clock
+	var ap_k: Vector2i = free_xy.call("apiary")
+	var ap_st = game.structures.get(ap_k) if ap_k.x >= 0 else null
+	var honey_ok := false
+	if ap_st != null:
+		var keeper: Pal = game.gen_pal("lifmunk", 5, game.player.pos)
+		keeper.mode = "base"; keeper.san = 90.0; keeper.hunger = 10.0; keeper.ailment = ""
+		keeper.passives = []; keeper.statuses.clear(); keeper.talent = 50
+		ap_st["workers"] = [keeper]; keeper.job_site = ap_st
+		ap_st["timer"] = 119.5
+		game.tick_production(1.0)
+		honey_ok = ap_st["store"].get("honey", 0) >= 1
+		ap_st["workers"] = []; keeper.job_site = null
+		game.pals.erase(keeper); keeper.free()
+	check("apiary drips honey", honey_ok, "ap=%s" % (ap_st != null))
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

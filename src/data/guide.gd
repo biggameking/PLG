@@ -15,7 +15,8 @@ and straw into fertilizer that makes a field surge for five
 minutes. The island wastes nothing if you work it right. And
 where the shore runs shallow, set a fish trap in the surf — a
 watering pal will pull fish from it all day; fry the catch for
-a meal that puts wind in your boots.
+a meal that puts wind in your boots. A skep of bees rounds out
+the pantry — honey bakes into buns that quicken the step.
 
 The island keeps a clock. Daylight is for building; night is
 when the dark element pals wake and hunt wide. Cold bites past

@@ -460,6 +460,26 @@ const STRUCTURES = {
   ],
   "desc": "A straw sparring partner — idle pals swing on it and grow a little stronger."
  },
+"apiary": {
+  "id": "apiary",
+  "name": "Apiary",
+  "glyph": "◍",
+  "color": "#d8b830",
+  "w": 1,
+  "h": 1,
+  "cost": [
+   [
+    "wood",
+    12
+   ],
+   [
+    "fiber",
+    8
+   ]
+  ],
+  "job": {"kind": "work", "workType": "planting", "amount": 120, "produces": [["honey", 1]]},
+  "desc": "A skep of tame bees — a planting pal keeps the comb full."
+ },
 "fish_trap": {
   "id": "fish_trap",
   "name": "Fish Trap",
@@ -1241,6 +1261,12 @@ const TECH = [
   "id": "training_dummy",
   "name": "Training Dummy",
   "tier": 4,
+  "cost": 1
+ },
+ {
+  "id": "apiary",
+  "name": "Apiary",
+  "tier": 3,
   "cost": 1
  }
 ]

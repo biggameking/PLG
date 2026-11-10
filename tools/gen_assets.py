@@ -821,6 +821,14 @@ def make_structure(sid, color, w, h):
         d.ellipse([W//2 - 6, 12, W//2 + 6, 24], fill=hxc("#d8b84a") + (255,))
         d.rectangle([W//2 - 7, 20, W//2 + 7, 23], fill=hxc("#a08050") + (255,))
         d.line([(W//2 - 3, 15), (W//2 + 3, 19)], fill=hxc("#8a6d4d") + (255,), width=1)
+    elif sid == "apiary":
+        # a domed bee skep — straw rings, little door, drifting bees
+        d.ellipse([W//2 - 13, 22, W//2 + 13, 44], fill=hxc("#d8b830") + (255,))
+        for ry in (28, 33, 38):
+            d.arc([W//2 - 13, ry - 6, W//2 + 13, ry + 6], 0, 180, fill=hxc("#a08030") + (255,), width=2)
+        d.ellipse([W//2 - 4, 36, W//2 + 4, 42], fill=hxc("#4a3a20") + (255,))
+        d.ellipse([W//2 + 12, 16, W//2 + 15, 19], fill=hxc("#3a3a3a") + (255,))
+        d.ellipse([W//2 - 16, 12, W//2 - 13, 15], fill=hxc("#3a3a3a") + (255,))
     elif sid == "fish_trap":
         # woven weir box over lapping water — stakes, net, a silver catch
         d.rectangle([W//2 - 16, 30, W//2 + 16, 44], fill=hxc("#3a6ea8") + (255,))
@@ -878,6 +886,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "sphere_factory_2": ("#4dd0e1", 2, 1),
     "compost_bin": ("#7a9a4a", 1, 1),
     "fish_trap": ("#5a8ac0", 1, 1),
+    "apiary": ("#d8b830", 1, 1),
     "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
