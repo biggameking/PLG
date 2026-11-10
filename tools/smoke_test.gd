@@ -1006,15 +1006,37 @@ func run() -> void:
 			if game.world.tile_at(tx2, ty2) == World.Tile.WATER or game.structures.has(Vector2i(tx2, ty2)):
 				continue
 			var near_w := false
-			for d3 in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
-				if game.world.in_bounds(tx2 + d3.x, ty2 + d3.y) and game.world.tile_at(tx2 + d3.x, ty2 + d3.y) == World.Tile.WATER:
-					near_w = true
+			for oy in range(-1, 2): # can_place counts the full ring incl diagonals
+				for ox in range(-1, 2):
+					if game.world.in_bounds(tx2 + ox, ty2 + oy) and game.world.tile_at(tx2 + ox, ty2 + oy) == World.Tile.WATER:
+						near_w = true
 			if not near_w and game.world.flat_at(tx2, ty2, 1, 1):
 				dry_reject = not game.can_place("fish_trap", tx2, ty2)
 				dry_done = true
 				break
 	check("fish trap yields", trap_ok and ft_spot.x >= 0 and dry_reject, "spot=%s fish=%s dry=%s" % [
 		ft_spot, game.structures.get(ft_spot, {}).get("store", {}).get("raw_fish", 0) if ft_spot.x >= 0 else -1, dry_reject])
+
+	# training dummy: an idle base pal spars itself stronger
+	var td_k: Vector2i = free_xy.call("training_dummy")
+	var td_st = game.structures.get(td_k) if td_k.x >= 0 else null
+	var td_ok := false
+	if td_st != null:
+		for wp9 in game.pals: # pacify the yard so the rookie drills instead of brawling
+			if wp9.mode == "wild":
+				wp9.aggro = -1; wp9.raid = false
+		# rushoar drills by day; at night a dark pal keeps the same hours —
+		# both carry no transporting suit so neither is pulled into hauling
+		var rookie: Pal = game.gen_pal("loupmoon" if game.is_night() else "rushoar", 3,
+			Vector2(td_k.x + 0.5, td_k.y + 0.5))
+		rookie.mode = "base"; rookie.san = 90.0; rookie.hunger = 10.0; rookie.ailment = ""
+		rookie.passives = []; rookie.statuses.clear()
+		var xp0: int = rookie.xp + rookie.level * 1000 # composite baseline
+		for i9 in range(40):
+			rookie.base_ai(0.1)
+		td_ok = rookie.xp > 0 or rookie.level * 1000 + rookie.xp > xp0
+		game.pals.erase(rookie); rookie.free()
+	check("dummy trains idle pal", td_ok, "td=%s" % (td_st != null))
 
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
@@ -2022,7 +2044,20 @@ func run() -> void:
 	game.tod = 13.0
 	p.hp = p.max_hp; p.hunger = 80.0
 	p.equipment["armor"] = ""; p.armor_wear = -1.0
-	p.pos = Vector2(150, 10)
+	# a fire-element partner or base pal at your shoulder is a heat source —
+	# park the whole crew far away so the north wind is the only variable
+	for qn in game.pals:
+		if qn.mode in ["partner", "base"]:
+			qn.pos = Vector2(140, 60)
+	# and pick a north tile clear of any heat structure left by earlier tests
+	var north_spot := Vector2(150, 10)
+	for nx2 in range(10, 210):
+		if game.world.tile_at(nx2, 10) == World.Tile.WATER:
+			continue
+		if game.nearest_heat(Vector2(nx2, 10) + Vector2(0.5, 0.5)) > 12.0:
+			north_spot = Vector2(nx2, 10) + Vector2(0.5, 0.5)
+			break
+	p.pos = north_spot
 	p.cold_t = 0.0
 	var hp_n := p.hp
 	p._physics_process(4.5)

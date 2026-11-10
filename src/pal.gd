@@ -17,6 +17,7 @@ var mode := "wild"           # wild | partner | base
 var statuses := {}           # kind -> until_t
 var aggro := -1              # -1 none, 0 player, >0 pal uid
 var wander_t := 0.0
+var train_t := 0.0            # sparring clock at a training dummy
 var bed_seek := 0.0           # seconds spent shuffling toward a bed at night
 var sleep_rested := false    # reached a real bed — a floor nap recovers less
 var carry = null             # {id,n} while hauling
@@ -461,6 +462,26 @@ func base_ai(dt: float) -> void:
 	elif spec.get("work", {}).get("transporting", 0) > 0:
 		haul_ai(dt)
 	else:
+		# Palworld training dummy: an idle pal marches to the nearest straw man
+		# and spars — fighters earn their keep between raids instead of
+		# milling about the yard
+		var dk := Vector2i(-1, -1); var dbd := 100.0
+		for k2 in game.structures:
+			if game.structures[k2]["id"] != "training_dummy":
+				continue
+			var dd3 := pos.distance_squared_to(Vector2(k2.x + 0.5, k2.y + 0.5))
+			if dd3 < dbd:
+				dbd = dd3; dk = k2
+		if dk.x >= 0:
+			var dp := Vector2(dk.x + 0.5, dk.y + 0.5)
+			if pos.distance_to(dp) > 1.3:
+				step_toward(dp, dt)
+			else:
+				train_t += dt
+				if train_t >= 3.0:
+					train_t = 0.0
+					game.pal_gain_xp(self, 2) # slow honest reps
+			return
 		wander_t -= dt
 		if wander_t <= 0:
 			wander_t = 2.0 + game.rng.next() * 3.0

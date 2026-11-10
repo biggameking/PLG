@@ -440,7 +440,27 @@ const STRUCTURES = {
   "job": {"kind": "chill", "workType": "cooling", "amount": 120, "produces": [["ice_organ", 1]]},
   "desc": "A cooling pal condenses ice organs here."
  },
- "fish_trap": {
+ "training_dummy": {
+  "id": "training_dummy",
+  "name": "Training Dummy",
+  "glyph": "‡",
+  "color": "#a08050",
+  "w": 1,
+  "h": 1,
+  "hp": 200,
+  "cost": [
+   [
+    "wood",
+    15
+   ],
+   [
+    "fiber",
+    6
+   ]
+  ],
+  "desc": "A straw sparring partner — idle pals swing on it and grow a little stronger."
+ },
+"fish_trap": {
   "id": "fish_trap",
   "name": "Fish Trap",
   "glyph": "≋",
@@ -1215,6 +1235,12 @@ const TECH = [
   "id": "fish_trap",
   "name": "Fish Trap",
   "tier": 3,
+  "cost": 1
+ },
+ {
+  "id": "training_dummy",
+  "name": "Training Dummy",
+  "tier": 4,
   "cost": 1
  }
 ]

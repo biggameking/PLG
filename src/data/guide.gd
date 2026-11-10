@@ -70,7 +70,9 @@ monitoring stand's gentler shifts keep minds whole. Sick pals
 need medicine; the box heals the KO'd on a timer.
 
 Sleep heals: a real bed knits wounds thrice as fast as the
-floor. Dark pals keep night hours and nap by day.""",
+floor. Dark pals keep night hours and nap by day. And a pal
+with no trade should not idle — set a training dummy in the
+yard and watch it spar itself stronger between raids.""",
 """— VOL. V —
 BREEDING, EGGS AND LUCK
 

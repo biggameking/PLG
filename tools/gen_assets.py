@@ -813,6 +813,14 @@ def make_structure(sid, color, w, h):
         d.line([(W//2, 26), (W//2, 16)], fill=hxc("#7a9a4a") + (255,), width=2)
         d.ellipse([W//2 - 5, 14, W//2 - 1, 18], fill=hxc("#9acd32") + (255,))
         d.ellipse([W//2 + 1, 13, W//2 + 6, 17], fill=hxc("#9acd32") + (255,))
+    elif sid == "training_dummy":
+        # straw man on a post — crossbar arms, battered head, wood base
+        d.rectangle([W//2 - 8, 40, W//2 + 8, 44], fill=hxc("#5e462e") + (255,))
+        d.line([(W//2, 14), (W//2, 40)], fill=hxc("#8a6d4d") + (255,), width=3)
+        d.line([(W//2 - 10, 24), (W//2 + 10, 24)], fill=hxc("#8a6d4d") + (255,), width=3)
+        d.ellipse([W//2 - 6, 12, W//2 + 6, 24], fill=hxc("#d8b84a") + (255,))
+        d.rectangle([W//2 - 7, 20, W//2 + 7, 23], fill=hxc("#a08050") + (255,))
+        d.line([(W//2 - 3, 15), (W//2 + 3, 19)], fill=hxc("#8a6d4d") + (255,), width=1)
     elif sid == "fish_trap":
         # woven weir box over lapping water — stakes, net, a silver catch
         d.rectangle([W//2 - 16, 30, W//2 + 16, 44], fill=hxc("#3a6ea8") + (255,))
@@ -870,6 +878,7 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
     "sphere_factory_2": ("#4dd0e1", 2, 1),
     "compost_bin": ("#7a9a4a", 1, 1),
     "fish_trap": ("#5a8ac0", 1, 1),
+    "training_dummy": ("#a08050", 1, 1),
     "expedition_post": ("#c9a15a", 2, 1),
 }
 

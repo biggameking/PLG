@@ -212,6 +212,12 @@ export const STRUCTURES: Record<string, StructureDef> = {
       consumes: [["spoiled_food", 2], ["fiber", 1]], produces: [["fertilizer", 1]] },
     desc: "A farming pal turns rot and straw into rich fertilizer — every scrap earns its keep.",
   },
+  training_dummy: {
+    id: "training_dummy", name: "Training Dummy", glyph: "‡", color: "#a08050", w: 1, h: 1,
+    hp: 200,
+    cost: [["wood", 15], ["fiber", 6]],
+    desc: "A straw sparring partner — idle pals swing on it and grow a little stronger.",
+  },
   fish_trap: {
     id: "fish_trap", name: "Fish Trap", glyph: "≋", color: "#5a8ac0", w: 1, h: 1,
     needsWater: true,
@@ -285,4 +291,5 @@ export const TECH: TechNode[] = [
   { id: "sphere_factory_2", name: "Giga Works", tier: 8, cost: 4, parts: 2 },
   { id: "compost_bin", name: "Compost Bin", tier: 2, cost: 1 },
   { id: "fish_trap", name: "Fish Trap", tier: 3, cost: 1 },
+  { id: "training_dummy", name: "Training Dummy", tier: 4, cost: 1 },
 ];
