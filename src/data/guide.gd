@@ -61,7 +61,12 @@ leaf-litter snare and the meal walks to you — whatever steps
 in is held fast for a few heartbeats, one bite and the spring
 is spent. Or take the quiet road entirely: a tranquilizer gun
 puffs a venom-coated dart that drops a wild pal mid-stride —
-sleeping prey catches like it dreams of being caught.""",
+sleeping prey catches like it dreams of being caught.
+
+And keep your hand steady: each capture that sticks feeds a
+quiet streak in your throwing arm — every success in a row
+pays a little more experience, up to half again. One pal
+breaking free snaps the run. A calm trapper is a rich one.""",
 """— VOL. III —
 PARTY, BOX AND BENCH
 

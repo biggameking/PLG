@@ -1425,6 +1425,19 @@ func run() -> void:
 	check("miner cap lamp swaps with armor", lamp_on and p._lamp == null,
 		"on=%s off=%s" % [lamp_on, p._lamp == null])
 
+	# catch streak: each landed capture pays a little more — one escape snaps it
+	var stk0 := game.catch_streak
+	game.catch_streak = 0
+	var stk_xp1: int = game.catch_xp(10) # 10*3*1.05 -> 32
+	var stk_xp2: int = game.catch_xp(10) # streak 2 -> 33
+	game.catch_streak = 20 # past the cap
+	var stk_xp_cap: int = game.catch_xp(10) # 10*3*1.5 -> 45
+	game.catch_fail()
+	check("catch streak pays and snaps", stk_xp1 > 30 and stk_xp2 > stk_xp1 \
+		and stk_xp_cap == 45 and game.catch_streak == 0,
+		"xp=%d,%d,%d streak=%d" % [stk_xp1, stk_xp2, stk_xp_cap, game.catch_streak])
+	game.catch_streak = stk0
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

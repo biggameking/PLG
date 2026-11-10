@@ -1046,7 +1046,9 @@ func resolve_sphere(sp) -> void:
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		sfx_play("catch")
 		log_msg("Caught %s Lv%d!" % [target.spec["name"], target.level])
-		gain_xp(target.level * 3)
+		gain_xp(catch_xp(target.level))
+		if catch_streak >= 3:
+			floater(target.pos, "STREAK x%d!" % catch_streak, "#ffd76e")
 		# Palworld catch-count bonus: every 10th of a species pays a fat bonus
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		if catch_counts[target.species_id] % 10 == 0:
@@ -1079,7 +1081,18 @@ func resolve_sphere(sp) -> void:
 		floater(target.pos, "…broke free", "#e8963c")
 		sfx_play("fail")
 		log_msg("%s broke free (%d%%)" % [target.spec["name"], int(chance * 100)])
+		catch_fail()
 		target.aggro = 0 if target.hostile() >= 1 else -1
+
+func catch_xp(lv: float) -> int:
+	# streak rewards a steady hand: +5% per consecutive catch, cap +50%
+	catch_streak += 1
+	return int(round(lv * 3.0 * (1.0 + minf(0.5, catch_streak * 0.05))))
+
+func catch_fail() -> void:
+	if catch_streak >= 3:
+		log_msg("Catch streak ends at %d" % catch_streak)
+	catch_streak = 0
 
 func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> void:
 	# Host-authoritative catch for a client's throw. The wire id is our own
@@ -4515,6 +4528,7 @@ var merchant_wander_t := 0.0
 var last_merchant_day := -1
 var _tod_prev := 0.0
 var catch_counts := {} # species_id -> caught count (10th-of-kind pays a bonus)
+var catch_streak := 0 # consecutive captures — a hand that never fumbles earns more
 
 const BOARD_POOL := [["wood", 10], ["stone", 8], ["fiber", 8], ["red_berries", 8],
 	["mushroom", 5], ["wool", 3], ["raw_fish", 3], ["honey", 2], ["milk", 3]]
