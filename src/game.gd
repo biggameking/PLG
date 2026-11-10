@@ -906,6 +906,27 @@ func tick_daedream() -> void:
 		tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult(), 1.0, rng), 1.0, true)
 	floater(tgt.pos, "dream chaser!", "#b06ee8")
 
+func fertilize() -> void:
+	# spread fertilizer on the nearest field — five minutes of surging crops
+	var best: Vector2i = Vector2i(-1, -1)
+	var bd := 4.5
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if k != cell_of(st):
+			continue
+		if not StructureData.STRUCTURES.get(st["id"], {}).get("farmField", false):
+			continue
+		var d: float = player.pos.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if d < bd:
+			bd = d; best = k
+	if best.x < 0:
+		log_msg("Stand by a farm plot to spread it")
+		return
+	structures[best]["fert"] = t + 300.0
+	add_item("fertilizer", -1)
+	floater(Vector2(best.x + 0.5, best.y + 0.5), "fertilized!", "#a8c84a")
+	log_msg("%s surges for five minutes" % StructureData.STRUCTURES[structures[best]["id"]]["name"])
+
 func cap_power_of(target: Pal) -> float:
 	# luckies resist; Palworld's real gate is level — a lv50 shrugs off a
 	# ball that would bag a lv5, which is what pushes the sphere ladder
@@ -1989,7 +2010,8 @@ func tick_production(dt: float) -> void:
 			var cond: float = 1.0 + w.star * 0.1 # Palworld: a condensed pal outworks its kin
 			work_sum += (0.5 + 0.5 * maxi(1, lv)) * w.passive_mult("work") * w.work_mult() * dusk * dew * iv * cond
 		var wet := 1.25 if weather != "clear" and s.get("farmField", false) else 1.0 # rain or storm does the watering
-		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet
+		var fert := 1.5 if s.get("farmField", false) and float(st.get("fert", 0.0)) > t else 1.0
+		st["timer"] += (dt * (1.0 + perks["work"] * 0.1)) * powered * stand * work_sum * wet * fert
 		var rate: float = job.get("amount", 30)
 		if st["timer"] >= rate:
 			st["timer"] -= rate
@@ -2703,7 +2725,8 @@ func save_game() -> void:
 		var inc = st.get("egg_inc")
 		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200), "loot": st.get("loot", false),
 			"exp": ({"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t), "cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)} if st["id"] == "expedition_post" else null),
-			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)}
+			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
+			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null}
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
@@ -3024,6 +3047,8 @@ func load_game() -> bool:
 				if left > 0.0:
 					st["exp_end"] = t + clampf(left, 1.0, 900.0) # foreign timers can't pin a pal away forever
 				st["exp_cd"] = t + maxf(float(exp_d.get("cd", 0.0)), 0.0)
+			if sv.get("fert") is float or sv.get("fert") is int:
+				st["fert"] = t + clampf(float(sv["fert"]), 0.0, 300.0) # remaining seconds
 			if sv.get("inc") is Dictionary and sid == "incubator":
 				var inc_d: Dictionary = sv["inc"]
 				st["egg_inc"] = {"pair": inc_d.get("pair"), "huge": inc_d.get("huge") == true,

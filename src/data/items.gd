@@ -29,6 +29,15 @@ const ITEMS = {
   "price": 1,
   "desc": "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it."
  },
+ "fertilizer": {
+  "id": "fertilizer",
+  "name": "Fertilizer",
+  "glyph": "❀",
+  "color": "#8a9a3a",
+  "kind": "material",
+  "price": 12,
+  "desc": "Rich compost — use it standing by a field and the crops surge for five minutes."
+ },
  "fiber": {
   "id": "fiber",
   "name": "Fiber",

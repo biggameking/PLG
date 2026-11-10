@@ -971,6 +971,8 @@ func use_item(k: String) -> void:
 		"memory_wipe":
 			if game.respec():
 				game.add_item(k, -1)
+		"fertilizer":
+			game.fertilize()
 		_:
 			if k.begins_with("skill_fruit_"):
 				game.teach_skill_fruit(k)

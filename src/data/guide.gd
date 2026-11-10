@@ -9,7 +9,10 @@ SURVIVING THE ISLAND
 You wake on Palapagos with a box, a dream, and a growling gut.
 Eat. The red berries by the shore keep a body moving; raw food
 spoils within the hour — cook it, dry it, or staff an ice box
-with a cooling pal or watch your larder turn to mush.
+with a cooling pal or watch your larder turn to mush. And what
+rots is not lost: a farming pal at the compost bin turns scraps
+and straw into fertilizer that makes a field surge for five
+minutes. The island wastes nothing if you work it right.
 
 The island keeps a clock. Daylight is for building; night is
 when the dark element pals wake and hunt wide. Cold bites past

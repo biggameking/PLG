@@ -548,6 +548,19 @@ const STRUCTURES = {
    "produces": [["giga_sphere", 1]]},
   "desc": "Palworld assembly line II — the organ-fed belt rolls giga spheres."
  },
+ "compost_bin": {
+  "id": "compost_bin",
+  "name": "Compost Bin",
+  "glyph": "♻",
+  "color": "#7a9a4a",
+  "w": 1,
+  "h": 1,
+  "cost": [["wood", 10], ["stone", 4]],
+  "job": {"kind": "work", "workType": "farming", "amount": 90,
+   "consumes": [["spoiled_food", 2], ["fiber", 1]],
+   "produces": [["fertilizer", 1]]},
+  "desc": "A farming pal turns rot and straw into rich fertilizer — every scrap earns its keep."
+ },
  "pal_condenser": {
   "id": "pal_condenser",
   "name": "Pal Condenser",
@@ -1170,6 +1183,12 @@ const TECH = [
   "tier": 8,
   "cost": 4,
   "parts": 2
+ },
+ {
+  "id": "compost_bin",
+  "name": "Compost Bin",
+  "tier": 2,
+  "cost": 1
  }
 ]
 

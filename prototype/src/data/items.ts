@@ -24,6 +24,8 @@ export const ITEMS: Record<string, ItemDef> = {
   // raw materials
   wood: { id: "wood", name: "Wood", glyph: "≡", color: "#8a6d4d", kind: "material", stack: 999, desc: "Basic building material." },
   stone: { id: "stone", name: "Stone", glyph: "■", color: "#6b6f72", kind: "material", stack: 999, desc: "Basic building material." },
+  spoiled_food: { id: "spoiled_food", name: "Spoiled Food", glyph: "☒", color: "#6a5a3a", kind: "material", price: 1, desc: "Rotten scraps — unfit for man or pal. A staffed ice box would have saved it." },
+  fertilizer: { id: "fertilizer", name: "Fertilizer", glyph: "❀", color: "#8a9a3a", kind: "material", price: 12, desc: "Rich compost — use it standing by a field and the crops surge for five minutes." },
   fiber: { id: "fiber", name: "Fiber", glyph: "∽", color: "#9acd32", kind: "material", stack: 999, desc: "Plant fibers for cordage." },
   paldium: { id: "paldium", name: "Paldium Fragment", glyph: "◊", color: "#4dd0e1", kind: "material", stack: 999, desc: "Glowing fragment; sphere crafting." },
   ore: { id: "ore", name: "Ore", glyph: "▓", color: "#a0622d", kind: "material", stack: 999, desc: "Smelt into ingots." },

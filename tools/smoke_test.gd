@@ -921,6 +921,52 @@ func run() -> void:
 	else:
 		check("ice box preserves", false, "no cooler spot")
 
+	# the rot loop closes: compost bin turns scraps into surge — fertilized
+	# fields run 50% hot for five minutes
+	var cbin_k: Vector2i = free_xy.call("compost_bin")
+	var cbin_st = game.structures.get(cbin_k) if cbin_k.x >= 0 else null
+	var cfarm_k := Vector2i(-1, -1)
+	for fk in game.structures:
+		if StructureData.STRUCTURES.get(game.structures[fk]["id"], {}).get("farmField", false):
+			cfarm_k = fk
+			break
+	if cfarm_k.x < 0:
+		cfarm_k = free_xy.call("wheat_farm")
+	var fert_ok := false
+	if cbin_st != null and game.structures.has(cfarm_k):
+		var farmer: Pal = game.gen_pal("chikipi", 5, game.player.pos)
+		farmer.mode = "base"; farmer.san = 90.0; farmer.hunger = 10.0; farmer.ailment = ""
+		farmer.passives = []; farmer.statuses.clear(); farmer.talent = 50
+		var saved_cb: Array = cbin_st["workers"].duplicate()
+		cbin_st["workers"] = [farmer]; farmer.job_site = cbin_st
+		var chest7 = null
+		for kk15 in game.structures:
+			if game.structures[kk15]["id"] == "chest" and not game.structures[kk15].get("loot", false):
+				chest7 = game.structures[kk15]
+				break
+		if chest7 == null:
+			var ck7: Vector2i = free_xy.call("chest")
+			chest7 = game.structures.get(ck7)
+		if chest7 != null:
+			chest7["store"]["spoiled_food"] = chest7["store"].get("spoiled_food", 0) + 2
+			chest7["store"]["fiber"] = chest7["store"].get("fiber", 0) + 1
+			cbin_st["timer"] = 89.5
+			game.tick_production(1.0)
+			var made: bool = cbin_st["store"].get("fertilizer", 0) >= 1
+			var p7: Vector2 = p.pos
+			p.pos = Vector2(cfarm_k.x + 0.5, cfarm_k.y + 0.5)
+			game.add_item("fertilizer", 1)
+			game.fertilize()
+			fert_ok = made and float(game.structures[cfarm_k].get("fert", 0.0)) > game.t
+			p.pos = p7
+			cbin_st["workers"] = saved_cb; farmer.job_site = null
+			game.pals.erase(farmer); farmer.free()
+		check("compost and surge", fert_ok, "made=%s fert=%.0f" % [
+			cbin_st["store"].get("fertilizer", 0) >= 1,
+			float(game.structures[cfarm_k].get("fert", 0.0)) - game.t])
+	else:
+		check("compost and surge", false, "bin=%s farm=%s" % [cbin_st != null, cfarm_k])
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):
