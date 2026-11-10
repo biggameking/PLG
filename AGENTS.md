@@ -168,3 +168,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     on boss/legend, box op on a non-owned uid, harvest with no ghost, strike
     during a panel, load with non-empty bench — the positive assertion
     without its gate-check certifies half the contract.
+35. **A gate class has layers — grep them all.** Gating frame-loop ticks but
+    not interaction verbs, or gating verbs but not key bindings, ships the
+    same hole twice. Closing a class means enumerating its LAYERS: per-frame
+    ticks, E-verb/item-cost interactions, save/load verbs, net-control keys,
+    and RPC handlers. `client_locked()` is the interaction-layer gate; key
+    handlers refuse mid-session (`host_net`/`join_net`/`load_save`); save
+    verbs refuse on client AND on host-with-guests.
+36. **A "named exception" needs its consequences reconciled, not just a
+    comment.** `tick_migration` was documented as the local-fauna exception
+    while its downstream effects (real AI, real loot, roster capacity,
+    catchability, uid-space collision) were never owned. If an exception
+    survives review, enumerate every consumer of the thing it produces.

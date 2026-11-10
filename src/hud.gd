@@ -228,10 +228,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.load_game()
 		return
 	if event.is_action_pressed("host_net"):
-		if game.net: game.net.host() # J: host on :7777 — these actions were bound but unwired
+		if game.net and game.net.multiplayer.multiplayer_peer == null:
+			game.net.host() # J: host on :7777 — refused mid-session:
+		elif game.net:                    # a guest re-hosting severs its own
+			game.log_msg("End the session first (quit to title)") # replica world
 		return
 	if event.is_action_pressed("join_net"):
-		if game.net and game.panel == "":
+		if game.net and game.panel == "" and game.net.multiplayer.multiplayer_peer == null:
 			game.panel = "join"; join_buf = "" # K: type the host's IP, Enter to join
 		return
 	if event is InputEventKey and event.pressed and game.panel == "":
@@ -1044,7 +1047,9 @@ func draw_kinbox(r: Vector2) -> void:
 		y += 18
 		for wp in workers:
 			var wrect := Rect2(rr.position.x + 24, y - 11, 250, 17)
-			click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
+			if game.net == null or not game.net.is_client():
+				click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
+				# a guest reads the crew roster but can't recall the keeper's kin
 			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d T%d %s%s" % [wp.spec["name"],
 				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
 				wp.job_site["id"] if wp.job_site else "idle",

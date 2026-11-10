@@ -25,6 +25,8 @@ func host() -> void:
 	if peer.create_server(PORT) != OK:
 		game.log_msg("Host failed: port %d busy" % PORT)
 		return
+	_close_peer() # never swap a live peer — that leaks the session and
+	# flips is_client() off, which would open the save gates on a guest
 	multiplayer.multiplayer_peer = peer
 	is_host = true
 	game.log_msg("Hosting on port %d — friends join with K" % PORT)
@@ -34,8 +36,15 @@ func join(ip: String) -> void:
 	if peer.create_client(ip, PORT) != OK:
 		game.log_msg("Join failed")
 		return
+	_close_peer()
+	is_host = false
 	multiplayer.multiplayer_peer = peer
 	game.log_msg("Joining %s:%d ..." % [ip, PORT])
+
+func _close_peer() -> void:
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
+		multiplayer.multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
 
 func is_client() -> bool:
 	# "not host" alone is also true offline — and a headless/offline run
@@ -469,13 +478,22 @@ func assign_req(x: float, y: float) -> void:
 		return # a hand can't post a pal it isn't standing next to
 	game.assign_remote(pid, at)
 
+var chat_last := 0.0 # cheap flood brake — one relayed line per tick beat
 @rpc("any_peer", "call_remote", "unreliable")
 func chat(t: String, from_id: int = 0) -> void:
-	if from_id == multiplayer.get_unique_id():
+	# the claimed sender is a lie — the wire's sender_id is the only honest id
+	var real_from: int = multiplayer.get_remote_sender_id()
+	if real_from == 0: # local call (own echo / host-originated line)
+		real_from = from_id
+	if real_from == multiplayer.get_unique_id():
 		return # the server relayed your own line back — hud already echoed it
-	game.log_msg("[friend] " + str(t))
+	var line: String = str(t).left(160) # the log window can't hold a novel
+	game.log_msg("[friend] " + line)
 	if multiplayer.is_server():
-		rpc("chat", str(t), int(from_id)) # ENet is a star: relay client chat to the other clients
+		if Time.get_ticks_msec() / 1000.0 - chat_last < 0.25:
+			return # a peer spamming chat gets exactly one relay per beat
+		chat_last = Time.get_ticks_msec() / 1000.0
+		rpc("chat", line, int(real_from)) # ENet is a star: relay to other clients
 
 var pal_sync_t := 0.0
 

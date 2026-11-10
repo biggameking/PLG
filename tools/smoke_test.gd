@@ -27,11 +27,8 @@ func _boot() -> void:
 	for r in results:
 		if r.begins_with("FAIL"):
 			fails += 1
-	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.READ_WRITE)
-	if fo == null:
-		fo = FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
-	if fo:
-		fo.seek_end()
+	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
+	if fo: # WRITE truncates — the file is this run's verdict, not a history log
 		fo.store_line("==== %d checks, %d failures ====" % [results.size(), fails])
 		fo.close()
 	quit()
@@ -4427,6 +4424,54 @@ func run() -> void:
 		and game.CRIES["fenjelly"].data.size() > 0
 		and game.CRIES.size() <= SpeciesData.SPECIES.size() + SpeciesGen.SPECIES.size()) # bounded by the species set
 
+	# ---------- client authority: every gated verb refuses on a guest ----------
+	# a connecting ENet peer flips is_client() true — it never has to complete;
+	# the gates key off the peer TYPE, not the handshake
+	var fake_peer := ENetMultiplayerPeer.new()
+	fake_peer.create_client("127.0.0.1", 7777)
+	game.net.is_host = false
+	game.net.multiplayer.multiplayer_peer = fake_peer
+	check("client context flips", game.net.is_client())
+	if game.item_count("kin_egg") == 0:
+		game.add_item("kin_egg", 1)
+	var eggs_have: int = game.item_count("kin_egg")
+	var b4_inc := game.structures.values().filter(func(s9): return s9["id"] == "incubator")
+	var inc_st = b4_inc[0] if b4_inc.size() > 0 else null
+	if inc_st != null:
+		game.deposit_egg()
+		check("client deposit_egg refused", game.item_count("kin_egg") == eggs_have
+			and not inc_st.has("egg_inc"), "eggs=%d inc=%s" % [game.item_count("kin_egg"), inc_st.get("egg_inc")])
+	var day_c: int = game.day
+	game.sleep_to_morning()
+	check("client sleep refused", game.day == day_c)
+	check("client cast refused", not game.cast_line())
+	check("client gauntlet refused", not game.start_gauntlet())
+	check("client load refused", not game.load_game())
+	var locked_tech := ""
+	for tn in StructureData.TECH: # find a real node the run hasn't unlocked
+		if tn["id"] not in game.unlocked:
+			locked_tech = tn["id"]; break
+	if locked_tech != "":
+		var tp_c: int = game.tech_points
+		game.unlock(locked_tech)
+		check("client unlock refused", locked_tech not in game.unlocked and game.tech_points == tp_c,
+			"sid=%s tp=%d" % [locked_tech, game.tech_points])
+	var bag0: int = game.items.values().reduce(func(a, b): return a + b, 0)
+	game.respawn_player()
+	var bag1: int = game.items.values().reduce(func(a, b): return a + b, 0)
+	check("client death keeps the bag", bag1 == bag0, "bag=%d -> %d" % [bag0, bag1])
+	var pal_c: int = game.pals.size()
+	game.mig_t = 0.0
+	game.tick_migration(999.0)
+	check("client migration spawns nothing", game.pals.size() == pal_c)
+	var chests := game.structures.values().filter(func(s9): return s9["id"] == "chest")
+	if chests.size() > 0:
+		check("client chest deposit refused", game.chest_deposit_all(chests[0]) == 0)
+	game.record_spire("spire_-1")
+	check("record_spire re-validates", not game.spires_done.has("spire_-1"))
+	game.net.multiplayer.multiplayer_peer.close()
+	game.net.multiplayer.multiplayer_peer = null # back to honest offline
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is
@@ -4457,19 +4502,20 @@ func run() -> void:
 	check("sweep: clock survives the reboot", game.day == day_n,
 		"day=%d want=%d" % [game.day, day_n])
 
+	# restore the dev's real save the moment the LAST save-mutating test is
+	# done — a crash after this point leaves user:// untouched
+	if save_backup.is_empty():
+		DirAccess.remove_absolute("user://savegame.plg")
+	else:
+		var sv2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+		sv2.store_buffer(save_backup); sv2.close()
+
 	# net host (no client join in same proc) — close the socket too: a bound
 	# :7777 outlives the suite and breaks the next run on a busy machine
 	game.net.host()
 	check("net host", game.net.multiplayer.multiplayer_peer != null)
 	game.net.multiplayer.multiplayer_peer.close()
 	game.net.multiplayer.multiplayer_peer = null
-
-	# restore the dev's real save — the load/corrupt-save tests clobbered it
-	if save_backup.is_empty():
-		DirAccess.remove_absolute("user://savegame.plg")
-	else:
-		var sv2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
-		sv2.store_buffer(save_backup); sv2.close()
 
 	var fails := 0
 	for r in results:

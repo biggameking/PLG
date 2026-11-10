@@ -606,6 +606,16 @@ func floater(pos: Vector2, text: String, color: String) -> void:
 		floaters.pop_front() # cosmetic spam is evictable
 	floaters.push_back({"p": pos, "t": text, "c": color, "age": 0.0})
 
+func client_locked() -> bool:
+	# the island authority contract: a guest may LOOK at a replica chest,
+	# egg slot, fossil bed, cage, shrine or statue — but verbs that spend
+	# items or mutate structure/world state belong to the host. One helper,
+	# every world-mutating interaction routes through it.
+	if net != null and net.is_client():
+		log_msg("Only the host can change the island")
+		return true
+	return false
+
 # ---------- wild kin ----------
 const ZONE_SPECIES := {
 	0: ["fenjelly", "fenlump", "sprigmelt", "puffmite", "briargoo"],
@@ -897,6 +907,8 @@ func tick_boss_respawns() -> void:
 var gauntlet := {} # {"wave": int, "left": int} — empty while idle
 
 func start_gauntlet() -> bool:
+	if client_locked():
+		return false
 	if not gauntlet.is_empty():
 		log_msg("A gauntlet is already running")
 		return false
@@ -1124,6 +1136,8 @@ func generator_active() -> bool:
 	return false
 
 func chest_deposit_all(st) -> int:
+	if client_locked():
+		return 0
 	var n := 0
 	if not st.has("store"):
 		st["store"] = {}
@@ -1148,6 +1162,8 @@ func chest_deposit_all(st) -> int:
 	return n
 
 func chest_withdraw_all(st) -> int:
+	if client_locked():
+		return 0
 	var n := 0
 	for iid in st.get("store", {}).keys():
 		add_item(iid, st["store"][iid])
@@ -1157,15 +1173,18 @@ func chest_withdraw_all(st) -> int:
 
 var death_marks: Array[Vector2] = [] # map tombstones where you dropped your pack (session-only)
 func respawn_player() -> void:
-	# the island rule: your pack spills where you fell; walk back to reclaim
+	# the island rule: your pack spills where you fell; walk back to reclaim.
+	# Guests skip the spill — spawn_drop is host-authoritative, so a client
+	# would delete its bag into the void (drops exist only as net replicas).
 	var dropped := 0
-	for id in items.keys():
-		if items[id] > 0:
-			var a := rng.next() * TAU
-			spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8))
-			dropped += items[id]
-			items.erase(id) # don't leave ghost "x0" rows in the bag
-			unequip_if_gone(id)
+	if net == null or not net.is_client():
+		for id in items.keys():
+			if items[id] > 0:
+				var a := rng.next() * TAU
+				spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8))
+				dropped += items[id]
+				items.erase(id) # don't leave ghost "x0" rows in the bag
+				unequip_if_gone(id)
 	if dropped > 0:
 		log_msg("You dropped %d items where you fell!" % dropped)
 		death_marks.append(player.pos) # the island tombstone: the map remembers the spill
@@ -1218,6 +1237,8 @@ func is_night() -> bool:
 	return tod >= 21.0 or tod < 5.0
 
 func sleep_to_morning() -> void:
+	if client_locked():
+		return
 	for q in pals:
 		if q.hp > 0 and (q.raid or (q.mode == "wild" and q.aggro >= 0)):
 			log_msg("Can't sleep - hostiles are after you!")
@@ -1333,6 +1354,8 @@ func dig_check() -> void: # called on the frame tick — standing on the X digs
 	sfx_play("level")
 
 func pray_weather() -> void:
+	if client_locked():
+		return
 	# the island weather-shrine: offer lumenite, cycle the sky. One altar's mood
 	# is everyone's sky — the cooldown is global, not per building
 	if t < pray_cd:
@@ -1367,6 +1390,8 @@ func lure_take(p: Kin) -> void: # first snout to the pile eats it
 	floater(p.pos, "yum!", "#d8b84a")
 
 func fertilize() -> void:
+	if client_locked():
+		return
 	# spread fertilizer on the nearest field — five minutes of surging crops
 	var best: Vector2i = Vector2i(-1, -1)
 	var bd := 4.5
@@ -2241,6 +2266,8 @@ func demolish_at(at: Vector2) -> bool:
 # their contents when razed. The kinbox is hardened — losing the anchor
 # would orphan every base kin's job and the respawn point.
 func tick_repairs(dt: float) -> void:
+	if net != null and net.is_client():
+		return # replica hp is host truth — a local patch desyncs the crew
 	# the island: free hands patch the base up — idle handiwork-suitable kin
 	# slowly mend damaged structures (assigned kin are busy elsewhere)
 	var fixers := 0.0
@@ -2315,6 +2342,8 @@ func tech_node(sid: String) -> Dictionary:
 	return {}
 
 func unlock(sid: String) -> void:
+	if client_locked():
+		return
 	if sid in unlocked:
 		return
 	var t := tech_node(sid)
@@ -2841,6 +2870,8 @@ func fish_bite_p() -> float:
 	return 0.55 if weather in ["rain", "storm"] else 0.4 # wet skies feed the bite; dry ones don't
 
 func cast_line() -> bool:
+	if client_locked():
+		return false
 	# the island fishing: stand at the water's edge, wait for a bite — mostly
 	# loot, sometimes a live aquatic kin surfaces to fight or catch
 	var c := Vector2i(int(player.pos.x), int(player.pos.y))
@@ -3191,6 +3222,8 @@ func find_work_site(p: Kin, reach: float) -> Variant:
 
 var assign_t := 0.0
 func tick_assign(dt: float) -> void:
+	if net != null and net.is_client():
+		return # writes job_site/workers on replica structures — host truth
 	# the island: idle base kin drift into open posts on their own — the kinbox
 	# crew staffs itself instead of waiting for a manual tap every time.
 	# Transporters are exempt: hauling IS their job and a pinned site would
@@ -3562,6 +3595,12 @@ func save_game() -> void:
 	log_msg(tr("Saved."))
 
 func load_game() -> bool:
+	if net != null and net.is_client():
+		log_msg("The world lives on the host — nothing to load locally")
+		return false # a solo save must never rebuild a replica world
+	if multiplayer.multiplayer_peer != null and multiplayer.get_peers().size() > 0:
+		log_msg("Guests connected — end the session before loading")
+		return false # reloading under guests desyncs their world for good
 	if not FileAccess.file_exists("user://savegame.plg"):
 		return false
 	var f := FileAccess.open("user://savegame.plg", FileAccess.READ)
@@ -3596,6 +3635,8 @@ func load_game() -> bool:
 	focus_target = null
 	raid_warned = false # a 30s horn doesn't survive the reload
 	raid_theme = ""
+	hint_seen.clear() # onboarding memory belongs to the run, not the file
+	death_marks.clear() # tombstones are session-only — a load starts clean
 	for pr in projectiles:
 		pr["node"].queue_free()
 	projectiles.clear()
@@ -3955,6 +3996,8 @@ const WORK_MODES := [
 ]
 
 func cycle_work_mode() -> void:
+	if client_locked():
+		return
 	if not has_structure("monitoring_stand"):
 		return
 	work_mode = (work_mode + 1) % WORK_MODES.size()
@@ -3992,13 +4035,16 @@ func tick_supply(dt: float) -> void:
 
 var mig_t := 300.0 # passing herds — a deeper zone's species crosses the map
 func tick_migration(dt: float) -> void:
+	if net != null and net.is_client():
+		return # migrants arrive as host-synced replicas — a local herd would
+		# be phantom fauna: real AI, real loot, invisible to the host
 	mig_t -= dt
 	if mig_t > 0.0:
 		return
 	mig_t = 420.0 + rng.next() * 420.0 # a herd drifts through every 7-14 minutes
 	# migrants come from a deeper band — a taste of what lives one zone over,
-	# catchable without walking there. Wild kin are locally authoritative
-	# (same contract as spawn_wild), so this ticks on every client too.
+	# catchable without walking there. Host-only like spawn_wild — the
+	# replicas clients render come through pal_sync, not this roll.
 	var zone := rng.int_range(1, 3)
 	var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone))
 	if pool.is_empty():
@@ -4298,6 +4344,8 @@ func pull_from_storage(id: String, need: int) -> int:
 	return need - left
 
 func deposit_egg() -> void:
+	if client_locked():
+		return
 	# the island: eggs go into an incubator; hatching takes real time.
 	# Huge eggs take the slot first — a guaranteed Lucky is worth it.
 	var egg_id := ""
@@ -4475,6 +4523,8 @@ func spawn_camps() -> void:
 		placed += 1
 
 func free_captive(st: Dictionary) -> void:
+	if client_locked():
+		return
 	# prize the lock — the caged kin joins your box like any catch
 	var cap = st.get("captive")
 	if not (cap is Dictionary) or str(cap.get("sp", "")) == "":
@@ -4507,6 +4557,8 @@ func spawn_fossils() -> void:
 			placed += 1 # haulers key on chest ids — a bone-heap needs no flag
 
 func dig_fossil(st: Dictionary) -> void:
+	if client_locked():
+		return
 	var cell: Vector2i = cell_of(st)
 	var pos := Vector2(cell.x + 0.5, cell.y + 0.5)
 	net_remove_structure(st) # one dig and the bed is spent
@@ -4521,6 +4573,8 @@ func dig_fossil(st: Dictionary) -> void:
 	sfx_play("catch")
 
 func open_mimic(st: Dictionary) -> void:
+	if client_locked():
+		return
 	# some dungeon chests are only chest-shaped — open it and it opens back
 	var sp: String = str(st.get("mimic", ""))
 	if sp == "" or SpeciesData.species_of(sp).is_empty():
@@ -4906,6 +4960,9 @@ func spire_tag_ok(s: String) -> bool:
 	return rest.is_valid_int() and int(rest) >= 0 and int(rest) < SPIRE_DEFS.size()
 
 func record_spire(tag: String) -> void:
+	if not spire_tag_ok(tag):
+		return # a crown must never be minted from a forged tag — every
+		# writer validates, and the choke point re-checks regardless
 	spires_done[tag] = true
 	var n := spires_done.size()
 	log_msg("Pact spire broken! %d of %d" % [n, SPIRE_DEFS.size()])
@@ -5016,6 +5073,11 @@ func regenerate(s: int) -> void:
 	player.mount = null # the pal it pointed at is gone — don't chase a freed object
 	lure = {}; treasure = {}; board_quest = {} # tossed bait, marked charts and old postings belong to the old world
 	hint_seen.clear() # a new island earns its nudges again
+	focus_target = null # a dangling Kin ref into the old world
+	death_marks.clear() # tombstones mark this island's falls, not the last one's
+	raid_warned = false; raid_theme = ""; raid_t = 180.0 # no horn or countdown survives — the clock re-arms, not fires
+	catch_counts.clear(); catch_streak = 0 # fresh world, fresh ten-streak math
+	player.statuses.clear() # the old world's burns don't carry over
 	despawn_merchant() # new world, new route — the trader doesn't follow
 	world.generate(s)
 	drawer.setup(world)
@@ -5075,6 +5137,8 @@ func respec() -> bool:
 	return true
 
 func soul_infuse(uid: int) -> void:
+	if client_locked():
+		return
 	# the island statue-of-power for kin: feed effigies into one kin's soul
 	var target: Kin = null
 	for q in pals:
@@ -5423,6 +5487,8 @@ func break_armor(id: String) -> void:
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func teach_skill_fruit(item_id: String) -> void:
+	if client_locked():
+		return
 	# Skill fruit (the island): teaches the active kin a move of that element
 	if party.is_empty():
 		log_msg("No active kin to teach")
