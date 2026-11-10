@@ -226,3 +226,21 @@ build-tools/apksigner).
   `owner_tag`; `_legit_blink` scans a cached travel-cell set (rebuild on
   count change or 3s TTL); `chat_last` prunes on disconnect. Smoke +4
   (spawn first-fix accept/reject, expedition orphan, zero-claim no-op).
+- S22b guest damage ceiling — DONE: `pal_hit`'s claim bound derives from
+  the real ceiling (top weapon ×2 transmog + 60-level attack + perks 0.4
+  + trinkets 0.24 + partner aura 0.1 + meal) ≈ 775 instead of a flat
+  500 that would have clipped legit end-game builds. Smoke asserts the
+  derived cap.
+- S22c loop seam + hello coverage — DONE: pad `arp_step` quantizes onto
+  the 24s loop and the per-loop attack ramp is gone; smoke asserts
+  head/tail continuity. `hello` gained a positive-path check
+  (fresh tag registers).
+- S22d touch verbs complete — DONE: the button cluster gained INV (bag)
+  and BLD (build, resets selection) — a touch-only player could not
+  reach either panel before. Smoke +2.
+- S23 store capsules — DONE: `tools/gen_store.py` ports the title dawn
+  scene to PIL, stamps the hero-kin lineup + Press Start 2P wordmark,
+  and emits Steam 460x215 / 616x353, itch 630x500, and a 1920x622 hero
+  into `store/`. Found + fixed a real bug: ImageDraw writes 4-tuples
+  raw onto RGBA (no blend), so the vignette rect blacked the frame —
+  now a whole-frame blend. Pixel-verified, not blind-generated.
