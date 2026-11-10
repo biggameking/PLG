@@ -323,6 +323,9 @@ func run_click(cr: Dictionary) -> void:
 		"fullscreen":
 			game.settings["fullscreen"] = not game.settings["fullscreen"]
 			game.apply_settings(); game.save_settings()
+		"raids_tgl":
+			game.settings["raids"] = not game.settings["raids"]
+			game.apply_settings(); game.save_settings()
 		"chest_dep", "chest_wd":
 			var st = game.chest_ref
 			var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
@@ -515,12 +518,16 @@ func _draw() -> void:
 					bd2 = dd
 					bp2 = q
 			if bp2:
-				var cap_pow2: float = game.cap_power_of(bp2)
-				var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
-					ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
-				var col := Color("#a8e6a1") if ch >= 0.5 else (Color("#e8963c") if ch >= 0.2 else Color("#e8452f"))
-				draw_string(font, Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)],
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
+				if bp2.boss:
+					draw_string(font, Vector2(12, 112), "✦ %s Lv%d — a legend: orbs bounce off" % [bp2.spec["name"], bp2.level],
+						HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ffd76e"))
+				else:
+					var cap_pow2: float = game.cap_power_of(bp2)
+					var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
+						ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
+					var col := Color("#a8e6a1") if ch >= 0.5 else (Color("#e8963c") if ch >= 0.2 else Color("#e8452f"))
+					draw_string(font, Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)],
+						HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
 	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else ("  ☀" if game.weather == "drought" else ""))
 	var wcol := Color("#b48ef0") if game.weather == "storm" else (Color("#7fb8e8") if game.weather == "rain" else (Color("#e8b45c") if game.weather == "drought" else Color("#e8f0f2")))
@@ -733,6 +740,11 @@ func draw_settings(r: Vector2) -> void:
 	click_rects.append({"rect": fs, "act": "fullscreen", "arg": null})
 	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), "FULLSCREEN  [%s]" % ("ON" if game.settings["fullscreen"] else "off"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["fullscreen"] else Color.WHITE)
+	y += 32
+	var rd := Rect2(rr.position.x + 24, y, 200, 26)
+	click_rects.append({"rect": rd, "act": "raids_tgl", "arg": null})
+	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), "BASE RAIDS  [%s]" % ("ON" if game.settings["raids"] else "off"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["raids"] else Color(0.7, 0.7, 0.7))
 	y += 44
 	var bk := Rect2(rr.position.x + 24, y, 120, 28)
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})

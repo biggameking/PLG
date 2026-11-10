@@ -925,7 +925,7 @@ const SPECIES = {
     5
    ]
   ],
-  "desc": "A poacher for the Iron Pact Iron Pact. Terrible worker, worse intentions.",
+  "desc": "A poacher for the Iron Pact. Terrible worker, worse intentions.",
   "hostile": 2
  },
  "ironpact_sweeper": {

@@ -63,7 +63,7 @@ var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
 var state := "title" # title | play | paused — sim and player input gate on this
 var panel := ""
-var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false}
+var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true}
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
@@ -3759,12 +3759,15 @@ var raid_theme := ""     # element pack for the incoming wave; "" = mixed
 func tick_raid(dt: float) -> void:
 	if kinbox_pos.x < 0:
 		return
+	if not settings.get("raids", true):
+		raid_t = 31.0 # peaceful mode: hold the horn just above the warning line
+		return
 	raid_t -= dt
 	if raid_t < 30.0 and not raid_warned:
 		raid_warned = true
 		# the island raids read as packs — mostly one element, sometimes a mob
 		var themes := ["fire", "water", "electric", "grass", "dark", "ice", "ground", "dragon"]
-		# signature raid: the Iron Pact Iron Pact sends humans, not kin
+		# signature raid: the Iron Pact sends humans, not kin
 		raid_theme = "Iron Pact" if rng.chance(0.15) else \
 			("" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)])
 		var howl := "Iron Pact squad" if raid_theme == "Iron Pact" else \
@@ -4044,6 +4047,18 @@ func egg_hint(pair) -> String:
 		return "%s line" % pn
 	return ""
 
+# Egg genetics stay mortal: legendaries are den bosses, and ironpact humans
+# don't come out of eggs. Every unparented hatch (wild eggs, gacha) draws here.
+func hatch_pool() -> Array:
+	var out := []
+	for s in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
+		var spec: Dictionary = SpeciesData.species_of(s)
+		if s in LEGENDARY_DEN or spec.get("boss", false) or spec.get("body", "") == "human":
+			continue
+		if s not in out:
+			out.append(s)
+	return out
+
 func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	var inc = st.get("egg_inc")
 	st.erase("egg_inc")
@@ -4064,12 +4079,12 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 				if pk not in inherited:
 					inherited.append(pk)
 	else: # found egg with no recorded parentage — wild genetics
-		var keys: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
-		sp_id = keys[rng.int_range(0, keys.size() - 1)]
+		var pool := hatch_pool()
+		sp_id = pool[rng.int_range(0, pool.size() - 1)]
 		talent_v = rng.int_range(0, 100)
 	if SpeciesData.species_of(sp_id).is_empty() and SpeciesGen.SPECIES.get(sp_id, {}).is_empty():
-		var keys2: Array = SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys()
-		sp_id = keys2[rng.int_range(0, keys2.size() - 1)]
+		var pool2 := hatch_pool()
+		sp_id = pool2[rng.int_range(0, pool2.size() - 1)]
 	var at: Vector2 = nearest_free(key.x + 1.0, key.y + 2.5) # don't hatch into a wall
 	var np := preload("res://src/kin.gd").new()
 	entity_layer.add_child(np)

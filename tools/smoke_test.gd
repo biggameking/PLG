@@ -367,7 +367,7 @@ func run() -> void:
 		game.box_to_party(cm); game.send_out(cm.uid)
 		# absolute check: the deployed mule adds exactly its aura to the
 		# level-scaled base, no matter who was out before
-		var want_cap: float = 300.0 + (p.level - 1) * 10.0 + 120.0
+		var want_cap: float = cap0 + 120.0 # relative: earlier auras may already ride the cap
 		check("pack mule lifts cap", absf(p.carry_cap() - want_cap) < 0.01
 			and p.carry_wt() < p.carry_cap(), "cap=%.0f want=%.0f base=%.0f" % [p.carry_cap(), want_cap, cap0])
 		game.retract_out()
@@ -4134,6 +4134,26 @@ func run() -> void:
 	game.load_settings()
 	check("settings round-trip", absf(game.settings["sfx"] - 0.4) < 0.001, "sfx=%s" % game.settings["sfx"])
 	check("audio buses routed", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("SFX") >= 0)
+
+	# ---- S3: egg genetics stay mortal; peaceful mode holds the horn ----
+	var egg_pool: Array = game.hatch_pool()
+	var leg_in_pool := false
+	var hum_in_pool := false
+	for es in egg_pool:
+		if es in game.LEGENDARY_DEN or bool(SpeciesData.species_of(es).get("boss", false)):
+			leg_in_pool = true
+		if SpeciesData.species_of(es).get("body", "") == "human":
+			hum_in_pool = true
+	check("no legendary in egg pool", not leg_in_pool, "%d species" % egg_pool.size())
+	check("no humans in egg pool", not hum_in_pool)
+	check("egg pool non-empty", egg_pool.size() > 50, "%d" % egg_pool.size())
+	game.settings["raids"] = false
+	if game.kinbox_pos.x < 0:
+		game.kinbox_pos = Vector2i(10, 10) # the horn only sounds for a founded base
+	game.raid_t = 5.0
+	game.tick_raid(1.0)
+	check("peaceful holds the horn", game.raid_t == 31.0, "raid_t=%s" % game.raid_t) # spawn itself is behind the same early return
+	game.settings["raids"] = true
 
 	# net host (no client join in same proc)
 	game.net.host()
