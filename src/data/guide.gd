@@ -82,7 +82,9 @@ handiwork feeds the assembly lines, transporting hauls the
 harvest to chests. Idle base pals find empty posts on their
 own; f assigns one by hand.
 
-Pals are not machines. Hunger drains them — keep the feed box
+Pals are not machines — but they do love a scratch. A petted
+pal works a tenth lighter for the next minute (and the pat
+itself tops up SAN). Hunger drains them — keep the feed box
 stocked. SAN frays under grind — hot springs, beds, and the
 monitoring stand's gentler shifts keep minds whole. Sick pals
 need medicine; the box heals the KO'd on a timer. And mind the

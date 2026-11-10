@@ -1346,6 +1346,22 @@ func run() -> void:
 	bk_p.queue_free()
 	game.pals.erase(bk_p)
 
+	# bond bonus: a petted pal works a tenth lighter for the pat's window
+	var bd_p = game.gen_pal("lamball", 5, p.pos)
+	bd_p.mode = "base"
+	game.pals.append(bd_p)
+	var bd_w0: float = bd_p.work_mult()
+	var bd_s0: float = bd_p.san
+	var pet_ok: bool = game.pet_pal(bd_p)
+	var bd_up: bool = bd_p.work_mult() > bd_w0 + 0.05 and bd_p.san > bd_s0
+	var pet_cd: bool = not game.pet_pal(bd_p) # the per-pal cooldown holds
+	bd_p.petted_t = game.t - 1.0
+	var bd_down: bool = absf(bd_p.work_mult() - bd_w0) < 0.001
+	check("a pet works lighter", pet_ok and bd_up and pet_cd and bd_down,
+		"w=%.2f→%.2f san=%.0f→%.0f" % [bd_w0, bd_p.work_mult(), bd_s0, bd_p.san])
+	bd_p.queue_free()
+	game.pals.erase(bd_p)
+
 	# monitoring stand: E cycles the pace — output and SAN drain scale together
 	var ms_spot := Vector2i(-1, -1)
 	for r3 in range(3, 40):

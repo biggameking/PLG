@@ -150,10 +150,11 @@ func status_speed_mult() -> float:
 # Palworld ailments: a sick pal underperforms until it gets medicine.
 const AILMENTS := ["depressed", "sprain", "ulcer", "weakened"]
 func work_mult() -> float:
+	var bond := 1.1 if petted_t > game.t else 1.0 # a recently petted pal works lighter
 	match ailment:
-		"depressed": return 0.4
-		"sprain": return 0.6
-		_: return 1.0
+		"depressed": return 0.4 * bond
+		"sprain": return 0.6 * bond
+		_: return bond
 func atk_mult() -> float:
 	return (0.7 if ailment == "weakened" else 1.0) * rage_mult()
 
