@@ -264,3 +264,8 @@ build-tools/apksigner).
   the wrap neighborhood, atk-cap band tightened 740..800, `or true`
   tautology removed. Smoke +12 (routing gates, stick park, sprint
   speed, mouse-vs-tap, join row + run_click path).
+- S25 release engineering — DONE: `tools/package.sh` exports Windows+Web
+  presets and zips versioned artifacts to `dist/` (verified: 115MB exe,
+  21-file web bundle). `store/page.md` holds the itch page copy (every
+  claim maps to shipped+tested behavior; Android unsigned is disclosed).
+  export/ + dist/ gitignored as build output.
