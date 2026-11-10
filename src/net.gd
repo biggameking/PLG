@@ -338,6 +338,19 @@ func _legit_blink(g, from: Vector2, to: Vector2) -> bool:
 	# waypoint hops have a visible departure too — the stone you stood on
 	return dst == "waypoint" and _near_travel_node(from) != ""
 
+var _guest_atk_cap := 0.0
+func guest_atk_cap() -> float:
+	# honest ceiling for a guest's damage claim: the best forgeable weapon,
+	# a lv60 keeper, a maxed atk statue (5), two +12% trinkets, a +10%
+	# partner aura and a cooked meal. Anything past this is a mod, not a build.
+	if _guest_atk_cap <= 0.0:
+		var wmax := 0.0
+		for iid in ItemData.ITEMS:
+			var wd: Dictionary = ItemData.ITEMS[iid].get("weapon", {})
+			wmax = maxf(wmax, float(wd.get("dmg", 0)))
+		_guest_atk_cap = (wmax * 2.0 + 60 * 4.0) * (1.0 + 5 * 0.08 + 0.24 + 0.10 + 0.15)
+	return _guest_atk_cap
+
 @rpc("any_peer", "call_remote", "unreliable")
 func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	# Client→host combat relay: a client's swing lands on the host's real kin.
@@ -354,9 +367,9 @@ func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 		return # fail closed: the swing has to come from somewhere real
 	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
 		return # honest swings top out ~2.2/s — a 60Hz claim feed is a script
-	var bound := Combat.damage(500.0, 34.0,
+	var bound := Combat.damage(guest_atk_cap(), 34.0,
 		Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(),
-		2.2, game.rng) # the formula's own ceiling against THIS target's def
+		2.2, game.rng) # the honest build ceiling against THIS target's def
 	p.hit(clampf(float(dmg), 0.0, minf(bound * 1.3, 250.0)), 1.0, false, pid)
 	# the guest who swung takes the aggro — the host doesn't tank remote blows
 	if sleep_s > 0.0 and p.hp > 0:

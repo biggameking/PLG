@@ -4732,6 +4732,10 @@ func run() -> void:
 	game.net.spawn_ghost(0)
 	game.net.ghosts[0].net_pos = Vector3(vt.pos.x, vt.pos.y, 0)
 	vt.max_hp = 99999.0; vt.hp = vt.max_hp # deep pool so the bound is what caps
+	# the cap derives from real gear data — a top-end build (85-wpn lv60,
+	# maxed statue + trinkets + aura + meal) lands ~775 pre-formula atk
+	check("guest atk cap derived", game.net.guest_atk_cap() > 700.0 and game.net.guest_atk_cap() < 900.0,
+		"cap=%.0f" % game.net.guest_atk_cap())
 	var hp_v: float = vt.hp
 	game.net.pal_hit(vt.uid, 99999.0)
 	check("pal_hit bounds claims", vt.hp >= hp_v - 260.0 and vt.hp < hp_v,
