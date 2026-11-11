@@ -839,13 +839,19 @@ func pick_wild_species(pool: Array) -> String:
 			return diurnal[rng.int_range(0, diurnal.size() - 1)]
 	return pool[rng.int_range(0, pool.size() - 1)]
 
-# One canonical gate for "a species the player may own": no legends, no
-# humans. Legends live in LEGENDARY_DEN and are picked deliberately by
-# dens/grottos/sigil raids — every spawn path that can produce an OWNED or
-# CATCHABLE kin must route through acq_pool. body_of() covers both body
+# One canonical gate for "a species that enters mortal pools": no legends,
+# no humans. Legends live in LEGENDARY_DEN and are picked deliberately by
+# dens/grottos/sigil raids — every spawn path that can produce a wild or
+# bred kin must route through acq_pool. body_of() covers both body
 # representations (inline "body" key and the BODY table the ironpact use).
 func acquirable(sid: String) -> bool:
 	return sid not in LEGENDARY_DEN and SpeciesData.body_of(sid) != "human"
+
+# ownable = "may join a roster" — the superset of acquirable the two catch
+# gates answer to. Legends stay out of spawn/breed/raid pools, but a den
+# legend that roams again is earned the hard way: fight it, then catch it.
+func ownable(sid: String) -> bool:
+	return SpeciesData.body_of(sid) != "human"
 
 func acq_pool(pool: Array) -> Array:
 	var out := []
@@ -1046,16 +1052,23 @@ func tick_boss_respawns() -> void:
 		var sid := str(br.get("sid", ""))
 		if pals.size() >= MAX_PALS or SpeciesData.species_of(sid).is_empty():
 			continue # cap reached or corrupted entry — the den stays empty
+		var legend := sid in LEGENDARY_DEN
+		if legend:
+			# a legendary den never re-raises the same warden — it calls a NEW
+			# legend, and this one roams catchable: legendary orbs finally have
+			# a target, and the ten-name collection loop closes
+			sid = LEGENDARY_DEN[rng.int_range(0, LEGENDARY_DEN.size() - 1)]
 		var pp: Array = br.get("pos", [0, 0])
 		var at := Vector2(float(pp[0]), float(pp[1])) if pp.size() >= 2 else Vector2.ZERO
 		var np := preload("res://src/kin.gd").new()
 		np.alpha = bool(br.get("alpha", false))
-		np.boss = bool(br.get("boss", false))
+		np.boss = bool(br.get("boss", false)) and not legend
 		entity_layer.add_child(np)
 		np.setup(self, sid, clampi(int(br.get("lv", 30)), 1, 60), at)
 		np.home = at
 		pals.append(np)
-		log_msg("A boss stirs again at its den")
+		log_msg("A legend roams the old den — this one can be caught!" if legend
+			else "A boss stirs again at its den")
 
 # ---------- gauntlet trial ----------
 # tower fights, distilled: a sigil starts a 3-wave escalating
@@ -1699,7 +1712,7 @@ func resolve_sphere(sp) -> void:
 	if target.boss:
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
-	if not acquirable(target.species_id):
+	if not ownable(target.species_id):
 		# single ownable-kin gate — boss-phase adds, wire-forged targets, and
 		# anything else the spawn pools missed can never join a roster
 		floater(target.pos, "IMMUNE", "#e8452f")
@@ -1739,6 +1752,7 @@ func resolve_sphere(sp) -> void:
 		target.statuses.clear()
 		target.aggro = -1
 		release_event_flags(target)
+		_reden_legend(target)
 		if party.size() < 5: # the island rule: catch joins the party until it's full
 			if _bench_add(target): # orbs ride in the same cold store as the box — a saturated bench overflows there too
 				party.append(target.uid)
@@ -1761,6 +1775,16 @@ func resolve_sphere(sp) -> void:
 		catch_fail()
 		target.aggro = 0 if target.hostile() >= 1 else -1
 		target.aggro_pid = 0 # the local keeper threw the orb — the heat is his
+
+func _reden_legend(c: Kin) -> void:
+	# catching the den's legend doesn't kill the site — the ring calls a new
+	# warden a day and a half on (a catchable one, like the last)
+	if c.species_id in LEGENDARY_DEN and c.alpha and c.home != Vector2.ZERO \
+			and boss_respawns.size() < MAX_RESPAWNS:
+		boss_respawns.append({"sid": c.species_id, "lv": c.level,
+			"pos": [c.home.x, c.home.y], "alpha": true, "boss": false,
+			"at": t + DAY_LEN * 1.5})
+		log_msg("The den will call a new legend")
 
 func release_event_flags(p: Kin) -> void:
 	# a caught kin stops being an invader: raid/gauntlet metas mark a
@@ -1789,7 +1813,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	# not: the catch answers to the keeper who threw the ball.
 	var target: Kin = find_pal(nid)
 	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss \
-			or not acquirable(target.species_id): # the ownable gate — same rule as resolve_sphere
+			or not ownable(target.species_id): # the ownable gate — same rule as resolve_sphere
 		return
 	var gp = net.ghosts.get(pid) if net != null else null
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(target.pos) > 9.0:
@@ -1830,6 +1854,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		target.statuses.clear()
 		target.aggro = -1
 		release_event_flags(target)
+		_reden_legend(target)
 		target.owner_id = pid
 		target.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
 		if rp.size() < 5: # a catch joins the party until the strip is full
