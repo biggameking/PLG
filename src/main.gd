@@ -16,10 +16,11 @@ func _ready() -> void:
 	game.connect("decor_dirty", _on_decor_dirty)
 	$UILayer/HUD.game = game
 	game.hud = $UILayer/HUD
-	var net := preload("res://src/net.gd").new()
-	add_child(net)
-	net.setup(game, game.entity_layer)
-	game.net = net
+	if not OS.has_feature("web"): # browsers can't host/join ENet — hide the whole co-op surface
+		var net := preload("res://src/net.gd").new()
+		add_child(net)
+		net.setup(game, game.entity_layer)
+		game.net = net
 
 var decor_need := true
 var last_vis := Rect2i(-999, -999, 0, 0)

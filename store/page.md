@@ -23,7 +23,7 @@ your transport, and your army.
   escalate as you claim them; the gauntlet waits at the shore.
 - **Condense** — feed spare kin to your favorites. Stars raise stats.
 
-## Multiplayer
+## Multiplayer (Windows/Android)
 Direct-connect co-op: one player hosts, friends join by IP. The host
 owns the world; guests keep private rosters under their keeper tag —
 disconnect orphans your kin safely and rejoining reclaims them.

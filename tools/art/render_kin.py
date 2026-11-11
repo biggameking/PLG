@@ -18,8 +18,8 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "render")
 # optional rot (rx,ry,rz) radians, seed jitter fields for fluff clusters.
 RIGS = {
     "fenjelly": {
-        "mats": [(0.929, 0.878, 0.784),   # 0 fleece #ede0c8
-                 (0.62, 0.47, 0.36),      # 1 face/legs warm tan
+        "mats": [(0.93, 0.88, 0.78),      # 0 fleece #ede0c8
+                 (0.80, 0.66, 0.53),      # 1 face/legs light fawn
                  (0.11, 0.10, 0.18)],     # 2 ink beads (eyes/nose)
         "parts": (
             # ---- fleece: a cloud of overlapping puffs ----
@@ -41,10 +41,10 @@ RIGS = {
             {"kind": "cyl", "c": (-0.26, 0.22, 0.16), "r": 0.075, "depth": 0.32, "mat": 1},
             {"kind": "cyl", "c": (0.26, 0.22, 0.16), "r": 0.075, "depth": 0.32, "mat": 1},
             # eyes — ink beads slightly proud of the muzzle
-            {"kind": "sph", "c": (-0.115, -0.795, 1.16), "r": 0.038, "mat": 2},
-            {"kind": "sph", "c": (0.115, -0.795, 1.16), "r": 0.038, "mat": 2},
+            {"kind": "sph", "c": (-0.115, -0.795, 1.16), "r": 0.052, "mat": 2},
+            {"kind": "sph", "c": (0.115, -0.795, 1.16), "r": 0.052, "mat": 2},
             # nose
-            {"kind": "sph", "c": (0, -0.815, 1.02), "r": (0.05, 0.03, 0.035), "mat": 2},
+            {"kind": "sph", "c": (0, -0.815, 1.02), "r": (0.055, 0.032, 0.04), "mat": 2},
         ),
         # f1 idle variation: fluff bobs up, ears lift a touch
         "f1": {"fluff_dy": 0.06, "ear_drop": 0.35, "head_dy": 0.03},
@@ -171,10 +171,13 @@ def camera():
 
 def render(sid, frame):
     s = bpy.context.scene
-    s.render.engine = 'BLENDER_EEVEE_NEXT'
+    s.render.engine = 'BLENDER_EEVEE' # 5.x names it EEVEE, not EEVEE_NEXT
     s.render.resolution_x = s.render.resolution_y = 512
     s.render.resolution_percentage = 100
     s.render.film_transparent = True
+    # poster look wants flat saturated color, not AgX's filmic desaturation
+    s.view_settings.view_transform = 'Standard'
+    s.view_settings.look = 'None'
     s.render.image_settings.file_format = 'PNG'
     s.render.image_settings.color_mode = 'RGBA'
     os.makedirs(OUT, exist_ok=True)

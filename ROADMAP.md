@@ -821,3 +821,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   from the Android preset field. All fixed, zips rebuilt, PCK greps
   clean (0 tool strings, 0 legacy IDs), SHA256SUMS + build.txt now
   travel with dist/. check_ip.sh covers locale/+store/+CJK terms.
+
+## S60c — audit-22b verify: PASS ×7, one new H closed
+  Re-audit confirmed every S60b fix landed (locale, presets, ip
+  check, web-quit gates, package metadata, page copy, roadmap) with
+  zero regressions — and caught one more H: the web build still
+  mounted the whole co-op surface (JOIN/HOST rows, J/K hotkeys)
+  while browsers can't host or join ENet, and page.md sold co-op
+  without a platform tag. main.gd now skips instantiating the net
+  layer on web (every consumer already null-guards game.net);
+  page copy reads "Multiplayer (Windows/Android)". Suite 761/0.
