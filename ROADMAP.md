@@ -435,3 +435,40 @@ S38c (board two-phase + reach): claim-and-dip burned everyone's daily
   15s pending slot + notice_board reach gate; board_done pays goods then
   asserts via board_paid; gold+xp arrive on board_pay after settlement.
   Smoke 667/0.
+S38d (flake kill): the tranq assertion wasn't seed jitter (40% fail rate) —
+  stray projectiles from earlier steps re-hit the parked target inside its
+  12-tick window and hit() erases "sleep" on any damage. projectiles.clear()
+  before the shot; the drained-world contract is AGENTS rule 66.
+S39 (skill-fruit parity + honest dead ends): teach_skill_fruit was the last
+  roster verb silently dead for guests — fruit_req teaches the asker's own
+  lead (rparty_for + owner check), fruit_done pays the bag on acceptance.
+  boss/gauntlet sigils and tech-row clicks now explain themselves to guests
+  instead of failing silent (host-authority by design, honest by UX).
+S40 (seventh audit sweep — 0C/0H/4M/10L):
+  M1 condense_remote had NO gate — remote starring from anywhere. Now
+    kin_condenser reach like every other machine verb.
+  M2 guest kills/catches never credited the hunt posting and all kill
+    loot/xp fell into the host's bag. kill_pal threads provoked_pid (the
+    partner-attack sites already carried owner_id — the wire just dropped
+    it at the last hop). _kill_loot/_kill_xp route give_remote/xp_gain;
+    board_hunt_credit(sp, pid) pays the killer's keeper; net_catch grants
+    hunt credit + flat catch xp (catch_xp would feed the host's streak).
+  M3 buy_remote/r_sell_pal had no merchant reach — modded clients could
+    blind-trade across the island. _ghost_reaches(merchant.pos, 6.0) both.
+    Merchant replica sync remains deferred (guests still can't SEE the
+    trader — honest-shop surface is a separate feature, not this gate).
+  M4 board holds hardened: same-asker re-reads its 15s hold without a
+    fresh clock (was silently renewable — one guest could starve the daily
+    posting forever); expired holds cool the SAME pid off for 30s; settle
+    keeps the holder's claim without freshness decay; an honest
+    insufficient-goods reply releases the hold early (board_release).
+  L: _free_incubator bound parameterized (20 local UX -> 6 ghost reach);
+    egg_inc persists own_tag so a saved guest egg hatches into the right
+    slice (pid-by-tag resolve, orphan fallback rebinds on hello);
+    box_fingerprint folds star/level (condense/infuse no longer leave a
+    15s-stale mirror); env_sync applies bq unconditionally (an empty
+    packet is "no posting", not "keep the old world's quest"); board_pay
+    xp parity (qn*3, was ~gold); sleep_done heals the sleeper's own player
+    (host's hp stays host's); net_catch peer-guard; r_butcher trust note;
+    dup-claim + hold-lifecycle + hunt-discrimination smoke coverage.
+  Smoke 676-678/0 x4.

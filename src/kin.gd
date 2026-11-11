@@ -121,7 +121,7 @@ func hit(dmg: int, mult: float, by_player: bool, provoked_pid: int = 0) -> void:
 	game.floater(pos, str(dmg) + ("!" if mult >= 2 else ("·" if mult <= 0.6 else "")),
 		"#e8d44d" if mult >= 2 else "#e8f0f2")
 	if hp <= 0:
-		game.kill_pal(self, by_player)
+		game.kill_pal(self, by_player, provoked_pid)
 	else:
 		statuses.erase("sleep") # any hit wakes, whatever the mode
 		if mode == "wild":

@@ -402,7 +402,10 @@ func run_click(cr: Dictionary) -> void:
 		"repair_armor":
 			game.repair_armor()
 		"tech":
-			game.unlock(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.log_msg("Research is the host's to direct")
+			else:
+				game.unlock(cr["arg"])
 		"box_out":
 			if game.net != null and game.net.is_client():
 				game.net.rpc("box_req", "box_to_party", int(cr["arg"].uid))
@@ -1927,10 +1930,14 @@ func sellable_pals() -> Array: # only your OWN kin ride the sell rail — guests
 func use_item(k: String) -> void:
 	match k:
 		"boss_sigil":
-			if game.summon_raid():
+			if game.net != null and game.net.is_client():
+				game.log_msg("The horn is the host's to sound")
+			elif game.summon_raid():
 				game.add_item(k, -1)
 		"gauntlet_sigil":
-			if game.start_gauntlet():
+			if game.net != null and game.net.is_client():
+				game.log_msg("The gauntlet answers the host, not guests")
+			elif game.start_gauntlet():
 				game.add_item(k, -1)
 		"kin_egg", "huge_kin_egg":
 			game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
@@ -1957,7 +1964,10 @@ func use_item(k: String) -> void:
 			game.use_treasure_map()
 		_:
 			if k.begins_with("skill_fruit_"):
-				game.teach_skill_fruit(k)
+				if game.net != null and game.net.is_client():
+					game.net.rpc("fruit_req", k) # host teaches the lead, bag pays on echo
+				else:
+					game.teach_skill_fruit(k)
 				return
 			var it: Dictionary = ItemData.ITEMS.get(k, {})
 			if it.get("heal", 0) > 0:

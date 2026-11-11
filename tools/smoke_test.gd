@@ -5008,6 +5008,7 @@ func run() -> void:
 			check("guest dig pays out", game.dig_req_remote(99, v6_fs)
 				and not game.structures.has(v6_fs)
 				and game.item_count("ancient_part") + game.item_count("stone") > v6_parts)
+			check("the same heap won't double-pay", not game.dig_req_remote(99, v6_fs))
 		var v6_cg := Vector2i(-1, -1)
 		for v6_r7 in range(3, 10):
 			for v6_a15 in range(16):
@@ -5052,12 +5053,40 @@ func run() -> void:
 			game.net.ghosts[7].net_pos = Vector3(v7_nb.x, v7_nb.y, 0)
 			check("another keeper can't steal the hold",
 				game.board_action_remote(7).is_empty())
-			check("settlement fills the posting", game.board_paid_remote(99, "wood") > 0
+			check("settlement fills the posting", int(game.board_paid_remote(99, "wood").get("gold", 0)) > 0
 				and str(game.board_quest.get("id", "?")) == ""
 				and not game.board_quest.has("pending"))
+			# S40: the hold is a claim, not a renewable lease — same asker reads
+			# it back without a fresh clock, expiry cools them off for 30s
+			game.board_quest = {"kind": "supply", "id": "stone", "n": 3, "day": game.day,
+				"pending": {"pid": 99, "t": game.t, "id": "stone"}}
+			var bh_res := game.board_action_remote(99)
+			check("same asker re-reads its hold", str(bh_res.get("id", "")) == "stone"
+				and float(game.board_quest["pending"]["t"]) == game.t)
+			game.board_quest["pending"]["t"] = game.t - 20.0
+			check("expired holder cools off", game.board_action_remote(99).is_empty())
+			game.board_quest["pending"]["t"] = game.t - 50.0
+			check("cooled keeper claims again", not game.board_action_remote(99).is_empty())
+			# hunt is a kill-tracker, not a claim — the board must still be
+			# there for the read to mean anything
+			game.board_quest = {"kind": "hunt", "sp": "fenjelly", "n": 2, "got": 0, "day": game.day}
+			check("hunt posting is read-only", game.board_action_remote(99).is_empty())
+			game.board_quest = {"kind": "supply", "id": "stone", "n": 2, "day": game.day}
+			check("a supply claim still answers at the board",
+				str(game.board_action_remote(99).get("id", "")) == "stone")
+			game.board_quest.erase("pending")
+			var hk_p: Kin = game.gen_pal("fenjelly", 5, p.pos)
+			game.pals.append(hk_p)
+			hk_p.mode = "wild"
+			game.board_quest = {"kind": "hunt", "sp": "fenjelly", "n": 2, "got": 0, "day": game.day}
+			game.kill_pal(hk_p, false, 99)
+			check("a guest's kill thins the herd", int(game.board_quest.get("got", 0)) == 1)
+			var hk_p2: Kin = game.gen_pal("fenjelly", 5, p.pos)
+			game.pals.append(hk_p2)
+			hk_p2.mode = "wild"
+			game.kill_pal(hk_p2, false, 99)
+			check("the fill lands and pays out", str(game.board_quest.get("kind", "")) == "done")
 			game.net_remove_structure(game.structures[v7_nb])
-		game.board_quest = {"kind": "hunt", "sp": "fenjelly", "n": 2, "got": 0, "day": game.day}
-		check("hunt posting is read-only", game.board_action_remote(99).is_empty())
 		var v6_lead: Kin = game.gen_pal("fenjelly", 10, p.pos)
 		game.pals.append(v6_lead)
 		v6_lead.owner_id = 99
@@ -5073,8 +5102,24 @@ func run() -> void:
 			game.box_pal(v6_fd)
 			v6_fod += 1
 		var v6_star := v6_lead.star
-		check("guest condense burns own fodder", game.condense_remote(99)
-			and v6_lead.star == v6_star + 1)
+		var v6_cd := Vector2i(-1, -1)
+		for v6_r9 in range(3, 12):
+			for v6_a19 in range(16):
+				var v6_c16 := Vector2i(int(p.pos.x + cos(v6_a19 * TAU / 16.0) * v6_r9),
+					int(p.pos.y + sin(v6_a19 * TAU / 16.0) * v6_r9))
+				if game.can_place("kin_condenser", v6_c16.x, v6_c16.y):
+					game.place_free("kin_condenser", v6_c16.x, v6_c16.y); v6_cd = v6_c16; break
+			if v6_cd.x >= 0: break
+		if v6_cd.x >= 0:
+			game.net.ghosts[99].net_pos = Vector3(v6_cd.x + 40, v6_cd.y, 0)
+			check("a remote star needs the machine",
+				not game.condense_remote(99) and v6_lead.star == v6_star)
+			game.net.ghosts[99].net_pos = Vector3(v6_cd.x, v6_cd.y, 0)
+			check("guest condense burns own fodder", game.condense_remote(99)
+				and v6_lead.star == v6_star + 1)
+			game.net_remove_structure(game.structures[v6_cd])
+		else:
+			check("condenser site found", false, "no kin_condenser spot in 9 rings")
 		game.pals.erase(v6_lead)
 		v6_lead.queue_free()
 		var ib_k := Vector2i(-1, -1)
@@ -5126,6 +5171,13 @@ func run() -> void:
 				var m_st: Dictionary = game.merchant_stock[m_idx]
 				var m_id := str(m_st.get("id", ""))
 				var m_n0 := int(m_st.get("n", 0))
+				game.net.ghosts[99].net_pos = Vector3(game.merchant.pos.x + 40,
+					game.merchant.pos.y, 0)
+				check("the till won't ring from across the island",
+					game.buy_remote(99, m_idx).is_empty()
+					and int(m_st.get("n", 0)) == m_n0)
+				game.net.ghosts[99].net_pos = Vector3(game.merchant.pos.x,
+					game.merchant.pos.y, 0)
 				var m_res := game.buy_remote(99, m_idx)
 				check("guest buy drains the real stock",
 					int(m_res.get("price", -1)) == int(m_st.get("price", -2))
@@ -5148,6 +5200,18 @@ func run() -> void:
 		if not lsk.is_empty():
 			game.box_op_remote("toggle_skill", if_p.uid, 99, str(lsk[0]))
 			check("guest skill toggle lands host-side", if_p.equipped != eq0)
+		# S39: a guest's skill fruit teaches THEIR lead, host rolls the move
+		var fr_lead: Kin = game.gen_pal("fenjelly", 5, p.pos)
+		game.pals.append(fr_lead)
+		fr_lead.owner_id = 99
+		fr_lead.mode = "partner"
+		game.remote_parties["t99"] = [fr_lead.uid]
+		var fr_sk0: int = fr_lead.extra_skills.size()
+		check("guest fruit teaches their own lead",
+			game.fruit_req_remote(99, "skill_fruit_fire")
+			and fr_lead.extra_skills.size() == fr_sk0 + 1)
+		check("bogus fruit refused", not game.fruit_req_remote(99, "gold_coin"))
+		game.pals.erase(fr_lead); fr_lead.queue_free()
 		game.pals.erase(if_p); if_p.queue_free()
 		game.pals.erase(if_host); if_host.queue_free()
 		game.remote_parties.erase("t99")

@@ -335,3 +335,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     transient collections (projectiles/drops/floaters) before
     timing-sensitive checks; `projectiles.clear()` before the shot is the
     contract, same as the clears at steps elsewhere.
+67. **A remote verb ports its gate before its effect.** `condense_remote`
+    shipped owner-filtered logic but no `kin_condenser` reach — the remote
+    twin was a strict superset of the local exploit surface. When wiring a
+    guest verb, port the local's precondition (structure, range, stock,
+    merchant) first, then its effect; a request that skips the gate IS the
+    exploit.
+68. **Pay the actor, not the local.** `kill_pal`'s loot/xp/hunt-credit
+    defaulted to the host's bag because pid threading stopped one hop
+    short (`hit` carried `provoked_pid`, `kill_pal` never saw it). Any
+    shared verb that mints rewards routes them by actor pid at the
+    mutation point — `give_remote`/`xp_gain` — never to whichever bag is
+    local on the authority.

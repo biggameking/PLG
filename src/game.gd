@@ -330,7 +330,19 @@ func note_remote(pid: int, msg: String) -> void:
 			and multiplayer.get_peers().has(pid):
 		net.rpc_id(pid, "net_note", msg)
 	else:
-		log_msg(msg) # offline rigs and absent peers hear it in the keeper's log
+		log_msg(msg)
+
+# kill rewards answer to the killer's keeper — a guest's loot rides the
+# loot wire, their xp the xp wire; the host's bag stays the fallback
+func _kill_loot(pid: int, id: String, n: int) -> void:
+	give_remote(pid, id, n)
+
+func _kill_xp(pid: int, n: int) -> void:
+	if pid > 0 and net != null and multiplayer.multiplayer_peer != null \
+			and multiplayer.get_peers().has(pid):
+		net.rpc_id(pid, "xp_gain", n)
+	else:
+		gain_xp(n)
 
 func peer_pos_of(pid: int) -> Vector2:
 	# where a remote keeper stands — their ghost's last synced position
@@ -523,7 +535,9 @@ func r_base_to_box(p: Kin, pid: int) -> void:
 
 func r_butcher(p: Kin, pid: int) -> void:
 	# the cleaver is host-side property, but a guest's own kin is theirs to
-	# spend — the goods spill at their feet, not ours
+	# spend — the goods spill at their feet, not ours. Trust note: the local
+	# gate is the client's own bag (cleaver count), which the host never sees —
+	# bounded by the same bag-trust lane as every guest inventory claim.
 	if p.mode != "box" or p.fav:
 		return
 	box.erase(p)
@@ -534,8 +548,9 @@ func r_butcher(p: Kin, pid: int) -> void:
 	note_remote(pid, "You butchered %s… it dropped its goods" % p.spec["name"])
 
 func r_sell_pal(p: Kin, pid: int) -> void:
-	if p.mode != "box" or p.fav or merchant == null:
-		return
+	if p.mode != "box" or p.fav or merchant == null \
+			or not _ghost_reaches(pid, merchant.pos, 6.0):
+		return # deals close face-to-face — a remote sell is a forged handshake
 	var gain := pal_sell_price(p)
 	box.erase(p)
 	p.free()
@@ -816,7 +831,10 @@ func lead_pal() -> Kin:
 		p = bench_pal_of(party[0])
 	return p
 
-func kill_pal(p: Kin, by_player: bool) -> void:
+func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
+	# pid carries the killer's peer id for guest swings (pal_hit threads it
+	# through hit's provoked_pid) — loot, xp and hunt credit answer to THEM,
+	# not to whichever bag happens to be local on the host
 	if p.net_id > 0:
 		return # replicas die by host snapshot, never by local simulation
 	player.dismount_if(p)
@@ -824,44 +842,44 @@ func kill_pal(p: Kin, by_player: bool) -> void:
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
 		var mult := 4 if p.alpha else (3 if p.lucky else 1)
 		if p.lucky:
-			add_item("gold_coin", rng.int_range(3, 8)) # lucky pals bleed money
+			_kill_loot(pid, "gold_coin", rng.int_range(3, 8)) # lucky pals bleed money
 			log_msg("Lucky %s dropped gold!" % p.spec["name"])
 		if p.boss:
-			add_item("legendary_orb", 1)
-			add_item("sprigmelt_effigy", 3)
-			add_item("gold_coin", 10)
+			_kill_loot(pid, "legendary_orb", 1)
+			_kill_loot(pid, "sprigmelt_effigy", 3)
+			_kill_loot(pid, "gold_coin", 10)
 			log_msg("RAID CLEARED! Legendary orb + loot!")
 		if p.alpha or p.boss:
 			mission_flags["elite"] = true
 		if p.bounty > 0:
-			add_item("gold_coin", p.bounty)
+			_kill_loot(pid, "gold_coin", p.bounty)
 			floater(p.pos, "BOUNTY +%dg" % p.bounty, "#ffd76e")
 			log_msg("Bounty claimed on %s: +%d gold" % [p.spec["name"], p.bounty])
 		for d in p.spec.get("drops", []):
 			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 		if p.alpha:
-			add_item("kin_orb", 1)
+			_kill_loot(pid, "kin_orb", 1)
 			log_msg("Alpha %s down! Bonus orb." % p.spec["name"])
-			add_item("sprigmelt_effigy", 2)
-			add_item("ancient_part", rng.int_range(1, 2)) # ancient tech currency
+			_kill_loot(pid, "sprigmelt_effigy", 2)
+			_kill_loot(pid, "ancient_part", rng.int_range(1, 2)) # ancient tech currency
 			if rng.chance(0.15):
 				spawn_drop("huge_kin_egg", 1, p.pos) # huge eggs hide on alphas
 			if rng.chance(0.08): # the island schematics drop off elites
 				var sch: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
-				add_item(sch, 1)
+				_kill_loot(pid, sch, 1)
 				log_msg("Found a %s!" % ItemData.ITEMS[sch]["name"])
 			if rng.chance(0.15): # alphas carry the odd boss sigil — a dare in your pocket
-				add_item("boss_sigil", 1)
+				_kill_loot(pid, "boss_sigil", 1)
 				log_msg("Found a Boss Sigil!")
 		if p.boss and rng.chance(0.3): # bosses teach the good blueprints
 			var sch2: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
-			add_item(sch2, 1)
+			_kill_loot(pid, sch2, 1)
 			log_msg("Found a %s!" % ItemData.ITEMS[sch2]["name"])
 		if p.boss:
-			add_item("ancient_part", rng.int_range(2, 4))
-		if by_player:
-			board_hunt_credit(p.species_id)
-		gain_xp(p.level * 4)
+			_kill_loot(pid, "ancient_part", rng.int_range(2, 4))
+		if by_player or pid > 0: # a guest's kill is still a keeper's kill
+			board_hunt_credit(p.species_id, pid)
+		_kill_xp(pid, p.level * 4)
 	if p.carry != null: # a hauler's load doesn't die with it
 		spawn_drop(p.carry["id"], p.carry["n"], p.pos)
 		p.carry = null
@@ -1162,11 +1180,15 @@ func sphere_fly(sid: String, target: Kin) -> void:
 		var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
 		var c := Color(ItemData.ITEMS.get(sid, {}).get("col", "#e05050"))
 		img.fill(Color(0, 0, 0, 0))
+		for yy in range(1, 9): # ink ring — the orb reads as a thrown print-thing
+			for xx in range(1, 9):
+				if xx in [1, 8] or yy in [1, 8]:
+					img.set_pixel(xx, yy, Ink.INK)
 		for yy in range(2, 8):
 			for xx in range(2, 8):
 				img.set_pixel(xx, yy, c)
 		for xx in range(3, 7):
-			img.set_pixel(xx, 2, Color.WHITE) # top glint
+			img.set_pixel(xx, 2, Ink.PAPER) # top glint
 		_sphere_tex[sid] = ImageTexture.create_from_image(img)
 	spr.texture = _sphere_tex[sid]
 	var p0 := Iso.to_screen(player.pos.x, player.pos.y, world.elev_at(int(player.pos.x), int(player.pos.y)))
@@ -1633,10 +1655,13 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 			return
 		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
 		cry_for(target.species_id)
-		if net != null and multiplayer.get_peers().has(pid):
+		if net != null and multiplayer.multiplayer_peer != null \
+				and multiplayer.get_peers().has(pid):
 			net.rpc_id(pid, "net_floater", target.pos.x, target.pos.y, "★ CAUGHT!", "#4dd0e1")
 		log_msg("Player %d caught %s Lv%d — into their kinbox" % [pid, target.spec["name"], target.level])
 		note_remote(pid, "You caught %s Lv%d" % [target.spec["name"], target.level])
+		board_hunt_credit(target.species_id, pid) # a boxed pal still thins the herd — theirs counts too
+		_kill_xp(pid, int(round(target.level * 3.0))) # flat rate — catch_xp would feed the HOST'S streak
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
 			log_msg("Kindex mastery: %s +10%%" % target.spec["name"])
@@ -1726,10 +1751,11 @@ func drop_sprite(id: String, at: Vector2) -> Sprite2D:
 	if not _drop_tex.has(id):
 		var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
 		var c := Color(ItemData.ITEMS.get(id, {}).get("col", "#c8b070"))
-		img.fill(c.darkened(0.35))
+		img.fill(Ink.INK) # ink frame — a dropped thing reads as a printed chip
 		for yy in range(2, 8):
 			for xx in range(2, 8):
 				img.set_pixel(xx, yy, c)
+		img.set_pixel(2, 2, Ink.PAPER) # paper glint, top-left
 		_drop_tex[id] = ImageTexture.create_from_image(img)
 	var spr := Sprite2D.new()
 	spr.texture = _drop_tex[id]
@@ -3728,7 +3754,7 @@ func save_game() -> void:
 		var inc = st.get("egg_inc")
 		structs["%d,%d" % [k.x, k.y]] = {"id": st["id"], "store": st.get("store", {}), "egg": st.get("egg_parents"), "timer": st.get("timer", 0.0), "hp": st.get("hp", 200), "loot": st.get("loot", false),
 			"exp": ({"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t), "cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)} if st["id"] == "expedition_post" else null),
-			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null),
+			"inc": ({"pair": inc.get("pair"), "huge": inc.get("huge", false), "left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t), "own": str(inc.get("own_tag", ""))} if inc is Dictionary else null),
 			"fert": maxf(0.0, float(st.get("fert", 0.0)) - t) if float(st.get("fert", 0.0)) > t else null,
 			"cap": st.get("captive") if st["id"] == "kin_cage" else null,
 			"by": str(st.get("placed_tag", "")) if str(st.get("placed_tag", "")) != "" else null,
@@ -4126,7 +4152,8 @@ func load_game() -> bool:
 			if sv.get("inc") is Dictionary and sid == "incubator":
 				var inc_d: Dictionary = sv["inc"]
 				st["egg_inc"] = {"pair": inc_d.get("pair"), "huge": inc_d.get("huge") == true,
-					"ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0)}
+					"ready_t": t + maxf(float(inc_d.get("left", 30.0)), 1.0),
+					"own_tag": str(inc_d.get("own", ""))} # pids are session-scoped — the tag is what survives a save
 			if sv.get("by") is String and str(sv["by"]) != "":
 				st["placed_tag"] = str(sv["by"]).left(24) # keeper tag — pids are session-scoped
 		for dy in range(h):
@@ -4583,9 +4610,11 @@ func deposit_egg() -> void:
 			"" if warm_hint else " (a campfire would hurry it)",
 			" — " + hint if hint != "" else ""])
 
-func _free_incubator(at: Vector2) -> Vector2i:
+func _free_incubator(at: Vector2, bound := 20.0) -> Vector2i:
+	# bound is the caller's arm: the keeper's own E stretches across the yard,
+	# a witnessed ghost only reaches the usual six tiles
 	var site := Vector2i(-1, -1)
-	var bd := 20.0
+	var bd := bound
 	for k in structures:
 		var st: Dictionary = structures[k]
 		if st["id"] != "incubator" or st.has("egg_inc"):
@@ -4603,7 +4632,7 @@ func egg_req_remote(pid: int, egg_id: String) -> bool:
 	var at := _ghost_at(pid)
 	if at.x < -1e8:
 		return false
-	var site := _free_incubator(at)
+	var site := _free_incubator(at, 6.0)
 	if site.x < 0:
 		note_remote(pid, "Need a free incubator nearby")
 		return false
@@ -4614,7 +4643,8 @@ func egg_req_remote(pid: int, egg_id: String) -> bool:
 			pair = q.pop_front() # oldest egg's parentage
 			break
 	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
-		"huge": egg_id == "huge_kin_egg", "own_pid": pid}
+		"huge": egg_id == "huge_kin_egg", "own_pid": pid,
+		"own_tag": str(net.peer_tags.get(pid, "")) if net != null else ""}
 	return true
 
 func egg_hint(pair) -> String:
@@ -4704,9 +4734,14 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		np.sprite.scale = Vector2(1.5, 1.5)
 		np.sprite.position.y = -48.0
 	var opid := int(inc.get("own_pid", 0)) if inc is Dictionary else 0
-	if opid > 0: # a guest's deposit hatches into their slice of the roster
-		np.owner_id = opid
-		np.owner_tag = str(net.peer_tags.get(opid, "")) if net != null else ""
+	var otag := str(inc.get("own_tag", "")) if inc is Dictionary else ""
+	if opid <= 0 and otag != "" and net != null: # a saved egg's pid died with the session — find the live one by tag
+		for cand in net.peer_tags:
+			if str(net.peer_tags[cand]) == otag:
+				opid = int(cand); break
+	if opid > 0 or otag != "": # a guest's deposit hatches into their slice — tagged orphans rebind on hello
+		np.owner_id = opid if opid > 0 else -1
+		np.owner_tag = otag if otag != "" else (str(net.peer_tags.get(opid, "")) if net != null else "")
 	if kinbox_pos.x >= 0:
 		np.mode = "base"
 		pals.append(np)
@@ -4978,30 +5013,53 @@ func board_action_remote(pid: int) -> Dictionary:
 		return {}
 	# a claim is a 15s hold, not a burn — the goods only settle on board_paid,
 	# so a guest who never pays can't torch the day's posting for everyone
-	var pend = board_quest.get("pending")
-	if pend is Dictionary and float(pend.get("t", 0.0)) + 15.0 > t \
-			and int(pend.get("pid", -1)) != pid:
-		note_remote(pid, "Notice board: someone's filling it — give it a moment")
-		return {}
 	var qn: int = int(board_quest["n"])
 	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
+	var pend = board_quest.get("pending")
+	if pend is Dictionary:
+		var pt: float = float(pend.get("t", 0.0))
+		if pt + 15.0 > t:
+			if int(pend.get("pid", -1)) != pid:
+				note_remote(pid, "Notice board: someone's filling it — give it a moment")
+				return {}
+			return {"id": qid, "n": qn, "gold": gold} # the same asker re-reading its hold — never a fresh 15s
+		if int(pend.get("pid", -1)) == pid and pt + 45.0 > t:
+			# an expired hold cools off for 30s — re-claiming on the dot can't
+			# starve every other keeper off the daily posting
+			note_remote(pid, "Notice board: give another keeper a turn")
+			return {}
 	board_quest["pending"] = {"pid": pid, "t": t, "id": qid}
 	return {"id": qid, "n": qn, "gold": gold}
 
-func board_paid_remote(pid: int, qid: String) -> int:
+func board_release_remote(pid: int, qid: String) -> void:
+	# an honest "can't pay" frees the board early — the alternative is a broke
+	# asker squatting the whole 15s window for nothing
+	var pend = board_quest.get("pending")
+	if pend is Dictionary and int(pend.get("pid", -1)) == pid \
+			and str(pend.get("id", "")) == qid:
+		board_quest.erase("pending")
+
+func board_paid_remote(pid: int, qid: String) -> Dictionary:
+	# the hold's freshness gate lives on the CLAIM side — the holder settles
+	# whenever its goods reach us (a new claimer overwriting `pending` is the
+	# only real expiry). The goods themselves ride the same bag-trust lane as
+	# every other client inventory.
 	var pend = board_quest.get("pending")
 	if not (pend is Dictionary) or int(pend.get("pid", -1)) != pid \
 			or str(pend.get("id", "")) != qid:
-		return -1
+		return {}
 	var qn: int = int(board_quest["n"])
 	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
 	board_quest["id"] = "" # paid — the board stays quiet until tomorrow
 	board_quest.erase("pending")
-	return gold
+	return {"gold": gold, "xp": qn * 3} # same bounty math the local fill pays
 
 # remote condense: same fodder rule, filtered to the asker's own slice —
 # heart-locked and other keepers' kin are never fuel
 func condense_remote(pid: int) -> bool:
+	var at := _ghost_at(pid)
+	if at.x < -1e8 or _nearest_struct("kin_condenser", at, 6.0).x < 0:
+		return false # the machine does the melding — remote starring is forgery
 	var rp := rparty_for(pid)
 	if rp.is_empty():
 		note_remote(pid, "No active kin to condense")
@@ -5627,6 +5685,43 @@ func infuse_req_remote(pid: int, uid: int) -> int:
 	target.apply_bonuses()
 	return cost
 
+# remote skill fruit: a guest teaches their own lead — the host holds the
+# roster's truth, the bag pays only on acceptance (same contract as egg_req)
+func fruit_req_remote(pid: int, item_id: String) -> bool:
+	var gp = net.ghosts.get(pid) if net != null else null
+	if gp == null:
+		return false
+	var it: Dictionary = ItemData.ITEMS.get(item_id, {})
+	var elem := str(it.get("elem", ""))
+	if not item_id.begins_with("skill_fruit_") or elem == "":
+		return false
+	var rp := rparty_for(pid)
+	if rp.is_empty():
+		note_remote(pid, "No active kin to teach")
+		return false
+	var p: Kin = null
+	for q in pals + bench:
+		if q.uid == int(rp[0]) and q.owner_id == pid:
+			p = q
+			break
+	if p == null or p.hp <= 0:
+		note_remote(pid, "Lead kin is down")
+		return false
+	var pool := []
+	for sid in SkillData.SKILLS:
+		var sk: Dictionary = SkillData.SKILLS[sid]
+		if sk.get("element", "neutral") == elem and sk.get("power", 0) > 0:
+			pool.append(sid)
+	pool = pool.filter(func(s): return s not in p.learned_skills())
+	if pool.is_empty():
+		note_remote(pid, "%s already knows every %s move" % [p.spec["name"], elem])
+		return false
+	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+	p.extra_skills.append(sid)
+	note_remote(pid, "%s learned %s!" % [p.spec["name"], SkillData.SKILLS[sid].get("name", sid)])
+	floater(p.pos, "+ skill!", "#a8e6a1")
+	return true
+
 # the island signature partner skills: a few species get bespoke actives
 # instead of "cast your best learned skill at the cursor"
 const PARTNER_SKILLS := {
@@ -6123,8 +6218,9 @@ func gacha_pull() -> void:
 	log_msg("The gacha rattles — out rolls a %s" % ItemData.ITEMS[eid]["name"])
 	sfx_play("catch")
 
-func board_hunt_credit(sp: String) -> void:
-	# the guild pays for thinning whether the kin leaves in a bag or a box
+func board_hunt_credit(sp: String, pid := 0) -> void:
+	# the guild pays for thinning whether the kin leaves in a bag or a box —
+	# and whoever did the thinning pockets the bounty, keeper or guest
 	if str(board_quest.get("kind", "")) != "hunt" \
 			or str(board_quest.get("sp", "")) != sp \
 			or int(board_quest.get("day", -1)) != day:
@@ -6134,9 +6230,10 @@ func board_hunt_credit(sp: String) -> void:
 	var sname: String = SpeciesData.species_of(sp).get("name", sp)
 	if int(board_quest["got"]) >= need:
 		var gold: int = need * 25
-		add_item("gold_coin", gold)
-		gain_xp(need * 15)
-		floater(player.pos, "HUNT FILLED +%dg" % gold, "#ffd76e")
+		_kill_loot(pid, "gold_coin", gold)
+		_kill_xp(pid, need * 15)
+		floater(peer_pos_of(pid) if pid > 0 else player.pos,
+			"HUNT FILLED +%dg" % gold, "#ffd76e")
 		log_msg("Hunt filled: %d %s → +%d gold" % [need, sname, gold])
 		board_quest["kind"] = "done"
 	else:
@@ -6296,8 +6393,9 @@ func buy_from_merchant(idx: int) -> void:
 # purchase arrives owner-tagged through box_sync. The gold is the bag's
 # own business — paid on the bought echo.
 func buy_remote(pid: int, idx: int) -> Dictionary:
-	if merchant == null or idx < 0 or idx >= merchant_stock.size():
-		return {}
+	if merchant == null or idx < 0 or idx >= merchant_stock.size() \
+			or not _ghost_reaches(pid, merchant.pos, 6.0):
+		return {} # the till only rings within arm's reach of the trader
 	var it: Dictionary = merchant_stock[idx]
 	if int(it.get("n", 0)) <= 0:
 		return {}

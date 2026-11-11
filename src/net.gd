@@ -250,10 +250,11 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 	var w := str(weather)
 	if w in ["clear", "rain", "storm", "drought"]:
 		game.weather = w
-	if not bq.is_empty():
-		game.board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
-			"n": int(bq.get("n", 0)), "day": int(bq.get("day", -1)),
-			"sp": str(bq.get("sp", "")), "got": int(bq.get("got", 0))}
+	# bq always rides the packet — an empty one means "no posting", not
+	# "keep the old world's quest" (absent-on-wire is not keep-local)
+	game.board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
+		"n": int(bq.get("n", 0)), "day": int(bq.get("day", -1)),
+		"sp": str(bq.get("sp", "")), "got": int(bq.get("got", 0))}
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
@@ -676,9 +677,12 @@ func sleep_req() -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		return
-	if not game.sleep_req_remote(pid) and multiplayer.get_peers().has(pid):
+	if not multiplayer.get_peers().has(pid):
+		return
+	if game.sleep_req_remote(pid):
+		rpc_id(pid, "sleep_done") # the shared day rolls on its own; the SLEEPER'S body is theirs to heal
+	else:
 		rpc_id(pid, "net_note", "Can't sleep — hostiles are after someone")
-	# a yes needs no echo: day/tod/hp ride the next state_sync for everyone
 
 @rpc("any_peer", "call_remote", "reliable")
 func dig_req(tx: float, ty: float) -> void:
@@ -721,9 +725,19 @@ func board_done(res: Dictionary) -> void:
 	# board_paid once the host sees the settlement claim
 	if game.item_count(qid) < qn:
 		game.log_msg("Notice board: the goods weren't in your pack")
+		rpc_id(1, "board_release", qid) # an honest miss frees the board early
 		return
 	game.add_item(qid, -qn)
 	rpc_id(1, "board_paid", qid) # tell the host the goods left our pack
+
+@rpc("any_peer", "call_remote", "reliable")
+func board_release(qid: String) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	game.board_release_remote(pid, str(qid))
 
 @rpc("any_peer", "call_remote", "reliable")
 func board_paid(qid: String) -> void:
@@ -732,17 +746,31 @@ func board_paid(qid: String) -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		return
-	var gold := game.board_paid_remote(pid, str(qid))
-	if gold > 0 and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "board_pay", gold)
+	var res := game.board_paid_remote(pid, str(qid))
+	if not res.is_empty() and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "board_pay", int(res["gold"]), int(res["xp"]))
 
 @rpc("authority", "call_remote", "reliable")
-func board_pay(gold: int) -> void:
+func board_pay(gold: int, xp: int) -> void:
 	if is_host:
 		return
 	game.add_item("gold_coin", int(gold))
-	game.gain_xp(int(gold))
+	game.gain_xp(int(xp)) # same bounty math the keeper's own fill pays
 	game.log_msg("Board request filled — +%d gold" % int(gold))
+
+@rpc("authority", "call_remote", "reliable")
+func xp_gain(n: int) -> void:
+	if is_host:
+		return
+	game.gain_xp(int(n)) # a keeper's kills pay the keeper — wherever they stand
+
+@rpc("authority", "call_remote", "reliable")
+func sleep_done() -> void:
+	if is_host:
+		return
+	# one keeper's bed heals every roster through the shared loops — but the
+	# sleeper's own body is local state only they can mend
+	game.player.hp = game.player.max_hp
 
 @rpc("any_peer", "call_remote", "reliable")
 func cond_req() -> void:
@@ -788,6 +816,22 @@ func infuse_done(cost: int) -> void:
 	game.add_item("sprigmelt_effigy", -int(cost)) # effigies burn only on host acceptance
 	game.log_msg("The offering burns — a soul burns brighter")
 
+@rpc("any_peer", "call_remote", "reliable")
+func fruit_req(item_id: String) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	if game.fruit_req_remote(pid, str(item_id)) and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "fruit_done", str(item_id))
+
+@rpc("authority", "call_remote", "reliable")
+func fruit_done(item_id: String) -> void:
+	if is_host:
+		return
+	game.add_item(str(item_id), -1) # the bag pays its fruit only on host acceptance
+
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
 # kinbox clicks travel back as box_req ops the host validates + runs.
@@ -797,9 +841,10 @@ var box_resend := 0.0
 func box_fingerprint() -> int:
 	var h := game.box.size() * 131 + game.party.size() * 7919
 	for bp in game.box:
-		h = (h * 31 + bp.uid + int(bp.hp) + bp.owner_id + (1 if bp.fav else 0)) & 0x7FFFFFFF
+		h = (h * 31 + bp.uid + int(bp.hp) + bp.owner_id + (1 if bp.fav else 0) \
+			+ bp.star * 131 + int(bp.level) * 17) & 0x7FFFFFFF
 	for bb in game.bench:
-		h = (h * 31 + bb.uid + int(bb.hp) + bb.owner_id) & 0x7FFFFFFF
+		h = (h * 31 + bb.uid + int(bb.hp) + bb.owner_id + bb.star * 131) & 0x7FFFFFFF
 	for u in game.party:
 		h = (h * 17 + int(u)) & 0x7FFFFFFF
 	var out := game.party_pal()
