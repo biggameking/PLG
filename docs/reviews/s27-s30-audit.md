@@ -41,7 +41,10 @@ releases the stick via `_process`; dex/shop scroll buttons only render
 on overflow; guide footer now says "Esc/n close". Deferred-by-design:
 title JOIN (world-swap flow is the deferred work, not the row), guest
 drop reconciliation (design-limit already on record), the defensive
-unreachable `_menu_key` branch left as a seatbelt.
+unreachable `_menu_key` branch left as a seatbelt. Host `m_save` with
+guests was audited for semantics: the snapshot serializes guest kin by
+keeper tag, and a later session's `hello` reclaim-by-tag re-binds them —
+already coherent, documented here rather than changed.
 
 ## Coverage added (real routes, not helpers)
 
