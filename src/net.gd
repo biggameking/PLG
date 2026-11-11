@@ -19,7 +19,7 @@ const MAX_PENDING_PAYS := 32 # in-flight holds — every verb settles or rejs, b
 var mount_pending := false # a mount_req is in flight — the button can't double-toggle before mount_done lands
 var mount_pending_uid := -1 # which handshake is out — a stray echo can't re-arm the button early
 var unbind_retry_t := 0.0 # self-heal cooldown — the host keeps hearing "let go" until it does
-func pay(tag: String, cost: Dictionary) -> void:
+func pay(tag: String, cost: Dictionary) -> bool:
 	# the ledger records what the bag ACTUALLY gave, not what the click
 	# claimed — add_item floors at zero, and a claimed refund would mint
 	var debited := {}
@@ -30,10 +30,17 @@ func pay(tag: String, cost: Dictionary) -> void:
 		if took > 0:
 			debited[str(k)] = took
 	if debited.is_empty():
-		return # nothing left the bag — there is no hold to settle or refund
+		return true # nothing left the bag — a free verb still flies, no hold
+	if pending_pays.size() >= MAX_PENDING_PAYS:
+		# refuse BEFORE the request flies: evicting a booked hold would let its
+		# echo settle a *different* same-tag request — cap means "come back in a
+		# beat", never "the oldest hold evaporates"
+		for k in debited:
+			game.add_item(str(k), int(debited[k]))
+		game.log_msg("Too many open offers — try again in a breath")
+		return false
 	pending_pays.append({"tag": tag, "cost": debited})
-	if pending_pays.size() > MAX_PENDING_PAYS:
-		pending_pays.pop_front() # the stalest hold eats the loss — never grows a ledger
+	return true
 func pay_settle(tag: String, refund: bool) -> void:
 	for i in pending_pays.size():
 		if pending_pays[i]["tag"] == tag:
@@ -309,6 +316,8 @@ func pal_sync(arr: Array) -> void:
 		if not (e is Array) or e.size() < 6 or not (e[0] is float or e[0] is int):
 			continue
 		var nid := int(e[0])
+		if nid <= 0:
+			continue # host uids are >=1 — a zero/negative row would spawn an untrackable phantom every tick
 		seen[nid] = true
 		var p := game.find_net_pal(nid)
 		if p == null:
@@ -327,7 +336,16 @@ func pal_sync(arr: Array) -> void:
 			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
 				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
 			p.mounted_by = int(e[11]) if e.size() > 11 else 0
-			if p != game.player.mount: # the rider's own mount hides via player.gd
+			var myid := 0 # no peer → 0; the mounted_by==0 lane below needs no uid
+			if multiplayer.multiplayer_peer != null:
+				myid = multiplayer.get_unique_id()
+			if p == game.player.mount and (p.mounted_by == 0 or p.mounted_by != myid):
+				# host released the saddle on a kin that STAYS alive — deploy/sell/KO
+				# free the replica, but deploy_to_base leaves it; without this the
+				# client keeps riding an invisible base worker
+				game.player.mount = null
+				p.visible = true
+			elif p != game.player.mount: # the rider's own mount hides via player.gd
 				p.visible = p.mounted_by == 0
 			_mount_selfheal_check(nid, p.mounted_by)
 	for p in game.pals.duplicate():
@@ -665,6 +683,7 @@ func build_req(sid: String, tx: int, ty: int) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "build_bkt", 0.7, 1.0):
+		rpc_id(pid, "build_deny", str(sid)) # materials were paid at click — a silent drop eats them
 		return # one blueprint per breath — a fill script can't pave the island
 	if not game.unlocked.has(str(sid)):
 		# an honest client CAN out-tech the host (developed save joins fresh
@@ -755,8 +774,16 @@ func bait_req() -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		rpc_id(pid, "bait_deny") # the bait left the bag on the click — give it back
 		return
 	game.throw_bait_remote(pid) # the pile lands under the ghost the wire saw
+
+@rpc("authority", "call_remote", "reliable")
+func bait_deny() -> void:
+	if is_host:
+		return
+	game.add_item("kin_bait", 1)
+	game.log_msg("The bait came back — the island didn't hear it")
 
 @rpc("any_peer", "call_remote", "reliable")
 func fish_req() -> void:
@@ -979,7 +1006,7 @@ func mount_done(uid: int, state: int) -> void:
 # don't — an earlier unbind died on the wire (throttle/drop). Ask again,
 # bounded to one handshake per cooldown; the verb can't stay wedged.
 func _mount_selfheal_check(nid: int, rider: int) -> bool:
-	if not is_client() or rider != multiplayer.get_unique_id() \
+	if not is_client() or not game.net_live() or rider != multiplayer.get_unique_id() \
 			or mount_pending or unbind_retry_t > 0.0:
 		return false
 	var p: Kin = game.find_net_pal(nid)
@@ -1032,16 +1059,19 @@ func infuse_req(uid: float) -> void:
 	var cost := game.infuse_req_remote(pid, int(uid))
 	if cost > 0:
 		if multiplayer.get_peers().has(pid):
-			rpc_id(pid, "infuse_done", cost)
+			rpc_id(pid, "infuse_done", float(uid), cost)
 	else:
 		_pay_rej(pid, "infuse")
 
 @rpc("authority", "call_remote", "reliable")
-func infuse_done(cost: int) -> void:
+func infuse_done(uid: float, cost: int) -> void:
 	if is_host:
 		return
 	pay_settle("infuse", true) # refund the optimistic burn…
 	game.add_item("sprigmelt_effigy", -int(cost)) # …then charge the host's truth
+	var p: Kin = game.find_net_pal(int(uid))
+	if p != null:
+		p.soul_boost += 1 # the mirror learns what the wire doesn't carry — next price quote is honest
 	game.log_msg("The offering burns — a soul burns brighter")
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1269,6 +1299,7 @@ func chat(t: String, from_id: int = 0) -> void:
 var pal_sync_t := 0.0
 
 func _process(dt: float) -> void:
+	unbind_retry_t = maxf(0.0, unbind_retry_t - dt) # cools even mid-tear — a half-dead session still drains it
 	if multiplayer.multiplayer_peer == null or ghosts.is_empty():
 		return
 	if is_host:
@@ -1296,7 +1327,6 @@ func _process(dt: float) -> void:
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
 				rpc("decor_delta", dd)
-	unbind_retry_t = maxf(0.0, unbind_retry_t - dt)
 	send_timer += dt
 	if send_timer < 0.05:
 		return

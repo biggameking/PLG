@@ -1345,10 +1345,13 @@ func respawn_player() -> void:
 		if death_marks.size() > 3:
 			death_marks.pop_front() # only the freshest few spills earn a mark
 	if player._mount_guard(): # dead men don't ride — and a stale ref can't ride either
-		if net != null and net.is_client() and player.mount.net_id > 0:
+		if net != null and net.is_client() and net_live() and player.mount.net_id > 0:
 			# the host still thinks we're in the saddle — the replica ref
-			# dies here, but mounted_by must be released host-side too
-			net.rpc("mount_req", float(player.mount.net_id))
+			# dies here, but mounted_by must be released host-side too.
+			# Skip when the in-flight handshake already targets this kin —
+			# its echo unbinds; a second toggle would re-BIND post-respawn
+			if not (net.mount_pending and net.mount_pending_uid == player.mount.net_id):
+				net.rpc("mount_req", float(player.mount.net_id))
 		else:
 			_unbind_mount(player.mount)
 		player.mount = null
@@ -3758,7 +3761,7 @@ func to_title() -> void:
 	# the fresh scene — close it first.
 	if net != null:
 		net.is_host = false
-		multiplayer.multiplayer_peer = null
+		net._close_peer() # graceful drop — the remote end sees a disconnect, not a timeout
 	get_tree().reload_current_scene() # fresh boot lands back on the title screen
 
 func save_game() -> void:

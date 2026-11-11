@@ -5374,6 +5374,49 @@ func run() -> void:
 		# self-heal exists but refuses offline — no wire, no unbind asks
 		check("unbind self-heal is client-gated",
 			not game.net._mount_selfheal_check(424243, 1))
+		# deploy-while-mounted: the replica survives (deploy keeps it in pals)
+		# but the wire says nobody rides — the saddle must drop client-side too
+		var dep1: Kin = game.gen_pal("scalfang", 6, p.pos)
+		dep1.net_id = 424244
+		game.pals.append(dep1)
+		p.mount = dep1
+		dep1.visible = false
+		var dep_rows := []
+		for rp5 in game.pals:
+			if rp5.net_id > 0:
+				dep_rows.append([rp5.net_id, rp5.species_id, rp5.pos.x, rp5.pos.y,
+					9 if rp5 == dep1 else rp5.level, "base" if rp5 == dep1 else rp5.mode,
+					rp5.hp, rp5.lucky, rp5.boss, rp5.alpha, rp5.spire_tag, 0])
+		game.net.pal_sync(dep_rows)
+		check("a surviving replica can't keep the saddle", p.mount == null
+			and dep1.visible)
+		check("wire level lands on the replica", dep1.level == 9)
+		game.pals.erase(dep1); dep1.queue_free()
+		# nonpositive uids spawn nothing — host uids are >=1, a 0/-N row would
+		# otherwise mint an untrackable phantom every sync tick
+		var pals_n0 := game.pals.size()
+		var bad_rows := [[0, "puffmite", 1.0, 1.0, 1, "wild", 1.0, false, false, false, "", 0],
+			[-5, "puffmite", 2.0, 2.0, 1, "wild", 1.0, false, false, false, "", 0]]
+		for rp6 in game.pals:
+			if rp6.net_id > 0:
+				bad_rows.append([rp6.net_id, rp6.species_id, rp6.pos.x, rp6.pos.y,
+					rp6.level, rp6.mode, rp6.hp, rp6.lucky, rp6.boss,
+					rp6.alpha, rp6.spire_tag, rp6.mounted_by])
+		game.net.pal_sync(bad_rows)
+		check("nonpositive uids spawn nothing", game.pals.size() == pals_n0)
+		# a flooded ledger refuses the new hold — debit reversed, nothing booked
+		game.net.pending_pays.clear()
+		for i in 32:
+			game.net.pending_pays.append({"tag": "flood", "cost": {"wood": 1}})
+		var wood6 := game.item_count("wood")
+		check("a flooded ledger refuses + reverses", not game.net.pay("cap", {"wood": 3})
+			and game.net.pending_pays.size() == 32
+			and game.item_count("wood") == wood6)
+		game.net.pending_pays.clear()
+		# a denied toss hands the bait back
+		var bait6 := game.item_count("kin_bait")
+		game.net.bait_deny()
+		check("a denied toss returns the bait", game.item_count("kin_bait") == bait6 + 1)
 		if had5:
 			game.items["wood"] = wood5
 		else:

@@ -655,3 +655,17 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   it); _mount_selfheal_check re-asks the unbind when a replica still
   reports us as its rider (2s cooldown). state_sync/pal_sync apply
   mode + mount guards symmetric with purge_replicas. Smoke 736/0.
+
+## S51 — audit-12: silent-refusal echoes + deploy-mount desync
+  Twelfth context-free audit (1H/1M/4L): build_req's throttle drop
+  silently ate paid materials (0.7/s bucket vs honest wall-rows) —
+  every paid verb now echoes its refusal (build_deny, bait_deny).
+  deploy_to_base is the only unbind that leaves the replica alive;
+  pal_sync now drops the local saddle when the wire says nobody rides
+  (or somebody else does). Ledger eviction became refuse-at-cap —
+  a booked hold can never be evicted into a same-tag mis-settle.
+  respawn skips a duplicate unbind when a handshake is already out
+  (toggle can't express unbind-only); to_title uses _close_peer for
+  a graceful drop; pal_sync refuses nonpositive uids; infuse_done
+  feeds the replica's soul_boost so guest price mirrors converge.
+  Smoke 741/0, IP CLEAN.

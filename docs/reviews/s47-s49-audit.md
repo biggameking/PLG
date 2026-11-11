@@ -85,3 +85,45 @@ state_sync 清 kin 时同步清 player.mount（L5）；pal_sync 应用端
 smoke 736/0 全绿，新增 6 断言（实扣账本/空袋无账/uid 回执作用域
 /自愈离线门）。审计另证：unbind 覆盖确属全面、快照字段序双端
 一致、has_saddle_for 为已记录客端权威通道。
+
+## 第十二轮外审处置（S51）
+1H/1M/4L —— 全部落地；审计同时验证 S50 全部主张成立。
+
+### H build_req 节流丢包静默吞材料
+`place_structure` 点击即扣料（非账本通道），build_bkt 0.7/s 节流
+丢包时无任何回执 → 正常连点摆墙每两块丢一块成本。修：节流分支
+回 `build_deny(sid)`（既有处理器退款）。同类面：`bait_req` 补
+`bait_deny` 退 kin_bait。
+
+### M deploy-while-mounted 客户端幻影坐骑
+`deploy_to_base` 是唯一解绑后 replica 仍存活的路径——客户端
+`player.mount` 悬在可见性=0 的基地工蜂上，保留坐骑速度与通行权。
+修：pal_sync 应用端 `p==mount && (mounted_by==0 || != myid)` →
+本地解绑+复显。myid 取 peer 守卫值（离线 0 不撞哨兵）。
+
+### L
+- pending_pays 驱逐→**封顶拒绝**：满 32 条时 pay() 退款返回 false，
+  调用点门控 rpc（8 站点）。原驱逐语义允许被逐挂账的回执错配
+  同 tag 挂账（需 34 并发在途，伪造端界限内——防御纵深改为
+  "挂账一旦建立永不消失，回执永远配对自己的请求"）。
+- respawn 解绑重复请求：pending 握手已锁定同 uid 时跳过（在飞
+  unbind 的回执会解绑，第二个 toggle 会重新绑定）；客户端路径
+  补 net_live() 门（半连状态不发 rpc）。
+- to_title 改走 `net._close_peer()`——优雅断连，远端见 disconnect
+  而非超时。
+- pal_sync `nid<=0` 行直接跳过——原会每 tick 生成无法追踪的幻影
+  kin（本地可打可捕）。
+- infuse 镜像价：soul_boost 不在线上字段——`infuse_done(uid,cost)`
+  回执顺手让客户端 replica sb+1，镜像价下次诚实。
+- unbind_retry_t 倒计时移出 ghosts 守卫（半断会话也冷却）；
+  self-heal 补 net_live() 门。
+
+### 审计验证为正确（拒绝的假设）
+pay() 实扣记账、FIFO 配对、空扣不立账、全动词拒路回执完备
+（build_req 是唯一漏网的——已修）、自愈/按钮互斥无抢占、
+uid 作用域握手、全 unbind 兄弟站点（唯一缺口即 deploy M 项）。
+
+### 验证
+smoke 741/0 零 ERROR；新断言 5 条（存活 replica 掉鞍、wire 等级
+落地、非正 uid 不生成、满账拒绝+退款、deny 退饵）。
+IP CHECK: CLEAN。
