@@ -375,3 +375,20 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     (`max_base_pals`) must count the actor's own slice
     (`base_pals_of(pid)`), not the shared pool — otherwise a guest's pile
     silently starves the keeper's workforce with no eviction path.
+
+74. **Explicit null clears; absence means "no change".** Every mirrored
+    state field is tristate — a freed captive (`cap: null`) or an emptied
+    crew (`wk: []`) can never ride "key missing", or the replica keeps a
+    ghost value forever. `struct_wire_state` always ships `wk`/`timer` even
+    at zero; apply-side `has()` + `erase()` pairs carry the distinction.
+75. **A relay checks the wire, not the flag.** `rpc()` inside a request
+    handler runs against the real peer — `is_host` true with a CONNECTING
+    peer (or a torn-down one) spams "RPC via a peer which is not connected".
+    Guards that precede an `rpc()` call check
+    `get_connection_status() == CONNECTION_CONNECTED`, not just non-null.
+76. **The host's own packets are truth, not suspect.** Position policing
+    (`sync_pos` first-fix/step cap) is a host-side verb on guest claims —
+    a client never runs it for another guest (the `peer_pos` relay is its
+    only truth), and the host's own avatar (pid 1) can't spoof itself.
+    Applying the gate to authority packets strands the host invisible
+    past spawn+12.

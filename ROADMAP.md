@@ -527,3 +527,42 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   Skipped as bound-consistent/negligible: chest_took RTT over-credit,
     pal_hit sleep floor, forged shrine/work flaps (echo-verified).
   Smoke 692-695/0 x4.
+
+## S43 — second eighth-audit landing (wire shapes + mirror lifecycle)
+  H1 guest shelf dropped kin rows: stock_sync accepted only `id` rows —
+    merchant kin sales were invisible. Rows now parse both shapes with a
+    SpeciesData whitelist + lv/n/price clamps; rebuilt dicts, never raw dup.
+  H2 guest sell rail was dead UI — sellable_pals() read the host's box.
+    Guests now list game.net_box dicts (uid/lv/name/est. price — host
+    recomputes the true buyback at r_sell_pal).
+  H3 chest deposit could launder forged claims into durable shared storage —
+    bounded to 9999 units/request under the existing throttle; the residual
+    laundering lane is the documented bag-trust bound (ledger would break
+    honest crafted-goods deposits).
+  M1 merchant mirror outlived disconnect as an interactable zombie —
+    _on_server_disconnected tears it down (apply off + hp/wanted reset).
+  M2 buildable_list intersected host tech with the guest's own research —
+    a fresh guest saw a starter bar on a developed island. Guests now read
+    net_unlocked directly; unlocked also rides env_sync for mid-session tech.
+  M3 struct_sync carried id/origin/store only — guests saw chests but no
+    captive state, egg timers, fertilizer, expedition countdowns, workers.
+    Wire shape is now [id, ox, oy, store, state] with re-anchored times and
+    uid→replica crew resolution; mimic and egg_parents stay off by design.
+    state_snapshot reuses struct_state_pack (fixes a latent footprint-cell
+    origin bug: snapshot keyed footprint cells, not origins).
+  L1 host ghost stranded past spawn+12 on clients (first-fix gate policed
+    authority packets) — clients accept sync_pos only from pid 1; other
+    guests arrive via peer_pos relay only.
+  L2 Iron Pact squad loop now breaks at MAX_PALS.
+  L3 merch_hit guest reach tightened 3.0→2.5 tiles.
+  L4 deploy_to_base failures now note_remote the asking guest.
+  L5 env_sync board_quest stripped `pending` (holder pid leaked + stale-open).
+  P1 MAX_MERCH_STOCK enforced in generation AND sync.
+  P2 smoke banner now prints skipped checks separately (fixture-skip
+    pattern surfaced, e.g. "grotto room 2 skipped: terrain…").
+  P4 state_snapshot no longer duplicates the struct pack loop.
+  Bound-consistent: shrine honest gate already existed; wire-level sender_id
+    can't be faked in the harness (merch_hit/pal_hit RPC gates are direct-call
+    tested instead); multi-sleeper day-skip asymmetry noted as design;
+    hello tag-switch desync is self-inflicted; guest-hit sfx is cosmetic.
+  Smoke 700-704/0 x9, 0 ERROR, skip counter live.

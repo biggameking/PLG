@@ -27,9 +27,13 @@ func _boot() -> void:
 	for r in results:
 		if r.begins_with("FAIL"):
 			fails += 1
+	var skips := 0
+	for r in results:
+		if "  skipped" in r:
+			skips += 1
 	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
 	if fo: # WRITE truncates — the file is this run's verdict, not a history log
-		fo.store_line("==== %d checks, %d failures ====" % [results.size(), fails])
+		fo.store_line("==== %d checks, %d failures, %d skipped ====" % [results.size(), fails, skips])
 		fo.close()
 	quit()
 
@@ -5429,6 +5433,109 @@ func run() -> void:
 	v42_ep.close()
 	game.net.multiplayer.multiplayer_peer = v42_pp
 	game.net.is_host = v42_ih
+	# ── S43: eighth-audit hardening — wire row shapes, mirror teardown, caps ──
+	var v43_ih: bool = game.net.is_host
+	var v43_pp = game.net.multiplayer.multiplayer_peer
+	var v43_ep := ENetMultiplayerPeer.new()
+	v43_ep.create_client("127.0.0.1", 43210)
+	game.net.multiplayer.multiplayer_peer = v43_ep
+	game.net.is_host = false
+	var v43_sid: String = SpeciesData.SPECIES.keys()[0]
+	var v43_m0: Array = game.merchant_stock.duplicate()
+	game.net.stock_sync([{"kin": v43_sid, "lv": 5, "n": 1, "price": 300},
+		{"id": "wood", "n": 3, "price": 4}, {"kin": "not_a_species", "lv": 1},
+		{"n": 2}, "junk"])
+	check("guest shelf keeps kin rows, drops forged shapes",
+		game.merchant_stock.size() == 2
+		and str(game.merchant_stock[0].get("kin", "")) == v43_sid
+		and str(game.merchant_stock[1].get("id", "")) == "wood")
+	var v43_fat := []
+	for i43 in game.MAX_MERCH_STOCK + 5:
+		v43_fat.append({"id": "wood", "n": 1, "price": 1})
+	game.net.stock_sync(v43_fat)
+	check("shelf mirror honors MAX_MERCH_STOCK",
+		game.merchant_stock.size() == game.MAX_MERCH_STOCK)
+	game.merchant_stock = v43_m0
+	game.net_unlocked = ["notice_board"]
+	check("guest build bar follows the host's research",
+		game.buildable_list() == ["notice_board"])
+	game.net_unlocked = []
+	game.net_box = [{"uid": 77, "sid": v43_sid, "lv": 5, "hp": 10, "max_hp": 10,
+		"sex": "M", "lucky": false, "talent": 50, "ailment": "", "fav": false,
+		"star": 1, "wk": ""}]
+	var v43_sell: Array = hudn.sellable_pals()
+	check("guest sell rail rides the mirrored roster",
+		v43_sell.size() == 1 and int(v43_sell[0]["uid"]) == 77
+		and int(v43_sell[0]["price"]) > 0)
+	game.net_box = []
+	v43_ep.close()
+	game.net.multiplayer.multiplayer_peer = v43_pp
+	game.net.is_host = v43_ih
+	# struct wire state: pack → mutate → sync restores (captive, egg timer, crew)
+	var v43_home := Vector2i(game.player.pos)
+	var v43_ck: Vector2i = Vector2i.ZERO
+	for v43_x in range(v43_home.x - 7, v43_home.x + 8):
+		for v43_y in range(v43_home.y - 7, v43_home.y + 8):
+			var v43_c := Vector2i(v43_x, v43_y)
+			if game.can_place("kin_cage", v43_c.x, v43_c.y) \
+					and game.can_place("incubator", v43_c.x + 2, v43_c.y):
+				v43_ck = v43_c; break
+		if v43_ck != Vector2i.ZERO: break
+	check("S43 fixture cell found", v43_ck != Vector2i.ZERO,
+		"searched around player at %s" % v43_home)
+	if v43_ck != Vector2i.ZERO:
+		game.place_free("kin_cage", v43_ck.x, v43_ck.y)
+		game.place_free("incubator", v43_ck.x + 2, v43_ck.y)
+		var v43_st: Dictionary = game.structures[v43_ck]
+		var v43_ist: Dictionary = game.structures[v43_ck + Vector2i(2, 0)]
+		v43_st["captive"] = {"sp": v43_sid, "lv": 7}
+		var v43_wk0 := game.gen_pal(v43_sid, 3, game.player.pos)
+		game.pals.append(v43_wk0) # the factory doesn't enlist — find_net_pal reads pals
+		v43_wk0.net_id = v43_wk0.uid # replicas carry their host uid — the wire key
+		v43_st["workers"] = [v43_wk0]
+		v43_ist["egg_inc"] = {"pair": [v43_sid, v43_sid], "huge": false,
+			"ready_t": game.t + 120.0, "own_tag": "keeper"}
+		var v43_pack: Array = game.net.struct_state_pack()
+		var v43_ent = null; var v43_ient = null
+		for e in v43_pack:
+			if e.size() > 4 and e[0] == "kin_cage" and Vector2i(int(e[1]), int(e[2])) == v43_ck:
+				v43_ent = e
+			if e.size() > 4 and e[0] == "incubator" and Vector2i(int(e[1]), int(e[2])) == v43_ck + Vector2i(2, 0):
+				v43_ient = e
+		check("cage+incubator ride the wire with state",
+			v43_ent != null and v43_ient != null
+			and v43_ent[4].get("cap", {}).get("sp", "") == v43_sid
+			and float(v43_ient[4].get("inc", {}).get("left", -1.0)) > 100.0
+			and (v43_ent[4].get("wk", []) as Array).size() == 1)
+		v43_st.erase("captive"); v43_st["workers"] = []; v43_ist.erase("egg_inc")
+		game.struct_sync(v43_pack) # the whole world rides — a subset pack razes it
+		check("wire state re-anchors timers and crew",
+			str(v43_st.get("captive", {}).get("sp", "")) == v43_sid
+			and v43_st["workers"].size() == 1
+			and v43_ist.get("egg_inc", {}).get("ready_t", 0.0) > game.t + 60.0)
+		if v43_ent != null:
+			v43_ent[4]["cap"] = null; v43_ent[4]["wk"] = []
+			game.struct_sync(v43_pack)
+		check("explicit null clears the freed prisoner",
+			not v43_st.has("captive") and v43_st["workers"].is_empty())
+		game.pals.erase(v43_wk0); v43_wk0.queue_free()
+		game.net_remove_structure(v43_st); game.net_remove_structure(v43_ist)
+	# Iron-Pact squad honors the population cap
+	if game.merchant == null or not is_instance_valid(game.merchant):
+		game.merchant_hp = 60
+		game.spawn_merchant()
+	var v43_wanted: bool = game.merchant_wanted
+	game.merchant_wanted = false; game.merchant_hp = 60
+	var v43_pad := []
+	while game.pals.size() < game.MAX_PALS: # pals is Array[Kin] — real bodies only
+		var v43_n := game.gen_pal(v43_sid, 1, game.player.pos)
+		v43_pad.append(v43_n); game.pals.append(v43_n)
+	var v43_before: int = game.pals.size()
+	game.hit_merchant(10, 99)
+	check("hit squad stops at MAX_PALS", game.pals.size() == v43_before)
+	for v43_n2 in v43_pad:
+		game.pals.erase(v43_n2); v43_n2.queue_free()
+	game.merchant_wanted = v43_wanted
 	# pause shell hosts the panel verbs for every input device
 	var peer_bak2 = game.net.multiplayer.multiplayer_peer
 	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer
@@ -5705,7 +5812,9 @@ func run() -> void:
 	check("client danger mirrors", game.danger_active())
 	game.net_danger = false
 	# sync_pos is the only input every proximity gate trusts — spoofed
-	# coordinates must die at the door (id 0 = a headless sender)
+	# coordinates must die at the door (id 0 = a headless sender). The gate
+	# itself executes HOST-side — a real client never runs this branch
+	game.net.is_host = true
 	game.net.spawn_ghost(0)
 	var g0 = game.net.ghosts[0]
 	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — but the first fix must
@@ -6120,7 +6229,10 @@ func run() -> void:
 	game.net.multiplayer.multiplayer_peer = null
 
 	var fails := 0
+	var skips2 := 0
 	for r in results:
 		if r.begins_with("FAIL"):
 			fails += 1
-	print("==== %d checks, %d failures ====" % [results.size(), fails])
+		elif "  skipped" in r:
+			skips2 += 1
+	print("==== %d checks, %d failures, %d skipped ====" % [results.size(), fails, skips2])

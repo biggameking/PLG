@@ -1273,6 +1273,7 @@ func chest_req_remote(pid: int, cell: Vector2i, op: String, payload: Dictionary)
 		return taken
 	if op == "dep":
 		var accepted := {}
+		var claimed := 0
 		for id in payload.keys():
 			var iid := str(id)
 			if not ItemData.ITEMS.has(iid) or iid == "gold_coin":
@@ -1280,6 +1281,12 @@ func chest_req_remote(pid: int, cell: Vector2i, op: String, payload: Dictionary)
 			var c := clampi(int(payload[id]), 0, 999)
 			if c <= 0 or not chest_can_take(st, iid):
 				continue # stack cap reached or garbage count
+			# a forged claim can only launder what the throttled request rate
+			# allows — the per-call cap keeps one packet from dumping a save
+			c = mini(c, 9999 - claimed)
+			if c <= 0:
+				break
+			claimed += c
 			if st["id"] == "feed_box" and int(ItemData.ITEMS.get(iid, {}).get("food", 0)) <= 0:
 				continue # the feed box only takes food — same rule as the local path
 			st["store"][iid] = int(st["store"].get(iid, 0)) + c
@@ -2195,9 +2202,9 @@ func buildable_list() -> Array:
 	# unlock recipes, not buildings (selecting them crashed place_structure)
 	var out := unlocked.filter(func(id): return StructureData.STRUCTURES.has(id))
 	if net != null and net.is_client() and not net_unlocked.is_empty():
-		# the host's tech is the truth — offering more than it has costs real
-		# materials when the host's gate refuses (deny refunds, but don't show it)
-		out = out.filter(func(id): return net_unlocked.has(id))
+		# the host's tech is the bar — a fresh guest on a developed island
+		# builds what the HOST researched, not what their own save knows
+		out = net_unlocked.filter(func(id): return StructureData.STRUCTURES.has(id))
 	return out
 
 func can_place(sid: String, tx: int, ty: int) -> bool:
@@ -3277,13 +3284,13 @@ func max_base_pals() -> int:
 func deploy_to_base(p: Kin) -> void:
 	# the island: drop a kin at the kinbox and it joins the base workforce
 	if p.hp <= 0:
-		log_msg("%s is KO'd - wait for it to recover" % p.spec["name"])
+		_deploy_note(p, "%s is KO'd - wait for it to recover" % p.spec["name"])
 		return
 	if kinbox_pos.x < 0:
-		log_msg("Need a kinbox to deploy kin")
+		_deploy_note(p, "Need a kinbox to deploy kin")
 		return
 	if base_pals_of(p.owner_id).size() >= max_base_pals() and p.mode != "base":
-		log_msg("Base is full (%d kin — level up for more slots)" % max_base_pals())
+		_deploy_note(p, "Base is full (%d kin — level up for more slots)" % max_base_pals())
 		return
 	player.dismount_if(p)
 	party.erase(p.uid)
@@ -3299,7 +3306,14 @@ func deploy_to_base(p: Kin) -> void:
 	p.job_site = null
 	var db := nearest_kinbox(p.pos)
 	p.pos = nearest_free(db.x + 2.0, db.y + 2.5)
-	log_msg("%s deployed at base" % p.spec["name"])
+	_deploy_note(p, "%s deployed at base" % p.spec["name"])
+
+# a remote caller's kin owns pid > 0 — its owner gets the notice, not the host
+func _deploy_note(p: Kin, msg: String) -> void:
+	if p.owner_id > 0:
+		note_remote(p.owner_id, msg)
+	else:
+		log_msg(msg)
 
 func base_to_box(p: Kin) -> void:
 	# recall a worker into cold storage — job and cargo are dropped first
@@ -6040,6 +6054,81 @@ func net_remove_structure(st: Dictionary) -> void:
 			extra_boxes.erase(origin)
 
 # client: reconcile structure replicas against the host's wire truth
+# guest-visible structure state — the compact "remaining-time" convention the
+# save serializer already uses. mimic and egg_parents stay home deliberately:
+# the trap is a spoiler and the genetics queue is the keeper's ledger
+func struct_wire_state(st: Dictionary) -> Dictionary:
+	var sv := {}
+	if st["id"] == "kin_cage":
+		sv["cap"] = st.get("captive") # explicit null clears a freed prisoner
+	if st["id"] == "incubator":
+		var inc = st.get("egg_inc")
+		sv["inc"] = ({"pair": inc.get("pair"), "huge": inc.get("huge", false),
+			"left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t),
+			"own": str(inc.get("own_tag", ""))} if inc is Dictionary else null)
+	if st["id"] == "expedition_post":
+		sv["exp"] = {"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t),
+			"cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)}
+		if st.get("exp_pal") is Kin:
+			sv["exp_uid"] = st["exp_pal"].uid
+	var fleft := float(st.get("fert", 0.0)) - t
+	if fleft > 0.0:
+		sv["fert"] = fleft
+	if st.get("loot", false):
+		sv["loot"] = true
+	sv["timer"] = float(st.get("timer", 0.0)) # always — a finished timer is truth too
+	if st.get("hp") != null:
+		sv["hp"] = st["hp"]
+	if str(st.get("placed_tag", "")) != "":
+		sv["by"] = str(st["placed_tag"])
+	var wu := []
+	for w in st.get("workers", []):
+		if w is Kin:
+			wu.append(w.uid) # replicas carry it as net_id on the client
+	sv["wk"] = wu # always — an empty crew is truth too
+	return sv
+
+func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
+	if sv.has("cap"):
+		if sv["cap"] is Dictionary:
+			st["captive"] = {"sp": str(sv["cap"].get("sp", "")),
+				"lv": clampi(int(sv["cap"].get("lv", 1)), 1, 60)}
+		else:
+			st.erase("captive")
+	if sv.has("inc"):
+		if sv["inc"] is Dictionary:
+			var inc: Dictionary = sv["inc"]
+			st["egg_inc"] = {"pair": inc.get("pair"), "huge": inc.get("huge") == true,
+				"ready_t": t + clampf(float(inc.get("left", 0.0)), 0.0, 900.0),
+				"own_tag": str(inc.get("own", ""))}
+		else:
+			st.erase("egg_inc")
+	if sv.has("exp") and sv["exp"] is Dictionary:
+		st["exp_end"] = t + clampf(float(sv["exp"].get("left", 0.0)), 0.0, 3600.0)
+		st["exp_cd"] = t + clampf(float(sv["exp"].get("cd", 0.0)), 0.0, 3600.0)
+		st["exp_pal"] = find_net_pal(int(sv.get("exp_uid", -1)))
+	if sv.has("fert"):
+		st["fert"] = t + clampf(float(sv["fert"]), 0.0, 600.0)
+	elif st.has("fert") and t >= float(st["fert"]):
+		st.erase("fert")
+	if sv.has("loot"):
+		st["loot"] = sv["loot"] == true
+	if sv.has("timer"):
+		st["timer"] = clampf(float(sv["timer"]), -3600.0, 3600.0)
+	if sv.has("hp"):
+		st["hp"] = sv["hp"]
+	if sv.has("by"):
+		st["placed_tag"] = str(sv["by"])
+	elif st.has("placed_tag"):
+		st.erase("placed_tag")
+	if sv.has("wk") and sv["wk"] is Array: # uids resolve to live replicas —
+		var wl := [] # a missing one self-heals on the next tick
+		for u in sv["wk"]:
+			var r := find_net_pal(int(u))
+			if r != null:
+				wl.append(r)
+		st["workers"] = wl
+
 func struct_sync(arr: Array) -> void:
 	var seen := {}
 	for e in arr:
@@ -6052,11 +6141,15 @@ func struct_sync(arr: Array) -> void:
 		seen[k] = sid
 		var cur = structures.get(k)
 		var has_store: bool = e.size() > 3 and e[3] is Dictionary
+		var sv: Dictionary = e[4] if e.size() > 4 and e[4] is Dictionary else {}
 		if cur != null and cur["id"] == sid and cur.get("pos", k) == k:
 			if has_store:
 				cur["store"] = e[3] # chest truth rides the wire — refresh it
+			if not sv.is_empty():
+				_struct_wire_apply(cur, sv)
 			continue # a pack without a store field must not zero what's there
-		place_free(sid, k.x, k.y, e[3] if has_store else {})
+		if place_free(sid, k.x, k.y, e[3] if has_store else {}) and not sv.is_empty():
+			_struct_wire_apply(structures[k], sv)
 	var uniq := []
 	for k in structures.keys():
 		var st: Dictionary = structures[k]
@@ -6291,6 +6384,8 @@ func gen_merchant_stock() -> void:
 	# black-market kin (the island): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):
+		if merchant_stock.size() >= MAX_MERCH_STOCK:
+			break # the briefcase is bounded — the cap is a real gate, not a hint
 		var z := rng.int_range(0, 2) if rng.chance(0.85) else 3
 		var ppool: Array = acq_pool(SpeciesGen.zone_pool(z))
 		if ppool.is_empty():
@@ -6367,6 +6462,8 @@ func hit_merchant(dmg: float, pid := 0) -> void:
 		var at0: Vector2 = peer_pos_of(pid) if pid > 0 else player.pos
 		var squad := mini(2 + int(day / 6.0), 4)
 		for i in squad:
+			if pals.size() >= MAX_PALS:
+				break # the population cap is also a CPU guard — the law waits
 			var a := rng.next() * TAU
 			var at := nearest_free(at0.x + cos(a) * 5.0, at0.y + sin(a) * 5.0)
 			var thug := gen_pal("ironpact_grunt" if i % 2 == 0 else "ironpact_sweeper",

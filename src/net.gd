@@ -162,14 +162,9 @@ func peer_left(id: int) -> void:
 		ghosts.erase(id)
 
 func state_snapshot() -> Dictionary:
-	# unique structures by origin cell (first-seen order = placement order)
-	var seen := []
-	var arr := []
-	for k in game.structures:
-		var st = game.structures[k]
-		if st not in seen:
-			seen.append(st)
-			arr.append([st["id"], k.x, k.y, st.get("store", {})])
+	# one pack path for snapshots and ticks — a footprint key cell is not an
+	# origin, and state fields (egg timers, workers) join for free
+	var arr := struct_state_pack()
 	# share the living population too — a joining client should see the same
 	# wild/base kin, not an empty world (capped upstream by MAX_PALS)
 	var parr := []
@@ -189,7 +184,11 @@ func state_sync(d: Dictionary) -> void:
 	for e in d.get("structures", []):
 		if e is Array and e.size() >= 3 and (e[1] is float or e[1] is int) and (e[2] is float or e[2] is int):
 			var st_store: Dictionary = e[3] if e.size() > 3 and e[3] is Dictionary else {}
-			game.place_free(str(e[0]), int(e[1]), int(e[2]), st_store) # net input is untrusted — validate shape
+			if game.place_free(str(e[0]), int(e[1]), int(e[2]), st_store) \
+					and e.size() > 4 and e[4] is Dictionary:
+				var sk := Vector2i(int(e[1]), int(e[2]))
+				if game.structures.has(sk):
+					game._struct_wire_apply(game.structures[sk], e[4]) # same wire shape as struct_sync
 	if d.get("unlocked") is Array:
 		game.net_unlocked = d["unlocked"] # the host's tech bounds our build bar
 	game.tod = float(d.get("tod", game.tod))
@@ -251,7 +250,8 @@ func pal_sync(arr: Array) -> void:
 
 @rpc("authority", "call_remote", "unreliable")
 func env_sync(tod: float, day: int, weather: String, danger: bool = false,
-		bq: Dictionary = {}, merch: Dictionary = {}, wmode: int = -1) -> void:
+		bq: Dictionary = {}, merch: Dictionary = {}, wmode: int = -1,
+		unl: Array = []) -> void:
 	if is_host:
 		return
 	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
@@ -271,6 +271,8 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 		float(merch.get("x", 0.0)), float(merch.get("y", 0.0)))
 	if wmode >= 0: # work-mode flips belong to the island, not the caller
 		game.work_mode = clampi(int(wmode), 0, game.WORK_MODES.size() - 1)
+	if not unl.is_empty(): # mid-session research reaches guests inside a tick
+		game.net_unlocked = unl.duplicate()
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
@@ -292,6 +294,9 @@ func _on_server_disconnected() -> void:
 	ghosts.clear()
 	game.clear_net_drops() # replica loot dies with the session too
 	game.purge_replicas() # statue kin can't linger as free catches post-session
+	game.net_merchant_apply(false, 0.0, 0.0) # the mirrored trader leaves with the host
+	game.merchant_hp = 0
+	game.merchant_wanted = false
 	game.party.clear() # host-uid party strip — dead references, not your roster
 	game.net_party = [] # the mirrors were the host's truth — stop showing them
 	game.net_box = []
@@ -324,6 +329,8 @@ func _arrive_guest() -> void: # a title-screen join lands IN the world, not on t
 @rpc("any_peer", "call_remote", "unreliable")
 func sync_pos(x: float, y: float, elev: float) -> void:
 	var id := multiplayer.get_remote_sender_id()
+	if not is_host and id != 1:
+		return # another guest's position arrives via the host's peer_pos relay — direct claims are noise
 	if not ghosts.has(id):
 		return
 	var nx := float(x); var ny := float(y); var nz := float(elev)
@@ -334,7 +341,12 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	var g = ghosts[id]
 	if g.net_pos.x < 0:
 		# the first fix is where the join actually materializes — spawn, or a
-		# pad beside it. Anything else stays -1 and keeps failing every gate
+		# pad beside it. Anything else stays -1 and keeps failing every gate.
+		# The HOST's own avatar is the authority itself — it can't spoof itself,
+		# and gating it strands it invisible anywhere past spawn+12
+		if not is_host and id == 1:
+			g.net_pos = Vector3(nx, ny, nz)
+			return
 		var sp := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
 		if Vector2(nx, ny).distance_to(sp) > 12.0 and _near_travel_node(Vector2(nx, ny)) == "":
 			return
@@ -356,8 +368,9 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 	# a blink drains the bucket too: a guest that just teleported has no
 	# honest need to be sprinting the very next frame
 	g.net_pos = Vector3(nx, ny, clampf(nz, -1.0, 8.0))
-	if is_host:
-		rpc("peer_pos", id, nx, ny, g.net_pos.z)  # relay the CLAMPED z, not the claim
+	if is_host and multiplayer.multiplayer_peer != null \
+			and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		rpc("peer_pos", id, nx, ny, g.net_pos.z)  # relay the CLAMPED z, not the claim — and only onto a live wire
 
 const BLINK_RADIUS := 5.0 # landing tolerance: nearest_free can shove a few tiles
 const POS_RATE := 40.0 # mounted sprint peaks ~29 u/s; cap leaves 38% headroom
@@ -509,7 +522,8 @@ func struct_state_pack() -> Array:
 		if st not in seen:
 			seen.append(st)
 			var o: Vector2i = st.get("pos", k) # origin cell — the wire key
-			arr.append([st["id"], o.x, o.y, st.get("store", {})])
+			arr.append([st["id"], o.x, o.y, st.get("store", {}),
+				game.struct_wire_state(st)])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -984,8 +998,21 @@ func stock_sync(stock: Array) -> void:
 		return
 	game.merchant_stock.clear()
 	for it in stock: # the shelf is display-only — buys still validate host-side
-		if it is Dictionary and str(it.get("id", "")) != "":
-			game.merchant_stock.append(it.duplicate())
+		if not (it is Dictionary):
+			continue
+		if str(it.get("kin", "")) != "": # black-market kin row — species whitelisted
+			var sid := str(it["kin"])
+			if SpeciesData.species_of(sid).is_empty():
+				continue
+			game.merchant_stock.append({"kin": sid,
+				"lv": clampi(int(it.get("lv", 1)), 1, 60), "n": 1,
+				"price": maxi(0, int(it.get("price", 0)))})
+		elif str(it.get("id", "")) != "":
+			game.merchant_stock.append({"id": str(it["id"]),
+				"n": clampi(int(it.get("n", 1)), 0, 999),
+				"price": maxi(0, int(it.get("price", 0)))})
+		if game.merchant_stock.size() >= game.MAX_MERCH_STOCK:
+			break # a hostile pack can't stuff the shelf past its cap
 
 @rpc("any_peer", "call_remote", "reliable")
 func merch_hit(dmg: float) -> void:
@@ -994,7 +1021,7 @@ func merch_hit(dmg: float) -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
 		return
-	if game.merchant == null or not game._ghost_reaches(pid, game.merchant.pos, 3.0):
+	if game.merchant == null or not game._ghost_reaches(pid, game.merchant.pos, 2.5):
 		return # melee reach — a rifle-length beating is a forged swing
 	game.hit_merchant(clampf(float(dmg), 0.0, 80.0), pid)
 
@@ -1047,8 +1074,11 @@ func _process(dt: float) -> void:
 			var mp2 := {}
 			if game.merchant != null and is_instance_valid(game.merchant):
 				mp2 = {"on": true, "x": game.merchant.pos.x, "y": game.merchant.pos.y}
+			var bq_send := {"kind": game.board_quest.get("kind", ""), "id": game.board_quest.get("id", ""),
+				"n": game.board_quest.get("n", 0), "day": game.board_quest.get("day", -1),
+				"sp": game.board_quest.get("sp", ""), "got": game.board_quest.get("got", 0)}
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
-				game.board_quest, mp2, game.work_mode) # clock + sky + threat + posting + trader + crew orders are host truth
+				bq_send, mp2, game.work_mode, game.unlocked) # clock + sky + threat + posting + trader + orders + tech are host truth — the holder's pid stays home
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose

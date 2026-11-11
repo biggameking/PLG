@@ -1893,9 +1893,9 @@ func draw_shop(r: Vector2) -> void:
 		if y > rr.end.y - 14 or shown >= 12:
 			break
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
-		click_rects.append({"rect": rect, "act": "sell_pal", "arg": bp.uid})
-		draw_string(font, Vector2(rect.position.x, y), "Lv%d %s  +%dg" % [bp.level,
-			String(bp.spec["name"]).left(14), game.pal_sell_price(bp)],
+		click_rects.append({"rect": rect, "act": "sell_pal", "arg": int(bp["uid"])})
+		draw_string(font, Vector2(rect.position.x, y), "Lv%d %s  +%dg" % [int(bp["lv"]),
+			str(bp["name"]).left(14), int(bp["price"])],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.ORANGE)
 		y += 17
 		shown += 1
@@ -1929,9 +1929,20 @@ func _dex_ids() -> Array:
 
 func sellable_pals() -> Array: # only your OWN kin ride the sell rail — guests' stay off it
 	var out: Array = []
+	if game.net != null and game.net.is_client():
+		for d in game.net_box: # a guest's roster is the mirrored dict, not game.box
+			var sp: Dictionary = SpeciesData.species_of(str(d["sid"]))
+			# host recomputes the real buyback at r_sell_pal — alpha isn't on the
+			# wire row, so the sticker here can sit a hair under the paid price
+			out.append({"uid": int(d["uid"]), "lv": int(d["lv"]),
+				"name": str(sp.get("name", d["sid"])),
+				"price": 40 + int(d["lv"]) * 8 + (60 if d["lucky"] else 0) \
+					+ int(d["star"]) * 50})
+		return out
 	for bp in game.box:
 		if bp.owner_id == 0:
-			out.append(bp)
+			out.append({"uid": bp.uid, "lv": bp.level, "name": bp.spec["name"],
+				"price": game.pal_sell_price(bp)})
 	return out
 
 func use_item(k: String) -> void:
