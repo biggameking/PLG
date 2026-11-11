@@ -810,3 +810,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   shell-expanded. Rebuilt 0.9.0 windows+web candidates from the
   post-S59 tree — 15-file clean web bundle, single-exe windows
   (embedded pck), zero warnings in export logs.
+
+## S60b — audit-22 HOLD closed: release gate findings landed
+  Twenty-second audit returned HOLD on artifact/localization/export
+  scope (not code): 帕鲁 survived in the zh KINDEX row; tools/*.gd —
+  including the legacy-ID save fixture — compiled into every PCK;
+  two malformed zh rows flipped en/zh columns; web shipped a fake
+  QUIT that freezes the canvas; page copy promised OS keyboard on
+  mobile-web (Android-only in reality); package.sh read the version
+  from the Android preset field. All fixed, zips rebuilt, PCK greps
+  clean (0 tool strings, 0 legacy IDs), SHA256SUMS + build.txt now
+  travel with dist/. check_ip.sh covers locale/+store/+CJK terms.
