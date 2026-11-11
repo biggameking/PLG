@@ -544,7 +544,7 @@ func partner_ai(dt: float) -> void:
 		elif grab in game.drops: # a hauler may have beaten us to it
 			game.give_remote(owner_id, grab["id"], grab["n"])
 			game.floater(grab["pos"], "+%d %s" % [grab["n"],
-				ItemData.ITEMS.get(grab["id"], {}).get("name", grab["id"])], "#ffe08a")
+				tr(str(ItemData.ITEMS.get(grab["id"], {}).get("name", grab["id"])))], "#ffe08a")
 			game.take_drop(grab)
 		return
 	var anchor := anchor_pos()
@@ -644,7 +644,7 @@ func base_ai(dt: float) -> void:
 				var dur: float = 600.0 * (1.0 - 0.05 * mini(glv, 4))
 				job_site["exp_end"] = game.t + maxf(dur, 240.0)
 				job_site["exp_pal"] = self
-				game.log_msg("%s sets off on an expedition" % spec.get("name", species_id))
+				game.log_msg("%s sets off on an expedition" % tr(str(spec.get("name", species_id))))
 				return
 			step_toward(sp2, dt)
 	elif spec.get("work", {}).get("transporting", 0) > 0:

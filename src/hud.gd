@@ -672,9 +672,9 @@ func interact() -> void:
 				var sdef: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
 				var eggs: String = "  %d egg(s)" % st["store"].get("kin_egg", 0) if st["id"] == "ranch" and st.get("store", {}).get("kin_egg", 0) > 0 else ""
 				if st.get("store", {}).is_empty():
-					game.log_msg("%s: %d workers, nothing stored" % [sdef.get("name", st["id"]), st["workers"].size()])
+					game.log_msg("%s: %d workers, nothing stored" % [tr(str(sdef.get("name", st["id"]))), st["workers"].size()])
 				else:
-					game.log_msg("%s stores: %s%s" % [sdef.get("name", st["id"]), str(st["store"]), eggs])
+					game.log_msg("%s stores: %s%s" % [tr(str(sdef.get("name", st["id"]))), str(st["store"]), eggs])
 				return
 			"feed_box":
 				game.chest_ref = st # pals eat out of it; it's still a container
@@ -856,7 +856,7 @@ func _draw() -> void:
 		Ink.tag(self, Rect2(sx, 44, 78, 20))
 		if sel:
 			draw_rect(Rect2(sx, 44, 78, 20), Ink.ORANGE, false, 1.5)
-		draw_string(font, Vector2(sx + 4, 59), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
+		draw_string(font, Vector2(sx + 4, 59), "%s x%d" % [tr(str(ItemData.ITEMS[id]["name"])).left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		sx += 82
 	draw_equipment_line() # gear row under the orb chips
@@ -887,14 +887,14 @@ func _draw() -> void:
 					bp2 = q
 			if bp2:
 				if bp2.boss:
-					wtext(Vector2(12, 112), "✦ %s Lv%d — a legend: orbs bounce off" % [bp2.spec["name"], bp2.level],
+					wtext(Vector2(12, 112), "✦ %s Lv%d — a legend: orbs bounce off" % [tr(str(bp2.spec["name"])), bp2.level],
 						Ink.GOLD)
 				else:
 					var cap_pow2: float = game.cap_power_of(bp2)
 					var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
 						ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
 					var col := Ink.GREEN if ch >= 0.5 else (Ink.ORANGE if ch >= 0.2 else Ink.RED)
-					wtext(Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)], col)
+					wtext(Vector2(12, 112), "Catch %s Lv%d: %d%%" % [tr(str(bp2.spec["name"])), bp2.level, int(ch * 100)], col)
 	Ink.tag(self, Rect2(r.x - 140, 10, 128, 20))
 	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else ("  ☀" if game.weather == "drought" else ""))
 	var wcol := Ink.VIOLET if game.weather == "storm" else (Ink.TEAL if game.weather == "rain" else (Ink.GOLD if game.weather == "drought" else Ink.INK))
@@ -924,7 +924,7 @@ func _draw() -> void:
 		draw_rect(Rect2(r.x / 2 - bw / 2 + 1, 35, (bw - 2) * frac, 14),
 			Ink.RED if boss.boss else Ink.ORANGE)
 		draw_string(font, Vector2(r.x / 2 - bw / 2 + 4, 47),
-			"%s %s Lv%d%s" % ["BOSS" if boss.boss else "α", boss.spec["name"], boss.level,
+			"%s %s Lv%d%s" % ["BOSS" if boss.boss else "α", tr(str(boss.spec["name"])), boss.level,
 				" ☠%dg" % boss.bounty if boss.bounty > 0 else ""],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.PAPER)
 	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
@@ -1536,7 +1536,7 @@ func draw_tech(r: Vector2) -> void:
 		var col := Ink.INK_SOFT if has else (Ink.INK if afford else Ink.LILAC)
 		if t.get("parts", 0) > 0 and not has:
 			col = Ink.VIOLET if afford else Color(Ink.VIOLET, 0.5) # ancient tech is purple
-		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), t.get("name", k).left(14), t.get("cost", 0),
+		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), tr(str(t.get("name", k))).left(14), t.get("cost", 0),
 			"+%d❖" % t["parts"] if t.get("parts", 0) > 0 else "", " ✓" if has else ""]
 		var cy0: float = rr.position.y + 44 + (di % 18) * 17
 		var rect := Rect2(cx0, cy0 - 12, colw - 14, 17)
@@ -1565,7 +1565,7 @@ func draw_chest(r: Vector2) -> void:
 	chest_scroll = clampi(chest_scroll, 0, maxi(0, skeys.size() - 12))
 	for i2 in range(chest_scroll, skeys.size()):
 		var iid: String = skeys[i2]
-		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [ItemData.ITEMS.get(iid, {}).get("name", iid), st["store"][iid]],
+		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [tr(str(ItemData.ITEMS.get(iid, {}).get("name", iid))), st["store"][iid]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 		y += 18
 		if y > rr.end.y - 16:
@@ -1585,8 +1585,8 @@ func draw_craft(r: Vector2) -> void:
 		click_rects.append({"rect": rrect, "act": "repair"})
 		var rcost := ""
 		for c in rep["cost"]:
-			rcost += "%d %s, " % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])]
-		var wnm: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "?")
+			rcost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
+		var wnm: String = tr(str(ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "?")))
 		draw_string(font, Vector2(rrect.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [wnm,
 			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(46)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep["afford"] else Ink.INK_SOFT)
@@ -1597,8 +1597,8 @@ func draw_craft(r: Vector2) -> void:
 		click_rects.append({"rect": rrect_a, "act": "repair_armor"})
 		var acost := ""
 		for c in rep_a["cost"]:
-			acost += "%d %s, " % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])]
-		var anm: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "?")
+			acost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
+		var anm: String = tr(str(ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "?")))
 		draw_string(font, Vector2(rrect_a.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [anm,
 			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(46)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep_a["afford"] else Ink.INK_SOFT)
@@ -1616,11 +1616,11 @@ func draw_craft(r: Vector2) -> void:
 		var afford := true
 		var cost := ""
 		for c in rec.get("cost", []):
-			cost += "%d %s, " % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])]
+			cost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
 			if game.item_count(c[0]) < c[1]:
 				afford = false
 		cost = cost.left(-2)
-		var out_name: String = ItemData.ITEMS.get(rec["out"][0], {}).get("name", rec["out"][0])
+		var out_name: String = tr(str(ItemData.ITEMS.get(rec["out"][0], {}).get("name", rec["out"][0])))
 		if y > rr.end.y - 16:
 			break # don't leave click rects for rows that were never drawn
 		var rect := Rect2(rr.position.x + 16, y - 12, 440, 18)
@@ -1639,7 +1639,7 @@ func draw_craft(r: Vector2) -> void:
 		for cq in game.craft_queue:
 			if y > rr.end.y - 14:
 				break
-			var nm: String = ItemData.ITEMS.get(cq["out"], {}).get("name", cq["out"])
+			var nm: String = tr(str(ItemData.ITEMS.get(cq["out"], {}).get("name", cq["out"])))
 			draw_string(font, Vector2(rr.position.x + 16, y), "  %s x%d  %.0fs" % [nm, cq["n"], cq["left"]],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN)
 			y += 15
@@ -1665,7 +1665,7 @@ func draw_inv(r: Vector2) -> void:
 		var y0: float = rr.position.y + 46 + (di % rows) * 16
 		if cx0 + colw - 10 > rr.end.x: # third column would spill — stop
 			break
-		var nm: String = ItemData.ITEMS.get(k, {}).get("name", k)
+		var nm: String = tr(str(ItemData.ITEMS.get(k, {}).get("name", k)))
 		var usable: bool = ItemData.ITEMS.get(k, {}).get("usable", false)
 		var equipable: bool = ItemData.ITEMS.get(k, {}).has("weapon") or ItemData.ITEMS.get(k, {}).has("armor") \
 			or ItemData.ITEMS.get(k, {}).has("acc")
@@ -1740,7 +1740,7 @@ func draw_kinbox(r: Vector2) -> void:
 			if game.net == null or not game.net.is_client():
 				click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
 				# a guest reads the crew roster but can't recall the keeper's kin
-			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d T%d %s%s" % [wp.spec["name"],
+			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d T%d %s%s" % [tr(str(wp.spec["name"])),
 				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
 				wp.job_site["id"] if wp.job_site else "idle",
 				" [%s]" % wp.ailment if wp.ailment != "" else ""],
@@ -1797,7 +1797,7 @@ func party_rows() -> Array:
 				st += "*"
 			if st != "":
 				st = " " + st
-			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]), "name": sp.get("name", str(d["sid"])),
+			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]), "name": tr(str(sp.get("name", str(d["sid"])))),
 				"lucky": d["lucky"], "sex": d["sex"], "lv": d["lv"], "talent": d["talent"],
 				"hp": d["hp"], "max_hp": d["max_hp"], "ailment": d["ailment"],
 				"star_s": st, "out": d["out"], "sub": "resting", "stance": str(d.get("stance", "auto")),
@@ -1810,7 +1810,7 @@ func party_rows() -> Array:
 				p = game.bench_pal_of(uid)
 			if p == null:
 				continue
-			out.append({"arg": p, "uid": p.uid, "name": p.spec["name"], "lucky": p.lucky,
+			out.append({"arg": p, "uid": p.uid, "name": tr(str(p.spec["name"])), "lucky": p.lucky,
 				"sex": p.sex, "lv": p.level, "talent": p.talent, "hp": int(p.hp),
 				"max_hp": int(p.max_hp), "ailment": p.ailment,
 				"star_s": star_str(p), "out": p == cur, "sub": passive_str(p).left(14),
@@ -1830,7 +1830,7 @@ func box_rows() -> Array:
 			if st != "":
 				st = " " + st
 			out.append({"arg": int(d["uid"]), "uid": int(d["uid"]),
-				"name": sp.get("name", str(d["sid"])), "lucky": d["lucky"], "sex": d["sex"],
+				"name": tr(str(sp.get("name", str(d["sid"])))), "lucky": d["lucky"], "sex": d["sex"],
 				"lv": d["lv"], "talent": d["talent"], "hp": d["hp"], "max_hp": d["max_hp"],
 				"ailment": d["ailment"], "fav": d["fav"], "star_s": st,
 				"ko": d["hp"] <= 0, "ko_t": " [KO]" if d["hp"] <= 0 else "",
@@ -1839,7 +1839,7 @@ func box_rows() -> Array:
 		for bp in game.box:
 			if bp.owner_id != 0:
 				continue # a guest's stock doesn't show in the keeper's box
-			out.append({"arg": bp, "uid": bp.uid, "name": bp.spec["name"], "lucky": bp.lucky,
+			out.append({"arg": bp, "uid": bp.uid, "name": tr(str(bp.spec["name"])), "lucky": bp.lucky,
 				"sex": bp.sex, "lv": bp.level, "talent": bp.talent, "hp": int(bp.hp),
 				"max_hp": int(bp.max_hp), "ailment": bp.ailment, "fav": bp.fav,
 				"star_s": star_str(bp), "ko": bp.hp <= 0,
@@ -1873,9 +1873,9 @@ func draw_shop(r: Vector2) -> void:
 		var nm: String
 		if it.has("kin"):
 			var sp: Dictionary = SpeciesData.species_of(str(it["kin"]))
-			nm = "Lv%d %s" % [it["lv"], sp.get("name", it["kin"])]
+			nm = "Lv%d %s" % [it["lv"], tr(str(sp.get("name", it["kin"])))]
 		else:
-			nm = ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])
+			nm = tr(str(ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])))
 		var rect := Rect2(rr.position.x + 16, y - 12, 270, 16)
 		var afford := game.item_count("gold_coin") >= int(it.get("price", 0))
 		if it["n"] > 0 and afford:
@@ -1899,7 +1899,7 @@ func draw_shop(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
 		click_rects.append({"rect": rect, "act": "sell", "arg": k})
-		draw_string(font, Vector2(rect.position.x, y), "%s x%d  +%dg" % [ItemData.ITEMS[k]["name"].left(16),
+		draw_string(font, Vector2(rect.position.x, y), "%s x%d  +%dg" % [tr(str(ItemData.ITEMS[k]["name"])).left(16),
 			game.items[k], maxi(1, int(price * 0.5))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		y += 17
 		if y > rr.end.y - 14:
@@ -1942,7 +1942,7 @@ func _dex_ids() -> Array:
 		var sa: bool = ca > 0 or game.dex_seen.has(a); var sb: bool = cb > 0 or game.dex_seen.has(b)
 		if ca != cb: return ca > cb
 		if sa != sb: return sa
-		return str(SpeciesData.species_of(a).get("name", a)) < str(SpeciesData.species_of(b).get("name", b)))
+		return str(tr(str(SpeciesData.species_of(a).get("name", a)))) < str(tr(str(SpeciesData.species_of(b).get("name", b)))))
 	_dex_cache = ids; _dex_key = key
 	return ids
 
@@ -1954,13 +1954,13 @@ func sellable_pals() -> Array: # only your OWN kin ride the sell rail — guests
 			# host recomputes the real buyback at r_sell_pal — alpha isn't on the
 			# wire row, so the sticker here can sit a hair under the paid price
 			out.append({"uid": int(d["uid"]), "lv": int(d["lv"]),
-				"name": str(sp.get("name", d["sid"])),
+				"name": str(tr(str(sp.get("name", d["sid"])))),
 				"price": 40 + int(d["lv"]) * 8 + (60 if d["lucky"] else 0) \
 					+ int(d["star"]) * 50})
 		return out
 	for bp in game.box:
 		if bp.owner_id == 0:
-			out.append({"uid": bp.uid, "lv": bp.level, "name": bp.spec["name"],
+			out.append({"uid": bp.uid, "lv": bp.level, "name": tr(str(bp.spec["name"])),
 				"price": game.pal_sell_price(bp)})
 	return out
 
@@ -2100,7 +2100,7 @@ func draw_dex(r: Vector2) -> void:
 		var cc: int = game.catch_counts.get(sid, 0)
 		if cc > 0:
 			var els: String = "/".join(sp.get("elements", []))
-			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
+			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s" % [sp.get("glyph", "?"), str(tr(str(sp.get("name", sid)))).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 			var hz := SpeciesGen.habitat(sid) # Kindex habitat: where to hunt it
 			draw_string(font, Vector2(rr.position.x + 320, y), "%s %s×%d" % [els.left(11),
@@ -2109,14 +2109,14 @@ func draw_dex(r: Vector2) -> void:
 			# field guide: a caught species tells you what it drops
 			var dnames := []
 			for dr in sp.get("drops", []):
-				dnames.append(str(ItemData.ITEMS.get(dr[0], {}).get("name", dr[0])).left(9))
+				dnames.append(str(tr(str(ItemData.ITEMS.get(dr[0], {}).get("name", dr[0])))).left(9))
 			draw_string(font, Vector2(rr.position.x + 445, y), ", ".join(dnames).left(13),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
 			# and which posts it can staff — the base-planning half of the entry
 			draw_string(font, Vector2(rr.position.x + 530, y), game.work_str(sp).left(10),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.TEAL)
 		elif game.dex_seen.has(sid):
-			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s  ·spotted·" % [sp.get("glyph", "?"), str(sp.get("name", sid)).left(18)],
+			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s  ·spotted·" % [sp.get("glyph", "?"), str(tr(str(sp.get("name", sid)))).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
 		else:
 			draw_string(font, Vector2(rr.position.x + 16, y), "?  ?????",
@@ -2159,13 +2159,13 @@ const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "
  "hp": "Max HP", "work": "Work Speed", "xp": "XP Gain"}
 
 func _eq_line() -> String:
-	var wn: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "Fists")
+	var wn: String = tr(str(ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "Fists")))
 	if game.player.weapon_wear >= 0.0:
 		wn += " [%d]" % int(game.player.weapon_wear)
-	var an: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "None")
+	var an: String = tr(str(ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "None")))
 	var acc := ""
 	for s in ["acc1", "acc2"]:
-		var a: String = ItemData.ITEMS.get(game.player.equipment[s], {}).get("name", "")
+		var a: String = tr(str(ItemData.ITEMS.get(game.player.equipment[s], {}).get("name", "")))
 		if a != "":
 			acc += "  " + a
 	return "Wpn: %s   Arm: %s%s" % [wn, an, acc]
@@ -2214,7 +2214,7 @@ func draw_statues(r: Vector2) -> void:
 			click_rects.append({"rect": rect2, "act": "infuse", "arg": q2.uid})
 		var col2 := Ink.INK_SOFT if full else Ink.INK
 		draw_string(font, Vector2(rect2.position.x, y), "%s Lv%d  soul+%d  (cost %d)" %
-			[str(q2.spec["name"]).left(14), q2.level, q2.soul_boost, cost2],
+			[str(tr(str(q2.spec["name"]))).left(14), q2.level, q2.soul_boost, cost2],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col2)
 		y += 20
 	if infused.size() > rows2:
@@ -2234,7 +2234,7 @@ func draw_skills(r: Vector2) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 		return
 	draw_string(font, rr.position + Vector2(16, 24),
-		"%s — slot up to 3 moves (Esc closes)" % tp.spec["name"],
+		"%s — slot up to 3 moves (Esc closes)" % tr(str(tp.spec["name"])),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 	var y := rr.position.y + 50
 	for sid in tp.learned_skills():
@@ -2243,7 +2243,7 @@ func draw_skills(r: Vector2) -> void:
 		var rect := Rect2(rr.position.x + 16, y - 12, 400, 18)
 		click_rects.append({"rect": rect, "act": "skill_tgl", "arg": {"p": tp, "sid": sid}})
 		draw_string(font, Vector2(rect.position.x, y), "%s %s  pow%d  cd%ds" %
-			["[x]" if on else "[ ]", str(sk.get("name", sid)).left(18),
+			["[x]" if on else "[ ]", str(tr(str(sk.get("name", sid)))).left(18),
 				int(sk.get("power", 0)), int(sk.get("cooldown", 2))],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
 			Ink.GOLD if on else Ink.INK_SOFT)

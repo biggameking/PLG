@@ -443,7 +443,7 @@ func try_mount() -> void:
 		mount = best
 		best.visible = false
 		best.mounted_by = 1 # the host's saddle claims the kin too — replicas hide it for every watcher, not just us
-		game.log_msg("Riding %s" % best.spec["name"])
+		game.log_msg("Riding %s" % tr(str(best.spec["name"])))
 	else:
 		game.log_msg("No mountable kin nearby (right saddle in pack?)")
 

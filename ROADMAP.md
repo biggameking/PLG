@@ -841,3 +841,11 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   data-name display (species/items/structures ~268 names render
   raw — names are display-only, never logic keys, so a tr() wrap
   at render sites is safe).
+
+## S62 — zh data-name wiring + item/species coverage
+  Every display-name read now passes tr(str(...)): 149 sites across
+  spec["name"], ITEMS[..]["name"], and all .get("name") consumers —
+  names were verified display-only (logic keys are ids). zh.csv grew
+  to 253 rows: 21 core species + all 108 items translated. Deferred
+  to S63: 120 structure names, 95 procgen species (proper nouns —
+  romanized acceptable for EA), skills/passives names.

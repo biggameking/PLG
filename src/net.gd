@@ -673,7 +673,7 @@ func got_loot(id: String, n: int) -> void:
 		return
 	var ln := clampi(n, 0, 999) # a negative echo drains the bag — loot only ever adds
 	game.add_item(str(id), ln)
-	game.floater(game.player.pos, "+%d %s" % [ln, it.get("name", id)], "#ffe08a")
+	game.floater(game.player.pos, "+%d %s" % [ln, tr(str(it.get("name", id)))], "#ffe08a")
 
 # Shared-world editing: clients ask, the host validates + mutates, everyone
 # converges on the next broadcast. Same trust rules as take_drop — the
@@ -1056,7 +1056,7 @@ func mount_done(uid: int, state: int) -> void:
 		if p != null and game.player.mount == null: # a stale bind can't unseat the saddle we already hold
 			game.player.mount = p
 			p.visible = false # the kin hides — the rider's sprite carries the ride
-			game.log_msg("Riding %s" % p.spec["name"])
+			game.log_msg("Riding %s" % tr(str(p.spec["name"])))
 	elif int(state) == 2 and game.player._mount_guard() and game.player.mount.net_id == wid:
 		# host confirms the release — drop the saddle AND show the kin now;
 		# a state-0 refusal owns only the handshake, never the saddle
