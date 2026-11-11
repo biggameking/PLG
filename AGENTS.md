@@ -71,9 +71,11 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
    `SPECIES.keys`, `BREED_COMBOS`, `gen_pal(`, `kin.gd").new`). Each site gets
    the filter or a written reason — put the list in the commit message.
 10. **One canonical pool per invariant.** `acquirable()` / `acq_pool()` is the
-    only "a species the player may own" gate — never per-site ad-hoc filters.
-    Intentional exceptions (dens, grotto, sigil raids) pick `LEGENDARY_DEN`
-    deliberately and say so in a comment.
+    only "a species enters mortal pools" gate (no legends, no humans) — never
+    per-site ad-hoc filters. The roster gate is `ownable()` (no humans) and
+    the two catch chokes answer to `catchable()` (ownable + legends need
+    `alpha` — only den heirs are ball-able). Intentional exceptions (dens,
+    grotto, sigil raids) pick `LEGENDARY_DEN` deliberately and say so.
 11. **Smoke checks assert invariants against DATA, not the implementation.**
     Never reuse the production predicate in its own test — tautological checks
     certify nothing (`spec.get("body")` vs `body_of()` was the S3 proof).
@@ -96,9 +98,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     run gets backed up and restored (see the settings round-trip fixture).
 18. **Ownable kin pass through one gate.** Every path that can put a kin in
     party/box/bench — catch, summon, load, shop, cage, boss-phase adds —
-    answers to `acquirable()`. `resolve_sphere`/`net_catch` reject
-    non-acquirable targets regardless of `boss`; spawn pools filter at the
-    source AND the catch layer refuses what slipped through.
+    answers to `ownable()`/`catchable()`. `resolve_sphere`/`net_catch` reject
+    non-ownable targets regardless of `boss`, and legends additionally need
+    `alpha` (den heirs only — phase adds/sigil spares stay immune); spawn
+    pools filter at the source AND the catch layer refuses what slipped
+    through. **The load gate is roster-scoped, not species-scoped** —
+    `load_game` applies `ownable()` only to non-`wild` modes. Wild Iron Pact
+    mobs legitimately live in `pals` and ride the save like any other world
+    fauna; dropping them mid-list shifts every `party_idx`/`rparties` index
+    after it (the S68 roster round-trip break).
 19. **Pad binds may not collide with `ui_*` defaults.** `bind_gamepad` strips
     joypad events from every action it touches before adding its own — B can
     never dodge AND pause, and a scene reload can't stack duplicates.

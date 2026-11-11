@@ -1057,7 +1057,11 @@ func tick_boss_respawns() -> void:
 			# a legendary den never re-raises the same warden — it calls a NEW
 			# legend, and this one roams catchable: legendary orbs finally have
 			# a target, and the ten-name collection loop closes
-			sid = LEGENDARY_DEN[rng.int_range(0, LEGENDARY_DEN.size() - 1)]
+			var lpool := LEGENDARY_DEN.filter(
+				func(s): return not SpeciesGen.SPECIES.get(s, {}).is_empty())
+			if lpool.is_empty():
+				continue # legend data trimmed — the den stays quiet
+			sid = lpool[rng.int_range(0, lpool.size() - 1)]
 		var pp: Array = br.get("pos", [0, 0])
 		var at := Vector2(float(pp[0]), float(pp[1])) if pp.size() >= 2 else Vector2.ZERO
 		var np := preload("res://src/kin.gd").new()
@@ -1712,9 +1716,7 @@ func resolve_sphere(sp) -> void:
 	if target.boss:
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
-	if not ownable(target.species_id):
-		# single ownable-kin gate — boss-phase adds, wire-forged targets, and
-		# anything else the spawn pools missed can never join a roster
+	if not catchable(target):
 		floater(target.pos, "IMMUNE", "#e8452f")
 		return
 	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
@@ -1776,6 +1778,14 @@ func resolve_sphere(sp) -> void:
 		target.aggro = 0 if target.hostile() >= 1 else -1
 		target.aggro_pid = 0 # the local keeper threw the orb — the heat is his
 
+# one ballability gate for both catch chokes — ownable species, and for
+# legends specifically an ALPHA: den heirs roam as alphas, while the same
+# species fielded without it (phase-2 adds, sigil raiders, grotto spares)
+# stays orb-immune — the den keeps its cadence as the only legend channel
+func catchable(c: Kin) -> bool:
+	return ownable(c.species_id) and \
+		(c.species_id not in LEGENDARY_DEN or c.alpha)
+
 func _reden_legend(c: Kin) -> void:
 	# catching the den's legend doesn't kill the site — the ring calls a new
 	# warden a day and a half on (a catchable one, like the last)
@@ -1796,6 +1806,8 @@ func release_event_flags(p: Kin) -> void:
 	p.raid = false
 	if p.has_meta("raid_t0"):
 		p.remove_meta("raid_t0")
+	if p.has_meta("summoner"):
+		p.remove_meta("summoner") # a caught add stops counting for its boss
 
 func catch_xp(lv: float) -> int:
 	# streak rewards a steady hand: +5% per consecutive catch, cap +50%
@@ -1813,7 +1825,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	# not: the catch answers to the keeper who threw the ball.
 	var target: Kin = find_pal(nid)
 	if target == null or target.mode != "wild" or target.hp <= 0 or target.boss \
-			or not ownable(target.species_id): # the ownable gate — same rule as resolve_sphere
+			or not catchable(target): # the catchable gate — same rule as resolve_sphere
 		return
 	var gp = net.ghosts.get(pid) if net != null else null
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(target.pos) > 9.0:
@@ -4246,6 +4258,12 @@ func load_game() -> bool:
 		if SpeciesData.species_of(str(pd.get("sp", ""))).is_empty():
 			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
 			continue # corrupt entry — don't crash on spec lookups
+		var m0 := str(pd.get("mode", "wild"))
+		if m0 not in ["wild", "partner", "base", "box", "bench", "expedition"]:
+			m0 = "wild" # foreign strings would poison every mode check
+		if m0 != "wild" and not ownable(str(pd.get("sp", ""))):
+			log_msg("Skipped unownable rostered species in save: %s" % pd.get("sp", "?"))
+			continue # a forged row can't smuggle a human into a roster lane — wild Iron Pact mobs are legit world fauna and load as wild
 		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
 		if ppos2 is not Array or ppos2.size() < 2 or not _fin(ppos2[0]) or not _fin(ppos2[1]):
 			continue # no usable position — drop the entry
@@ -4260,8 +4278,7 @@ func load_game() -> bool:
 		var hm = pd.get("home")
 		if hm is Array and hm.size() == 2 and _fin(hm[0]) and _fin(hm[1]):
 			np.home = Vector2(float(hm[0]), float(hm[1])) # herd anchors ride the save
-		var m0 := str(pd.get("mode", "wild"))
-		np.mode = m0 if m0 in ["wild", "partner", "base", "box", "bench", "expedition"] else "wild" # foreign strings would poison every mode check
+		np.mode = m0 # already whitelisted above
 		if np.mode == "expedition":
 			np.visible = false # off-map until its post calls it home
 		np.hp = clampf(_f(pd.get("hp", np.max_hp)), 0.0, np.max_hp); np.talent = clampi(_i(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
@@ -5099,6 +5116,9 @@ func free_captive(st: Dictionary) -> void:
 	if box.size() >= MAX_BOX:
 		log_msg("Kinbox is full — the captive won't leave its cage")
 		return
+	if not ownable(str(cap["sp"])):
+		log_msg("The cage holds something that can't be kept")
+		return # the ownable gate — worldgen cages can't hold this anyway
 	var bp := gen_pal(str(cap["sp"]), int(cap["lv"]), player.pos)
 	bp.mode = "box"
 	box.append(bp)
@@ -5274,6 +5294,9 @@ func cage_req_remote(pid: int, cell: Vector2i) -> bool:
 	if box.size() >= MAX_BOX:
 		note_remote(pid, "Kinbox is full — the captive won't leave its cage")
 		return false
+	if not ownable(str(cap["sp"])):
+		note_remote(pid, "The cage holds something that can't be kept")
+		return false # the ownable gate — same rule as the local verb
 	var bp := gen_pal(str(cap["sp"]), int(cap["lv"]), Vector2(cell.x + 0.5, cell.y + 0.5))
 	bp.mode = "box"
 	bp.owner_id = pid

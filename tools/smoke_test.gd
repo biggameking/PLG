@@ -1544,9 +1544,12 @@ func run() -> void:
 			for dd8 in [Vector2(1,0), Vector2(-1,0), Vector2(0,1), Vector2(0,-1),
 					Vector2(1,1), Vector2(-1,1), Vector2(1,-1), Vector2(-1,-1)]:
 				var tt: Vector2 = s + dd8.normalized()
+				# the dart flies 1.4 tiles a tick and wall-checks BEFORE the
+				# pal check — sweep to 1.5 so the first landing cell is covered
+				var far: Vector2 = s + dd8.normalized() * 1.5
 				var clear := true
 				for f9 in [0.2, 0.5, 0.8, 1.0]:
-					var cx9: int = int(s.lerp(tt, f9).x); var cy9: int = int(s.lerp(tt, f9).y)
+					var cx9: int = int(s.lerp(far, f9).x); var cy9: int = int(s.lerp(far, f9).y)
 					if not game.world.in_bounds(cx9, cy9) \
 							or game.world.elev_at(cx9, cy9) > sev \
 							or game.world.decor[game.world.idx(cx9, cy9)] != World.Decor.NONE \
@@ -2445,8 +2448,8 @@ func run() -> void:
 		var ring_rock := game.world.decor[game.world.idx(gp.x + 3, gp.y)] == World.Decor.ROCK
 		var warden := false; var loot := false
 		for q in game.pals:
-			if q.boss and q.pos.distance_to(Vector2(gp.x + 0.5, gp.y + 0.5)) < 4.0:
-				warden = true
+			if q.boss and q.home.distance_to(Vector2(gp.x + 0.5, gp.y + 0.5)) < 4.0:
+				warden = true # wardens wander — the contract is the chamber anchor, not the sampled pos
 		for ks in game.structures:
 			var s2: Dictionary = game.structures[ks]
 			if s2["id"] == "chest" and Vector2(ks.x, ks.y).distance_to(Vector2(gp.x, gp.y)) < 4.0 \
@@ -2460,7 +2463,7 @@ func run() -> void:
 			var ctr2 := Vector2(g2.x + 0.5, g2.y + 0.5)
 			var room2_boss := false; var room2_loot := false
 			for q in game.pals:
-				if q.boss and q.pos.distance_to(ctr2) < 4.0:
+				if q.boss and q.home.distance_to(ctr2) < 4.0:
 					room2_boss = q.level >= 45
 			for ks in game.structures:
 				var s3: Dictionary = game.structures[ks]
@@ -2736,38 +2739,61 @@ func run() -> void:
 				and game.boss_respawns.back()["boss"] == false)
 			game.boss_respawns.pop_back()
 			game.pals.erase(back); back.queue_free()
-	check("ownable admits legends, bars humans", game.ownable("scalbeak")
-		and not game.ownable("ironpact_grunt"))
-	check("acquirable still gates mortal pools", not game.acquirable("scalbeak")
-		and game.acquirable("fenjelly"))
+	# gate DATA, not the predicate (rule 11): the split relies on scalbeak
+	# being den stock, the grunt being human, fenjelly being neither
+	check("legend data: scalbeak is den stock, grunt is human",
+		"scalbeak" in Game.LEGENDARY_DEN
+		and SpeciesData.body_of("ironpact_grunt") == "human")
+	check("mortal data: fenjelly is neither legend nor human",
+		"fenjelly" not in Game.LEGENDARY_DEN
+		and SpeciesData.body_of("fenjelly") != "human")
 	# catch gate end-to-end: a den legend is NOT IMMUNE anymore (roll itself
 	# is rng — assert the gate admitted it, either verdict proves the lane)
 	if legend:
 		var leg2: Kin = game.gen_pal("scalbeak", 50, game.player.pos + Vector2(1, 0))
 		leg2.mode = "wild"; leg2.alpha = true; leg2.home = leg2.pos
 		game.pals.append(leg2)
-		var f0: int = game.floaters.size()
 		var rb9: int = game.boss_respawns.size()
 		game.resolve_sphere({"sid": "legendary_orb", "target": leg2, "t": 1.0,
 			"from": game.player.pos, "wt": 2.0})
-		var immune_hit := false
-		for fi in range(f0, game.floaters.size()):
-			if "IMMUNE" in str(game.floaters[fi].get("t", "")):
-				immune_hit = true
-		check("den legend is catchable", not immune_hit, "floaters=%s" % str(game.floaters.slice(f0)))
+		# ring buffer: at MAX_FLOATERS a size-snapshot slice reads nothing —
+		# the call's verdict is always the LAST entry (IMMUNE returns right
+		# after pushing it), so assert on the tail (r44)
+		check("den legend is catchable", game.floaters.size() > 0
+			and str(game.floaters.back().get("t", "")) != "IMMUNE",
+			"tail=%s" % str(game.floaters.back() if game.floaters.size() > 0 else {}))
 		# any verdict cleans up: wild → pals only; caught → party/bench/box lane
 		game.party.erase(leg2.uid); game.bench.erase(leg2); game.box.erase(leg2)
 		game.pals.erase(leg2)
 		game.boss_respawns.resize(rb9) # a caught legend re-dens — unschedule it
 		if leg2.get_parent(): leg2.get_parent().remove_child(leg2)
 		leg2.free()
-	# boss sphere-immune
-	for q in game.pals:
-		if q.boss:
-			var bx := game.box.size()
-			game.resolve_sphere({"sid": "legendary_orb", "target": q})
-			check("boss immune", game.box.size() == bx)
-			break
+	# boss sphere-immune — a synthetic fixture, not ambient worldgen luck;
+	# assert the IMMUNE floater, not merely "box unchanged" (a failed roll
+	# passes that vacuously)
+	var bfix: Kin = game.gen_pal("fenjelly", 30, p.pos + Vector2(2, 0))
+	bfix.mode = "wild"; bfix.boss = true
+	game.pals.append(bfix)
+	game.resolve_sphere({"sid": "legendary_orb", "target": bfix})
+	check("boss immune", game.floaters.size() > 0
+		and str(game.floaters.back().get("t", "")) == "IMMUNE"
+		and bfix.mode == "wild")
+	game.pals.erase(bfix)
+	if bfix.get_parent(): bfix.get_parent().remove_child(bfix)
+	bfix.free()
+	# the H-tier hole from audit-25: a NON-alpha legend is a phase-add /
+	# sigil-raider shape — the den keeps its cadence because only heirs
+	# (alphas) are ball-able
+	var laddx: Kin = game.gen_pal(Game.LEGENDARY_DEN[1], 10, p.pos + Vector2(2, 0))
+	laddx.mode = "wild"
+	game.pals.append(laddx)
+	game.resolve_sphere({"sid": "legendary_orb", "target": laddx})
+	check("non-alpha legend stays immune", game.floaters.size() > 0
+		and str(game.floaters.back().get("t", "")) == "IMMUNE"
+		and laddx.mode == "wild", "mode=%s" % laddx.mode)
+	game.pals.erase(laddx)
+	if laddx.get_parent(): laddx.get_parent().remove_child(laddx)
+	laddx.free()
 	# S68 contract: a NON-boss legendary is what the den respawns as — the
 	# ownable gate admits it. Weaken it and the orb lands: real catch, roster
 	# lanes all scrubbed after (uid in party/bench/box must not dangle)
@@ -3702,7 +3728,10 @@ func run() -> void:
 		if q.owner_tag == "tok_t":
 			gp_re = q
 	check("guest tag survives reload", gp_re != null and gp_re.owner_id == -1
-		and game.remote_parties.get("tok_t", []).has(gp_re.uid))
+		and game.remote_parties.get("tok_t", []).has(gp_re.uid),
+		"re=%s oid=%s tag=%s rps=%s" % [str(gp_re),
+		gp_re.owner_id if gp_re else "?", gp_re.owner_tag if gp_re else "?",
+		str(game.remote_parties)])
 	game.rebind_owner(33, "tok_t")
 	check("save rebind claims kin", gp_re != null and gp_re.owner_id == 33)
 	if gp_re != null:
@@ -3838,6 +3867,8 @@ func run() -> void:
 		# tod must match the species' clock: a dark alpha at noon is napping
 		# and wild_ai sleeps it again before the lair branch — ambient-spawn
 		# flake. Day for diurnal kin, night for nocturnal ones.
+		var tod_la := game.tod
+		var ppos_la := game.player.pos
 		game.tod = 0.0 if "dark" in la.spec.get("elements", []) else 12.0
 		la.aggro = -1; la.statuses.erase("sleep")
 		game.player.pos = la.home
@@ -3874,6 +3905,7 @@ func run() -> void:
 				"%.1f->%.1f sp=%s spd=%.2f->%.2f aggro=%d moving=%s spec_spd=%s" % [
 				dh0, la.pos.distance_to(la.home), la.species_id, spd0, la.speed,
 				la.aggro, str(la.moving), str(la.spec.get("speed"))])
+		game.tod = tod_la; game.player.pos = ppos_la # tests leave no dirty state
 
 	# generated-species capturePower must be on the 30-90 scale —
 	# a basic sphere at full HP should never be a free 97% catch
@@ -4033,12 +4065,26 @@ func run() -> void:
 			if q2.mode != "wild" or q2.hp <= 0 or not (q2.raid or q2.aggro >= 0):
 				continue
 			# foes don't tick during the fixture — only dbase moves, and it
-			# walks spot→bed. Sweep the whole corridor, not just the spawn.
+			# walks spot→bed (wedging ~1 cell off the line). Sweep the whole
+			# corridor at 9.0 — comfortably over find_foe's 7.0 pull radius.
 			for f8 in [0.0, 0.33, 0.66, 1.0]:
-				if spot.lerp(bedp, f8).distance_to(q2.pos) < 8.0:
+				if spot.lerp(bedp, f8).distance_to(q2.pos) < 9.0:
 					foes += 1; break
 		if foes == 0:
 			quiet = spot; break
+	# the walked route weaves off the scanned line — disarm every hostile that
+	# could pull it mid-route, restored after the loop
+	var quiet_bed := game.nearest_bed_cell(quiet)
+	var quiet_bp := Vector2(quiet_bed.x + 0.5, quiet_bed.y + 0.5) if quiet_bed.x >= 0 else quiet
+	var disarmed := []
+	var qs := maxi(4, int(quiet.distance_to(quiet_bp) / 1.5))
+	for q2 in game.pals:
+		if q2.mode != "wild" or q2.hp <= 0 or not (q2.raid or q2.aggro >= 0):
+			continue
+		for i2 in range(qs + 1):
+			if quiet.lerp(quiet_bp, float(i2) / qs).distance_to(q2.pos) < 10.0:
+				disarmed.append([q2, q2.aggro, q2.raid]); q2.aggro = -1; q2.raid = false
+				break
 	var dbase: Kin = game.gen_pal("shademite", 4, quiet)
 	dbase.mode = "base"; dbase.san = 50.0
 	game.pals.append(dbase)
@@ -4048,6 +4094,8 @@ func run() -> void:
 		dbase.base_ai(0.1)
 		if dbase.has_status("sleep"):
 			break
+	for d2 in disarmed:
+		d2[0].aggro = d2[1]; d2[0].raid = d2[2]
 	var foes2 := 0
 	var foe_k := ""
 	for q2 in game.pals:
