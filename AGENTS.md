@@ -438,3 +438,16 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     `get_property_list()` probe beat the runtime error. Godot API claims
     in a fix get the same treatment as data claims: verify the surface
     exists before wiring it.
+86. **Untrusted-value aborts are a class with layers.** Coercing `int()`/
+    `float()` was only layer one: typed function parameters
+    (`world.generate(seed)`), `for ... in` on raw stored fields, `.split()`
+    on dict keys, `has()`-gated iteration, and `bool()`/`== true` on
+    foreign values all abort the same way. Closing the class means
+    enumerating EVERY conversion surface, not just arithmetic reads —
+    and migrate runs before load's guards, so it needs its own.
+87. **Fixtures feed every abort shape, not the ones you fixed.** The
+    hostile-save fixture missed seed/sp/key-type/iteration shapes because
+    it was built from the fix list, not the failure taxonomy. When
+    hardening a boundary, fixture the whole class: bad scalars, bad
+    iterables, bad keys, bad tails, bad parents — or the next audit
+    finds the layer you skipped.
