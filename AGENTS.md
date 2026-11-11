@@ -416,3 +416,25 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     the same unbind helper. New exit paths inherit the contract — grep the
     helper's call sites before adding a sibling, never inline a partial
     clear.
+82. **Ledgers book actual debit, never declared cost.** `add_item` floors
+    at zero, so `pay()` records `had - after`, not the price tag — an
+    underfunded bag must never mint a refundable hold. Refunds draw from
+    the recorded debit (FIFO tag match), and cap-full refuses BEFORE the
+    request flies: a booked hold can never be evicted into a same-tag
+    mis-settle.
+83. **Throttles never gate hold-lifecycle verbs.** Claim/settle/release
+    verbs self-guard on the live hold (`board_paid_remote` matches pid+id,
+    first success erases) — a starved settle eats goods the keeper already
+    shipped; a starved release squats the ask for its freshness window.
+    Buckets belong on spammable requests, not on the verbs that free state.
+84. **Every refused request echoes; every handshake flag needs a way out.**
+    A throttle drop without a response wedges the waiting flag for the
+    session (`mount_pending`, `board_paid_out`). The deny echo is part of
+    the request (`mount_done(uid,0)`, `pay_rej`, `board_rej`), and a flag
+    only a success can clear gets a self-heal lane (`unbind_retry_t`) or
+    a reject path — never a silent hole.
+85. **API names are probed, not assumed.** `server_relay` lives on
+    `SceneMultiplayer`, not `ENetMultiplayerPeer` — a 10-line
+    `get_property_list()` probe beat the runtime error. Godot API claims
+    in a fix get the same treatment as data claims: verify the surface
+    exists before wiring it.
