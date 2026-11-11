@@ -5811,7 +5811,10 @@ func record_spire(tag: String) -> void:
 			floater(player.pos, "ISLAND CROWNED", "#ffd76e")
 
 func spawn_legendary_den() -> void:
-	# one per world: bigger ring, an uncapturable giant, elite honour guard
+	# one per world: bigger ring, an orb-immune giant, elite honour guard.
+	# The FIRST warden is a kill-fight — its successor respawns catchable
+	# (tick_boss_respawns legend branch), and catching that one re-arms the
+	# den: the ten-name collection loop runs on this one site
 	var tries := 0
 	while tries < 6000:
 		tries += 1
@@ -5835,7 +5838,7 @@ func spawn_legendary_den() -> void:
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 		var bp := preload("res://src/kin.gd").new()
 		bp.alpha = true
-		bp.boss = true # IMMUNE to orbs — legendaries are earned, not caught
+		bp.boss = true # the warden itself is IMMUNE — its re-den'd heir is not
 		entity_layer.add_child(bp)
 		bp.setup(self, sid, 50, Vector2(tx + 0.5, ty + 0.5))
 		bp.sprite.scale = Vector2(2.5, 2.5)
