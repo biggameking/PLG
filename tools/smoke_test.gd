@@ -1986,12 +1986,12 @@ func run() -> void:
 
 	# net kin replication: valid entry spawns, malformed/foreign entries drop
 	var np0 := game.pals.size()
-	game.spawn_net_pal(["puffmite", p.pos.x + 3, p.pos.y + 3, 5, "wild", true])
+	game.spawn_net_pal(["puffmite", p.pos.x + 3, p.pos.y + 3, 5, "wild", true, 881])
 	check("net kin spawns", game.pals.size() == np0 + 1)
 	var npal: Kin = game.pals[game.pals.size() - 1]
 	check("net kin lucky", npal.lucky and "lucky" in npal.passives)
-	# hostile wire tails coerce before gen_pal — a dict lv/nid can't abort or ghost (audit-17 M9)
-	game.spawn_net_pal(["puffmite", p.pos.x + 4, p.pos.y + 3, {}, "wild", {}, {}, {}, {}])
+	# hostile wire tails coerce before gen_pal — a dict lv can't abort or ghost (audit-17 M9)
+	game.spawn_net_pal(["puffmite", p.pos.x + 4, p.pos.y + 3, {}, "wild", {}, 882, {}, {}])
 	var npal2: Kin = game.pals[game.pals.size() - 1]
 	check("hostile wire kin coerced", game.pals.size() == np0 + 2
 		and npal2.level == 1, "lv=%d" % npal2.level)
@@ -2017,6 +2017,7 @@ func run() -> void:
 	npal2.free()
 	game.spawn_net_pal(["no_such_species", 0, 0, 1, "wild"])
 	game.spawn_net_pal("garbage")
+	game.spawn_net_pal(["puffmite", p.pos.x, p.pos.y, 5, "wild", false, -9]) # nid<=0 → untrackable local kin (audit-20 M11)
 	check("net kin rejected", game.pals.size() == np0)
 	# live kin sync: replicas key on host uid — spawn, move, despawn
 	game.spawn_net_pal(["puffmite", p.pos.x + 4, p.pos.y + 4, 5, "wild", false, 777])
@@ -2216,6 +2217,39 @@ func run() -> void:
 	var dv0: int = game.world.decor[0]
 	game.decor_sync([[0, {"v": 1}], [{"x": 9}, 2]])
 	check("decor_sync hostile value skipped", game.world.decor[0] == dv0)
+	# S59: NaN damage claims and hostile echo payloads can't poison host state
+	var nan_pal: Kin = game.gen_pal("fenjelly", 5, p.pos)
+	nan_pal.mode = "wild"; nan_pal.net_id = 0
+	game.pals.append(nan_pal) # gen_pal is a bare factory — the roster append is the caller's
+	var hp_nan0: float = nan_pal.hp
+	game.net.is_host = true
+	game.net.spawn_ghost(0) # headless sender resolves to peer 0 — its ghost carries the bucket
+	game.net.ghosts[0].net_pos = Vector3(nan_pal.pos.x, nan_pal.pos.y, 0) # the swing has to come from somewhere real
+	game.net.pal_hit(int(nan_pal.uid), NAN, 0.0)
+	check("NaN pal_hit refused", nan_pal.hp == hp_nan0)
+	game.net.pal_hit(int(nan_pal.uid), 40.0, 0.0)
+	check("finite pal_hit lands", nan_pal.hp < hp_nan0,
+		"hp=%.1f want<%.1f uid=%d found=%s ghost=%s" % [nan_pal.hp, hp_nan0,
+			nan_pal.uid, str(game.find_pal(nan_pal.uid) != null), str(game.net.ghosts.get(0) != null)])
+	var mh0: float = game.merchant_hp
+	game.net.merch_hit(NAN)
+	check("NaN merch_hit refused", game.merchant_hp == mh0)
+	game.net.is_host = false
+	game.net.chest_grant(0, 0, {"forged_id": 5, "wood": {"x": 1}, "stone": 4})
+	check("chest_grant whitelists", game.items.get("forged_id", 0) == 0)
+	game.net.board_done({"id": "wood", "n": {"q": 1}})
+	check("board_done hostile n coerced", true) # reached = no abort
+	game.net.board_paid_out = ""
+	game.merchant_stock.clear()
+	game.net.stock_sync([{"kin": "fenlump", "lv": {"x": 1}, "price": {}},
+		{"id": "wood", "n": [], "price": {"p": 1}}])
+	check("stock_sync hostile rows coerce", game.merchant_stock.size() == 2
+		and game.merchant_stock[0]["lv"] == 1 and game.merchant_stock[1]["n"] == 0)
+	game.merchant_stock.clear()
+	game.net.ghosts[0].queue_free(); game.net.ghosts.erase(0)
+	game.pals.erase(nan_pal)
+	if nan_pal.get_parent(): nan_pal.get_parent().remove_child(nan_pal)
+	nan_pal.free()
 	var ppack: Array = game.net.party_state_pack(0)
 	check("party pack rows", ppack.size() == mini(game.party.size(), 8)
 		and ppack.all(func(e9): return e9.size() >= 14), "rows=%d party=%d" % [ppack.size(), game.party.size()])

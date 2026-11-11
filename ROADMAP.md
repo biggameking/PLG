@@ -765,3 +765,28 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   remote_parties skip empty keys; meal_buff only loads with a live
   meal_t. Fixture: hostile box/pal/env/drop/decor rows coerce or
   skip without aborting. Smoke 755-757/0 x3, zero-error.
+
+## S59 — audit-20: NaN damage claims + wire echo coercions
+  Twentieth audit on the S58 surface (1H/14M/19L). H1 was live:
+  pal_hit's clampf passes NaN through — int(NaN) poisons a wild kin's
+  hp to ~9e18 (unkillable, uncatchable) or insta-kills bosses, one
+  packet guest→host. is_finite() now refuses dmg/sleep claims on
+  pal_hit, merch_hit, guest_hit, guest_skill_hit and net_floater.
+  Mid-handler aborts sealed: bool(Variant) on wire (state_sync merch,
+  env_sync merch), for-in on non-Array structures/kin rows, raw int()
+  in stock_sync/chest_grant/chest_took/board_done/chest_req dep —
+  all ride Game._i/_fin/is-Array now; negative counts can't mint
+  goods (qn/c clamps); chest_grant whitelists ITEMS ids. Bounds moved
+  to choke points: MAX_STRUCTURES inside place_free (wire callers
+  bypassed the verb caps), MAX_EXTRA_BOXES on the same path,
+  spawn_ghost caps at MAX_PEERS, _drop_tex keys whitelist to real
+  item ids (forged ids share one texture). Replica integrity:
+  spawn_net_pal refuses nid<=0 (untrackable catchable local kin),
+  mounted_by clamps >=0, decor bytes clamp to the enum (off-enum
+  crashed harvest_cell's literal lookup), hello reserves the _pid
+  namespace (fallback rows can't be claimed), party_idx/party dedup
+  + cap 5, placed_tag .left(24), weather echo whitelisted,
+  soul_boost echo capped at 10. env_sync tod/day — the claim that
+  never shipped — now clamps like state_sync. Hostile fixtures drive
+  pal_hit/merch_hit/chest_grant/board_done/stock_sync/spawn rows.
+  Smoke 761-762/0 x2, zero-error.

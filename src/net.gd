@@ -173,8 +173,8 @@ func hello(tag: String) -> void:
 	if ghosts.has(pid) and not _throttle(pid, "hello_bkt", 1.0, 4.0):
 		return # a re-hello is one breath, a script is not — its own slow bucket
 	var tag_s := str(tag).substr(0, 24)
-	if tag_s == "":
-		tag_s = "_pid%d" % pid # an empty hello can't tag kin — the pid fallback keeps roster/eviction honest
+	if tag_s == "" or tag_s.begins_with("_pid"):
+		tag_s = "_pid%d" % pid # the _pid namespace is reserved — a guest can't claim another peer's fallback row
 	for other in peer_tags:
 		if other != pid and peer_tags[other] == tag_s:
 			rpc_id(pid, "net_note", "That keeper tag is already claimed")
@@ -190,17 +190,19 @@ func net_note(msg: String) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func net_floater(x: float, y: float, txt: String, col: String) -> void:
+	if not is_finite(x) or not is_finite(y):
+		return
 	game.floater(Vector2(float(x), float(y)), str(txt).substr(0, 24), str(col))
 
 @rpc("authority", "call_remote", "reliable")
 func guest_hit(dmg: float) -> void:
-	if multiplayer.is_server():
-		return # host wildlife only bites through the wire toward guests
+	if multiplayer.is_server() or not is_finite(dmg):
+		return # host wildlife only bites through the wire toward guests — NaN bites nothing
 	game.hurt_player(clampf(float(dmg), 1.0, 500.0), null)
 
 @rpc("authority", "call_remote", "reliable")
 func guest_skill_hit(power: float, status_kind: String = "", status_dur: float = 0.0) -> void:
-	if multiplayer.is_server():
+	if multiplayer.is_server() or not is_finite(power) or not is_finite(status_dur):
 		return # a skill shot mirrors the same formula on the guest's own armor
 	if status_kind != "" and status_kind not in ["burn", "soak", "freeze"]:
 		status_kind = ""
@@ -263,7 +265,7 @@ func state_sync(d: Dictionary) -> void:
 			n0.queue_free()
 	game.structures.clear()
 	game.world.structures.clear()
-	for e in d.get("structures", []):
+	for e in (d["structures"] if d.get("structures") is Array else []): # a scalar/nil here aborts the whole rebuild — after the world was already razed
 		if e is Array and e.size() >= 3 and Game._fin(e[1]) and Game._fin(e[2]):
 			var st_store: Dictionary = e[3] if e.size() > 3 and e[3] is Dictionary else {}
 			if game.place_free(str(e[0]), int(e[1]), int(e[2]), st_store) \
@@ -284,7 +286,7 @@ func state_sync(d: Dictionary) -> void:
 			game.pals.erase(p)
 			p.queue_free()
 	var np := 0
-	for e in d.get("kin", []):
+	for e in (d["kin"] if d.get("kin") is Array else []):
 		if not (e is Array) or e.size() < 7:
 			continue
 		var n0 := game.pals.size()
@@ -298,10 +300,11 @@ func state_sync(d: Dictionary) -> void:
 			e[11] if e.size() > 11 else 0])
 		np += 1 if game.pals.size() > n0 else 0
 	var md: Dictionary = d.get("merch", {}) if d.get("merch") is Dictionary else {}
-	game.net_merchant_apply(bool(md.get("on", false)),
+	game.net_merchant_apply(md.get("on") == true,
 		Game._f(md.get("x", 0.0)), Game._f(md.get("y", 0.0)))
 	stock_sync(d.get("stock", []) if d.get("stock") is Array else [])
-	game.log_msg("Synced %d structures, %d kin" % [d.get("structures", []).size(), np])
+	var nst: int = d["structures"].size() if d.get("structures") is Array else 0
+	game.log_msg("Synced %d structures, %d kin" % [nst, np])
 
 # Live kin population: host rebroadcasts positions/health at 2Hz so replicas
 # don't just sit where the join snapshot left them. Replicas are keyed by
@@ -352,7 +355,7 @@ func pal_sync(arr: Array) -> void:
 				p.level = clampi(Game._i(e[4]), 1, 60) # host-side xp growth must reach the replica
 			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
 				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
-			p.mounted_by = Game._i(e[11]) if e.size() > 11 else 0
+			p.mounted_by = maxi(Game._i(e[11]), 0) if e.size() > 11 else 0 # negative ids hide the replica's rider state
 			var myid := 0 # no peer → 0; the mounted_by==0 lane below needs no uid
 			if multiplayer.multiplayer_peer != null:
 				myid = multiplayer.get_unique_id()
@@ -378,8 +381,8 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 		unl: Array = []) -> void:
 	if is_host:
 		return
-	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
-	game.day = int(day)
+	game.tod = clampf(Game._f(tod, game.tod), 0.0, 24.0) # the host's clock owns the sky — a NaN/INF tod still can't reach it
+	game.day = maxi(Game._i(day), 1)
 	game.net_danger = danger == true # raids are host truth; the drone mirrors it
 	var w := str(weather)
 	if w in ["clear", "rain", "storm", "drought"]:
@@ -391,7 +394,7 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 		"sp": str(bq.get("sp", "")), "got": Game._i(bq.get("got", 0))}
 	# the wandering trader rides the same tick — position only; the
 	# briefcase travels stock_sync, the till stays host-side
-	game.net_merchant_apply(bool(merch.get("on", false)),
+	game.net_merchant_apply(merch.get("on") == true,
 		Game._f(merch.get("x", 0.0)), Game._f(merch.get("y", 0.0)))
 	if wmode >= 0: # work-mode flips belong to the island, not the caller
 		game.work_mode = clampi(int(wmode), 0, game.WORK_MODES.size() - 1)
@@ -446,6 +449,8 @@ func _on_server_disconnected() -> void:
 func spawn_ghost(id: int) -> void:
 	if ghosts.has(id):
 		return # a reused peer id must not stack a second ghost
+	if ghosts.size() >= MAX_PEERS:
+		return # a forged peer_joined can't mint ghost nodes past the lobby cap
 	var g := preload("res://src/ghost.gd").new()
 	g.game = game
 	entity_layer.add_child(g)
@@ -598,6 +603,8 @@ func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
 		return # fail closed: the swing has to come from somewhere real
+	if not is_finite(dmg) or not is_finite(sleep_s):
+		return # NaN slips past every comparison — clampf passes it and int(NaN) poisons hp
 	if float(dmg) <= 0.0 and float(sleep_s) <= 0.0:
 		return # a 0-damage claim still wakes tranq'd kin and pulls aggro — pure grief
 	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
@@ -767,8 +774,11 @@ func chest_grant(_tx: int, _ty: int, items: Dictionary) -> void:
 		return
 	var n := 0
 	for id in items:
-		var c := int(items[id])
-		game.add_item(str(id), c)
+		var iid := str(id)
+		if not ItemData.ITEMS.has(iid):
+			continue # forged ids don't get bag keys
+		var c := clampi(Game._i(items[id]), 0, 999)
+		game.add_item(iid, c)
 		n += c
 	game.log_msg("Took %d items" % n)
 
@@ -781,14 +791,14 @@ func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
 	for i in pending_pays.size():
 		if pending_pays[i]["tag"] == "chest_dep":
 			for id in pending_pays[i]["cost"]:
-				var gap: int = int(pending_pays[i]["cost"][id]) - int(items.get(id, 0))
+				var gap: int = Game._i(pending_pays[i]["cost"][id]) - Game._i(items.get(id, 0))
 				if gap > 0:
 					game.add_item(str(id), gap)
 			break
 	pay_settle("chest_dep", false) # goods left the bag when the request flew
 	var n := 0
 	for id in items:
-		n += int(items[id])
+		n += maxi(Game._i(items[id]), 0)
 	game.log_msg("Stored %d items" % n)
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -871,7 +881,9 @@ func shrine_req() -> void:
 func shrine_done(nw: String) -> void:
 	if is_host:
 		return
-	game.weather = str(nw) # the offering lands; state_sync would catch up anyway
+	var w2 := str(nw)
+	if w2 in ["clear", "rain", "storm", "drought"]: # a forged echo can't paint junk skies
+		game.weather = w2 # the offering lands; state_sync would catch up anyway
 	pay_settle("shrine", false) # the lumenite left the bag at request time
 	game.log_msg("The altar drinks your lumenite — the sky shifts")
 
@@ -944,7 +956,7 @@ func board_done(res: Dictionary) -> void:
 	if is_host:
 		return
 	var qid := str(res.get("id", ""))
-	var qn := int(res.get("n", 0))
+	var qn := maxi(Game._i(res.get("n", 0)), 0) # a negative ask would mint goods through add_item
 	# the bag pays its goods first, then asserts it — gold arrives via
 	# board_paid once the host sees the settlement claim
 	if qid == board_paid_out:
@@ -1115,7 +1127,7 @@ func infuse_done(uid: float, cost: int) -> void:
 	game.add_item("sprigmelt_effigy", -int(cost)) # …then charge the host's truth
 	var p: Kin = game.find_net_pal(int(uid))
 	if p != null:
-		p.soul_boost += 1 # the mirror learns what the wire doesn't carry — next price quote is honest
+		p.soul_boost = mini(p.soul_boost + 1, 10) # the mirror learns what the wire doesn't carry — capped like the real verb
 	game.log_msg("The offering burns — a soul burns brighter")
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1286,12 +1298,12 @@ func stock_sync(stock: Array) -> void:
 			if SpeciesData.species_of(sid).is_empty():
 				continue
 			game.merchant_stock.append({"kin": sid,
-				"lv": clampi(int(it.get("lv", 1)), 1, 60), "n": 1,
-				"price": maxi(0, int(it.get("price", 0)))})
+				"lv": clampi(Game._i(it.get("lv", 1)), 1, 60), "n": 1,
+				"price": maxi(0, Game._i(it.get("price", 0)))})
 		elif str(it.get("id", "")) != "":
 			game.merchant_stock.append({"id": str(it["id"]),
-				"n": clampi(int(it.get("n", 1)), 0, 999),
-				"price": maxi(0, int(it.get("price", 0)))})
+				"n": clampi(Game._i(it.get("n", 1)), 0, 999),
+				"price": maxi(0, Game._i(it.get("price", 0)))})
 		if game.merchant_stock.size() >= game.MAX_MERCH_STOCK:
 			break # a hostile pack can't stuff the shelf past its cap
 
@@ -1302,6 +1314,8 @@ func merch_hit(dmg: float) -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
 		return
+	if not is_finite(dmg):
+		return # NaN lands the same poison as pal_hit — clampf never stops it
 	if game.merchant == null or not game._ghost_reaches(pid, game.merchant.pos, 2.5):
 		return # melee reach — a rifle-length beating is a forged swing
 	game.hit_merchant(clampf(float(dmg), 0.0, 80.0), pid)

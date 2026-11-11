@@ -879,7 +879,9 @@ func spawn_net_pal(d) -> void:
 	var nnid := _i(d[6]) if d.size() > 6 else 0
 	var nboss: bool = d.size() > 7 and d[7] is bool and d[7]
 	var nalpha: bool = d.size() > 8 and d[8] is bool and d[8]
-	var nmount := _i(d[10]) if d.size() > 10 else 0
+	if nnid <= 0:
+		return # replicas only exist shadowing a host uid — a 0/-N row would mint an untrackable local kin
+	var nmount := maxi(_i(d[10]), 0) if d.size() > 10 else 0
 	var np := gen_pal(sp_id, nlv, nearest_free(float(d[1]), float(d[2])), nlucky)
 	np.mode = str(d[4]) if str(d[4]) in ["base", "partner", "wild"] else "wild"
 	np.net_id = nnid # host uid — replicas track by this
@@ -1393,7 +1395,7 @@ func chest_req_remote(pid: int, cell: Vector2i, op: String, payload: Dictionary)
 			var iid := str(id)
 			if not ItemData.ITEMS.has(iid) or iid == "gold_coin":
 				continue # unknown ids and coin don't ride into shared storage
-			var c := clampi(int(payload[id]), 0, 999)
+			var c := clampi(_i(payload[id]), 0, 999)
 			if c <= 0 or not chest_can_take(st, iid):
 				continue # stack cap reached or garbage count
 			# a forged claim can only launder what the throttled request rate
@@ -1906,17 +1908,18 @@ func spawn_drop(id: String, n: int, at: Vector2) -> void:
 	next_drop_id += 1
 
 func drop_sprite(id: String, at: Vector2) -> Sprite2D:
-	if not _drop_tex.has(id):
+	var tid := id if ItemData.ITEMS.has(id) else "_unk" # forged wire ids share one texture — the cache can't be flooded
+	if not _drop_tex.has(tid):
 		var img := Image.create(10, 10, false, Image.FORMAT_RGBA8)
-		var c := Color(ItemData.ITEMS.get(id, {}).get("col", "#c8b070"))
+		var c := Color(ItemData.ITEMS.get(tid, {}).get("col", "#c8b070"))
 		img.fill(Ink.INK) # ink frame — a dropped thing reads as a printed chip
 		for yy in range(2, 8):
 			for xx in range(2, 8):
 				img.set_pixel(xx, yy, c)
 		img.set_pixel(2, 2, Ink.PAPER) # paper glint, top-left
-		_drop_tex[id] = ImageTexture.create_from_image(img)
+		_drop_tex[tid] = ImageTexture.create_from_image(img)
 	var spr := Sprite2D.new()
-	spr.texture = _drop_tex[id]
+	spr.texture = _drop_tex[tid]
 	var p := Iso.to_screen(at.x, at.y, world.elev_at(int(at.x), int(at.y)))
 	spr.position = Vector2(p.x, p.y - 2)
 	entity_layer.add_child(spr)
@@ -2504,6 +2507,11 @@ func place_free(sid: String, tx: int, ty: int, store: Dictionary = {}) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
 	if s.is_empty():
 		return false
+	var seen_st := {}
+	for k in structures:
+		seen_st[structures[k]] = true # cells→structures dedupe, same count as the build verbs
+	if seen_st.size() >= MAX_STRUCTURES:
+		return false # wire callers bypass the verb caps — the bound lives at the choke point
 	var w: int = s.get("w", 2); var h: int = s.get("h", 2)
 	for dy0 in range(h):
 		for dx0 in range(w):
@@ -2538,7 +2546,7 @@ func place_free(sid: String, tx: int, ty: int, store: Dictionary = {}) -> bool:
 		var o := Vector2i(tx, ty)
 		if kinbox_pos.x < 0:
 			kinbox_pos = o
-		elif o != kinbox_pos and o not in extra_boxes:
+		elif o != kinbox_pos and o not in extra_boxes and extra_boxes.size() < MAX_EXTRA_BOXES:
 			extra_boxes.append(o)
 	return true
 
@@ -4183,7 +4191,7 @@ func load_game() -> bool:
 	party.clear()
 	for u in d["party"]: # typed-array assignment rejects untyped arrays from foreign saves
 		var uu := _i(u)
-		if uu != 0 and party.size() < 5: # uid 0 names nobody — null/dict payloads collapse to it
+		if uu != 0 and party.size() < 5 and not party.has(uu): # uid 0 names nobody; a forged strip can't duplicate either
 			party.append(uu)
 	var ppos = d["player"].get("pos", [player.pos.x, player.pos.y])
 	if ppos is Array and ppos.size() >= 2 and _fin(ppos[0]) and _fin(ppos[1]):
@@ -4308,8 +4316,9 @@ func load_game() -> bool:
 	if d.get("party_idx") is Array: # has() alone isn't enough — iterating null/a scalar aborts mid-load
 		party.clear()
 		for pi in d["party_idx"]:
-			if pi is int and pi >= 0 and pi < loaded.size():
-				party.append(loaded[pi].uid)
+			if pi is int and pi >= 0 and pi < loaded.size() \
+					and party.size() < 5 and not party.has(loaded[pi].uid):
+				party.append(loaded[pi].uid) # a forged strip can't duplicate or overflow
 	else: # pre-party_idx saves stored raw uids — new pals got fresh uids, so old refs are dead
 		party = party.filter(func(u): return find_pal(u) != null or bench_pal_of(u) != null)
 	remote_parties.clear()
@@ -6397,7 +6406,7 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 	if sv.has("hp"):
 		st["hp"] = clampi(_i(sv["hp"]), 0, 99999) # same ceiling the save loader enforces — a forged pack can't mint an unbreakable wall
 	if sv.has("by"):
-		st["placed_tag"] = str(sv["by"])
+		st["placed_tag"] = str(sv["by"]).left(24) # same bound the save loader runs — a wire tag can't grow past it
 	elif st.has("placed_tag"):
 		st.erase("placed_tag")
 	if sv.has("wk") and sv["wk"] is Array: # uids resolve to live replicas —
@@ -6449,7 +6458,11 @@ func struct_sync(arr: Array) -> void:
 func decor_snapshot_apply(d: Dictionary) -> bool:
 	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
 			and d.get("hp_map") is PackedByteArray and d["hp_map"].size() == world.hp.size():
-		world.decor = d["decor"]
+		var raw: PackedByteArray = d["decor"]
+		for i2 in raw.size(): # an off-enum byte reaches harvest_cell's literal lookup — same clamp as decor_sync
+			if raw[i2] > int(World.Decor.STUMP):
+				raw[i2] = World.Decor.NONE
+		world.decor = raw
 		world.hp = d["hp_map"]
 		queue_redraw_decor()
 		return true
@@ -6462,7 +6475,7 @@ func decor_sync(arr: Array) -> void:
 		if e is Array and e.size() >= 2 and _fin(e[0]) and _fin(e[1]):
 			var i := int(e[0])
 			if i >= 0 and i < world.decor.size():
-				world.decor[i] = clampi(int(e[1]), 0, 255)
+				world.decor[i] = clampi(int(e[1]), 0, int(World.Decor.STUMP)) # an off-enum byte kills harvest_cell's literal lookup
 				changed = true
 	if changed:
 		queue_redraw_decor()
