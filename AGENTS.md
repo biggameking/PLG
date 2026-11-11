@@ -308,3 +308,19 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 61. **Presence is not liveness.** `multiplayer_peer != null` stays true
     on a dropped socket — gate UI on a `net_live()`-style check that
     reads `get_connection_status()`, never on pointer presence.
+62. **A sync field absent on the wire is not an empty value.** `struct_sync`
+    refreshed `cur["store"] = e[3] if present else {}` — every pack built
+    without the field wiped every mirrored chest (11 lair chests emptied
+    mid-suite). When a wire payload can carry a field optionally, gate the
+    write on presence (`e.size() > 3`), never on a defaulted read.
+63. **Guard the irreplaceable, not the category.** First draft refused ALL
+    kinbox razes — but the outpost network is designed to promote a backup.
+    The audit's harm case was losing the LAST anchor, so the guard is
+    `pos == kinbox_pos and extra_boxes.is_empty()`. Before gating a whole
+    type, find the code path that makes a member legitimately removable —
+    demolish_at's own promotion tail was the spec.
+64. **Sibling verbs pay one price, not just share one predicate.**
+    `can_dodge()` was already shared, but the cost triple (0.35s / -15 SP /
+    0.8s wait) lived in both the key path and the touch verb — three magic
+    numbers to drift. Extract the verb (`dodge()`) too; a shared predicate
+    with duplicated effects is half a contract.

@@ -62,6 +62,8 @@ func _process(_dt: float) -> void:
 func _unhandled_input(e: InputEvent) -> void:
 	if game.panel != "": # panels eat the wheel for scrolling, not zoom
 		return
+	if e is InputEventMagnifyGesture: # pinch — the slab's only zoom
+		cam.zoom = (cam.zoom * e.factor).clampf(0.35, 2.5) * Vector2.ONE
 	if e.is_action_pressed("zoom_in"):
 		cam.zoom = (cam.zoom * 1.15).clampf(0.35, 2.5) * Vector2.ONE
 	if e.is_action_pressed("zoom_out"):

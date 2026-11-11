@@ -66,6 +66,38 @@ def ramp(hx):
         "spec": rgb(h - 25, s * 0.45, 0.93),
     }
 
+INK = (28, 26, 46)  # warm navy #1c1a2e — contours and halftone, never pure black
+
+def mix(a, b, t):
+    return tuple(int(a[i] * (1 - t) + b[i] * t) for i in range(3))
+
+def ink_outline(img, grow=1):
+    """1px navy edge where an opaque pixel borders transparency."""
+    px = img.load()
+    W, H = img.size
+    edge = []
+    for y in range(H):
+        for x in range(W):
+            if px[x, y][3] == 0:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < W and 0 <= ny < H) or px[nx, ny][3] == 0:
+                    edge.append((x, y))
+                    break
+    for x, y in edge:
+        px[x, y] = INK + (255,)
+
+def halftone_shade(img, thresh=0.45, period=6, duty=2, strength=0.5):
+    """Dark pixels get a diagonal ink-dot lattice — shade as print tone."""
+    px = img.load()
+    W, H = img.size
+    for y in range(H):
+        for x in range(W):
+            r, g, b, a = px[x, y]
+            if a and (r + g + b) / 765.0 < thresh and (x + 2 * y) % period < duty:
+                px[x, y] = mix((r, g, b), INK, strength) + (a,)
+
 DARK = {"out": rgb(230, 0.15, 0.06), "shade": rgb(230, 0.15, 0.1),
         "base": rgb(25, 0.12, 0.14), "light": rgb(25, 0.1, 0.22), "spec": rgb(30, 0.1, 0.4)}
 WHITE = {"out": rgb(220, 0.25, 0.3), "shade": rgb(215, 0.2, 0.72),
@@ -374,13 +406,15 @@ def render_pal(spec_id):
                 rp = ramps[c - 1]
                 lf = (1 - y / PH) * 0.62 + (1 - x / PW) * 0.14 + (h - 0.5) * 0.16
                 if op:
-                    col = rp["out"]
+                    col = mix(rp["out"], INK, 0.55)  # ink-weighted contour keeps species hue
                 elif lf > 0.8:
                     col = rp["spec"]
                 elif lf > 0.62:
                     col = rp["light"]
                 elif lf < 0.26:
                     col = rp["shade"]
+                    if (x + 2 * y) % 7 < 2:  # halftone lattice inside the shade zone
+                        col = mix(col, INK, 0.34)
                 else:
                     nearHi = 0.62 - lf < 0.09
                     nearLo = lf - 0.26 < 0.09
@@ -1024,6 +1058,8 @@ def make_structure(sid, color, w, h):
             d.rectangle([W//2 + dx, 38, W//2 + dx + 5, 52], fill=hxc("#5e462e") + (255,))
         d.rectangle([W//2 - 12, 18, W//2 - 4, 28], fill=hxc("#7f8c8d") + (255,))
         d.rectangle([W//2 + 2, 16, W//2 + 10, 26], fill=hxc("#a98a5e") + (255,))
+    halftone_shade(img, thresh=0.4, strength=0.45)
+    ink_outline(img)
     img.save(os.path.join(A, "structures", f"{sid}.png"))
     return img
 
@@ -1072,8 +1108,16 @@ STRUCT_DEFS = {  # id: (color, w, h) — mirrors STRUCTURES in structures.gd
 def shadow():
     img = Image.new("RGBA", (56, 20), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.ellipse([2, 3, 54, 17], fill=(0, 0, 0, 90))
+    d.ellipse([2, 3, 54, 17], fill=(91, 74, 138, 115))  # violet shadow, not grey
     img.save(os.path.join(A, "shadow.png"))
+
+def halftone_tile():
+    """8x8 tileable ink dot for UI halftone fields."""
+    img = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    px = img.load()
+    for x, y in ((3, 3), (4, 3), (3, 4), (4, 4)):
+        px[x, y] = INK + (255,)
+    img.save(os.path.join(A, "ui", "halftone.png"))
 
 def element_orbs():
     cols = {"neutral": "#c8d3d5", "fire": "#e8963c", "water": "#4d9de0",
@@ -1121,7 +1165,10 @@ def decor():
                      "rock": lambda: boulder(), "ore_gold": lambda: boulder("#e8d44d"),
                      "ore_coal": lambda: boulder("#3c3c3c"), "berry_bush": berry_bush,
                      "stump": stump}.items():
-        fn().save(os.path.join(A, "decor", f"{name}.png"))
+        img = fn()
+        halftone_shade(img)
+        ink_outline(img)
+        img.save(os.path.join(A, "decor", f"{name}.png"))
 
 
 
@@ -1247,4 +1294,5 @@ if __name__ == "__main__":
         make_structure(sid, col, w, h)
     shadow()
     element_orbs()
+    halftone_tile()
     print("done")

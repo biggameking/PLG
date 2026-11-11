@@ -343,3 +343,24 @@ S30 (5th context-free audit — S27..S29 touch batch, 2H/5M/9L):
   Coverage: paused typing/paging/X/joy-guard, handled-flag, all-zone
   containment, row-radius spacing, sellable_pals, run_click for
   m_host/m_dex/m_statues/m_guide, chest scroll. Smoke 603-606/0 x3.
+S33 (6th context-free audit — S31..S32 batch, 3H/8M/5L):
+  H1 demolish_at anchor guard, narrowed to the LAST anchor — a lone
+  outpost razes and a backed-up primary still promotes; the flat draft
+  killed both. H2 net_residue: a dropped session's hybrid world can't
+  overwrite the real solo save; disconnect purges party/mirrors/unlocked
+  + nulls the peer. H3 net_unlocked mirrors host tech — the client's
+  build bar intersects it and build_req refunds on an honest deny.
+  M: store contents ride snapshot/pack/sync as element 4 (refresh only
+  when present — the default-{} first draft zeroed every mirrored
+  chest; suite caught it). _build_tap_ok limits the S30 zone guard to
+  the X button; roll clears ATK's hit disc; pinch zoom via
+  MagnifyGesture; vkbd lifts chat/join bars; guest pause menu drops
+  the dead TECH row; dex sort cached; BTN_LABELS shared. L:
+  _reset_shell_state shared by load+regenerate, dodge() is the one
+  roll verb, touch aim hint + desktop-only preview, build_sel dead
+  field gone. Art pass landed with the batch: Ink paper/navy grammar
+  (src/style.gd) wired into pause rows + scroll buttons, ink_outline
+  pipeline regenerated all sprites, halftone tile. Coverage: planted
+  last-anchor refuse, outpost raze, residue refuse, mirror purge,
+  client intersect, deny refund, tech-row gate, facing shot, tap
+  zones, pinch, x_close, dex cache, wire store. Smoke 631-633/0 x3.

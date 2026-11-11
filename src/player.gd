@@ -63,9 +63,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		sphere_sel = (sphere_sel + 1) % maxi(1, game.sphere_tiers().size())
 	if statuses.get("sleep", 0) > game.t:
 		return # asleep: no dodge / attack / throw
-	if event.is_action_pressed("dodge") and can_dodge():
-		dodge_t = 0.35
-		stamina -= 15.0; stam_wait = 0.8 # a roll costs a chunk of stamina
+	if event.is_action_pressed("dodge"):
+		dodge()
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
 			and not (game.touch_ui and game.hud != null and game.hud.touch_zone_hit(event.position)):
 		# touch taps emulate LMB — but ONLY taps that land on a virtual control
@@ -84,6 +83,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func can_dodge() -> bool: # one rule for key, pad, and touch — the roll cost lives here
 	return statuses.get("sleep", 0) <= game.t and dodge_t <= 0 and stamina >= 15.0
+
+func dodge() -> bool: # the roll verb itself — one price for every input class
+	if not can_dodge():
+		return false
+	dodge_t = 0.35
+	stamina -= 15.0; stam_wait = 0.8 # a roll costs a chunk of stamina
+	return true
 
 func melee() -> void:
 	if atk_cd > 0:
@@ -424,9 +430,16 @@ func shoot_weapon(wd: Dictionary) -> void:
 	atk_cd = wd.get("cd", 0.7)
 	if ammo_id != "":
 		game.add_item(ammo_id, -1)
-	var m := get_global_mouse_position()
-	var tw: Vector2 = Iso.from_screen(m.x, m.y, elev())
+	var tw := _shot_target(wd)
 	game.fire_player_shot(tw, wd)
+
+func _shot_target(wd: Dictionary) -> Vector2:
+	# glass has no cursor — the ATK button's emulated mouse sits in a fixed
+	# corner, so a touch shot aims down facing like the melee/orb verbs do
+	if game.touch_ui and facing != Vector2.ZERO:
+		return pos + facing.normalized() * float(wd.get("range", 8.0))
+	var m := get_global_mouse_position()
+	return Iso.from_screen(m.x, m.y, elev())
 
 func armor_def() -> int:
 	return int((ItemData.ITEMS.get(equipment["armor"], {}).get("armor", {}).get("def", 0) + acc_total("def") + game.partner_aura("def")) * (1.0 + meal_bonus("def")))

@@ -167,7 +167,7 @@ func state_snapshot() -> Dictionary:
 		var st = game.structures[k]
 		if st not in seen:
 			seen.append(st)
-			arr.append([st["id"], k.x, k.y])
+			arr.append([st["id"], k.x, k.y, st.get("store", {})])
 	# share the living population too — a joining client should see the same
 	# wild/base kin, not an empty world (capped upstream by MAX_PALS)
 	var parr := []
@@ -175,13 +175,17 @@ func state_snapshot() -> Dictionary:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
 			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid,
 				p.boss, p.alpha, p.spire_tag])
-	return {"structures": arr, "tod": game.tod, "day": game.day, "kin": parr}
+	return {"structures": arr, "tod": game.tod, "day": game.day, "kin": parr,
+		"unlocked": game.unlocked.duplicate()} # the host's tech bounds the client's build bar
 
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
 	for e in d.get("structures", []):
 		if e is Array and e.size() >= 3 and (e[1] is float or e[1] is int) and (e[2] is float or e[2] is int):
-			game.place_free(str(e[0]), int(e[1]), int(e[2])) # net input is untrusted — validate shape
+			var st_store: Dictionary = e[3] if e.size() > 3 and e[3] is Dictionary else {}
+			game.place_free(str(e[0]), int(e[1]), int(e[2]), st_store) # net input is untrusted — validate shape
+	if d.get("unlocked") is Array:
+		game.net_unlocked = d["unlocked"] # the host's tech bounds our build bar
 	game.tod = float(d.get("tod", game.tod))
 	game.day = int(d.get("day", game.day))
 	# drop the population our own regenerate() spawned — the host's wild/base
@@ -266,6 +270,10 @@ func _on_server_disconnected() -> void:
 	ghosts.clear()
 	game.clear_net_drops() # replica loot dies with the session too
 	game.purge_replicas() # statue kin can't linger as free catches post-session
+	game.party.clear() # host-uid party strip — dead references, not your roster
+	game.net_party = [] # the mirrors were the host's truth — stop showing them
+	game.net_box = []
+	game.net_unlocked = []
 	is_host = false
 	multiplayer.multiplayer_peer = null # a dead peer must not keep net_live() true
 	game.net_danger = false # the raid verdict belonged to the session — rejoin clean
@@ -283,6 +291,7 @@ func spawn_ghost(id: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func world_sync(s: int) -> void:
 	game.regenerate(int(s))
+	game.net_residue = true # this world came down the wire — a dropped session must not save it
 	game.log_msg("Synced world seed %d" % int(s))
 	_arrive_guest()
 
@@ -478,7 +487,7 @@ func struct_state_pack() -> Array:
 		if st not in seen:
 			seen.append(st)
 			var o: Vector2i = st.get("pos", k) # origin cell — the wire key
-			arr.append([st["id"], o.x, o.y])
+			arr.append([st["id"], o.x, o.y, st.get("store", {})])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -510,7 +519,11 @@ func build_req(sid: String, tx: int, ty: int) -> void:
 	if not _throttle(pid, "build_bkt", 0.7, 1.0):
 		return # one blueprint per breath — a fill script can't pave the island
 	if not game.unlocked.has(str(sid)):
-		return # a locked blueprint can't come from an honest client — no refund for forgeries
+		# an honest client CAN out-tech the host (developed save joins fresh
+		# host) — deny + refund; bags are client-authoritative anyway so a
+		# forger gains nothing either way
+		rpc_id(pid, "build_deny", str(sid))
+		return
 	if not game.net_place(str(sid), int(tx), int(ty), pid):
 		rpc_id(pid, "build_deny", str(sid)) # site contested mid-click — the one honest deny
 

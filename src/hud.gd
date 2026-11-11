@@ -75,9 +75,8 @@ func _process(dt: float) -> void:
 	queue_redraw()
 	# a held direction emits no events — catch the transition here too or the
 	# old hold would keep marching into the new menu with no fresh 0.42s delay
-	var mk2 := "%s|%s" % [game.state, game.panel]
-	if game != null and mk2 != _menu_key:
-		_menu_key = mk2
+	if game != null and "%s|%s" % [game.state, game.panel] != _menu_key:
+		_menu_key = "%s|%s" % [game.state, game.panel]
 		click_rects.clear()
 		menu_sel = 0
 		nav_hold = 0.0
@@ -334,7 +333,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				run_click(cr)
 				get_viewport().set_input_as_handled() # a panel-closing act must not fall through to melee
 				return
-		if game.panel == "build" and build_sel >= 0 and not (game.touch_ui and touch_zone_hit(event.position)):
+		if game.panel == "build" and build_sel >= 0 and _build_tap_ok(event.position):
 			place_ghost() # the ✕ tap arrives as a mouse event first — never plant under it
 			get_viewport().set_input_as_handled()
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and game.panel == "build":
@@ -359,9 +358,9 @@ func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked
 	var up_r := Rect2(bx, rr.position.y + 8, 24, 24)
 	var dn_r := Rect2(bx, rr.position.y + 36 if stacked else rr.end.y - 32, 24, 24)
 	for b2 in [[up_r, up_act, "▲"], [dn_r, dn_act, "▼"]]:
-		draw_rect(b2[0], Color(0.15, 0.18, 0.24, 0.9))
-		draw_rect(b2[0], Color(0.5, 0.6, 0.7), false, 1.0)
-		draw_string(font, b2[0].position + Vector2(6, 17), b2[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		draw_rect(b2[0], Ink.PAPER_DARK)
+		draw_rect(b2[0], Ink.INK, false, 1.5)
+		draw_string(font, b2[0].position + Vector2(6, 17), b2[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 		click_rects.append({"rect": b2[0], "act": b2[1], "arg": null})
 
 func _chat_submit() -> void:
@@ -394,6 +393,8 @@ func run_click(cr: Dictionary) -> void:
 		game.net.rpc("box_req", KINBOX_OPS[cr["act"]], uid)
 		return
 	match cr["act"]:
+		"x_close":
+			game.panel = "" # the touch ✕ is also a click target — pads and mice hit it too
 		"craft":
 			game.craft(cr["arg"])
 		"repair":
@@ -659,6 +660,14 @@ func mouse_tile() -> Vector2:
 	var w := (m - get_viewport_rect().size / 2) / c.zoom.x + c.global_position
 	return Iso.from_screen(w.x, w.y, game.player.elev())
 
+func _build_tap_ok(p: Vector2) -> bool:
+	# while the build bar owns the screen the only live touch control is the
+	# ✕ — guarding the whole zone table made a third of the slab unplaceable
+	if not game.touch_ui:
+		return true
+	var lay0 := touch_layout(get_viewport_rect().size)
+	return p.distance_to(lay0["btns"]["menu"]) > btn_r("menu")
+
 func place_ghost() -> void:
 	var tw := mouse_tile()
 	var bl := game.buildable_list()
@@ -671,23 +680,50 @@ func w2s(p: Vector2) -> Vector2:
 	var c: Camera2D = get_viewport().get_camera_2d()
 	return (p - c.global_position) * c.zoom.x + get_viewport_rect().size / 2
 
+func wtext(p: Vector2, s: String, col: Color, size := 13) -> void:
+	# world-space text: ink underlay keeps bright type readable on any tile
+	draw_string(font, p + Vector2(1, 1), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size,
+		Color(Ink.INK.r, Ink.INK.g, Ink.INK.b, col.a * 0.85))
+	draw_string(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
+
+func draw_floaters() -> void:
+	# combat/loot feedback as paper field-tags — they were queued but never
+	# rendered, so every catch/damage tick was invisible until now
+	for f in game.floaters:
+		var p: Vector2 = f["p"]
+		var e := 0
+		if p.x >= 0 and p.y >= 0 and p.x < game.world.WORLD_W and p.y < game.world.WORLD_H:
+			e = game.world.elev_at(int(p.x), int(p.y))
+		var sc := w2s(Iso.to_screen(p.x, p.y, e))
+		sc.y -= 22 + f["age"] * 26.0
+		var a := clampf(1.5 - f["age"], 0.0, 1.0)
+		var txt: String = f["t"]
+		var tw: float = font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+		var rr := Rect2(sc.x - tw / 2 - 5, sc.y - 11, tw + 10, 15)
+		Ink.tag(self, rr, a)
+		var fc := Color(str(f["c"]))
+		if (fc.r + fc.g + fc.b) / 3.0 > 0.62: # cream/gold on cream — pull to readable
+			fc = fc.darkened(0.45)
+		draw_string(font, rr.position + Vector2(5, 12), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9,
+			Color(fc.r, fc.g, fc.b, a))
+
 func _draw() -> void:
 	if not game or not game.player:
 		return
 	click_rects = []
 	var pl := game.player
 	var r := get_viewport_rect().size
-	draw_rect(Rect2(12, 10, 224, 18), Color(0, 0, 0, 0.55))
-	draw_rect(Rect2(14, 12, int(220 * clampf(pl.hp / pl.max_hp, 0, 1)), 14), Color("#4caf50"))
-	draw_rect(Rect2(12, 30, 224, 6), Color(0, 0, 0, 0.55))
-	var hc: Color = Color("#e6a23c") if pl.hunger >= 25 else Color("#e0503c")
+	Ink.tag(self, Rect2(12, 10, 224, 18))
+	draw_rect(Rect2(14, 12, int(220 * clampf(pl.hp / pl.max_hp, 0, 1)), 14), Ink.GREEN)
+	Ink.tag(self, Rect2(12, 30, 224, 6))
+	var hc: Color = Ink.GOLD if pl.hunger >= 25 else Ink.RED
 	draw_rect(Rect2(14, 31, int(220 * clampf(pl.hunger / 100.0, 0, 1)), 4), hc)
 	# the island SP bar under the hunger sliver — sprints and swims burn it
-	draw_rect(Rect2(12, 37, 224, 5), Color(0, 0, 0, 0.55))
-	var spc: Color = Color("#3cb7e0") if pl.stamina > 15.0 else Color("#e0503c")
+	Ink.tag(self, Rect2(12, 37, 224, 5))
+	var spc: Color = Ink.TEAL if pl.stamina > 15.0 else Ink.RED
 	draw_rect(Rect2(14, 38, int(220 * clampf(pl.stamina / 100.0, 0, 1)), 3), spc)
 	draw_string(font, Vector2(16, 25), "HP %d/%d  Lv%d  XP%d" % [int(pl.hp), int(pl.max_hp), pl.level, pl.xp],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 	var tiers := game.sphere_tiers()
 	var sx := 12
 	for id in ["kin_orb", "mega_orb", "giga_orb", "ultra_orb", "legendary_orb"]:
@@ -695,26 +731,26 @@ func _draw() -> void:
 		if n <= 0:
 			continue
 		var sel := tiers.find(id) == pl.sphere_sel
-		draw_rect(Rect2(sx, 44, 70, 20), Color(0, 0, 0, 0.55))
+		Ink.tag(self, Rect2(sx, 44, 70, 20))
 		if sel:
-			draw_rect(Rect2(sx, 44, 70, 20), Color("#4dd0e1"), false, 1.5)
+			draw_rect(Rect2(sx, 44, 70, 20), Ink.ORANGE, false, 1.5)
 		draw_string(font, Vector2(sx + 4, 49), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		sx += 74
 	draw_equipment_line() # gear row under the orb chips
 	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # the island meal timer chip
 		var btxt := ""
 		for bk in pl.meal_buff:
 			btxt += "%s+%d%% " % [bk.to_upper(), int(float(pl.meal_buff[bk]) * 100)]
-		draw_rect(Rect2(240, 24, 112, 16), Color(0, 0, 0, 0.55))
+		Ink.tag(self, Rect2(240, 24, 112, 16))
 		draw_string(font, Vector2(244, 36), "%s %d:%02d" % [btxt.strip_edges(), int(pl.meal_t) / 60, int(pl.meal_t) % 60],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8b95f"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	if pl.aiming:
-		draw_string(font, Vector2(12, 96), "AIM — click a kin to throw (Q cancel)",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#4dd0e1"))
+		wtext(Vector2(12, 96), "AIM — tap a kin to throw" if game.touch_ui else "AIM — click a kin to throw (Q cancel)",
+			Ink.TEAL)
 		# the island throw preview: hovering a wild kin shows the catch odds
 		var tiers2 := game.sphere_tiers()
-		if not tiers2.is_empty():
+		if not tiers2.is_empty() and not game.touch_ui:
 			var sid2: String = tiers2[clampi(pl.sphere_sel, 0, tiers2.size() - 1)]
 			var mp2 := get_global_mouse_position()
 			var tw2: Vector2 = Iso.from_screen(mp2.x, mp2.y, pl.elev())
@@ -729,24 +765,25 @@ func _draw() -> void:
 					bp2 = q
 			if bp2:
 				if bp2.boss:
-					draw_string(font, Vector2(12, 112), "✦ %s Lv%d — a legend: orbs bounce off" % [bp2.spec["name"], bp2.level],
-						HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ffd76e"))
+					wtext(Vector2(12, 112), "✦ %s Lv%d — a legend: orbs bounce off" % [bp2.spec["name"], bp2.level],
+						Ink.GOLD)
 				else:
 					var cap_pow2: float = game.cap_power_of(bp2)
 					var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
 						ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
-					var col := Color("#a8e6a1") if ch >= 0.5 else (Color("#e8963c") if ch >= 0.2 else Color("#e8452f"))
-					draw_string(font, Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)],
-						HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
-	draw_rect(Rect2(r.x - 140, 10, 128, 20), Color(0, 0, 0, 0.55))
+					var col := Ink.GREEN if ch >= 0.5 else (Ink.ORANGE if ch >= 0.2 else Ink.RED)
+					wtext(Vector2(12, 112), "Catch %s Lv%d: %d%%" % [bp2.spec["name"], bp2.level, int(ch * 100)], col)
+	Ink.tag(self, Rect2(r.x - 140, 10, 128, 20))
 	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else ("  ☀" if game.weather == "drought" else ""))
-	var wcol := Color("#b48ef0") if game.weather == "storm" else (Color("#7fb8e8") if game.weather == "rain" else (Color("#e8b45c") if game.weather == "drought" else Color("#e8f0f2")))
+	var wcol := Ink.VIOLET if game.weather == "storm" else (Ink.TEAL if game.weather == "rain" else (Ink.GOLD if game.weather == "drought" else Ink.INK))
 	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00%s" % [game.day, int(game.tod), wicon],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, wcol)
 	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0: # the island raid horn
-		draw_rect(Rect2(r.x / 2 - 80, 8, 160, 22), Color(0.5, 0.06, 0.06, 0.7))
+		var raid_r := Rect2(r.x / 2 - 80, 8, 160, 22)
+		draw_rect(raid_r, Color(Ink.RED, 0.85))
+		draw_rect(raid_r, Ink.INK, false, 1.5)
 		draw_string(font, Vector2(r.x / 2 - 62, 24), "RAID IN %ds" % int(ceilf(game.raid_t)),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ff8d7e"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.PAPER)
 	# boss bar: nearest alpha/boss in the fray gets a name + hp strip
 	var boss: Kin = null
 	var bd := 18.0
@@ -761,51 +798,51 @@ func _draw() -> void:
 	if boss:
 		var frac: float = clampf(boss.hp / boss.max_hp, 0.0, 1.0)
 		var bw := 240.0
-		draw_rect(Rect2(r.x / 2 - bw / 2, 34, bw, 16), Color(0, 0, 0, 0.6))
+		draw_rect(Rect2(r.x / 2 - bw / 2, 34, bw, 16), Color(Ink.INK, 0.65))
 		draw_rect(Rect2(r.x / 2 - bw / 2 + 1, 35, (bw - 2) * frac, 14),
-			Color("#c0392b") if boss.boss else Color("#e8963c"))
+			Ink.RED if boss.boss else Ink.ORANGE)
 		draw_string(font, Vector2(r.x / 2 - bw / 2 + 4, 47),
 			"%s %s Lv%d%s" % ["BOSS" if boss.boss else "α", boss.spec["name"], boss.level,
 				" ☠%dg" % boss.bounty if boss.bounty > 0 else ""],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.PAPER)
 	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
-		draw_rect(Rect2(r.x - 220, 32, 208, 18), Color(0, 0, 0, 0.45))
+		Ink.tag(self, Rect2(r.x - 220, 32, 208, 18))
 		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8d44d"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	var hy := 62.0
 	for h in game.active_hints(): # contextual nudges — retire themselves
-		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
+		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
 		var htxt: String = str(h.get("pad", h["text"])) if game.using_pad else str(h["text"])
 		draw_string(font, Vector2(r.x - 212, hy), "» " + tr(htxt),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.85, 0.9, 0.95))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		hy += 17
 	if game.spires_done.size() > 0 or game.crowned: # the campaign spine's tally
-		draw_rect(Rect2(r.x - 216, hy - 11, 208, 15), Color(0, 0, 0, 0.45))
+		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
 		draw_string(font, Vector2(r.x - 212, hy),
 			tr("SPIRES %d/%d") % [game.spires_done.size(), game.SPIRE_DEFS.size()]
 				+ (tr(" — CROWNED") if game.crowned else ""),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var my := r.y - 24
 	for i in range(game.messages.size()):
 		var m: String = game.messages[game.messages.size() - 1 - i]
-		draw_string(font, Vector2(14, my - i * 18), m, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.85))
+		wtext(Vector2(14, my - i * 18), m, Color(1, 1, 1, 0.85))
 	var py := 38
 	for pr in party_rows(): # ● out / ○ in its ball — the island fields one
-		draw_rect(Rect2(r.x - 150, py, 138, 16), Color(0, 0, 0, 0.5))
+		Ink.tag(self, Rect2(r.x - 150, py, 138, 16))
 		var tag := "!" if pr["stance"] == "aggressive" else ("." if pr["stance"] == "passive" else "")
 		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s%s" % [pr["name"], pr["lv"],
-			"●" if pr["out"] else "○", tag], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c8f0d0"))
+			"●" if pr["out"] else "○", tag], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		py += 18
 	# the island partner-skill readout: name + cooldown under the party strip
 	var psk_p := game.party_pal()
 	if psk_p != null and game.PARTNER_SKILLS.has(psk_p.species_id):
 		var cd_left: float = float(psk_p.skill_cd.get("partner", 0.0)) - game.t
-		draw_rect(Rect2(r.x - 150, py, 138, 16), Color(0, 0, 0, 0.5))
+		Ink.tag(self, Rect2(r.x - 150, py, 138, 16))
 		draw_string(font, Vector2(r.x - 144, py + 13),
 			"%s %s" % [game.PARTNER_SKILLS[psk_p.species_id]["name"],
 				"READY" if cd_left <= 0 else "%ds" % ceili(cd_left)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
-			Color("#ffd76e") if cd_left <= 0 else Color(0.55, 0.55, 0.6))
+			Ink.GOLD if cd_left <= 0 else Ink.INK_SOFT)
 	# build ghost preview
 	if game.panel == "build" and build_sel >= 0:
 		var tw := mouse_tile()
@@ -864,9 +901,9 @@ func _draw() -> void:
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
 			"Glider descends cliffs. Sick kin need medicine in feed box/bag.",
 		]
-		draw_rect(Rect2(10, r.y - 136, 580, 96), Color(0, 0, 0, 0.7))
+		Ink.card(self, Rect2(10, r.y - 136, 580, 96))
 		for i in range(lines.size()):
-			draw_string(font, Vector2(20, r.y - 116 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#dfe8ea"))
+			draw_string(font, Vector2(20, r.y - 116 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 
 	# minimap (M): baked world image + live player/kinbox markers
 
@@ -874,7 +911,7 @@ func _draw() -> void:
 		var vw := get_viewport_rect().size.x
 		var ms := 176.0
 		var mr := Rect2(vw - ms - 10, 10, ms, ms)
-		draw_rect(mr.grow(2), Color(0, 0, 0, 0.7))
+		Ink.tag(self, mr.grow(2))
 		if map_tex != null:
 			draw_texture_rect(map_tex, mr, false)
 		fog_t -= 0.016 # draw runs per-frame; rebake the fog ~2x a second
@@ -885,17 +922,18 @@ func _draw() -> void:
 			draw_texture_rect(fog_tex, mr, false)
 		var plp := game.player.pos
 		var pp := mr.position + Vector2(plp.x / game.world.WORLD_W * ms, plp.y / game.world.WORLD_H * ms)
-		draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), Color.WHITE)
+		draw_rect(Rect2(pp - Vector2(2, 2), Vector2(4, 4)), Ink.ORANGE)
 		if game.kinbox_pos.x >= 0:
 			var pb := mr.position + Vector2(game.kinbox_pos.x / float(game.world.WORLD_W) * ms, game.kinbox_pos.y / float(game.world.WORLD_H) * ms)
-			draw_rect(Rect2(pb - Vector2(2, 2), Vector2(4, 4)), Color(1, 0.55, 0.1))
+			draw_rect(Rect2(pb - Vector2(2, 2), Vector2(4, 4)), Ink.TEAL)
 		for dm in game.death_marks: # the island tombstones — guide the corpse run
 			var dp := mr.position + Vector2(dm.x / game.world.WORLD_W * ms, dm.y / game.world.WORLD_H * ms)
-			draw_rect(Rect2(dp - Vector2(2, 2), Vector2(4, 4)), Color(0.95, 0.2, 0.2))
+			draw_rect(Rect2(dp - Vector2(2, 2), Vector2(4, 4)), Ink.RED)
 		if game.treasure: # the surveyor's X — follow it and dig
 			var tp := mr.position + Vector2(game.treasure["pos"].x / game.world.WORLD_W * ms, game.treasure["pos"].y / game.world.WORLD_H * ms)
-			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Color(1.0, 0.84, 0.28))
+			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Ink.GOLD)
 
+	draw_floaters()
 	draw_weather_fx(r)
 	draw_touch(r)
 
@@ -907,9 +945,9 @@ func _draw() -> void:
 	if (game.state != "play" or game.panel != "") and not click_rects.is_empty():
 		menu_sel = clampi(menu_sel, 0, click_rects.size() - 1) # panels swap rows under the cursor
 		var msel: Rect2 = click_rects[menu_sel]["rect"]
-		draw_rect(msel, Color(0.55, 0.7, 0.95, 0.9), false, 2.0) # pad/arrow-key cursor
+		draw_rect(msel, Ink.ORANGE, false, 2.0) # pad/arrow-key cursor
 		draw_string(font, Vector2(msel.position.x - 16, msel.position.y + 20), "»",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#8ef0ff"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.ORANGE)
 
 # ---------- on-screen touch controls ----------
 var _lay_key := Vector2(-1, -1)
@@ -922,7 +960,7 @@ func touch_layout(r: Vector2) -> Dictionary: # cached — draw_touch asks every 
 	_lay_cache = {"joy": Vector2(92, r.y - 108), "btns": {
 		"atk": Vector2(r.x - 72, r.y - 92),
 		"aim": Vector2(r.x - 152, r.y - 52),
-		"roll": Vector2(r.x - 66, r.y - 164),
+		"roll": Vector2(r.x - 66, r.y - 178), # clear of ATK's hit disc — fat-finger arcs need 79px
 		"e": Vector2(r.x - 156, r.y - 140),
 		"orb": Vector2(r.x - 226, r.y - 92),
 		"inv": Vector2(r.x - 226, r.y - 170),
@@ -937,6 +975,9 @@ func touch_layout(r: Vector2) -> Dictionary: # cached — draw_touch asks every 
 
 const MORE_VERBS := ["asg", "stn", "ksk", "rde", "dml", "map"]
 const MORE_BTN_R := 19.0 # drawn AND hit-tested smaller — 56px spacing can't take BTN_R+8
+const BTN_LABELS := {"atk": "ATK", "aim": "AIM", "roll": "ROLL", "e": "E", "orb": "ORB",
+	"inv": "INV", "bld": "BLD", "more": "···", "menu": "≡",
+	"asg": "ASG", "stn": "STN", "ksk": "KSK", "rde": "RDE", "dml": "DML", "map": "MAP"}
 var touch_more := false
 
 func joy_grab_r() -> float: return JOY_R * 1.7 # one radius table — touch_down AND zone gate share it
@@ -1068,8 +1109,7 @@ func touch_verb(b: String) -> void:
 			game.panel = "build"
 			build_sel = -1
 		"roll":
-			if pl.can_dodge():
-				pl.dodge_t = 0.35; pl.stamina -= 15.0; pl.stam_wait = 0.8
+			pl.dodge()
 		"atk":
 			if pl.statuses.get("sleep", 0) > game.t:
 				return
@@ -1085,50 +1125,48 @@ func draw_touch(r: Vector2) -> void:
 	if game.panel != "":
 		# panels own the taps — but ☰ stays up as ✕, the slab's only way out
 		var c: Vector2 = lay["btns"]["menu"]
-		draw_circle(c, BTN_R, Color(0.9, 0.5, 0.5, 0.14))
-		draw_arc(c, BTN_R, 0, TAU, 24, Color(0.95, 0.6, 0.6, 0.45), 1.5)
+		click_rects.append({"rect": Rect2(c - Vector2(btn_r("menu"), btn_r("menu")),
+			Vector2(btn_r("menu"), btn_r("menu")) * 2.0), "act": "x_close", "arg": null})
+		draw_circle(c, BTN_R, Color(Ink.RED, 0.14))
+		draw_arc(c, BTN_R, 0, TAU, 24, Color(Ink.RED, 0.5), 1.5)
 		draw_string(font, c - Vector2(font.get_string_size("X", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), "X",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.8, 0.8, 0.8))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Ink.RED, 0.85))
 		return
 	if game.state != "play":
 		return
 	var jc: Vector2 = lay["joy"]
-	draw_circle(jc, JOY_R, Color(0.9, 0.95, 1.0, 0.10))
-	draw_arc(jc, JOY_R, 0, TAU, 24, Color(0.9, 0.95, 1.0, 0.30), 1.5)
+	draw_circle(jc, JOY_R, Color(Ink.PAPER, 0.10))
+	draw_arc(jc, JOY_R, 0, TAU, 24, Color(Ink.PAPER, 0.35), 1.5)
 	var knob := jc + game.player.touch_vec * (JOY_R * 0.55)
-	draw_circle(knob, 20, Color(0.3, 0.82, 0.88, 0.55))
-	var labels := {"atk": "ATK", "aim": "AIM", "roll": "ROLL", "e": "E", "orb": "ORB",
-		"inv": "INV", "bld": "BLD", "more": "···", "menu": "≡",
-		"asg": "ASG", "stn": "STN", "ksk": "KSK", "rde": "RDE", "dml": "DML", "map": "MAP"}
+	draw_circle(knob, 20, Color(Ink.TEAL, 0.6))
 	for b in lay["btns"]:
 		var c: Vector2 = lay["btns"][b]
 		var rad := 36.0 if b == "atk" else BTN_R
-		draw_circle(c, rad, Color(0.9, 0.95, 1.0, 0.10))
-		draw_arc(c, rad, 0, TAU, 24, Color(0.9, 0.95, 1.0, 0.35), 1.5)
-		var tl: String = labels[b]
+		draw_circle(c, rad, Color(Ink.PAPER, 0.10))
+		draw_arc(c, rad, 0, TAU, 24, Color(Ink.PAPER, 0.4), 1.5)
+		var tl: String = BTN_LABELS[b]
 		draw_string(font, c - Vector2(font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), tl,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.75))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Ink.PAPER, 0.8))
 	if touch_more:
 		for b in lay["more_row"]:
 			var c2: Vector2 = lay["more_row"][b]
-			draw_circle(c2, MORE_BTN_R, Color(0.85, 0.8, 0.6, 0.14))
-			draw_arc(c2, MORE_BTN_R, 0, TAU, 24, Color(0.95, 0.9, 0.6, 0.4), 1.5)
-			var tl2: String = labels[b]
+			draw_circle(c2, MORE_BTN_R, Color(Ink.GOLD, 0.14))
+			draw_arc(c2, MORE_BTN_R, 0, TAU, 24, Color(Ink.GOLD, 0.45), 1.5)
+			var tl2: String = BTN_LABELS[b]
 			draw_string(font, c2 - Vector2(font.get_string_size(tl2, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x / 2, -4), tl2,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 0.98, 0.85, 0.8))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(Ink.GOLD, 0.85))
 
 func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Color = Color.WHITE) -> float:
 	var rr := Rect2(cx - w / 2, y, w, 30)
 	var hov := (game.state != "play" or game.panel != "") and click_rects.size() == menu_sel # cursor row glows
-	draw_rect(rr, Color(0.09, 0.12, 0.16, 0.95) if hov else Color(0.05, 0.05, 0.07, 0.9))
-	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
+	Ink.tag(self, rr, 1.0, Ink.PAPER_DARK if hov else Ink.PAPER)
 	if hov:
-		draw_rect(Rect2(rr.position + Vector2(2, 4), Vector2(3, 22)), Color("#8ef0ff")) # cursor tick — the eye finds the live row before the border
-	draw_rect(Rect2(cx - w / 2 + 1, y + 29, w - 2, 1), Color(1, 1, 1, 0.05)) # row separator — list rhythm without noise
+		draw_rect(Rect2(rr.position + Vector2(3, 4), Vector2(3, 22)), Ink.ORANGE) # cursor tick — the eye finds the live row before the border
 	click_rects.append({"rect": rr, "act": act, "arg": null})
 	var tl := tr(label)
+	var tc := Ink.INK if col == Color.WHITE else Ink.RED # pale red = the quit row
 	draw_string(font, Vector2(cx - font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), tl,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col)
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, tc)
 	return y + 40
 
 func draw_weather_fx(r: Vector2) -> void:
@@ -1160,44 +1198,48 @@ func draw_weather_fx(r: Vector2) -> void:
 		draw_rect(Rect2(r.x - edge, 0, edge, r.y), danger_col)
 
 func draw_title_sky(r: Vector2) -> void:
-	# procedural dawn over the Wildmere — the title should read as a place,
-	# not a menu on a dim rectangle. All motion runs off game.t: same seeds,
-	# same frame, on any machine.
+	# procedural morning over the Wildmere — a printed travel poster: flat
+	# sky bands, a sun with a dotted halo, an ink ridge. All motion runs off
+	# game.t: same seeds, same frame, on any machine.
 	var t := game.t
-	var sky_top := Color(0.10, 0.18, 0.34)
-	var sky_bot := Color(0.58, 0.40, 0.46)
+	var sky_top := Color(0.75, 0.90, 0.93)  # pale cyan field
+	var sky_bot := Color(0.55, 0.82, 0.89)  # #8fd3e6
 	for i in 16:
 		draw_rect(Rect2(0, r.y * i / 16.0, r.x, r.y / 16.0 + 1.0), sky_top.lerp(sky_bot, i / 15.0))
 	var sun := Vector2(r.x * 0.72, r.y * 0.28)
-	for ring in 4:
-		draw_circle(sun, 44.0 + ring * 18.0, Color(1.0, 0.85, 0.45, 0.045))
-	draw_circle(sun, 40.0, Color(1.0, 0.87, 0.5))
-	for c in 5: # clouds — each on its own slow lane, wrapping forever
+	for i in 14: # the COO halo: a ring of ink dots, never a glow
+		var a := i * TAU / 14.0
+		draw_circle(sun + Vector2(cos(a), sin(a)) * 62.0, 2.6, Ink.ORANGE)
+	draw_circle(sun, 44.0, Ink.PAPER)
+	draw_arc(sun, 44.0, 0, TAU, 48, Ink.INK, 2.0)
+	draw_circle(sun + Vector2(-12, -10), 14.0, Color(Ink.GOLD, 0.45)) # cel shade on the disc
+	for c in 5: # paper clouds — each on its own slow lane, wrapping forever
 		var cxx := fposmod(r.x * (0.08 + c * 0.23) + t * (4.0 + c * 1.3), r.x + 160.0) - 80.0
 		var cyy := r.y * (0.10 + c * 0.055)
 		for b in 3:
 			draw_circle(Vector2(cxx + b * 26.0, cyy - absf(b - 1) * 8.0),
-				22.0 - absf(b - 1) * 6.0, Color(1, 1, 1, 0.10))
+				22.0 - absf(b - 1) * 6.0, Color(Ink.PAPER, 0.5))
 	var sea_y := r.y * 0.68
-	draw_rect(Rect2(0, sea_y, r.x, r.y - sea_y), Color(0.05, 0.16, 0.24))
-	for g in 9: # sun path on the water
+	draw_rect(Rect2(0, sea_y, r.x, r.y - sea_y), Color(0.16, 0.32, 0.42))
+	Ink.dots(self, Rect2(0, sea_y, r.x, r.y - sea_y), 0.14) # halftone swell on the water
+	for g in 9: # sun path on the water — flat gold strokes
 		var gw := 60.0 - g * 6.0
-		draw_rect(Rect2(sun.x - gw / 2, sea_y + g * 14.0, gw, 3.0), Color(1.0, 0.85, 0.5, 0.10 - g * 0.008))
+		draw_rect(Rect2(sun.x - gw / 2, sea_y + g * 14.0, gw, 3.0), Color(Ink.GOLD, 0.22 - g * 0.015))
 	draw_polygon(PackedVector2Array([Vector2(0, sea_y), Vector2(r.x * 0.18, sea_y - 46),
 		Vector2(r.x * 0.34, sea_y - 20), Vector2(r.x * 0.52, sea_y - 64),
 		Vector2(r.x * 0.7, sea_y - 30), Vector2(r.x, sea_y - 56), Vector2(r.x, sea_y)]),
-		PackedColorArray([Color(0.04, 0.10, 0.14)])) # the island ridge the whole game happens on
+		PackedColorArray([Ink.EDGE])) # the island ridge the whole game happens on
 	for tri in 14: # tree spikes — cheap silhouette, reads as forest at a glance
 		var tx := r.x * (0.06 + tri * 0.068)
 		var th := 14.0 + sin(tri * 7.0) * 8.0
 		var ty := sea_y - 8.0 - 30.0 * maxf(0.0, sin(tri * 1.7))
 		draw_colored_polygon(PackedVector2Array([Vector2(tx, ty - th), Vector2(tx - 7, ty), Vector2(tx + 7, ty)]),
-			Color(0.05, 0.14, 0.12))
+			Ink.INK)
 	for m in 18: # motes drifting up off the water
 		var mx := fposmod(m * 137.0 + t * 6.0, r.x)
 		var my := r.y * 0.15 + fposmod(m * 89.0 + t * 3.0, r.y * 0.5)
-		draw_circle(Vector2(mx, my), 1.2, Color(1, 0.95, 0.7, 0.35))
-	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.06, 0.42)) # vignette — menu contrast over the scene
+		draw_circle(Vector2(mx, my), 1.2, Color(Ink.PAPER, 0.55))
+	draw_rect(Rect2(Vector2.ZERO, r), Color(Ink.INK, 0.30)) # vignette — menu contrast over the scene
 
 func draw_title(r: Vector2) -> void:
 	draw_title_sky(r)
@@ -1205,22 +1247,24 @@ func draw_title(r: Vector2) -> void:
 	var ty := r.y * 0.22
 	var brand := tr("Kinbound").to_upper() # the logo rides the locale table like everything else
 	var bw := font.get_string_size(brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56).x
-	draw_string(font, Vector2(cx - bw / 2 + 2, ty + 2), brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color(0, 0, 0, 0.55))
+	draw_string(font, Vector2(cx - bw / 2 + 3, ty + 4), brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Ink.INK) # hard offset shadow
+	draw_string(font, Vector2(cx - bw / 2 - 1.5, ty - 1.5), brand, HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color(Ink.RED, 0.5)) # misregistered plate
 	draw_string(font, Vector2(cx - bw / 2, ty), brand,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Color("#e8d44d"))
-	draw_rect(Rect2(cx - bw / 2, ty + 12, bw, 3), Color("#e8d44d")) # the gold rule under the wordmark
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 56, Ink.PAPER)
+	draw_rect(Rect2(cx - bw / 2, ty + 12, bw, 3), Ink.ORANGE) # the signal rule under the wordmark
 	for orb in [-1, 1]: # the orb motif flanking the mark — the game's own sigil
 		var ox: float = cx + orb * (bw / 2 + 34.0)
-		draw_circle(Vector2(ox, ty - 16), 10, Color("#e8d44d"))
-		draw_circle(Vector2(ox, ty - 16), 6, Color(0.08, 0.14, 0.2))
-		draw_circle(Vector2(ox - 2, ty - 19), 2, Color(1, 1, 1, 0.85))
+		draw_circle(Vector2(ox, ty - 16), 10, Ink.GOLD)
+		draw_arc(Vector2(ox, ty - 16), 10, 0, TAU, 24, Ink.INK, 1.5)
+		draw_circle(Vector2(ox, ty - 16), 6, Ink.INK)
+		draw_circle(Vector2(ox - 2, ty - 19), 2, Ink.PAPER)
 	var tagline := tr("the Wildmere keeps what you catch")
-	draw_string(font, Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.8, 0.85))
+	wtext(Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
+		Ink.PAPER)
 	var y := r.y * 0.42
 	for row in title_rows():
 		y = menu_row(cx, y, 220, row[0], row[1], row[2])
-	draw_string(font, Vector2(14, r.y - 12), tr("enter = continue · click a row"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 0.55, 0.6))
+	draw_string(font, Vector2(14, r.y - 12), tr("enter = continue · click a row"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(Ink.PAPER, 0.6))
 
 func title_rows() -> Array: # the title menu's rows as data — pad nav and smoke both read this
 	var rows := []
@@ -1234,13 +1278,15 @@ func title_rows() -> Array: # the title menu's rows as data — pad nav and smok
 	return rows
 
 func draw_pause(r: Vector2) -> void:
-	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.6))
+	draw_rect(Rect2(Vector2.ZERO, r), Color(Ink.INK, 0.55))
 	var cx := r.x / 2
 	var ptxt := tr("MENU — the world keeps running") if game.net_live() else tr("PAUSED")
 	var pw := font.get_string_size(ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+	draw_string(font, Vector2(cx - pw / 2 + 2, r.y * 0.3 + 2), ptxt,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Ink.INK)
 	draw_string(font, Vector2(cx - pw / 2, r.y * 0.3), ptxt,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
-	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 6, pw, 2), Color(0.91, 0.83, 0.30, 0.4)) # gold rule under the header
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Ink.PAPER)
+	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 6, pw, 2), Ink.ORANGE) # signal rule under the header
 	var rows := pause_rows()
 	if rows.size() <= 7:
 		var y := r.y * 0.42
@@ -1260,7 +1306,8 @@ func pause_rows() -> Array:
 		rows.append(["HOST SESSION", "m_host"])
 	if game.net_live():
 		rows.append(["CHAT", "m_chat"])
-	rows.append(["TECH TREE", "m_tech"])
+	if game.net == null or not game.net.is_client():
+		rows.append(["TECH TREE", "m_tech"]) # research is host business — guests get a dead panel otherwise
 	rows.append(["KINDEX", "m_dex"])
 	rows.append(["STATUES", "m_statues"])
 	rows.append(["GUIDE", "m_guide"])
@@ -1270,61 +1317,61 @@ func pause_rows() -> Array:
 
 func draw_settings(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 190, r.y * 0.25, 380, 300)
-	draw_rect(rr, Color(0.04, 0.05, 0.07, 0.95))
-	draw_rect(rr, Color(0.35, 0.42, 0.5, 0.8), false, 1.0)
-	draw_string(font, Vector2(rr.position + Vector2(16, 26)), tr("SETTINGS"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#e8d44d"))
+	Ink.card(self, rr)
+	draw_string(font, Vector2(rr.position + Vector2(16, 26)), tr("SETTINGS"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Ink.GOLD)
 	var y := rr.position.y + 54
 	for b in [["master", "MASTER"], ["music", "MUSIC"], ["sfx", "SFX"]]:
 		var v: float = game.settings[b[0]]
 		draw_string(font, Vector2(rr.position.x + 24, y + 14), "%s  %d%%" % [tr(b[1]), int(v * 100)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
-		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Color(0.12, 0.14, 0.16))
-		draw_rect(Rect2(rr.position.x + 140, y + 4, 150.0 * v, 14), Color("#4dd0e1"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
+		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Ink.PAPER_DARK)
+		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Ink.INK_SOFT, false, 1.0)
+		draw_rect(Rect2(rr.position.x + 140, y + 4, 150.0 * v, 14), Ink.TEAL)
 		var mr1 := Rect2(rr.position.x + 296, y, 28, 22)
 		var mr2 := Rect2(rr.position.x + 330, y, 28, 22)
 		click_rects.append({"rect": mr1, "act": "vol_%s_m" % b[0], "arg": null})
 		click_rects.append({"rect": mr2, "act": "vol_%s_p" % b[0], "arg": null})
-		draw_string(font, mr1.position + Vector2(9, 16), "-", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-		draw_string(font, mr2.position + Vector2(8, 16), "+", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		draw_string(font, mr1.position + Vector2(9, 16), "-", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.INK)
+		draw_string(font, mr2.position + Vector2(8, 16), "+", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.INK)
 		y += 38
 	y += 8
 	var fs := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": fs, "act": "fullscreen", "arg": null})
 	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), "%s  [%s]" % [tr("FULLSCREEN"), tr("ON") if game.settings["fullscreen"] else tr("off")],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["fullscreen"] else Color.WHITE)
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.settings["fullscreen"] else Ink.INK)
 	y += 32
 	var rd := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": rd, "act": "raids_tgl", "arg": null})
 	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), "%s  [%s]" % [tr("BASE RAIDS"), tr("ON") if game.settings["raids"] else tr("off")],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.settings["raids"] else Color(0.7, 0.7, 0.7))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.settings["raids"] else Ink.INK_SOFT)
 	y += 32
 	var lg := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": lg, "act": "lang_tgl", "arg": null})
 	draw_string(font, Vector2(lg.position.x, lg.position.y + 18), "%s  [%s]" % [tr("LANGUAGE"), "中文" if game.settings.get("lang", "en") == "zh" else "EN"],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 	y += 32
 	var tg := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": tg, "act": "touch_tgl", "arg": null})
 	draw_string(font, Vector2(tg.position.x, tg.position.y + 18), "%s  [%s]" % [tr("TOUCH CONTROLS"), tr(str(game.settings.get("touch", "auto")).to_upper())],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1") if game.touch_ui else Color(0.7, 0.7, 0.7))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.touch_ui else Ink.INK_SOFT)
 	y += 44
 	var bk := Rect2(rr.position.x + 24, y, 120, 28)
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})
-	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), "[ %s ]" % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
+	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), "[ %s ]" % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()
 	var bx := 10.0
 	var by := r.y - 200.0
-	draw_rect(Rect2(bx, by, 620, 56), Color(0, 0, 0, 0.75))
+	Ink.card(self, Rect2(bx, by, 620, 56), Ink.PAPER, 0.0, 3.0)
 	draw_string(font, Vector2(bx + 8, by + 16), "BUILD — tap/1-9 pick, tap again to cancel" + ("  (placing: %s)" % StructureData.STRUCTURES[game.buildable_list()[build_sel]]["name"] if build_sel >= 0 else ""),
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#4dd0e1"))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 	for i in range(mini(9, lst.size())):
 		var s: Dictionary = StructureData.STRUCTURES[lst[i]]
 		var cost := ""
 		for c in s.get("cost", []):
 			cost += "%d%s " % [c[1], c[0].left(4)]
-		var col := Color("#4dd0e1") if i == build_sel else Color.WHITE
+		var col := Ink.ORANGE if i == build_sel else Ink.INK
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
 		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": i})
@@ -1332,9 +1379,9 @@ func draw_build_bar(r: Vector2) -> void:
 
 func draw_tech(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)
-	draw_rect(rr, Color(0, 0, 0, 0.85))
+	Ink.card(self, rr)
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "TECH  (pts: %d)" % game.tech_points,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8d44d"))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
 	var colw := 232.0
 	var cap := int((rr.size.x - 24) / colw) * 18 # columns × rows that actually fit
 	tech_scroll = clampi(tech_scroll, 0, maxi(0, StructureData.TECH.size() - cap))
@@ -1348,9 +1395,9 @@ func draw_tech(r: Vector2) -> void:
 		var has: bool = k in game.unlocked
 		var afford: bool = game.tech_points >= t.get("cost", 0) \
 			and game.item_count("ancient_part") >= t.get("parts", 0)
-		var col := Color("#5a6068") if has else (Color.WHITE if afford else Color("#7a6a55"))
+		var col := Ink.INK_SOFT if has else (Ink.INK if afford else Ink.LILAC)
 		if t.get("parts", 0) > 0 and not has:
-			col = Color("#9c8bd4") if afford else Color("#5a4a80") # ancient tech is purple
+			col = Ink.VIOLET if afford else Color(Ink.VIOLET, 0.5) # ancient tech is purple
 		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), t.get("name", k).left(14), t.get("cost", 0),
 			"+%d❖" % t["parts"] if t.get("parts", 0) > 0 else "", " ✓" if has else ""]
 		var cy0: float = rr.position.y + 44 + (di % 18) * 17
@@ -1363,8 +1410,8 @@ func draw_tech(r: Vector2) -> void:
 
 func draw_chest(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 220, 150, 440, 300)
-	draw_rect(rr, Color(0, 0, 0, 0.85))
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CHEST", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8c97a"))
+	Ink.card(self, rr)
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CHEST", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
 	var st = game.chest_ref
 	if st == null:
 		return
@@ -1373,15 +1420,15 @@ func draw_chest(r: Vector2) -> void:
 	var rect2 := Rect2(rr.position.x + 230, y - 12, 190, 20)
 	click_rects.append({"rect": rect1, "act": "chest_dep", "arg": null})
 	click_rects.append({"rect": rect2, "act": "chest_wd", "arg": null})
-	draw_string(font, rect1.position, "[ deposit all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
-	draw_string(font, rect2.position, "[ take all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
+	draw_string(font, rect1.position, "[ deposit all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
+	draw_string(font, rect2.position, "[ take all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 	y += 28
 	var skeys: Array = st.get("store", {}).keys()
 	chest_scroll = clampi(chest_scroll, 0, maxi(0, skeys.size() - 12))
 	for i2 in range(chest_scroll, skeys.size()):
 		var iid: String = skeys[i2]
 		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [ItemData.ITEMS.get(iid, {}).get("name", iid), st["store"][iid]],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 		y += 18
 		if y > rr.end.y - 16:
 			break
@@ -1390,8 +1437,8 @@ func draw_chest(r: Vector2) -> void:
 
 func draw_craft(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 60, 480, 560)
-	draw_rect(rr, Color(0, 0, 0, 0.85))
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8963c"))
+	Ink.card(self, rr)
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.ORANGE)
 	var y := rr.position.y + 48
 	# the island repair: a worn weapon mends at the bench for half its recipe
 	var rep := game.repair_quote()
@@ -1404,7 +1451,7 @@ func draw_craft(r: Vector2) -> void:
 		var wnm: String = ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "?")
 		draw_string(font, Vector2(rrect.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [wnm,
 			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(46)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff") if rep["afford"] else Color("#5a6068"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep["afford"] else Ink.INK_SOFT)
 		y += 24
 	var rep_a := game.repair_quote_armor()
 	if not rep_a.is_empty():
@@ -1416,7 +1463,7 @@ func draw_craft(r: Vector2) -> void:
 		var anm: String = ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "?")
 		draw_string(font, Vector2(rrect_a.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [anm,
 			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(46)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff") if rep_a["afford"] else Color("#5a6068"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep_a["afford"] else Ink.INK_SOFT)
 		y += 24
 	var vis := []
 	for rec in ItemData.RECIPES:
@@ -1441,7 +1488,7 @@ func draw_craft(r: Vector2) -> void:
 		var rect := Rect2(rr.position.x + 16, y - 12, 440, 18)
 		click_rects.append({"rect": rect, "act": "craft", "arg": rec["id"]})
 		draw_string(font, Vector2(rect.position.x, y), "%s x%d  <-  %s" % [out_name, rec["out"][1], cost.left(50)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE if afford else Color("#5a6068"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK if afford else Ink.INK_SOFT)
 		y += 20
 		if y > rr.end.y - 16:
 			break
@@ -1449,25 +1496,25 @@ func draw_craft(r: Vector2) -> void:
 		_scroll_btns(rr, "craft_up", "craft_dn")
 	if not game.craft_queue.is_empty(): # the island bench queue: builds tick down live
 		y += 8
-		draw_string(font, Vector2(rr.position.x + 16, y), "QUEUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
+		draw_string(font, Vector2(rr.position.x + 16, y), "QUEUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
 		y += 16
 		for cq in game.craft_queue:
 			if y > rr.end.y - 14:
 				break
 			var nm: String = ItemData.ITEMS.get(cq["out"], {}).get("name", cq["out"])
 			draw_string(font, Vector2(rr.position.x + 16, y), "  %s x%d  %.0fs" % [nm, cq["n"], cq["left"]],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#a8e6a1"))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN)
 			y += 15
 
 func draw_inv(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 230, 60, 460, 500)
-	draw_rect(rr, Color(0, 0, 0, 0.85))
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a8e6a1"))
+	Ink.card(self, rr)
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GREEN)
 	# the island carry weight: the bag drags once it tops capacity
 	var pl := game.player
 	var over: bool = pl.carry_wt() > pl.carry_cap()
 	draw_string(font, Vector2(rr.position + Vector2(330, 24)), "Wt %d/%d" % [int(pl.carry_wt()), int(pl.carry_cap())],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e0503c") if over else Color("#9fd8ff"))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.RED if over else Ink.TEAL)
 	var keys := game.items.keys()
 	keys.sort()
 	var colw := 222.0
@@ -1494,50 +1541,50 @@ func draw_inv(r: Vector2) -> void:
 			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
 			nm += "  [use]"
 		draw_string(font, Vector2(cx0, y0), "%s x%d" % [nm.left(16), game.items[k]],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e") if usable else Color.WHITE)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD if usable else Ink.INK)
 	if keys.size() > rows:
 		_scroll_btns(rr, "inv_up", "inv_dn")
 
 func draw_kinbox(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 540)
-	draw_rect(rr, Color(0, 0, 0, 0.85))
+	Ink.card(self, rr)
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "KINBOX — click to swap party/base",
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#4dd0e1"))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.TEAL)
 	# the island base level: the terminal grades your base and pays slots
 	var blv_txt := "BASE LV%d" % game.base_level
 	if game.base_level < game.BASE_LEVEL_MAX:
 		var bmet: bool = game.base_mission_done(game.base_level)
 		blv_txt += " · next: " + game.BASE_MISSION_TEXT[game.base_level]
 		draw_string(font, Vector2(rr.position.x + 330, rr.position.y + 24), blv_txt,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#a8e6a1") if bmet else Color(0.6, 0.6, 0.65))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN if bmet else Ink.INK_SOFT)
 		if bmet and (game.net == null or not game.net.is_client()):
 			click_rects.append({"rect": Rect2(rr.position.x + 505, rr.position.y + 12, 80, 20),
 				"act": "base_up"})
 			draw_string(font, Vector2(rr.position.x + 505, rr.position.y + 26), "[UPGRADE]",
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#ffd76e"))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	else:
 		draw_string(font, Vector2(rr.position.x + 330, rr.position.y + 24), blv_txt + " MAX",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var y := rr.position.y + 44
-	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c8f0d0"))
+	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 	y += 18
 	for pr in party_rows():
 		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 		click_rects.append({"rect": rect, "act": "party_in", "arg": pr["uid"]})
 		click_rects.append({"rect": Rect2(rect.position + Vector2(254, 0), Vector2(52, 17)), "act": "deploy", "arg": pr["arg"]})
-		draw_string(font, Vector2(rect.position + Vector2(254, 13)), "[>base]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#a8e6a1"))
+		draw_string(font, Vector2(rect.position + Vector2(254, 13)), "[>base]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GREEN)
 		click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": pr["uid"]})
 		draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[▼]" if pr["out"] else "[*]",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd76e"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GOLD)
 		if game.net == null or not game.net.is_client(): # host-owned pals only
 			click_rects.append({"rect": Rect2(rect.position + Vector2(342, 0), Vector2(34, 17)), "act": "skills", "arg": pr["arg"]})
 			draw_string(font, Vector2(rect.position + Vector2(344, 13)), "[mv]",
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#8ef0ff"))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.TEAL)
 		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d T%d %s HP%d/%d" % [
 			"● " if pr["out"] else "○ ", pr["name"],
 			"☆" if pr["lucky"] else "", pr["sex"], pr["star_s"], pr["lv"], pr["talent"],
 			(pr["ailment"] + "! ") if pr["ailment"] != "" else pr["sub"], pr["hp"], pr["max_hp"]],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8a0a0") if pr["ailment"] != "" else Color.WHITE)
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if pr["ailment"] != "" else Ink.INK)
 		y += 17
 	# deployed workforce (the island: kin working the base live in the world)
 	var workers := game.base_pals()
@@ -1546,7 +1593,7 @@ func draw_kinbox(r: Vector2) -> void:
 	if not workers.is_empty():
 		y += 8
 		draw_string(font, Vector2(rr.position.x + 16, y), "BASE (%d/%d) — click to recall" % [workers.size(), game.max_base_pals()],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8dff0"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 		y += 18
 		for wp in workers:
 			var wrect := Rect2(rr.position.x + 24, y - 11, 250, 17)
@@ -1557,15 +1604,15 @@ func draw_kinbox(r: Vector2) -> void:
 				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
 				wp.job_site["id"] if wp.job_site else "idle",
 				" [%s]" % wp.ailment if wp.ailment != "" else ""],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if wp.ailment != "" else Color("#a8dff0"))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if wp.ailment != "" else Ink.TEAL)
 			if game.net == null or not game.net.is_client():
 				click_rects.append({"rect": Rect2(wrect.position + Vector2(258, 0), Vector2(34, 17)), "act": "skills", "arg": wp})
 				draw_string(font, Vector2(wrect.position.x + 260, y), "[mv]",
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#8ef0ff"))
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.TEAL)
 			y += 17
 	y += 10
 	var brows := box_rows()
-	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % brows.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
+	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % brows.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
 	y += 18
 	var colw := 288.0
 	var rows: int = int((rr.end.y - y - 8) / 16)
@@ -1583,18 +1630,18 @@ func draw_kinbox(r: Vector2) -> void:
 		var frect := Rect2(cx0 + colw - (52 if butcher else 30), y0 - 11, 20, 16)
 		click_rects.append({"rect": frect, "act": "fav", "arg": rd["uid"]})
 		draw_string(font, Vector2(frect.position.x + 3, y0), "♥" if rd["fav"] else "♡",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e86a92") if rd["fav"] else Color(0.55, 0.55, 0.55))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if rd["fav"] else Ink.INK_SOFT)
 		if butcher:
 			var brect := Rect2(cx0 + colw - 30, y0 - 11, 22, 16)
 			click_rects.append({"rect": brect, "act": "butcher", "arg": rd["uid"]})
 			draw_string(font, Vector2(brect.position.x + 3, y0), "[x]",
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#c0392b"))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED)
 		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s %s" % [rd["name"], "☆" if rd["lucky"] else "", rd["sex"], rd["star_s"], rd["lv"], rd["talent"],
 			int(maxi(0, rd["hp"])), int(rd["max_hp"]), rd["ko_t"],
 			" [%s]" % rd["ailment"] if rd["ailment"] != "" else "",
 			str(rd.get("wk", "")).left(15)]
 		draw_string(font, Vector2(cx0, y0), label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if rd["ko"] or rd["ailment"] != "" else Color("#c8d3d5"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if rd["ko"] or rd["ailment"] != "" else Ink.INK_SOFT)
 	if brows.size() > rows:
 		_scroll_btns(rr, "kin_up", "kin_dn")
 
@@ -1733,6 +1780,31 @@ func draw_shop(r: Vector2) -> void:
 	if maxi(game.merchant_stock.size(), sell_n) > 22:
 		_scroll_btns(rr, "shop_up", "shop_dn", rr.position.x + 289, true) # column gutter
 
+var _dex_cache := []
+var _dex_key := ""
+
+func _dex_ids() -> Array:
+	# caught first (most caught on top), then spotted, then the unknown dark —
+	# recompute only when the catch book changes, not every painted frame
+	var key := "%d|%d|%d" % [game.catch_counts.size(), game.dex_seen.size(),
+		game.catch_counts.values().reduce(func(a, b): return int(a) + int(b), 0)]
+	if key == _dex_key:
+		return _dex_cache
+	var ids := []
+	for sid in SpeciesData.SPECIES:
+		ids.append(sid)
+	for sid in SpeciesGen.SPECIES:
+		if not SpeciesData.SPECIES.has(sid):
+			ids.append(sid)
+	ids.sort_custom(func(a, b):
+		var ca: int = game.catch_counts.get(a, 0); var cb: int = game.catch_counts.get(b, 0)
+		var sa: bool = ca > 0 or game.dex_seen.has(a); var sb: bool = cb > 0 or game.dex_seen.has(b)
+		if ca != cb: return ca > cb
+		if sa != sb: return sa
+		return str(SpeciesData.species_of(a).get("name", a)) < str(SpeciesData.species_of(b).get("name", b)))
+	_dex_cache = ids; _dex_key = key
+	return ids
+
 func sellable_pals() -> Array: # only your OWN kin ride the sell rail — guests' stay off it
 	var out: Array = []
 	for bp in game.box:
@@ -1805,7 +1877,7 @@ func _text_btns(rr: Rect2, ok_act: String) -> void:
 	click_rects.append({"rect": cx, "act": "text_cancel", "arg": null})
 
 func draw_join(r: Vector2) -> void:
-	var rr := Rect2(10, r.y - 58, 520, 44)
+	var rr := Rect2(10, r.y - 58 - _vkbd_lift(), 520, 44)
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), tr("Join IP (blank=localhost): ") + join_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9fd8ff"))
@@ -1837,19 +1909,7 @@ func draw_travel(r: Vector2) -> void:
 func draw_dex(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 560)
 	draw_rect(rr, Color(0, 0, 0, 0.85))
-	# caught first (most caught on top), then spotted, then the unknown dark
-	var ids := []
-	for sid in SpeciesData.SPECIES:
-		ids.append(sid)
-	for sid in SpeciesGen.SPECIES:
-		if not SpeciesData.SPECIES.has(sid):
-			ids.append(sid)
-	ids.sort_custom(func(a, b):
-		var ca: int = game.catch_counts.get(a, 0); var cb: int = game.catch_counts.get(b, 0)
-		var sa: bool = ca > 0 or game.dex_seen.has(a); var sb: bool = cb > 0 or game.dex_seen.has(b)
-		if ca != cb: return ca > cb
-		if sa != sb: return sa
-		return str(SpeciesData.species_of(a).get("name", a)) < str(SpeciesData.species_of(b).get("name", b)))
+	var ids := _dex_ids() # the sort is O(n log n) of ~200 species — cache it
 	var caught := game.catch_counts.size()
 	var seen_n: int = game.dex_seen.size()
 	draw_string(font, rr.position + Vector2(16, 24),
@@ -1891,8 +1951,12 @@ func draw_dex(r: Vector2) -> void:
 	if ids.size() > rows:
 		_scroll_btns(rr, "dex_up", "dex_dn")
 
+func _vkbd_lift() -> float:
+	# the OS keyboard this HUD summoned eats the bottom ~40% — ride above it
+	return float(DisplayServer.virtual_keyboard_get_height()) if _vkbd_open else 0.0
+
 func draw_chat(r: Vector2) -> void:
-	var rr := Rect2(12, r.y - 40, 480, 28)
+	var rr := Rect2(12, r.y - 40 - _vkbd_lift(), 480, 28)
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), tr("Say: ") + chat_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))

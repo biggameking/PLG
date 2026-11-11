@@ -29,6 +29,8 @@ var drops: Array = []        # ground drops {id,n,pos,node,did}
 var net_drops := {}          # client-side drop replicas: did -> {id,n,pos,node}
 var net_box := []            # client-side mirror of the host's box roster (dicts)
 var net_party := []          # client-side mirror of the host's party roster (dicts)
+var net_residue := false     # this world came down the wire — never write it over a real save
+var net_unlocked := []       # host's tech list mirror; empty = not a client / no constraint
 var remote_parties := {}     # multiplayer: owner_tag -> [pal uids] — each guest's own party strip
 const MAX_REMOTE_TAGS := 32  # a roster row per keeper — enough guests for any sane co-op night
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
@@ -60,7 +62,6 @@ const MAX_EXTRA_BOXES := 2          # the island runs up to 3 bases — 1 primar
 var extra_boxes: Array[Vector2i] = [] # outpost kinbox origins, shared box network
 var tech_points := 0
 var unlocked := ["kinbox", "kin_bed", "feed_box", "campfire", "workbench", "straw_bed"]
-var build_sel := -1           # index into buildable list; -1 off
 var craft_target: Node2D = null
 var state := "title" # title | play | paused — sim and player input gate on this
 var panel := ""
@@ -2122,7 +2123,12 @@ func _process(dt: float) -> void:
 func buildable_list() -> Array:
 	# only tech nodes that are actual structures — spear/orb/axe techs
 	# unlock recipes, not buildings (selecting them crashed place_structure)
-	return unlocked.filter(func(id): return StructureData.STRUCTURES.has(id))
+	var out := unlocked.filter(func(id): return StructureData.STRUCTURES.has(id))
+	if net != null and net.is_client() and not net_unlocked.is_empty():
+		# the host's tech is the truth — offering more than it has costs real
+		# materials when the host's gate refuses (deny refunds, but don't show it)
+		out = out.filter(func(id): return net_unlocked.has(id))
+	return out
 
 func can_place(sid: String, tx: int, ty: int) -> bool:
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
@@ -2266,7 +2272,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	sfx_play("build")
 	return true
 
-func place_free(sid: String, tx: int, ty: int) -> bool:
+func place_free(sid: String, tx: int, ty: int, store: Dictionary = {}) -> bool:
 	# Cost-free placement used by net state_sync and world-gen lair markers.
 	var s: Dictionary = StructureData.STRUCTURES.get(sid, {})
 	if s.is_empty():
@@ -2287,7 +2293,7 @@ func place_free(sid: String, tx: int, ty: int) -> bool:
 	entity_layer.add_child(spr)
 	if s.get("light", 0) > 0:
 		add_glow(spr, s["light"])
-	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": {},
+	var st := {"id": sid, "node": spr, "timer": 0.0, "workers": [], "store": store.duplicate(),
 		"hp": s.get("hp", 4000 if s.get("anchor", false) else 200),
 		"walkable": s.get("walkable", false), "spike": s.get("spike", 0),
 		"turret": s.get("turret", 0), "snare": s.get("snare", false),
@@ -2316,6 +2322,11 @@ func demolish_at(at: Vector2) -> bool:
 	if not st:
 		log_msg("Nothing to demolish")
 		return false
+	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false):
+		if st.get("pos") == kinbox_pos and extra_boxes.is_empty():
+			log_msg("The kinbox anchors the base — nobody razes it")
+			return false # the LAST anchor seals the box and the respawn point
+		# backups exist or this IS a backup — the box network survives the raze
 	if net != null and net.is_client():
 		# host razes it; the refund goes to the shared base store, not our bag
 		net.rpc("demolish_req", int(at.x), int(at.y))
@@ -3588,6 +3599,9 @@ func save_game() -> void:
 	if net != null and net.is_client():
 		log_msg(tr("The world lives on the host — nothing to save locally"))
 		return # a client's replica snapshot must never clobber the solo save
+	if net_residue:
+		log_msg("A dropped session's world can't be saved")
+		return # host gone ≠ yours — the Frankenstein snapshot would eat the real save
 	var pals_data := []
 	for p in pals:
 		var jc = null
@@ -4093,8 +4107,15 @@ func load_game() -> bool:
 		if not home2: # the post is gone — the pal walks back in
 			lp2.mode = "base"
 			lp2.visible = true
+	_reset_shell_state()
+	net_residue = false # a loaded solo world is yours again — residue lifted
+	log_msg(tr("Loaded."))
+	return true
+
+func _reset_shell_state() -> void:
 	# stale shell state must not leak across a world swap: an armed raid horn,
-	# an open panel, a dead chest ref, a held aim — none of them survive the load
+	# an open panel, a dead chest ref, a held aim — none of them survive it.
+	# load_game and regenerate both swap the world — one reset serves both.
 	raid_warned = false
 	raid_theme = ""
 	panel = ""
@@ -4103,11 +4124,9 @@ func load_game() -> bool:
 	if player != null:
 		player.aiming = false
 		player.dodge_t = 0.0
-		player.touch_vec = Vector2.ZERO # a load mid-drift must not inherit the stick
+		player.touch_vec = Vector2.ZERO # a swap mid-drift must not inherit the stick
 		player.touch_sprint = false
 		if hud != null: hud.joy_idx = -1 # ...nor its owner finger
-	log_msg(tr("Loaded."))
-	return true
 
 # monitoring stand work pace (the island: normal/hard/super-hard). Needs the
 # stand built to mean anything; default 1 preserves the classic x1.4 boost.
@@ -5144,6 +5163,7 @@ func spawn_legendary_den() -> void:
 		return
 
 func regenerate(s: int) -> void:
+	_reset_shell_state() # a swapped world can't keep the old one's open panels
 	for p in pals:
 		if is_instance_valid(p):
 			p.queue_free()
@@ -5592,9 +5612,12 @@ func struct_sync(arr: Array) -> void:
 		var k := Vector2i(int(e[1]), int(e[2]))
 		seen[k] = sid
 		var cur = structures.get(k)
+		var has_store: bool = e.size() > 3 and e[3] is Dictionary
 		if cur != null and cur["id"] == sid and cur.get("pos", k) == k:
-			continue # already mirrored at this origin
-		place_free(sid, k.x, k.y)
+			if has_store:
+				cur["store"] = e[3] # chest truth rides the wire — refresh it
+			continue # a pack without a store field must not zero what's there
+		place_free(sid, k.x, k.y, e[3] if has_store else {})
 	var uniq := []
 	for k in structures.keys():
 		var st: Dictionary = structures[k]

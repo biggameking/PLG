@@ -2122,9 +2122,10 @@ func run() -> void:
 			var st0: Dictionary = game.structures[k0]
 			if st0.get("pos", k0) == k0:
 				pk1.append([st0["id"], k0.x, k0.y])
-		pk1.append(["campfire", free_spot.x, free_spot.y])
+		pk1.append(["campfire", free_spot.x, free_spot.y, {"wood": 3}]) # chest truth rides element 4
 		game.struct_sync(pk1)
 		check("struct sync adds", game.structures.has(free_spot))
+		check("store rides the wire", game.structures[free_spot].get("store", {}).get("wood", 0) == 3)
 		game.struct_sync(pk1.slice(0, pk1.size() - 1))
 		check("struct sync despawns", not game.structures.has(free_spot))
 		if not game.net.ghosts.has(99):
@@ -4712,6 +4713,120 @@ func run() -> void:
 	hudn._unhandled_input(act_ev)
 	check("key route respects reach", game.messages.back() in
 		["Too far to demolish", "Nothing to demolish"], "msg=%s" % game.messages.back())
+
+	# ---- S33 audit batch: anchor, residue, tech-sync, touch polish ----
+	# the LAST kinbox is anchored — a backup or a lone outpost still razes clean
+	var xb_bak := game.extra_boxes.duplicate()
+	var kb_bak: Vector2i = game.kinbox_pos
+	var kb_t: Vector2i = game.kinbox_pos
+	var planted_kb := false
+	var cur_kb = game.structures.get(kb_t)
+	if cur_kb == null or not StructureData.STRUCTURES.get(cur_kb["id"], {}).get("anchor", false):
+		# phantom kinbox_pos (earlier fixtures can leave it pointing at air) —
+		# plant a real anchor: the contract is about the LAST base standing
+		for rad in range(3, 10):
+			for ang9 in range(16):
+				var ck3 := Vector2i(int(p.pos.x + cos(ang9 * TAU / 16.0) * rad),
+					int(p.pos.y + sin(ang9 * TAU / 16.0) * rad))
+				if game.can_place("kinbox", ck3.x, ck3.y):
+					game.place_free("kinbox", ck3.x, ck3.y)
+					kb_t = ck3; planted_kb = true; break
+			if planted_kb: break
+		if planted_kb:
+			game.kinbox_pos = kb_t
+	game.extra_boxes = [] # isolate: no backup to promote — the anchor must hold
+	check("last kinbox refuses the raze",
+		game.structures.has(kb_t)
+		and not game.demolish_at(Vector2(kb_t.x + 0.5, kb_t.y + 0.5))
+		and game.structures.has(kb_t) and game.kinbox_pos == kb_t
+		and game.messages.back() == "The kinbox anchors the base — nobody razes it",
+		"pos=%s has=%s msg=%s" % [kb_t, game.structures.has(kb_t), game.messages.back()])
+	if planted_kb: # it refused — take the fixture down and restore the books
+		game.net_remove_structure(game.structures[kb_t])
+		game.kinbox_pos = kb_bak
+	game.extra_boxes = xb_bak
+	# ...while an outpost backup is still a normal structure — razes clean
+	var kb_ok := false; var kb_k := Vector2i.ZERO
+	for rad in range(3, 8):
+		for ang9 in range(16):
+			var ck3 := Vector2i(int(p.pos.x + cos(ang9 * TAU / 16.0) * rad),
+				int(p.pos.y + sin(ang9 * TAU / 16.0) * rad))
+			if game.can_place("kinbox", ck3.x, ck3.y):
+				game.place_free("kinbox", ck3.x, ck3.y); kb_k = ck3; kb_ok = true; break
+		if kb_ok: break
+	if kb_ok:
+		var kb_t2: Vector2i = game.kinbox_pos
+		check("outpost backup razes clean", game.demolish_at(Vector2(kb_k.x + 0.5, kb_k.y + 0.5))
+			and not game.structures.has(kb_k) and game.kinbox_pos == kb_t2
+			and not game.extra_boxes.has(kb_k), "primary=%s" % game.kinbox_pos)
+	else:
+		check("outpost backup razes clean", false, "no outpost spot seeded")
+	game.extra_boxes = xb_bak # placement/demolish is self-cleaning — belt and braces
+	# residue world: a dropped session must never write over a real save
+	game.net_residue = true
+	game.save_game()
+	check("residue refuses the save", game.messages.back() == "A dropped session's world can't be saved",
+		"msg=%s" % game.messages.back())
+	game.net_residue = false
+	var party_bak := game.party.duplicate()
+	game.net_party = [{"uid": 9, "sp": "x"}]; game.net_box = [{"uid": 8}]; game.party = [9, 8]
+	game.net._on_server_disconnected() # mirrors + dead uid strip die with the session
+	check("disconnect drops the mirrors", game.net_party.is_empty() and game.net_box.is_empty()
+		and game.party.is_empty() and game.net.multiplayer.multiplayer_peer == null)
+	game.party = party_bak
+	# host tech bounds the client's build bar; locked blueprints refund
+	var cli_peer := ENetMultiplayerPeer.new()
+	cli_peer.create_client("127.0.0.1", 1)
+	game.net.multiplayer.multiplayer_peer = cli_peer
+	game.net.is_host = false
+	game.net_unlocked = ["campfire"]
+	var bl_now := game.buildable_list()
+	check("build bar intersects host tech", bl_now.size() == 1 and bl_now[0] == "campfire",
+		"list=%s" % str(bl_now))
+	var w00 := game.item_count("wood") if "wood" in game.items else 0
+	game.net.build_deny("campfire") # the honest deny refunds what the host refused
+	var w01 := game.item_count("wood") if "wood" in game.items else 0
+	check("build_deny refunds the cost", w01 > w00
+		or game.messages.back().contains("refunded"), "w=%d->%d" % [w00, w01])
+	game.net_unlocked = []
+	var tec_rows := 0
+	for row in hudn.pause_rows():
+		if row[1] == "m_tech": tec_rows += 1
+	check("guest sees no tech row", tec_rows == 0)
+	cli_peer.close()
+	game.net.multiplayer.multiplayer_peer = null
+	for row in hudn.pause_rows():
+		if row[1] == "m_tech": tec_rows += 1
+	check("solo keeps the tech row", tec_rows == 1)
+	# touch shot aims down facing, not at the button's screen corner
+	var tui3 := game.touch_ui
+	var fac0 := p.facing
+	game.touch_ui = true
+	p.facing = Vector2(0, 1)
+	var st_t := p._shot_target({})
+	check("touch shot rides facing", st_t.distance_to(p.pos + Vector2(0, 8)) < 0.01,
+		"target=%s" % str(st_t))
+	p.facing = fac0
+	# build taps only yield to the X — the joystick corner is placeable again
+	check("joy corner takes a build tap", hudn._build_tap_ok(lay_t["joy"]))
+	check("X zone still guarded", not hudn._build_tap_ok(lay_t["btns"]["menu"]))
+	# pinch zoom is the slab's only zoom
+	var cam0: Vector2 = main.cam.zoom
+	var mg := InputEventMagnifyGesture.new()
+	mg.factor = 1.4
+	main._unhandled_input(mg)
+	check("pinch zooms the camera", not main.cam.zoom.is_equal_approx(cam0)
+		and main.cam.zoom.x <= 2.5)
+	main.cam.zoom = cam0
+	# roll cleared ATK's hit disc
+	check("roll clear of atk zone", lay_t["btns"]["atk"].distance_to(lay_t["btns"]["roll"])
+		>= hudn.btn_r("atk") + hudn.btn_r("roll"))
+	# x_close is a real act — pads and mice hit the X too
+	game.panel = "inv"
+	hudn.run_click({"act": "x_close", "arg": null})
+	check("x_close bails the panel", game.panel == "")
+	check("dex ids cached", hudn._dex_ids().size() > 0 and hudn._dex_key != "")
+	game.touch_ui = tui3
 	hudn.touch_verb("more")
 	check("··· collapses the row", not hudn.touch_more)
 	# pause shell hosts the panel verbs for every input device
