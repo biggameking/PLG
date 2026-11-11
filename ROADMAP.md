@@ -692,3 +692,17 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   arm, mount_done guards, _close_peer ledger wipes, and peer-existence
   guards on every refusal echo rounded out the batch. Smoke now drives
   a real CONNECTED loopback for board+respawn coverage. 746/0.
+
+## S54 — audit-15: board_rej frees dead holds + server_relay off
+  Fifteenth context-free audit (1M/6L): board_paid_out cleared ONLY on a
+  board_pay echo — when the hold died silently (expiry overwrite, board_quest
+  dict swap, regen) the client kept its goods-loss flag forever and every
+  same-qid ask was swallowed. board_paid now echoes board_rej(qid) so the
+  assert flag frees. Bigger catch hiding in a "comments are wrong" finding:
+  server_relay defaults true on SceneMultiplayer, so every guest broadcast
+  reached all guests — chat printed twice in 3+ player sessions (original +
+  host relay). server_relay=false at host() makes leaf-remote true; roster/
+  positions still arrive via the host's peer_pos/peer_joined relays.
+  board_release lost its bucket too — a starved release squats the ask.
+  _close_peer wipes chest_ref; loopback fixture now restores hunger, the
+  connect-hook ghost, and plg_net.cfg (rule 30). Smoke 746/0.

@@ -960,8 +960,8 @@ func board_release(qid: String) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
-	if not _throttle(pid, "board_bkt", 4.0, 6.0):
-		return
+	# no bucket on a release either — board_release_remote self-guards on the
+	# holder's pid, and a starved release squats the ask for its 15s freshness
 	game.board_release_remote(pid, str(qid))
 
 @rpc("any_peer", "call_remote", "reliable")
