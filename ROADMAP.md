@@ -387,3 +387,16 @@ S35 (guest world-verbs): the interact layer left three verbs dead for
   and open_mimic(st, opener_pid) marks the asker, not the host. Bonus:
   give_remote/note_remote needed a multiplayer_peer null-guard —
   get_peers() itself errors on offline rigs. Smoke 644/0 x2.
+S36 (guest interact parity): swept every remaining interact branch —
+  seven verbs dead for guests, two silently divergent. New RPCs all ride
+  the witnessed-ghost reach rule: sleep_req (bed turns everyone's clock,
+  hostiles veto), work_req (stand dial is shared base policy), shrine_req
+  (guest offering turns the sky; bag pays lumenite on shrine_done echo),
+  dig_req (fossil one-shot via give_remote), cage_req (freed kin joins the
+  asker's owner-tagged slice), board_req/board_done (the posting now rides
+  env_sync — guests see the same quest, claim it, pay goods on echo),
+  cond_req (fodder filtered to the asker's slice — heart-locked and other
+  keepers' kin are never fuel). gacha_pull audited: eggs go to the guest's
+  own bag, client-authoritative — already correct. deposit_egg/soul_infuse/
+  start_gauntlet stay host-only by design (hatch ownership + roster trust
+  bounds documented). Smoke 657-658/0 x2.

@@ -625,7 +625,10 @@ func interact() -> void:
 				game.panel = "kinbox"
 				return
 			"straw_bed":
-				game.sleep_to_morning()
+				if game.net != null and game.net.is_client():
+					game.net.rpc("sleep_req")
+				else:
+					game.sleep_to_morning()
 				return
 			"waypoint":
 				game.use_waypoint()
@@ -643,25 +646,48 @@ func interact() -> void:
 				game.panel = "chest"
 				return
 			"monitoring_stand":
-				game.cycle_work_mode()
+				if game.net != null and game.net.is_client():
+					game.net.rpc("work_req")
+				else:
+					game.cycle_work_mode()
 				return
 			"weather_shrine":
-				game.pray_weather()
+				if game.net != null and game.net.is_client():
+					if game.item_count("lumenite") >= 3:
+						game.net.rpc("shrine_req")
+					else:
+						game.log_msg("The shrine wants 3 lumenite")
+				else:
+					game.pray_weather()
 				return
 			"notice_board":
-				game.notice_board_action()
+				if game.net != null and game.net.is_client():
+					game.net.rpc("board_req") # the shared posting answers host-side
+				else:
+					game.notice_board_action()
 				return
 			"kin_gacha":
 				game.gacha_pull()
 				return
 			"fossil_bed":
-				game.dig_fossil(st)
+				if game.net != null and game.net.is_client():
+					var dc: Vector2i = game.cell_of(st)
+					game.net.rpc("dig_req", float(dc.x), float(dc.y))
+				else:
+					game.dig_fossil(st)
 				return
 			"kin_cage":
-				game.free_captive(st)
+				if game.net != null and game.net.is_client():
+					var kc: Vector2i = game.cell_of(st)
+					game.net.rpc("cage_req", float(kc.x), float(kc.y))
+				else:
+					game.free_captive(st)
 				return
 			"kin_condenser":
-				game.condense_active()
+				if game.net != null and game.net.is_client():
+					game.net.rpc("cond_req") # fodder burns host-side, owner-sliced
+				else:
+					game.condense_active()
 				return
 			"incubator":
 				var inc = st.get("egg_inc")
@@ -1589,14 +1615,14 @@ func draw_kinbox(r: Vector2) -> void:
 	Ink.card(self, rr)
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "KINBOX",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.TEAL)
-	draw_string(font, Vector2(rr.position + Vector2(112, 24)), "click a row to swap party/base",
+	draw_string(font, Vector2(rr.position + Vector2(112, 24)), "rows swap party/base",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
 	# the island base level: the terminal grades your base and pays slots
 	var blv_txt := "BASE LV%d" % game.base_level
 	if game.base_level < game.BASE_LEVEL_MAX:
 		var bmet: bool = game.base_mission_done(game.base_level)
-		blv_txt += " · next: " + String(game.BASE_MISSION_TEXT[game.base_level]).left(16)
-		draw_string(font, Vector2(rr.position.x + 350, rr.position.y + 24), blv_txt.left(32),
+		blv_txt += " · " + String(game.BASE_MISSION_TEXT[game.base_level]).left(20)
+		draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 38), blv_txt.left(42),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GREEN if bmet else Ink.INK_SOFT)
 		if bmet and (game.net == null or not game.net.is_client()):
 			click_rects.append({"rect": Rect2(rr.position.x + 505, rr.position.y + 12, 80, 20),
@@ -1604,9 +1630,9 @@ func draw_kinbox(r: Vector2) -> void:
 			draw_string(font, Vector2(rr.position.x + 505, rr.position.y + 26), "[UPGRADE]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	else:
-		draw_string(font, Vector2(rr.position.x + 350, rr.position.y + 24), blv_txt + " MAX",
+		draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 38), blv_txt + " MAX",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
-	var y := rr.position.y + 44
+	var y := rr.position.y + 54
 	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 	y += 18
 	for pr in party_rows():

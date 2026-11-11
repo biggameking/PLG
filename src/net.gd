@@ -240,7 +240,8 @@ func pal_sync(arr: Array) -> void:
 			p.queue_free()
 
 @rpc("authority", "call_remote", "unreliable")
-func env_sync(tod: float, day: int, weather: String, danger: bool = false) -> void:
+func env_sync(tod: float, day: int, weather: String, danger: bool = false,
+		bq: Dictionary = {}) -> void:
 	if is_host:
 		return
 	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
@@ -249,6 +250,10 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false) -> vo
 	var w := str(weather)
 	if w in ["clear", "rain", "storm", "drought"]:
 		game.weather = w
+	if not bq.is_empty():
+		game.board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
+			"n": int(bq.get("n", 0)), "day": int(bq.get("day", -1)),
+			"sp": str(bq.get("sp", "")), "got": int(bq.get("got", 0))}
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
@@ -627,6 +632,109 @@ func fert_done() -> void:
 	game.add_item("fertilizer", -1) # the bag pays only on host acceptance
 	game.log_msg("Fertilizer spread — five minutes of surge")
 
+@rpc("any_peer", "call_remote", "reliable")
+func shrine_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	if game.shrine_req_remote(pid) and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "shrine_done", game.weather)
+
+@rpc("authority", "call_remote", "reliable")
+func shrine_done(nw: String) -> void:
+	if is_host:
+		return
+	game.weather = str(nw) # the offering lands; state_sync would catch up anyway
+	game.add_item("lumenite", -3) # the bag pays only on host acceptance
+	game.log_msg("The altar drinks your lumenite — the sky shifts")
+
+@rpc("any_peer", "call_remote", "reliable")
+func work_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	var wm := game.work_req_remote(pid)
+	if wm >= 0 and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "work_done", wm)
+
+@rpc("authority", "call_remote", "reliable")
+func work_done(wm: int) -> void:
+	if is_host:
+		return
+	game.work_mode = clampi(int(wm), 0, game.WORK_MODES.size() - 1)
+	var d: Dictionary = game.WORK_MODES[game.work_mode]
+	game.log_msg("Monitoring stand: %s pace" % d["name"])
+
+@rpc("any_peer", "call_remote", "reliable")
+func sleep_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	if not game.sleep_req_remote(pid) and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "net_note", "Can't sleep — hostiles are after someone")
+	# a yes needs no echo: day/tod/hp ride the next state_sync for everyone
+
+@rpc("any_peer", "call_remote", "reliable")
+func dig_req(tx: float, ty: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	game.dig_req_remote(pid, Vector2i(int(tx), int(ty)))
+	# loot echoes through give_remote inside the remote fn
+
+@rpc("any_peer", "call_remote", "reliable")
+func cage_req(tx: float, ty: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	game.cage_req_remote(pid, Vector2i(int(tx), int(ty)))
+	# the freed kin arrives through box_sync, owner-sliced to the asker
+
+@rpc("any_peer", "call_remote", "reliable")
+func board_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	var res := game.board_action_remote(pid)
+	if not res.is_empty() and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "board_done", res)
+
+@rpc("authority", "call_remote", "reliable")
+func board_done(res: Dictionary) -> void:
+	if is_host:
+		return
+	var qid := str(res.get("id", ""))
+	var qn := int(res.get("n", 0))
+	# the bag pays its goods first — no payment, no gold, quest already spent
+	if game.item_count(qid) < qn:
+		game.log_msg("Notice board: the goods weren't in your pack")
+		return
+	game.add_item(qid, -qn)
+	game.add_item("gold_coin", int(res.get("gold", 0)))
+	game.gain_xp(qn * 3)
+	game.log_msg("Board request filled: %d %s → +%d gold" % [qn, qid, int(res.get("gold", 0))])
+
+@rpc("any_peer", "call_remote", "reliable")
+func cond_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	game.condense_remote(pid)
+
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
 # kinbox clicks travel back as box_req ops the host validates + runs.
@@ -782,7 +890,8 @@ func _process(dt: float) -> void:
 			rpc("pal_sync", pal_state_pack())
 			rpc("drop_sync", drop_state_pack())
 			rpc("struct_sync", struct_state_pack())
-			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active()) # clock + sky + threat are host truth
+			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
+				game.board_quest) # clock + sky + threat + the shared posting are host truth
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose

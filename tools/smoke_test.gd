@@ -4934,6 +4934,115 @@ func run() -> void:
 			check("guest cast lands a roll", game.pals.size() > vt_p1 or
 				game.item_count("kin_fluid") + game.item_count("gold_coin") \
 				+ game.item_count("red_berries") + game.item_count("treasure_map") > vt_bag)
+		# S36 verbs: shrine sky, stand pace, bed clock, fossil dig, cage
+		# rescue, board claim, remote condense — all ghost-reach gated
+		var v6_sh := Vector2i(-1, -1)
+		for v6_r4 in range(3, 10):
+			for v6_a12 in range(16):
+				var v6_c9 := Vector2i(int(p.pos.x + cos(v6_a12 * TAU / 16.0) * v6_r4),
+					int(p.pos.y + sin(v6_a12 * TAU / 16.0) * v6_r4))
+				if game.can_place("weather_shrine", v6_c9.x, v6_c9.y):
+					game.place_free("weather_shrine", v6_c9.x, v6_c9.y); v6_sh = v6_c9; break
+			if v6_sh.x >= 0: break
+		if v6_sh.x >= 0:
+			var v6_w0: String = game.weather
+			game.pray_cd = 0.0
+			game.net.ghosts[99].net_pos = Vector3(v6_sh.x + 40, v6_sh.y, 0)
+			check("far ghost can't pray", not game.shrine_req_remote(99))
+			game.net.ghosts[99].net_pos = Vector3(v6_sh.x, v6_sh.y, 0)
+			check("guest prayer turns the shared sky", game.shrine_req_remote(99)
+				and game.weather != v6_w0 and game.pray_cd > 0.0)
+			game.net_remove_structure(game.structures[v6_sh])
+		var v6_ms := Vector2i(-1, -1)
+		for v6_r5 in range(3, 10):
+			for v6_a13 in range(16):
+				var v6_c10 := Vector2i(int(p.pos.x + cos(v6_a13 * TAU / 16.0) * v6_r5),
+					int(p.pos.y + sin(v6_a13 * TAU / 16.0) * v6_r5))
+				if game.can_place("monitoring_stand", v6_c10.x, v6_c10.y):
+					game.place_free("monitoring_stand", v6_c10.x, v6_c10.y); v6_ms = v6_c10; break
+			if v6_ms.x >= 0: break
+		if v6_ms.x >= 0:
+			var v6_wm := game.work_mode
+			game.net.ghosts[99].net_pos = Vector3(v6_ms.x + 40, v6_ms.y, 0)
+			check("far ghost can't touch the dial", game.work_req_remote(99) < 0)
+			game.net.ghosts[99].net_pos = Vector3(v6_ms.x, v6_ms.y, 0)
+			check("guest cycles the shared pace", game.work_req_remote(99) >= 0
+				and game.work_mode != v6_wm)
+			game.net_remove_structure(game.structures[v6_ms])
+		for v6_q2 in game.pals: # no raid or wild aggro — the bed must say yes
+			v6_q2.aggro = -1
+			v6_q2.raid = false
+		var v6_day := game.day
+		check("guest sleep turns the clock", game.sleep_req_remote(99)
+			and game.day == v6_day + 1)
+		var v6_fs := Vector2i(-1, -1)
+		for v6_r6 in range(3, 10):
+			for v6_a14 in range(16):
+				var v6_c11 := Vector2i(int(p.pos.x + cos(v6_a14 * TAU / 16.0) * v6_r6),
+					int(p.pos.y + sin(v6_a14 * TAU / 16.0) * v6_r6))
+				if game.can_place("fossil_bed", v6_c11.x, v6_c11.y):
+					game.place_free("fossil_bed", v6_c11.x, v6_c11.y); v6_fs = v6_c11; break
+			if v6_fs.x >= 0: break
+		if v6_fs.x >= 0:
+			var v6_parts := game.item_count("ancient_part") + game.item_count("stone")
+			game.net.ghosts[99].net_pos = Vector3(v6_fs.x + 40, v6_fs.y, 0)
+			check("far ghost can't dig", not game.dig_req_remote(99, v6_fs)
+				and game.structures.has(v6_fs))
+			game.net.ghosts[99].net_pos = Vector3(v6_fs.x, v6_fs.y, 0)
+			check("guest dig pays out", game.dig_req_remote(99, v6_fs)
+				and not game.structures.has(v6_fs)
+				and game.item_count("ancient_part") + game.item_count("stone") > v6_parts)
+		var v6_cg := Vector2i(-1, -1)
+		for v6_r7 in range(3, 10):
+			for v6_a15 in range(16):
+				var v6_c12 := Vector2i(int(p.pos.x + cos(v6_a15 * TAU / 16.0) * v6_r7),
+					int(p.pos.y + sin(v6_a15 * TAU / 16.0) * v6_r7))
+				if game.can_place("kin_cage", v6_c12.x, v6_c12.y):
+					game.place_free("kin_cage", v6_c12.x, v6_c12.y); v6_cg = v6_c12; break
+			if v6_cg.x >= 0: break
+		if v6_cg.x >= 0:
+			var v6_cst: Dictionary = game.structures[v6_cg]
+			v6_cst["captive"] = {"sp": "fenjelly", "lv": 10}
+			var v6_box := game.box.size()
+			game.net.ghosts[99].net_pos = Vector3(v6_cg.x + 40, v6_cg.y, 0)
+			check("far ghost can't prize the lock", not game.cage_req_remote(99, v6_cg)
+				and game.box.size() == v6_box)
+			game.net.ghosts[99].net_pos = Vector3(v6_cg.x, v6_cg.y, 0)
+			check("guest frees into their own slice", game.cage_req_remote(99, v6_cg)
+				and game.box.size() == v6_box + 1
+				and game.box.back().owner_id == 99
+				and not game.structures.has(v6_cg))
+			var v6_fr: Kin = game.box.pop_back()
+			game.box_holder.remove_child(v6_fr)
+			v6_fr.free()
+		game.board_quest = {"kind": "supply", "id": "wood", "n": 2, "day": game.day}
+		var v6_bres := game.board_action_remote(99)
+		check("guest board claim returns the bill", int(v6_bres.get("n", 0)) == 2
+			and str(v6_bres.get("id", "")) == "wood" and int(v6_bres.get("gold", 0)) > 0
+			and str(game.board_quest.get("id", "?")) == "")
+		game.board_quest = {"kind": "hunt", "sp": "fenjelly", "n": 2, "got": 0, "day": game.day}
+		check("hunt posting is read-only", game.board_action_remote(99).is_empty())
+		var v6_lead: Kin = game.gen_pal("fenjelly", 10, p.pos)
+		game.pals.append(v6_lead)
+		v6_lead.owner_id = 99
+		v6_lead.mode = "partner"
+		game.net.peer_tags[99] = "t99"
+		game.remote_parties["t99"] = [v6_lead.uid]
+		var v6_fod := 0
+		while v6_fod < int(game.CONDENSE_COST[v6_lead.star]):
+			var v6_fd: Kin = game.gen_pal("fenjelly", 5, p.pos)
+			v6_fd.owner_id = 99
+			v6_fd.mode = "box"
+			game.box.append(v6_fd)
+			game.box_pal(v6_fd)
+			v6_fod += 1
+		var v6_star := v6_lead.star
+		check("guest condense burns own fodder", game.condense_remote(99)
+			and v6_lead.star == v6_star + 1)
+		game.pals.erase(v6_lead)
+		v6_lead.queue_free()
+		game.remote_parties.erase("t99")
+		game.net.peer_tags.erase(99)
 	else:
 		check("guest deposit whitelists", false, "no chest spot seeded")
 	game.touch_ui = tui3

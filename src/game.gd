@@ -4805,6 +4805,27 @@ func mimic_req_remote(pid: int, cell: Vector2i) -> bool:
 	open_mimic(st, pid)
 	return true
 
+# host-side guest verb helpers: the ghost's witnessed position is the only
+# honest reach a client has — everything else they send is a claim
+func _ghost_at(pid: int) -> Vector2:
+	var gp = net.ghosts.get(pid) if net != null else null
+	return Vector2(gp.net_pos.x, gp.net_pos.y) if gp != null else Vector2(-1e9, -1e9)
+
+func _ghost_reaches(pid: int, at: Vector2, reach := 6.0) -> bool:
+	return _ghost_at(pid).distance_to(at) <= reach
+
+func _nearest_struct(sid: String, at: Vector2, reach := 4.0) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var bd := reach
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st["id"] != sid or k != cell_of(st):
+			continue
+		var d: float = at.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if d < bd:
+			bd = d; best = k
+	return best
+
 # host-side guest fertilize: ghost proximity is the honest reach — the
 # guest's own bag pays on the fert_done echo, never up front
 func fert_req_remote(pid: int) -> bool:
@@ -4825,6 +4846,137 @@ func fert_req_remote(pid: int) -> bool:
 	if best.x < 0:
 		return false
 	structures[best]["fert"] = t + 300.0
+	return true
+
+# the shrine takes any keeper's offering — one altar's mood is everyone's
+# sky, and the cooldown is global so a guest can't out-pray the host
+func shrine_req_remote(pid: int) -> bool:
+	var at := _ghost_at(pid)
+	if at.x < -1e8 or t < pray_cd \
+			or _nearest_struct("weather_shrine", at).x < 0:
+		return false
+	var nxt: String = {"clear": "rain", "rain": "storm", "storm": "drought",
+		"drought": "clear"}.get(weather, "rain")
+	weather = nxt
+	weather_t = 0.0
+	pray_cd = t + 600.0
+	return true
+
+# the stand's pace is shared base policy — a guest at the dial can set it
+func work_req_remote(pid: int) -> int:
+	var at := _ghost_at(pid)
+	if at.x < -1e8 or _nearest_struct("monitoring_stand", at).x < 0:
+		return -1
+	work_mode = (work_mode + 1) % WORK_MODES.size()
+	return work_mode
+
+# one keeper's bed turns everyone's clock — hostiles veto it for all
+func sleep_req_remote(pid: int) -> bool:
+	if _ghost_at(pid).x < -1e8:
+		return false
+	for q in pals:
+		if q.hp > 0 and (q.raid or (q.mode == "wild" and q.aggro >= 0)):
+			return false
+	sleep_to_morning()
+	return true
+
+# a bone-heap is one dig for whoever reaches it first — same one-shot rule
+func dig_req_remote(pid: int, cell: Vector2i) -> bool:
+	var st = structures.get(cell)
+	if st == null or st["id"] != "fossil_bed" \
+			or not _ghost_reaches(pid, Vector2(cell.x + 0.5, cell.y + 0.5)):
+		return false
+	net_remove_structure(st)
+	give_remote(pid, "ancient_part", rng.int_range(2, 4))
+	give_remote(pid, "stone", 4)
+	if rng.chance(0.25):
+		give_remote(pid, "lumenite", 1)
+	return true
+
+# the lock opens for whoever prizes it — the freed kin joins THEIR slice
+# of the shared kinbox, owner_tagged like a catch
+func cage_req_remote(pid: int, cell: Vector2i) -> bool:
+	var st = structures.get(cell)
+	if st == null or st["id"] != "kin_cage" \
+			or not _ghost_reaches(pid, Vector2(cell.x + 0.5, cell.y + 0.5)):
+		return false
+	var cap = st.get("captive")
+	if not (cap is Dictionary) or str(cap.get("sp", "")) == "":
+		note_remote(pid, "The cage is empty")
+		return false
+	if box.size() >= MAX_BOX:
+		note_remote(pid, "Kinbox is full — the captive won't leave its cage")
+		return false
+	var bp := gen_pal(str(cap["sp"]), int(cap["lv"]), Vector2(cell.x + 0.5, cell.y + 0.5))
+	bp.mode = "box"
+	bp.owner_id = pid
+	bp.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
+	box.append(bp)
+	box_pal(bp)
+	note_remote(pid, "Freed %s Lv%d — it scurries into your kinbox"
+		% [bp.spec["name"], bp.level])
+	net_remove_structure(st)
+	return true
+
+# the board is one shared posting — guests see it via env_sync, claim it
+# here, and pay their own goods on the board_done echo
+func board_action_remote(pid: int) -> Dictionary:
+	if int(board_quest.get("day", -1)) != day:
+		if rng.chance(0.5): # half the mornings want goods, half want thinning
+			var pick: Array = BOARD_POOL[rng.int_range(0, BOARD_POOL.size() - 1)]
+			board_quest = {"kind": "supply", "id": pick[0], "n": pick[1], "day": day}
+		else:
+			board_quest = {"kind": "hunt", "sp": HUNT_POOL[rng.int_range(0, HUNT_POOL.size() - 1)],
+				"n": rng.int_range(2, 4), "got": 0, "day": day}
+	var qk: String = str(board_quest.get("kind", "supply"))
+	if qk == "hunt":
+		var sname: String = SpeciesData.species_of(board_quest["sp"]).get("name", board_quest["sp"])
+		note_remote(pid, "Notice board: cull %d %s (%d/%d) — kill or capture counts"
+			% [int(board_quest["n"]), sname, int(board_quest.get("got", 0)), int(board_quest["n"])])
+		return {}
+	var qid: String = str(board_quest.get("id", ""))
+	if qid == "":
+		note_remote(pid, "Notice board: today's request is filled — come back at dawn")
+		return {}
+	var qn: int = int(board_quest["n"])
+	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
+	board_quest["id"] = "" # claimed — whoever echoes first fills it for all
+	return {"id": qid, "n": qn, "gold": gold}
+
+# remote condense: same fodder rule, filtered to the asker's own slice —
+# heart-locked and other keepers' kin are never fuel
+func condense_remote(pid: int) -> bool:
+	var rp := rparty_for(pid)
+	if rp.is_empty():
+		note_remote(pid, "No active kin to condense")
+		return false
+	var ap: Kin = null
+	for p in pals:
+		if p.uid == int(rp[0]) and p.owner_id == pid:
+			ap = p
+			break
+	if ap == null:
+		return false
+	if ap.star >= CONDENSE_COST.size():
+		note_remote(pid, "%s is already max star" % ap.spec["name"])
+		return false
+	var need: int = CONDENSE_COST[ap.star]
+	var fodder: Array = []
+	for bp in box:
+		if bp.species_id == ap.species_id and bp.uid != ap.uid and not bp.fav \
+				and bp.owner_id == pid:
+			fodder.append(bp)
+	fodder.sort_custom(func(a, b): return a.level < b.level)
+	if fodder.size() < need:
+		note_remote(pid, "Need %d same-species kin for star %d (have %d)"
+			% [need, ap.star + 1, fodder.size()])
+		return false
+	for i in need:
+		var fp: Kin = fodder[i]
+		box.erase(fp)
+		fp.free() # box pals aren't in the scene tree — free() not queue_free()
+	ap.condense()
+	note_remote(pid, "%s condensed to star %d!" % [ap.spec["name"], ap.star])
 	return true
 
 func spawn_lairs() -> void:
