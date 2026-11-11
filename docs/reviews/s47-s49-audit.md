@@ -366,3 +366,42 @@ smoke 749/0、747/0 零 ERROR。
 
 ### 验证
 smoke 752/0、749/0 零 ERROR ×2。
+
+## 第十八轮外审处置（S57）— S56 复核
+
+外审快照 `8cac4a4`：**1C/3M/3L**。S56 主架全部验证通过（类型链、
+迭代闸、`_norm_pair`、spawn 预估值、seed 拒绝路、schema 无漂移），
+剩余四类真伤：
+
+### C — meal_buff dict 值未强转
+`d["player"]["meal"]` 只验容器型——`{"glow":{}}` 直达
+`player.gd:319` 的每帧 `int(meal_buff.get("glow"))` → 物理帧死。
+修法：按六键白名单逐值重建（atk/def/spd/warm/cool/glow），`_fin`
+数值门 + 0..10 钳制——伪造键值永远到不了消费端。
+
+### M（3/3 全落）
+- NaN/±INF 穿所有 `is float` 闸——`maxf(0,NaN)=NaN` 让 respawn
+  `at` 立即触发、`pos` 落 NaN 实体、`seed` 走 impl-defined。
+  `_i`/`_f` 加 `is_finite` 层（NaN→dflt），新增 `_fin(v)` 门并
+  替换全部 18 处边界 `is float or is int`（seed/drops/respawn
+  pos/grotto/treasure/ppos/home/pbx/rparties/store/fert/wk/
+  wire sync/drop_sync/decor_sync/settings/`_norm_pair` 尾）。
+- `remote_parties` 行帽被 `rebind_owner` 的裸写绕过 + 被逐行的
+  orb 留在 bench → 每驱逐周期 +5 无界。`rebind_owner` 新 tag 走
+  `rparty_by_tag`（驱逐车道唯一入口）；驱逐时 orb 归箱（box 满
+  →queue_free）。新增 `_bench_add` 溢出车道：bench 满→box、双满
+  →queue_free，六个 bench.append 站点全部改道，strip uid 只在
+  true lane 追加。
+- `hatch_incubated` 是唯一无帽 kin 入口——`pals`/`box` 双帽 +
+  `max_base_pals()` 劳动力帽，双满→queue_free。
+
+### L（3/3 全落或升级）
+- `hr_ok` 只验 3 字段→全六字段白名单断言；新增**真触发一条
+  respawn** 端到端断言（`at` 设为过去→tick→pal 出现→清场）。
+- `pd["sp"]` raw Variant→`str()` 进 typed param（最后一个此类）。
+- `spawn_net_pal` 坐标 `_fin` 门（NaN replica 不可达）。
+- schema 对账：顶层写读 1:1，无漂移；`craft.cost`/`board_quest.
+  pending`/`craft_target` 死字段记档不删。
+
+### 验证
+smoke 750/0、749/0 零 ERROR ×2。

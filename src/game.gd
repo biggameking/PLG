@@ -88,18 +88,28 @@ const MAX_MERCH_STOCK := 64   # merchant inventory refresh
 # and a mid-load abort leaves a gutted world the next save would clobber.
 # These helpers are the ONLY way save/RPC values may reach numeric vars.
 static func _i(v, dflt: int = 0) -> int:
-	if v is bool or v is int or v is float:
+	if v is bool or v is int:
 		return int(v)
+	if v is float:
+		return int(v) if is_finite(v) else dflt # int(NaN) is impl-defined, never 0
 	if v is String:
 		return int(v)
 	return dflt
 
 static func _f(v, dflt: float = 0.0) -> float:
-	if v is bool or v is int or v is float:
+	if v is bool or v is int:
 		return float(v)
+	if v is float:
+		return v if is_finite(v) else dflt # maxf(0, NaN) returns NaN — never let it through
 	if v is String:
-		return float(v)
+		var r := float(v)
+		return r if is_finite(r) else dflt
 	return dflt
+
+# numeric AND finite — NaN/INF pass "is float" and poison every position,
+# timer and seed they land in. One gate covers the whole class.
+static func _fin(v) -> bool:
+	return v is int or (v is float and is_finite(v))
 
 # a parentage row is [sp, sp, talent, talent, ...] — hatch reads pair[0]/[1]
 # into a typed String and pair[2]/[3] through int(), so an entry with foreign
@@ -107,7 +117,7 @@ static func _f(v, dflt: float = 0.0) -> float:
 # finish. Anything malformed normalizes to null = wild genetics, never lost.
 static func _norm_pair(p) -> Variant:
 	if p is Array and p.size() >= 4 and p[0] is String and p[1] is String \
-			and (p[2] is float or p[2] is int) and (p[3] is float or p[3] is int):
+			and _fin(p[2]) and _fin(p[3]):
 		return p
 	return null
 
@@ -403,17 +413,46 @@ func rparty_by_tag(tag: String) -> Array:
 	# sessions (peer ids are not), capped at the same 5 slots as ours
 	if not remote_parties.has(tag):
 		if remote_parties.size() >= MAX_REMOTE_TAGS:
-			# evict a cold keeper's row — their kin stay benched and rebind
-			# rebuilds the strip if they ever say hello again
+			# evict a cold keeper's row — their kin cold-store in the box and
+			# rebind rebuilds the strip if they ever say hello again. Leaving
+			# them on the bench grew it ~5 per eviction cycle (rule 1).
 			var live: Array = net.peer_tags.values() if net != null else []
 			var victim := ""
 			for k in remote_parties:
 				if k not in live:
 					victim = k
 					break
-			remote_parties.erase(victim if victim != "" else remote_parties.keys()[0])
+			var vtag: String = victim if victim != "" else remote_parties.keys()[0]
+			remote_parties.erase(vtag)
+			for bk in bench.duplicate():
+				if is_instance_valid(bk) and bk.owner_tag == vtag:
+					bench.erase(bk)
+					bk.mode = "box"
+					if box.size() < MAX_BOX + 32:
+						box.append(bk)
+					else:
+						bk.queue_free() # double-cap: dies clean under box_holder
 		remote_parties[tag] = []
 	return remote_parties[tag]
+
+# one cap for every strip lane: the bench is bounded like every runtime set.
+# A saturated bench overflows into the box; a saturated world frees clean.
+# Returns true only when the kin actually landed on the bench — callers
+# append the strip uid only on the true lane.
+func _bench_add(cur: Kin) -> bool:
+	pals.erase(cur)
+	if bench.size() < MAX_BENCH:
+		cur.mode = "bench"
+		bench.append(cur)
+		box_pal(cur)
+		return true
+	cur.mode = "box" # strip's full — the box takes what the bench can't
+	if box.size() < MAX_BOX + 32:
+		box.append(cur)
+		box_pal(cur)
+	else:
+		cur.queue_free() # box+bench both capped — dies clean, no third store
+	return false
 
 func rparty_for(pid: int) -> Array:
 	# resolve a peer id to its strip; a guest that never said hello still
@@ -450,6 +489,8 @@ func rebind_owner(pid: int, tag: String) -> void:
 	for p3 in pals:
 		if p3.mode == "partner" and p3.owner_id == pid:
 			kept.push_front(p3.uid) # the field pal leads its keeper's strip
+	if not remote_parties.has(tag):
+		rparty_by_tag(tag) # a fresh tag's row goes through the cap/eviction lane — never a raw write past 32
 	remote_parties[tag] = kept.slice(0, 5)
 
 func box_op_remote(op: String, uid: int, pid: int, extra := "") -> void:
@@ -496,11 +537,9 @@ func r_retract(pid: int) -> void:
 	if cur == null:
 		return
 	_unbind_mount(cur) # a mount called back to the bench can't stay claimed
-	pals.erase(cur)
-	cur.mode = "bench"
-	bench.append(cur)
-	box_pal(cur)
-	note_remote(pid, "%s recalled" % cur.spec["name"])
+	var rc_name: String = cur.spec["name"] # capture before the overflow lane can free it
+	_bench_add(cur)
+	note_remote(pid, "%s recalled" % rc_name)
 
 func r_send_out(uid: int, pid: int) -> void:
 	var bp := bench_pal_of(uid)
@@ -536,12 +575,13 @@ func r_box_to_party(bp: Kin, pid: int) -> void:
 		note_remote(pid, "Party full (5)")
 		return
 	box.erase(bp)
-	rp.append(bp.uid)
-	bp.mode = "bench"
-	bench.append(bp)
-	note_remote(pid, "%s joined your party (%d/5)" % [bp.spec["name"], rp.size()])
-	if r_out_pal(pid) == null:
-		r_send_out(bp.uid, pid)
+	if _bench_add(bp): # saturated bench lands it back in the box, mode corrected
+		rp.append(bp.uid)
+		note_remote(pid, "%s joined your party (%d/5)" % [bp.spec["name"], rp.size()])
+		if r_out_pal(pid) == null:
+			r_send_out(bp.uid, pid)
+	else:
+		note_remote(pid, "Bench is full - %s stays in the box" % bp.spec["name"])
 
 func r_party_to_box(p: Kin, pid: int) -> void:
 	_unbind_mount(p) # boxed kin can't stay bound — a mount belongs to the field
@@ -822,8 +862,8 @@ func spawn_net_pal(d) -> void:
 	var sp_id := str(d[0])
 	if SpeciesData.species_of(sp_id).is_empty() and SpeciesGen.SPECIES.get(sp_id, {}).is_empty():
 		return # foreign species id — drop the entry
-	if not (d[1] is float or d[1] is int) or not (d[2] is float or d[2] is int):
-		return
+	if not _fin(d[1]) or not _fin(d[2]):
+		return # non-finite wire coords spawn an unreachable ghost
 	# every wire cast lands before gen_pal — an abort after add_child would leak
 	# an in-tree kin that never ran setup and no roster can ever reach
 	var nlv := clampi(_i(d[3]), 1, 60)
@@ -1690,14 +1730,12 @@ func resolve_sphere(sp) -> void:
 		target.aggro = -1
 		release_event_flags(target)
 		if party.size() < 5: # the island rule: catch joins the party until it's full
-			target.mode = "bench"
-			party.append(target.uid)
-			bench.append(target)
-			pals.erase(target)
-			box_pal(target) # orbs ride in the same cold store as the box
-			log_msg("%s joins your party (%d/5)" % [target.spec["name"], party.size()])
-			if party_pal() == null:
-				send_out(target.uid) # an empty slot means the new catch takes the field
+			if _bench_add(target): # orbs ride in the same cold store as the box — a saturated bench overflows there too
+				party.append(target.uid)
+				log_msg("%s joins your party (%d/5)" % [target.spec["name"], party.size()])
+				if party_pal() == null:
+					send_out(target.uid) # an empty slot means the new catch takes the field
+			# false → the overflow lane already boxed or freed it — no double add
 		else:
 			target.mode = "box"
 			box.append(target)
@@ -1782,13 +1820,11 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		target.owner_id = pid
 		target.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
 		if rp.size() < 5: # a catch joins the party until the strip is full
-			target.mode = "bench"
-			rp.append(target.uid)
-			bench.append(target)
-			pals.erase(target)
-			box_pal(target)
-			if r_out_pal(pid) == null:
-				r_send_out(target.uid, pid) # an empty strip means the catch takes the field
+			if _bench_add(target):
+				rp.append(target.uid)
+				if r_out_pal(pid) == null:
+					r_send_out(target.uid, pid) # an empty strip means the catch takes the field
+			# false → the overflow lane already boxed it — no double add
 		else:
 			target.mode = "box"
 			box.append(target)
@@ -1877,7 +1913,7 @@ func drop_sprite(id: String, at: Vector2) -> Sprite2D:
 func drop_sync(arr: Array) -> void:
 	var seen := {}
 	for e in arr:
-		if not (e is Array) or e.size() < 5 or not (e[0] is float or e[0] is int):
+		if not (e is Array) or e.size() < 5 or not _fin(e[0]):
 			continue
 		var did := int(e[0])
 		seen[did] = true
@@ -3305,11 +3341,9 @@ func retract_out() -> void:
 		return
 	player.dismount_if(cur)
 	_unbind_mount(cur)
-	pals.erase(cur)
-	cur.mode = "bench"
-	bench.append(cur)
-	box_pal(cur)
-	log_msg("%s recalled" % cur.spec["name"])
+	var rc_name2: String = cur.spec["name"]
+	_bench_add(cur)
+	log_msg("%s recalled" % rc_name2)
 
 func send_out(uid: int) -> void:
 	# the island send-out: the chosen party member takes the field; whoever was
@@ -3341,12 +3375,13 @@ func box_to_party(bp: Kin) -> void:
 		return
 	box.erase(bp)
 	party.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
-	party.append(bp.uid)
-	bp.mode = "bench" # the island: new members wait in their ball until sent out
-	bench.append(bp)
-	log_msg("%s joined the bench (%d/5)" % [bp.spec["name"], party.size()])
-	if party_pal() == null:
-		send_out(bp.uid)
+	if _bench_add(bp): # the island: new members wait in their ball until sent out
+		party.append(bp.uid)
+		log_msg("%s joined the bench (%d/5)" % [bp.spec["name"], party.size()])
+		if party_pal() == null:
+			send_out(bp.uid)
+	else:
+		log_msg("Bench is full - %s stays in the box" % bp.spec["name"])
 
 const MAX_BASE_PALS := 20 # absolute workforce cap — more mouths than this starve the loop anyway
 
@@ -3770,7 +3805,7 @@ func load_settings() -> void:
 			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:
-				settings[k] = clampf(float(v) if v is float or v is int else settings[k], 0.0, 1.0)
+				settings[k] = clampf(float(v) if _fin(v) else settings[k], 0.0, 1.0) # NaN is not a volume
 	apply_settings()
 
 func save_settings() -> void:
@@ -3966,7 +4001,7 @@ func load_game() -> bool:
 			return false # below this point every field is assumed present
 	if d["player"] is not Dictionary or d["kin"] is not Array or d["structures"] is not Dictionary \
 			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array \
-			or not (d["seed"] is float or d["seed"] is int):
+			or not _fin(d["seed"]):
 		log_msg("Save has wrong field types - starting fresh")
 		return false # seed reaches a typed int parameter — refusing here beats a mid-load abort
 	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
@@ -4023,13 +4058,13 @@ func load_game() -> bool:
 	for dd0 in (d["drops"] if d.get("drops") is Array else []): # a scalar/null drops field aborts the loop itself — guard at the door
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
 				and ItemData.ITEMS.has(str(dd0["id"])) \
-				and (dd0["x"] is float or dd0["x"] is int) and (dd0["y"] is float or dd0["y"] is int):
+				and _fin(dd0["x"]) and _fin(dd0["y"]):
 			spawn_drop(str(dd0["id"]), maxi(_i(dd0.get("n", 1)), 0), Vector2(float(dd0["x"]), float(dd0["y"]))) # negative n would corrupt the item ledger
 	boss_respawns.clear()
 	for rb in (d["respawns"] if d.get("respawns") is Array else []):
 		var rp = rb.get("pos") if rb is Dictionary else null
-		if rp is Array and rp.size() >= 2 and (rp[0] is float or rp[0] is int) \
-				and (rp[1] is float or rp[1] is int) and boss_respawns.size() < MAX_RESPAWNS:
+		if rp is Array and rp.size() >= 2 and _fin(rp[0]) and _fin(rp[1]) \
+				and boss_respawns.size() < MAX_RESPAWNS:
 			var rrsid := str(rb.get("sid", ""))
 			if SpeciesData.species_of(rrsid).is_empty():
 				continue # a removed species' den stays dead — no phantom timer
@@ -4037,7 +4072,7 @@ func load_game() -> bool:
 				"lv": clampi(_i(rb.get("lv", 30)), 1, 60), # hostile tails never reach gen_pal or a typed read at tick time
 				"alpha": rb.get("alpha") is bool and rb["alpha"],
 				"boss": rb.get("boss") is bool and rb["boss"],
-				"at": t + maxf(0.0, _f(rb.get("at", DAY_LEN)))} # saved as remaining → back to absolute
+				"at": t + maxf(0.0, _f(rb.get("at", DAY_LEN), DAY_LEN))} # NaN falls back to a fresh day, not "fire now"
 			boss_respawns.append(rr)
 	craft_queue.clear()
 	for rc in (d["crafts"] if d.get("crafts") is Array else []):
@@ -4078,12 +4113,10 @@ func load_game() -> bool:
 	weather_t = clampf(_f(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	var gtv = d.get("grotto", []) # dungeon markers ride the save like everything else
 	grotto_pos = Vector2i(_i(gtv[0]), _i(gtv[1])) \
-		if gtv is Array and gtv.size() == 2 and (gtv[0] is float or gtv[0] is int) \
-		and (gtv[1] is float or gtv[1] is int) else Vector2i(-1, -1)
+		if gtv is Array and gtv.size() == 2 and _fin(gtv[0]) and _fin(gtv[1]) else Vector2i(-1, -1)
 	var gv2 = d.get("grotto2", [])
 	grotto_room2 = Vector2i(_i(gv2[0]), _i(gv2[1])) \
-		if gv2 is Array and gv2.size() == 2 and (gv2[0] is float or gv2[0] is int) \
-		and (gv2[1] is float or gv2[1] is int) else Vector2i(-1, -1)
+		if gv2 is Array and gv2.size() == 2 and _fin(gv2[0]) and _fin(gv2[1]) else Vector2i(-1, -1)
 	pray_cd = t + clampf(_f(d.get("pray_left", 0.0)), 0.0, 600.0)
 	var bq = d.get("board_quest", {})
 	var bqk := str(bq.get("kind", "supply")) if bq is Dictionary else ""
@@ -4099,7 +4132,7 @@ func load_game() -> bool:
 		explored.clear(); explored.resize(world.WORLD_W * world.WORLD_H)
 	var tr = d.get("treasure", null) # a marked X rides the save too
 	treasure = {"pos": Vector2(_f(tr[0]), _f(tr[1]))} if tr is Array and tr.size() == 2 \
-		and (tr[0] is float or tr[0] is int) and (tr[1] is float or tr[1] is int) else {}
+		and _fin(tr[0]) and _fin(tr[1]) else {}
 	work_mode = clampi(_i(d.get("wmode", 1)), 0, WORK_MODES.size() - 1)
 	base_level = clampi(_i(d.get("blev", 1)), 1, BASE_LEVEL_MAX) # foreign save can't over-level the base
 	mission_idx = clampi(_i(d.get("missions", 0)), 0, MISSIONS.size())
@@ -4118,10 +4151,10 @@ func load_game() -> bool:
 			player.equipment[slot] = str(ev) if ItemData.ITEMS.has(str(ev)) else "" # unknown ids equip to nothing
 		var wdur: float = float(ItemData.ITEMS.get(player.equipment["weapon"], {}).get("weapon", {}).get("dur", -1))
 		var wv = d.get("wear", wdur) # a foreign save can hand us a string — then trust the item, not the field
-		player.weapon_wear = (clampf(float(wv), -1.0, maxf(wdur, 1.0)) if (wv is float or wv is int) else wdur) if wdur > 0 else -1.0
+		player.weapon_wear = (clampf(float(wv), -1.0, maxf(wdur, 1.0)) if _fin(wv) else wdur) if wdur > 0 else -1.0
 		var adur: float = float(ItemData.ITEMS.get(player.equipment["armor"], {}).get("armor", {}).get("dur", -1))
 		var av = d.get("awear", adur)
-		player.armor_wear = (clampf(float(av), -1.0, maxf(adur, 1.0)) if (av is float or av is int) else adur) if adur > 0 else -1.0
+		player.armor_wear = (clampf(float(av), -1.0, maxf(adur, 1.0)) if _fin(av) else adur) if adur > 0 else -1.0
 	items.clear() # element-wise int() — foreign saves can carry string counts that would break items[id]+n arithmetic later
 	for ik in d["items"]:
 		if ItemData.ITEMS.has(str(ik)): # a forged "7" key is a dead id the panels would render raw
@@ -4132,7 +4165,7 @@ func load_game() -> bool:
 		if uu != 0 and party.size() < 5: # uid 0 names nobody — null/dict payloads collapse to it
 			party.append(uu)
 	var ppos = d["player"].get("pos", [player.pos.x, player.pos.y])
-	if ppos is Array and ppos.size() >= 2 and (ppos[0] is float or ppos[0] is int) and (ppos[1] is float or ppos[1] is int):
+	if ppos is Array and ppos.size() >= 2 and _fin(ppos[0]) and _fin(ppos[1]):
 		player.pos = Vector2(float(ppos[0]), float(ppos[1])) # corrupt pos keeps spawn point instead of aborting
 	if not world.in_bounds(int(player.pos.x), int(player.pos.y)) or world.blocked(int(player.pos.x), int(player.pos.y)):
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5) # OOB/blocked pos from a foreign save = softlock (every move rejected)
@@ -4140,7 +4173,14 @@ func load_game() -> bool:
 	player.xp = maxi(_i(d["player"].get("xp", 0)), 0); player.capture_level = clampi(_i(d["player"].get("cap_lv", 1)), 1, 6) # honest ceiling: 1 + capture perk (≤5) — same bound as the wire
 	player.hunger = clampf(_f(d["player"].get("hunger", player.hunger)), 0.0, 100.0)
 	player.stamina = clampf(_f(d["player"].get("stamina", 100.0)), 0.0, 100.0) # old saves start rested
-	player.meal_buff = d["player"]["meal"] if d["player"].get("meal") is Dictionary else {} # .get() readers can't digest a non-dict
+	player.meal_buff = {} # rebuilt key-by-key: raw values reach int()/float() readers every frame
+	if d["player"].get("meal") is Dictionary:
+		for mk in ["atk", "def", "spd", "warm", "cool", "glow"]:
+			var mv = d["player"]["meal"].get(mk)
+			if _fin(mv): # only the six stats meals actually grant — a forged key can't reach a consumer
+				var fm := clampf(float(mv), 0.0, 10.0)
+				if fm > 0.0:
+					player.meal_buff[mk] = fm
 	player.meal_t = clampf(_f(d["player"].get("meal_t", 0.0)), 0.0, 600.0) # cap restored buffs
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = clampf(player.hp, 0.0, player.max_hp) # forged saves can't make you immortal or limbo-dead
@@ -4153,7 +4193,7 @@ func load_game() -> bool:
 			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
 			continue # corrupt entry — don't crash on spec lookups
 		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
-		if ppos2 is not Array or ppos2.size() < 2 or not (ppos2[0] is float or ppos2[0] is int) or not (ppos2[1] is float or ppos2[1] is int):
+		if ppos2 is not Array or ppos2.size() < 2 or not _fin(ppos2[0]) or not _fin(ppos2[1]):
 			continue # no usable position — drop the entry
 		if not world.in_bounds(int(ppos2[0]), int(ppos2[1])):
 			if str(pd.get("mode", "")) == "box":
@@ -4161,11 +4201,10 @@ func load_game() -> bool:
 			else:
 				ppos2 = [world.spawn.x, world.spawn.y] # OOB pal could never move again — re-anchor at spawn, don't delete it
 		var np := preload("res://src/kin.gd").new()
-		np.setup(self, pd["sp"], clampi(_i(pd.get("lv", 1)), 1, 60), Vector2(float(ppos2[0]), float(ppos2[1]))) # lv<=0 makes stat_at return negative max_hp — an instant corpse
+		np.setup(self, str(pd.get("sp", "")), clampi(_i(pd.get("lv", 1)), 1, 60), Vector2(float(ppos2[0]), float(ppos2[1]))) # lv<=0 makes stat_at return negative max_hp — an instant corpse; the raw sp Variant can't reach the typed param
 		np.home = np.pos # loaded pals re-anchor at their saved spot
 		var hm = pd.get("home")
-		if hm is Array and hm.size() == 2 and (hm[0] is float or hm[0] is int) \
-				and (hm[1] is float or hm[1] is int):
+		if hm is Array and hm.size() == 2 and _fin(hm[0]) and _fin(hm[1]):
 			np.home = Vector2(float(hm[0]), float(hm[1])) # herd anchors ride the save
 		var m0 := str(pd.get("mode", "wild"))
 		np.mode = m0 if m0 in ["wild", "partner", "base", "box", "bench", "expedition"] else "wild" # foreign strings would poison every mode check
@@ -4188,7 +4227,7 @@ func load_game() -> bool:
 		np.san = clampf(_f(pd.get("san", np.san)), 0.0, 200.0)
 		np.hunger = clampf(_f(pd.get("hunger", 0.0)), 0.0, 100.0)
 		var cv2 = pd.get("carry")
-		if cv2 is Dictionary and cv2.has("id") and (cv2.get("n", 0) is float or cv2.get("n", 0) is int):
+		if cv2 is Dictionary and cv2.has("id") and _fin(cv2.get("n", 0)):
 			np.carry = {"id": str(cv2["id"]), "n": maxi(int(cv2["n"]), 0)} # haul_ai reads carry["id"]/carry["n"] — a dict missing either crashes every frame
 		else:
 			np.carry = null
@@ -4220,7 +4259,7 @@ func load_game() -> bool:
 		if np.raid:
 			np.set_meta("raid_t0", t - _f(pd.get("rt0", 0.0))) # preserve despawn countdown
 		var rvs = pd.get("revive", 0.0)
-		np.revive_t = t + float(rvs) if (rvs is float or rvs is int) and float(rvs) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
+		np.revive_t = t + float(rvs) if _fin(rvs) and float(rvs) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
 		if np.mode == "box":
 			if box.size() < MAX_BOX + 32: # same overflow lane the KO path uses
@@ -4260,14 +4299,13 @@ func load_game() -> bool:
 				break # same roster cap the runtime path enforces
 			var arr := []
 			for pi2 in (rps[tag] if rps[tag] is Array else []):
-				if (pi2 is float or pi2 is int) and int(pi2) >= 0 and int(pi2) < loaded.size():
+				if _fin(pi2) and int(pi2) >= 0 and int(pi2) < loaded.size():
 					arr.append(loaded[int(pi2)].uid)
 			if not arr.is_empty():
 				remote_parties[str(tag).substr(0, 24)] = arr.slice(0, 5)
 	var pbx_sv := Vector2i(-9999, -9999) # saved primary kinbox, if the save is new enough
 	var pv = d.get("pbx", [])
-	if pv is Array and pv.size() >= 2 and (pv[0] is float or pv[0] is int) \
-			and (pv[1] is float or pv[1] is int):
+	if pv is Array and pv.size() >= 2 and _fin(pv[0]) and _fin(pv[1]):
 		pbx_sv = Vector2i(int(pv[0]), int(pv[1]))
 	kinbox_pos = Vector2i(-1, -1) # rebuilt below — stale state must not skip the first kinbox
 	extra_boxes.clear()
@@ -4320,7 +4358,7 @@ func load_game() -> bool:
 			if sv.get("store") is Dictionary:
 				for sk2 in sv["store"]: # counts used in +/- arithmetic everywhere — coerce, skip junk
 					var cv = sv["store"][sk2]
-					if cv is float or cv is int:
+					if _fin(cv):
 						st["store"][str(sk2)] = maxi(int(cv), 0) # negative stock would make chest math lie
 			st["timer"] = maxf(_f(sv.get("timer", 0.0)), 0.0) # negative timer fires production instantly; st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg") is Array: # tick_ranch size()/pop_fronts this — anything else errors per frame
@@ -4331,7 +4369,7 @@ func load_game() -> bool:
 				if left > 0.0:
 					st["exp_end"] = t + clampf(left, 1.0, 900.0) # foreign timers can't pin a pal away forever
 				st["exp_cd"] = t + maxf(_f(exp_d.get("cd", 0.0)), 0.0)
-			if sv.get("fert") is float or sv.get("fert") is int:
+			if _fin(sv.get("fert")):
 				st["fert"] = t + clampf(float(sv["fert"]), 0.0, 300.0) # remaining seconds
 			if sv.get("inc") is Dictionary and sid == "incubator":
 				var inc_d: Dictionary = sv["inc"]
@@ -4941,13 +4979,16 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	if opid > 0 or otag != "": # a guest's deposit hatches into their slice — tagged orphans rebind on hello
 		np.owner_id = opid if opid > 0 else -1
 		np.owner_tag = otag if otag != "" else (str(net.peer_tags.get(opid, "")) if net != null else "")
-	if kinbox_pos.x >= 0:
-		np.mode = "base"
+	if kinbox_pos.x >= 0 and pals.size() < MAX_PALS and base_pals().size() < max_base_pals():
+		np.mode = "base" # the hatch obeys the same caps every other kin path does
 		pals.append(np)
-	else: # no base: it goes straight to the box like any caught pal
+	elif box.size() < MAX_BOX + 32: # no base — or a full one: the KO overflow lane
 		np.mode = "box"
 		box.append(np)
 		box_pal(np)
+	else:
+		np.queue_free() # double-cap: the chick dies clean rather than break rule 1
+		log_msg("The egg hatched… but there was no room for the chick")
 	if pair is Array:
 		mission_flags["egg"] = true # a bred egg — wild nest finds don't count
 	floater(at, "* hatched! *", "#4dd0e1")
@@ -6348,7 +6389,7 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 func struct_sync(arr: Array) -> void:
 	var seen := {}
 	for e in arr:
-		if not (e is Array) or e.size() < 3 or not (e[1] is float or e[1] is int) or not (e[2] is float or e[2] is int):
+		if not (e is Array) or e.size() < 3 or not _fin(e[1]) or not _fin(e[2]):
 			continue
 		var sid := str(e[0])
 		if not StructureData.STRUCTURES.has(sid):
@@ -6396,7 +6437,7 @@ func decor_snapshot_apply(d: Dictionary) -> bool:
 func decor_sync(arr: Array) -> void:
 	var changed := false
 	for e in arr:
-		if e is Array and e.size() >= 2 and (e[0] is float or e[0] is int):
+		if e is Array and e.size() >= 2 and _fin(e[0]):
 			var i := int(e[0])
 			if i >= 0 and i < world.decor.size():
 				world.decor[i] = int(e[1])

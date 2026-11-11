@@ -4005,7 +4005,7 @@ func run() -> void:
 	hf.store_var({"seed": game.world.seed, "v": 2, "day": [1, 2], "tod": {"x": 8},
 		"tech_points": [], "raid_t": {}, "unlocked": ["kinbox", {"fake": 1}],
 		"items": {7: 5, "wood": [9]}, "party": [null, {"u": 1}],
-		"player": {"pos": [5.0, 5.0], "hp": [], "level": 1, "cap_lv": "9", "meal": 5,
+		"player": {"pos": [5.0, 5.0], "hp": [], "level": 1, "cap_lv": "9", "meal": {"glow": {}, "atk": "x", "def": 0.5, 7: 1},
 			"hunger": [], "stamina": {}, "xp": {}},
 		"board_quest": {"kind": "hax", "n": [3], "got": {}, "day": []},
 		"treasure": ["a", "b"], "grotto": [1, {}], "perks": [1, 2],
@@ -4030,8 +4030,9 @@ func run() -> void:
 	var hcap = game.structures.get(Vector2i(5, 5))
 	var hinc = game.structures.get(Vector2i(9, 9))
 	var hr_ok := true
-	for br in game.boss_respawns: # hostile tails are rebuilt to known-good fields — no abort at tick time
-		if not (br.get("lv") is int and br.get("alpha") is bool and br.get("boss") is bool):
+	for br in game.boss_respawns: # the rebuild whitelists all six fields — hostile tails can't reach gen_pal
+		if not (br.get("sid") is String and br.get("pos") is Array and br.get("lv") is int
+				and br.get("alpha") is bool and br.get("boss") is bool and br.get("at") is float):
 			hr_ok = false
 	check("hostile-variant save loads whole", hload == true and hkin_ok and hkeys_ok
 		and game.day == 1 and game.player.meal_buff is Dictionary
@@ -4042,7 +4043,20 @@ func run() -> void:
 		and (hinc == null or hinc.get("egg_inc", {}).get("pair", "x") == null)
 		and (hinc == null or hinc.get("egg_parents", [1]).is_empty())
 		and hr_ok
+		and game.player.meal_buff.size() == 1 and absf(game.player.meal_buff.get("def", 0.0) - 0.5) < 0.001
 		and game.items.get("wood", 0) == 0, "wood=%s" % str(game.items.get("wood")))
+	# fire a rebuilt respawn end-to-end — hostile tails can't abort the tick (audit-18)
+	var hfire_n := game.pals.size()
+	if game.boss_respawns.size() > 0:
+		game.boss_respawns[0]["at"] = game.t - 1.0
+		game.tick_boss_respawns()
+		check("respawn tick survives rebuilt row", game.pals.size() > hfire_n, "pals=%d" % game.pals.size())
+		var hfk: Kin = game.pals[game.pals.size() - 1]
+		game.pals.erase(hfk)
+		if hfk.get_parent(): hfk.get_parent().remove_child(hfk)
+		hfk.free() # the fired den guard leaves the stage now, not next frame
+	else:
+		check("respawn tick survives rebuilt row", false, "no rows")
 	# a non-numeric seed refuses BEFORE teardown — the live world must survive (audit-17 C1)
 	var hf2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 	hf2.store_var({"seed": "abc", "v": 2, "day": 1, "tod": 8.0, "tech_points": 0,
