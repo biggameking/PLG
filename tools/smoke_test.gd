@@ -6452,6 +6452,44 @@ func run() -> void:
 	game.pals.erase(slam_boss); slam_boss.queue_free()
 	if not game.party.has(victim.uid):
 		game.pals.erase(victim); victim.queue_free()
+	# pact slam telegraphs: 5s charge → rooted 0.8s tell → the ring lands where
+	# the boss planted; a guest inside the zone eats it through guest_hit
+	game.net.spawn_ghost(99)
+	var tod_w3 := game.tod
+	game.tod = 12.0 # the grunt is diurnal — a night fixture would sleep through its own telegraph
+	var wb: Kin = game.gen_pal("ironpact_grunt", 40, game.nearest_free(p.pos.x + 24, p.pos.y))
+	wb.boss = true; wb.phase = 2; wb.mode = "wild"
+	wb.aggro = 0; wb.aggro_pid = 99
+	game.pals.append(wb)
+	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 1.5, wb.pos.y, 0)
+	var wpp := Vector2(game.net.ghosts[99].net_pos.x, game.net.ghosts[99].net_pos.y)
+	for i in 54: # charge 5.0s → the tell lands ~tick 50; 54 sits mid-windup
+		wb.wild_ai(0.1)
+	check("slam telegraphs and roots", wb.slam_windup > 0.0
+		and wb.pos.distance_to(wpp) <= 2.2
+		and str(game.floaters.back().get("t", "")) == "IT REARS UP",
+		"windup=%.2f d=%.1f tail=%s" % [wb.slam_windup, wb.pos.distance_to(wpp),
+			str(game.floaters.back().get("t", ""))])
+	var root_pos := wb.pos
+	for i in 12: # the ring lands inside the windup budget
+		wb.wild_ai(0.1)
+	check("telegraphed slam fires", wb.slam_windup <= 0.0
+		and str(game.floaters.back().get("t", "")) == "PACT SLAM",
+		"windup=%.2f tail=%s" % [wb.slam_windup, str(game.floaters.back().get("t", ""))])
+	check("boss stayed planted through the windup", wb.pos == root_pos)
+	check("a guest inside the ring counts", wb.pact_slam() == 1,
+		"hits — ghost at +1.5 sits inside the 2.6 zone")
+	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 40, wb.pos.y, 0)
+	var w_pl := game.player.pos
+	game.player.pos = wb.pos + Vector2(40, 0)
+	check("an empty ring hits nobody", wb.pact_slam() == 0,
+		"player+guest parked outside 2.6")
+	game.player.pos = w_pl
+	game.tod = tod_w3
+	game.pals.erase(wb)
+	if wb.get_parent(): wb.get_parent().remove_child(wb)
+	wb.free()
+	game.net.ghosts.erase(99)
 
 	# i18n — zh translation registered, toggle swaps tr() output, garbage coerced
 	check("zh translation loaded", "zh" in TranslationServer.get_loaded_locales())

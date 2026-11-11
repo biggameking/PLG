@@ -151,6 +151,7 @@ func hit(dmg: int, mult: float, by_player: bool, provoked_pid: int = 0) -> void:
 # ---- boss phases: at half health the guardian changes the fight ----
 var phase := 1
 var summon_t := 0.0
+var slam_windup := 0.0 # rooted telegraph before the ring lands — dodge window
 var spire_tag := "" # non-empty on Pact-spire guardians; game.record_spire reads it
 
 func enter_phase_two() -> void:
@@ -176,14 +177,25 @@ func enter_phase_two() -> void:
 		game.pals.append(m)
 		n += 1
 
-func pact_slam() -> void:
+func pact_slam() -> int:
 	# phase-two signature: a shock ring that punishes the pile-up — and at a
 	# Pact spire the ring carries the shrine's element, so each guardian's
-	# slam asks a different question of the roster you brought
+	# slam asks a different question of the roster you brought. Returns the
+	# victim count so tests can see the zone hit who it should.
 	game.floater(pos, "PACT SLAM", "#ff5544")
+	var hits := 0
 	var pl = game.player
 	if pl != null and pos.distance_to(pl.pos) <= 2.6:
 		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
+		hits += 1
+	if aggro_pid > 0 and game.net != null: # the ring is a zone — a guest inside it eats it too
+		var gp2 = game.net.ghosts.get(aggro_pid)
+		if gp2 != null and gp2.net_pos.x >= 0 \
+				and pos.distance_to(Vector2(gp2.net_pos.x, gp2.net_pos.y)) <= 2.6:
+			if game.net.multiplayer.multiplayer_peer != null:
+				game.net.rpc_id(aggro_pid, "guest_hit",
+					spec.get("atk", 50) * 0.8 * rage_mult())
+			hits += 1 # the zone contained them — the rpc is the delivery, not the verdict
 	var ail := ""
 	if game.spire_tag_ok(spire_tag): # int() eats garbage→0; the validator doesn't
 		var si := int(spire_tag.trim_prefix("spire_"))
@@ -193,8 +205,10 @@ func pact_slam() -> void:
 		if q != self and q.hp > 0 and q.mode == "partner" \
 				and pos.distance_to(q.pos) <= 2.6: # punish the pile-up, not parked farmhands
 			q.hit(maxi(2, int(spec.get("atk", 40) * 0.5 * rage_mult())), 1.0, false)
+			hits += 1
 			if ail != "":
 				q.add_status(ail, 3.0)
+	return hits
 
 func elem() -> Array:
 	return spec.get("elements", ["neutral"])
@@ -340,6 +354,24 @@ func wild_ai(dt: float) -> void:
 				if tdist > 16:
 					aggro = -1; aggro_pid = 0
 				return
+			# pact-slam cadence: charge 5s, then a rooted 0.8s telegraph — the
+			# ring lands where the boss stood, so the pile-up gets a beat to
+			# scatter. Windup check sits before movement or the boss would
+			# track victims while "planting" (no dodge, no counterplay)
+			if boss and phase == 2:
+				if slam_windup > 0.0:
+					slam_windup -= dt
+					if slam_windup <= 0.0:
+						pact_slam()
+					return # rooted while the ring charges — scatter or eat it
+				summon_t += dt
+				if summon_t >= 5.0:
+					summon_t = 0.0
+					slam_windup = 0.8
+					game.floater(pos, "IT REARS UP", "#ffcc44") # the tell
+					if game.net != null and game.net.ghosts.size() > 0:
+						game.net.rpc("net_floater", pos.x, pos.y,
+							"IT REARS UP", "#ffcc44") # guests read the same cue
 			# skills aim at whoever holds the aggro — the keeper or a guest's
 			# ghost. Ghosts are position-only, so only projectile/self kinds
 			# can address them (lunges/bursts need a real body; the melee
@@ -364,11 +396,6 @@ func wild_ai(dt: float) -> void:
 						game.hurt_player(spec.get("atk", 50) * rage_mult(), self)
 			elif tdist > spec.get("reach", 4.0):
 				step_toward(tpos, dt)
-			if boss and phase == 2:
-				summon_t += dt
-				if summon_t >= 5.0:
-					summon_t = 0.0
-					pact_slam()
 			if tdist > 14:
 				aggro = -1; aggro_pid = 0
 		else:
