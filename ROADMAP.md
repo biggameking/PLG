@@ -582,3 +582,16 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   gauntlet_ex persists through mflags.
   Sim: capture grid/raid curve/species spread all sane (SIM 0 failures).
   Smoke 705/0.
+
+## S45 — Android export unblocked (debug APK builds + signs)
+  The named blocker was three separate gaps, none in game code:
+  - editor settings pointed android_sdk_path at a nonexistent dir; real SDK
+    lives at /opt/homebrew/share/android-commandlinetools (homebrew). Fixed
+    + java_sdk_path now points at brewed openjdk@17 (was empty).
+  - project.godot lacked textures/vram_compression/import_etc2_astc —
+    required for Android. Enabled.
+  - export templates for 4.7.2 were already installed under editor_data.
+  Result: --export-debug "Android" produces a signed, verified 35MB APK —
+  com.kinbound.game v0.9.0, minSdk 24, targetSdk 36, 706 assets inside.
+  Release export needs a release keystore (owner decision; debug lane is
+  green for device sideload via adb install).
