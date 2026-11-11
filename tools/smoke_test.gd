@@ -2177,6 +2177,45 @@ func run() -> void:
 	check("work suits text", game.work_str(SpeciesData.species_of("fenjelly")) == "FA1 HA1 TR1")
 	game.net.box_sync(["junk", [1, 2]], [])
 	check("box sync drops junk", game.net_box.is_empty() and game.party.is_empty())
+	# S58: hostile wire — Variant payloads must not abort the handler or land
+	# unclamped values (audit-19: raw int()/float() reached typed consumers)
+	game.net.box_sync([[{ "x": 1 }, "fenjelly", 9, 5, 10], # dict uid — _fin kills the row
+		[881, "fenjelly", "NaN", INF, {}]], []) # non-finite lv/hp coerce to defaults
+	check("box sync coerces hostile rows", game.net_box.size() == 1
+		and game.net_box[0]["uid"] == 881 and game.net_box[0]["lv"] == 1
+		and game.net_box[0]["hp"] >= 0 and game.net_box[0]["max_hp"] >= 1,
+		"nb=%s" % str(game.net_box))
+	# a hostile UPDATE row must land on a live replica to reach the coercions —
+	# and the packet must re-list every existing replica or reconcile despawns it
+	game.net.pal_sync([[882, "puffmite", 1.0, 1.0, 1, "wild", 5.0, false]])
+	var hp882 := game.find_net_pal(882)
+	var upd_rows := [[882, "puffmite", {"a": 1}, [1], {"l": 9}, "wild", INF, false,
+		false, false, "", {"m": 1}]]
+	for rp7 in game.pals:
+		if rp7.net_id > 0 and rp7.net_id != 882:
+			upd_rows.append([rp7.net_id, rp7.species_id, rp7.pos.x, rp7.pos.y,
+				rp7.level, rp7.mode, rp7.hp, rp7.lucky, rp7.boss,
+				rp7.alpha, rp7.spire_tag, rp7.mounted_by])
+	game.net.pal_sync(upd_rows)
+	check("pal_sync hostile update coerces", hp882 != null and is_instance_valid(hp882)
+		and is_finite(hp882.net_target.x) and is_finite(hp882.hp)
+		and hp882.level == 1 and hp882.mounted_by == 0)
+	if hp882 != null and is_instance_valid(hp882):
+		game.pals.erase(hp882)
+		hp882.queue_free()
+	game.net.env_sync(5.0, 1, "clear", false, {"kind": "supply", "id": "wood",
+		"n": {"x": 1}, "day": [3], "got": "abc"}, {"on": true, "x": {"q": 2}, "y": []})
+	check("env_sync hostile bq/merch", game.board_quest["n"] == 0
+		and game.board_quest["day"] == -1 and game.board_quest["got"] == 0)
+	game.drop_sync([[991, "wood", {"n": 9}, {"x": 1}, [2.0]]])
+	check("drop_sync hostile coords coerce", game.net_drops.has(991)
+		and game.net_drops[991]["n"] == 0 and game.net_drops[991]["pos"] == Vector2.ZERO)
+	if is_instance_valid(game.net_drops[991]["node"]):
+		game.net_drops[991]["node"].queue_free()
+	game.net_drops.erase(991)
+	var dv0: int = game.world.decor[0]
+	game.decor_sync([[0, {"v": 1}], [{"x": 9}, 2]])
+	check("decor_sync hostile value skipped", game.world.decor[0] == dv0)
 	var ppack: Array = game.net.party_state_pack(0)
 	check("party pack rows", ppack.size() == mini(game.party.size(), 8)
 		and ppack.all(func(e9): return e9.size() >= 14), "rows=%d party=%d" % [ppack.size(), game.party.size()])
@@ -3084,15 +3123,19 @@ func run() -> void:
 	game.items.erase("gold_coin"); game.items.erase("ancient_part"); game.items.erase("kin_orb")
 
 	# party cap: 6th kin refused and stays in the box
-	while game.party.size() < 5:
+	var cap_iter := 0
+	while game.party.size() < 5 and cap_iter < 8: # a refused promote can't spin the loop
 		var fp: Kin = load("res://src/kin.gd").new()
 		game.entity_layer.add_child(fp)
 		fp.setup(game, "puffmite", 3, p.pos)
+		fp.mode = "box" # box_to_party only promotes real box cargo
 		game.box.append(fp)
 		game.box_to_party(fp)
+		cap_iter += 1
 	var over: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(over)
 	over.setup(game, "puffmite", 3, p.pos)
+	over.mode = "box"
 	game.box.append(over)
 	game.box_to_party(over)
 	check("party overflow refused", game.party.size() == 5 and not game.pals.has(over) and game.box.has(over),
@@ -4005,7 +4048,8 @@ func run() -> void:
 	hf.store_var({"seed": game.world.seed, "v": 2, "day": [1, 2], "tod": {"x": 8},
 		"tech_points": [], "raid_t": {}, "unlocked": ["kinbox", {"fake": 1}],
 		"items": {7: 5, "wood": [9]}, "party": [null, {"u": 1}],
-		"player": {"pos": [5.0, 5.0], "hp": [], "level": 1, "cap_lv": "9", "meal": {"glow": {}, "atk": "x", "def": 0.5, 7: 1},
+		"player": {"pos": [5.0, 5.0], "hp": [], "level": 1, "cap_lv": "9", "meal_t": 120.0,
+			"meal": {"glow": {}, "atk": "x", "def": 0.5, 7: 1},
 			"hunger": [], "stamina": {}, "xp": {}},
 		"board_quest": {"kind": "hax", "n": [3], "got": {}, "day": []},
 		"treasure": ["a", "b"], "grotto": [1, {}], "perks": [1, 2],

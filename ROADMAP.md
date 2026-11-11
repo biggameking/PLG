@@ -745,3 +745,23 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   the MAX_PALS/max_base_pals/box caps every other kin path had.
   Fixture asserts all six respawn fields and fires one row live.
   Smoke 750/0, 749/0 zero-error.
+
+## S58 — audit-19: wire-layer coercion parity + roster-uid hygiene
+  Nineteenth audit on the S57 surface (1H/3M/4L): the save boundary
+  was sealed but the SAME hostile shapes still reached wire handlers —
+  raw int()/float() inside world_sync (tod/day/kin-row id/merch pos),
+  pal_sync update tails (pos/hp/lv/mounted_by), env_sync board-quest
+  and merchant fields, box_sync rows, drop_sync coords, decor_sync
+  values. All route through Game._i/_f/_fin now; tod clamps 0-24 so an
+  INF can't fast-forward days; level clamps 1-60. Found live while
+  fixturing: a size-5 box_sync row aborted on unconditional e[5] —
+  gate tails at the highest unguarded index, both rows. Roster lanes:
+  _bench_add's box/free overflow now scrubs the stale strip uid
+  (r_retract/retract_out), r_box_to_party erases before append like
+  its local twin, local box_to_party gates mode=="box", all four
+  party/base->box verbs refuse at MAX_BOX before side-effects, the
+  catch overflow lanes take MAX_BOX+32 then free clean. hello("")
+  binds "_pid%d" instead of the unclaimable empty tag; saved
+  remote_parties skip empty keys; meal_buff only loads with a live
+  meal_t. Fixture: hostile box/pal/env/drop/decor rows coerce or
+  skip without aborting. Smoke 755-757/0 x3, zero-error.

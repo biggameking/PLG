@@ -538,7 +538,8 @@ func r_retract(pid: int) -> void:
 		return
 	_unbind_mount(cur) # a mount called back to the bench can't stay claimed
 	var rc_name: String = cur.spec["name"] # capture before the overflow lane can free it
-	_bench_add(cur)
+	if not _bench_add(cur):
+		rparty_for(pid).erase(cur.uid) # saturated lanes boxed/freed it — the strip can't keep a ghost uid
 	note_remote(pid, "%s recalled" % rc_name)
 
 func r_send_out(uid: int, pid: int) -> void:
@@ -575,6 +576,7 @@ func r_box_to_party(bp: Kin, pid: int) -> void:
 		note_remote(pid, "Party full (5)")
 		return
 	box.erase(bp)
+	rp.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	if _bench_add(bp): # saturated bench lands it back in the box, mode corrected
 		rp.append(bp.uid)
 		note_remote(pid, "%s joined your party (%d/5)" % [bp.spec["name"], rp.size()])
@@ -584,6 +586,9 @@ func r_box_to_party(bp: Kin, pid: int) -> void:
 		note_remote(pid, "Bench is full - %s stays in the box" % bp.spec["name"])
 
 func r_party_to_box(p: Kin, pid: int) -> void:
+	if box.size() >= MAX_BOX: # full box refuses BEFORE the unbind/job drop — the kin stays put whole
+		note_remote(pid, "Kinbox is full")
+		return
 	_unbind_mount(p) # boxed kin can't stay bound — a mount belongs to the field
 	var rp := rparty_for(pid)
 	rp.erase(p.uid)
@@ -604,6 +609,9 @@ func r_party_to_box(p: Kin, pid: int) -> void:
 
 func r_base_to_box(p: Kin, pid: int) -> void:
 	# a guest recalls their own worker — job dropped, cargo goes to their bag
+	if box.size() >= MAX_BOX:
+		note_remote(pid, "Kinbox is full")
+		return
 	_unbind_mount(p)
 	if p.job_site:
 		if p in p.job_site["workers"]:
@@ -1738,9 +1746,12 @@ func resolve_sphere(sp) -> void:
 			# false → the overflow lane already boxed or freed it — no double add
 		else:
 			target.mode = "box"
-			box.append(target)
 			pals.erase(target)
-			box_pal(target)
+			if box.size() < MAX_BOX + 32: # same soft cap _bench_add overflows into
+				box.append(target)
+				box_pal(target)
+			else:
+				target.queue_free() # every store capped — dies clean, no unbound kin
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		sfx_play("fail")
@@ -1827,9 +1838,12 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 			# false → the overflow lane already boxed it — no double add
 		else:
 			target.mode = "box"
-			box.append(target)
 			pals.erase(target)
-			box_pal(target)
+			if box.size() < MAX_BOX + 32: # same soft cap _bench_add overflows into
+				box.append(target)
+				box_pal(target)
+			else:
+				target.queue_free() # every store capped — dies clean, no unbound kin
 	else:
 		floater(target.pos, "…broke free", "#e8963c")
 		log_msg("%s broke free from player %d's orb" % [target.spec["name"], pid])
@@ -1920,10 +1934,10 @@ func drop_sync(arr: Array) -> void:
 		if net_drops.has(did):
 			continue
 		var id := str(e[1])
-		var at := Vector2(float(e[3]), float(e[4]))
+		var at := Vector2(_f(e[3]), _f(e[4]))
 		if net_drops.size() >= MAX_DROPS:
 			continue # a hostile or buggy host can't stuff our sprite RAM either
-		net_drops[did] = {"id": id, "n": int(e[2]), "pos": at, "node": drop_sprite(id, at)}
+		net_drops[did] = {"id": id, "n": maxi(_i(e[2]), 0), "pos": at, "node": drop_sprite(id, at)}
 	for did in net_drops.keys():
 		if not seen.has(did):
 			if is_instance_valid(net_drops[did]["node"]):
@@ -3342,7 +3356,8 @@ func retract_out() -> void:
 	player.dismount_if(cur)
 	_unbind_mount(cur)
 	var rc_name2: String = cur.spec["name"]
-	_bench_add(cur)
+	if not _bench_add(cur):
+		party.erase(cur.uid) # the box/freed lane already claimed it — no ghost uid on the strip
 	log_msg("%s recalled" % rc_name2)
 
 func send_out(uid: int) -> void:
@@ -3367,8 +3382,8 @@ func send_out(uid: int) -> void:
 	log_msg("%s sent out!" % bp.spec["name"])
 
 func box_to_party(bp: Kin) -> void:
-	if bp.hp <= 0:
-		log_msg("%s is KO'd - wait for it to recover" % bp.spec["name"])
+	if bp.hp <= 0 or bp.mode != "box": # the remote twin gates the same way — a field pal isn't box cargo
+		log_msg("%s is KO'd - wait for it to recover" % bp.spec["name"] if bp.hp <= 0 else "%s isn't in the box" % bp.spec["name"])
 		return
 	if party.size() >= 5:
 		log_msg("Party full (5) - send someone to the box first")
@@ -3454,6 +3469,9 @@ func _deploy_note(p: Kin, msg: String) -> void:
 
 func base_to_box(p: Kin) -> void:
 	# recall a worker into cold storage — job and cargo are dropped first
+	if box.size() >= MAX_BOX:
+		log_msg("Kinbox is full")
+		return
 	_unbind_mount(p)
 	if p.job_site:
 		if p in p.job_site["workers"]:
@@ -3473,6 +3491,9 @@ func party_to_box(uid: int) -> void:
 	if p == null:
 		p = bench_pal_of(uid) # benched orbs drop straight into cold storage
 	if p == null:
+		return
+	if box.size() >= MAX_BOX: # refusal precedes the unbind/job drop — a full box keeps the kin put
+		log_msg("Kinbox is full")
 		return
 	player.dismount_if(p)
 	_unbind_mount(p)
@@ -4173,15 +4194,15 @@ func load_game() -> bool:
 	player.xp = maxi(_i(d["player"].get("xp", 0)), 0); player.capture_level = clampi(_i(d["player"].get("cap_lv", 1)), 1, 6) # honest ceiling: 1 + capture perk (≤5) — same bound as the wire
 	player.hunger = clampf(_f(d["player"].get("hunger", player.hunger)), 0.0, 100.0)
 	player.stamina = clampf(_f(d["player"].get("stamina", 100.0)), 0.0, 100.0) # old saves start rested
+	player.meal_t = clampf(_f(d["player"].get("meal_t", 0.0)), 0.0, 600.0) # cap restored buffs
 	player.meal_buff = {} # rebuilt key-by-key: raw values reach int()/float() readers every frame
-	if d["player"].get("meal") is Dictionary:
+	if player.meal_t > 0.0 and d["player"].get("meal") is Dictionary: # a dead timer carries no buff — the pair travels together or not at all
 		for mk in ["atk", "def", "spd", "warm", "cool", "glow"]:
 			var mv = d["player"]["meal"].get(mk)
 			if _fin(mv): # only the six stats meals actually grant — a forged key can't reach a consumer
 				var fm := clampf(float(mv), 0.0, 10.0)
 				if fm > 0.0:
 					player.meal_buff[mk] = fm
-	player.meal_t = clampf(_f(d["player"].get("meal_t", 0.0)), 0.0, 600.0) # cap restored buffs
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
 	player.hp = clampf(player.hp, 0.0, player.max_hp) # forged saves can't make you immortal or limbo-dead
 	var pending_jobs := []
@@ -4301,8 +4322,9 @@ func load_game() -> bool:
 			for pi2 in (rps[tag] if rps[tag] is Array else []):
 				if _fin(pi2) and int(pi2) >= 0 and int(pi2) < loaded.size():
 					arr.append(loaded[int(pi2)].uid)
-			if not arr.is_empty():
-				remote_parties[str(tag).substr(0, 24)] = arr.slice(0, 5)
+			var rtk := str(tag).substr(0, 24)
+			if not arr.is_empty() and rtk != "": # an empty tag can't own a roster — rebind_owner refuses it too
+				remote_parties[rtk] = arr.slice(0, 5)
 	var pbx_sv := Vector2i(-9999, -9999) # saved primary kinbox, if the save is new enough
 	var pv = d.get("pbx", [])
 	if pv is Array and pv.size() >= 2 and _fin(pv[0]) and _fin(pv[1]):
@@ -6437,10 +6459,10 @@ func decor_snapshot_apply(d: Dictionary) -> bool:
 func decor_sync(arr: Array) -> void:
 	var changed := false
 	for e in arr:
-		if e is Array and e.size() >= 2 and _fin(e[0]):
+		if e is Array and e.size() >= 2 and _fin(e[0]) and _fin(e[1]):
 			var i := int(e[0])
 			if i >= 0 and i < world.decor.size():
-				world.decor[i] = int(e[1])
+				world.decor[i] = clampi(int(e[1]), 0, 255)
 				changed = true
 	if changed:
 		queue_redraw_decor()

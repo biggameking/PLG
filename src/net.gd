@@ -173,6 +173,8 @@ func hello(tag: String) -> void:
 	if ghosts.has(pid) and not _throttle(pid, "hello_bkt", 1.0, 4.0):
 		return # a re-hello is one breath, a script is not — its own slow bucket
 	var tag_s := str(tag).substr(0, 24)
+	if tag_s == "":
+		tag_s = "_pid%d" % pid # an empty hello can't tag kin — the pid fallback keeps roster/eviction honest
 	for other in peer_tags:
 		if other != pid and peer_tags[other] == tag_s:
 			rpc_id(pid, "net_note", "That keeper tag is already claimed")
@@ -262,7 +264,7 @@ func state_sync(d: Dictionary) -> void:
 	game.structures.clear()
 	game.world.structures.clear()
 	for e in d.get("structures", []):
-		if e is Array and e.size() >= 3 and (e[1] is float or e[1] is int) and (e[2] is float or e[2] is int):
+		if e is Array and e.size() >= 3 and Game._fin(e[1]) and Game._fin(e[2]):
 			var st_store: Dictionary = e[3] if e.size() > 3 and e[3] is Dictionary else {}
 			if game.place_free(str(e[0]), int(e[1]), int(e[2]), st_store) \
 					and e.size() > 4 and e[4] is Dictionary:
@@ -271,8 +273,8 @@ func state_sync(d: Dictionary) -> void:
 					game._struct_wire_apply(game.structures[sk], e[4]) # same wire shape as struct_sync
 	if d.get("unlocked") is Array:
 		game.net_unlocked = d["unlocked"] # the host's tech bounds our build bar
-	game.tod = float(d.get("tod", game.tod))
-	game.day = int(d.get("day", game.day))
+	game.tod = clampf(Game._f(d.get("tod", game.tod), game.tod), 0.0, 24.0) # an INF tod fast-forwards a day per frame — same clamp the save path runs
+	game.day = maxi(Game._i(d.get("day", game.day), game.day), 1)
 	# drop the population our own regenerate() spawned — the host's wild/base
 	# kin replace it, otherwise clients see every kin twice
 	for p in game.pals.duplicate():
@@ -289,7 +291,7 @@ func state_sync(d: Dictionary) -> void:
 		# kin rows ship in pal_state_pack shape — the same reorder pal_sync
 		# runs before spawn_net_pal applies its wire shape
 		game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
-			e[7] if e.size() > 7 else false, int(e[0]),
+			e[7] if e.size() > 7 else false, Game._i(e[0]),
 			e[8] if e.size() > 8 else false,
 			e[9] if e.size() > 9 else false,
 			e[10] if e.size() > 10 else "",
@@ -297,7 +299,7 @@ func state_sync(d: Dictionary) -> void:
 		np += 1 if game.pals.size() > n0 else 0
 	var md: Dictionary = d.get("merch", {}) if d.get("merch") is Dictionary else {}
 	game.net_merchant_apply(bool(md.get("on", false)),
-		float(md.get("x", 0.0)), float(md.get("y", 0.0)))
+		Game._f(md.get("x", 0.0)), Game._f(md.get("y", 0.0)))
 	stock_sync(d.get("stock", []) if d.get("stock") is Array else [])
 	game.log_msg("Synced %d structures, %d kin" % [d.get("structures", []).size(), np])
 
@@ -328,7 +330,7 @@ func pal_sync(arr: Array) -> void:
 		return # the host's own broadcast echoes back — it's the authority already
 	var seen := {}
 	for e in arr:
-		if not (e is Array) or e.size() < 6 or not (e[0] is float or e[0] is int):
+		if not (e is Array) or e.size() < 6 or not Game._fin(e[0]):
 			continue
 		var nid := int(e[0])
 		if nid <= 0:
@@ -344,13 +346,13 @@ func pal_sync(arr: Array) -> void:
 				e[10] if e.size() > 10 else "",
 				e[11] if e.size() > 11 else 0])
 		else:
-			p.net_target = Vector2(float(e[2]), float(e[3]))
-			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp
+			p.net_target = Vector2(Game._f(e[2]), Game._f(e[3]))
+			p.hp = maxf(0.0, Game._f(e[6])) if e.size() > 6 else p.hp
 			if e.size() > 4:
-				p.level = int(e[4]) # host-side xp growth must reach the replica
+				p.level = clampi(Game._i(e[4]), 1, 60) # host-side xp growth must reach the replica
 			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
 				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
-			p.mounted_by = int(e[11]) if e.size() > 11 else 0
+			p.mounted_by = Game._i(e[11]) if e.size() > 11 else 0
 			var myid := 0 # no peer → 0; the mounted_by==0 lane below needs no uid
 			if multiplayer.multiplayer_peer != null:
 				myid = multiplayer.get_unique_id()
@@ -385,12 +387,12 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 	# bq always rides the packet — an empty one means "no posting", not
 	# "keep the old world's quest" (absent-on-wire is not keep-local)
 	game.board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
-		"n": int(bq.get("n", 0)), "day": int(bq.get("day", -1)),
-		"sp": str(bq.get("sp", "")), "got": int(bq.get("got", 0))}
+		"n": Game._i(bq.get("n", 0)), "day": Game._i(bq.get("day", -1), -1),
+		"sp": str(bq.get("sp", "")), "got": Game._i(bq.get("got", 0))}
 	# the wandering trader rides the same tick — position only; the
 	# briefcase travels stock_sync, the till stays host-side
 	game.net_merchant_apply(bool(merch.get("on", false)),
-		float(merch.get("x", 0.0)), float(merch.get("y", 0.0)))
+		Game._f(merch.get("x", 0.0)), Game._f(merch.get("y", 0.0)))
 	if wmode >= 0: # work-mode flips belong to the island, not the caller
 		game.work_mode = clampi(int(wmode), 0, game.WORK_MODES.size() - 1)
 	if not unl.is_empty(): # mid-session research reaches guests inside a tick
@@ -1197,32 +1199,32 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 		return
 	var nb := []
 	for e in arr:
-		if not (e is Array) or e.size() < 5 or not (e[0] is float or e[0] is int):
+		if not (e is Array) or e.size() < 5 or not Game._fin(e[0]):
 			continue
-		nb.append({"uid": int(e[0]), "sid": str(e[1]), "lv": clampi(int(e[2]), 1, 60),
-			"hp": maxi(0, int(e[3])), "max_hp": maxi(1, int(e[4])),
-			"sex": "F" if str(e[5]) == "F" else "M",
+		nb.append({"uid": Game._i(e[0]), "sid": str(e[1]), "lv": clampi(Game._i(e[2]), 1, 60),
+			"hp": maxi(0, Game._i(e[3])), "max_hp": maxi(1, Game._i(e[4])),
+			"sex": "F" if e.size() > 5 and str(e[5]) == "F" else "M",
 			"lucky": e.size() > 6 and e[6] == true,
-			"talent": clampi(int(e[7]) if e.size() > 7 else 50, 0, 100),
+			"talent": clampi(Game._i(e[7]) if e.size() > 7 else 50, 0, 100),
 			"ailment": str(e[8]) if e.size() > 8 else "",
 			"fav": e.size() > 9 and e[9] == true,
-			"star": clampi(int(e[10]) if e.size() > 10 else 0, 0, 4),
+			"star": clampi(Game._i(e[10]) if e.size() > 10 else 0, 0, 4),
 			"wk": str(e[11]) if e.size() > 11 else ""})
 		if nb.size() >= 512: # hostile/hostile host can't stuff memory either
 			break
 	game.net_box = nb
 	var np := []
 	for e2 in prows:
-		if not (e2 is Array) or e2.size() < 5 or not (e2[0] is float or e2[0] is int):
+		if not (e2 is Array) or e2.size() < 5 or not Game._fin(e2[0]):
 			continue
-		np.append({"uid": int(e2[0]), "sid": str(e2[1]), "lv": clampi(int(e2[2]), 1, 60),
-			"hp": maxi(0, int(e2[3])), "max_hp": maxi(1, int(e2[4])),
-			"sex": "F" if str(e2[5]) == "F" else "M",
+		np.append({"uid": Game._i(e2[0]), "sid": str(e2[1]), "lv": clampi(Game._i(e2[2]), 1, 60),
+			"hp": maxi(0, Game._i(e2[3])), "max_hp": maxi(1, Game._i(e2[4])),
+			"sex": "F" if e2.size() > 5 and str(e2[5]) == "F" else "M",
 			"lucky": e2.size() > 6 and e2[6] == true,
-			"talent": clampi(int(e2[7]) if e2.size() > 7 else 50, 0, 100),
+			"talent": clampi(Game._i(e2[7]) if e2.size() > 7 else 50, 0, 100),
 			"ailment": str(e2[8]) if e2.size() > 8 else "",
 			"fav": e2.size() > 9 and e2[9] == true,
-			"star": clampi(int(e2[10]) if e2.size() > 10 else 0, 0, 4),
+			"star": clampi(Game._i(e2[10]) if e2.size() > 10 else 0, 0, 4),
 			"out": e2.size() > 11 and e2[11] == true,
 			"stance": str(e2[12]) if e2.size() > 12 else "auto",
 			"wk": str(e2[13]) if e2.size() > 13 else ""})
@@ -1231,7 +1233,7 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 	game.net_party = np
 	game.party.clear() # typed Array[int] — a plain Array won't assign
 	for u in pty:
-		if u is float or u is int:
+		if Game._fin(u):
 			game.party.append(int(u))
 		if game.party.size() >= 8:
 			break

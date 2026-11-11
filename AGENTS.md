@@ -451,3 +451,21 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     hardening a boundary, fixture the whole class: bad scalars, bad
     iterables, bad keys, bad tails, bad parents — or the next audit
     finds the layer you skipped.
+88. **Row-tail reads abort at the highest unguarded index.** A
+    `size() < 5` gate licenses `e[0..4]` only — the unconditional
+    `e[5]` two lines later still crashes on the exact row the gate
+    admitted (box_sync's sex field proved it). When a loop guards
+    `size()`, every raw `e[N]` either takes `e.size() > N` or the
+    gate rises to the deepest index the row actually touches.
+89. **Wire handlers get the same boundary as saves.** Hardening
+    load_game left `net.gd` running the identical `int()`/`float()`
+    class the audit had just condemned — the trust boundary is the
+    transport, not the file. Any boundary sweep greps BOTH
+    directions of every sync verb before it closes, and fixtures
+    drive hostile rows through the RPC handler itself, not just
+    the coercion helper.
+90. **Refusal precedes side-effects on bounded transfers.** A
+    `to_box` that unbinds/drops the job then discovers a full box
+    has already spent the kin's state. Capacity checks that can
+    refuse go first in the function; the strip-row erase rides the
+    same transaction so a failed lane can't orphan a uid.
