@@ -625,3 +625,21 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   hide under their rider and sleep their AI; orphan_guest_kin unbinds
   on disconnect. Client try_mount scans own-roster replicas and mount_done
   completes the handoff. Smoke: far/stranger/species/owner gates + toggle.
+
+## S49 — mount lifecycle contract + mature-world join layer (audit 10)
+  Tenth context-free audit (1C/2H/3M/6L) all landed. _unbind_mount(p)
+  centralizes rider teardown; every live-state exit path calls it:
+  kill_pal, r_retract, r_party_to_box, r_base_to_box, deploy_to_base,
+  r_butcher, r_sell_pal, orphan_guest_kin, respawn_player. Replicas freed
+  by pal_sync/purge_replicas clear player.mount first (the C1 dangling
+  ref — freed-instance derefs every frame). mount_req_remote now validates
+  before unbinding (a refused swap can't strip the saddle) and every
+  refusal echoes mount_done so mount_pending can't wedge the button.
+  Host mounts stamp mounted_by=1 — replicas hide for watchers, not just
+  the rider. state_snapshot carries world.decor/hp_map (mature worlds no
+  longer phantom-wall joiners) and shares pal_state_pack's 12-field rows.
+  chest_took refunds claim-accepted gaps; throw_bait is wired (bait_req →
+  ghost-anchored lure); board_paid/board_release ride board_bkt (settle
+  can't starve behind act spam); _on_connection_failed clears pending
+  ledger/mount handshake/chest ref. player.gd _mount_guard() belts every
+  mount consumer. Smoke 729-731/0 x3 green.

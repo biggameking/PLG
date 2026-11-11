@@ -163,6 +163,14 @@ func _exit_tree() -> void:
 # reclaims them at exit and no code path can orphan one.
 var box_holder: Node2D
 
+func _unbind_mount(p: Kin) -> void:
+	# any path that retires, relocates or frees a ridden kin owes it this:
+	# no rider claims it, and it stops hiding under a rider that no longer
+	# exists. Every sibling site calls this or the kin re-enters a roster
+	# invisible and unmountable forever.
+	p.mounted_by = 0
+	p.visible = true
+
 func box_pal(p: Kin) -> void:
 	# send a live kin to the box: keep it parented (to box_holder) so it can
 	# never leak; process is disabled there so stored kin cost nothing.
@@ -459,6 +467,7 @@ func r_retract(pid: int) -> void:
 	var cur := r_out_pal(pid)
 	if cur == null:
 		return
+	_unbind_mount(cur) # a mount called back to the bench can't stay claimed
 	pals.erase(cur)
 	cur.mode = "bench"
 	bench.append(cur)
@@ -507,6 +516,7 @@ func r_box_to_party(bp: Kin, pid: int) -> void:
 		r_send_out(bp.uid, pid)
 
 func r_party_to_box(p: Kin, pid: int) -> void:
+	_unbind_mount(p) # boxed kin can't stay bound — a mount belongs to the field
 	var rp := rparty_for(pid)
 	rp.erase(p.uid)
 	pals.erase(p)
@@ -526,6 +536,7 @@ func r_party_to_box(p: Kin, pid: int) -> void:
 
 func r_base_to_box(p: Kin, pid: int) -> void:
 	# a guest recalls their own worker — job dropped, cargo goes to their bag
+	_unbind_mount(p)
 	if p.job_site:
 		if p in p.job_site["workers"]:
 			p.job_site["workers"].erase(p)
@@ -547,6 +558,7 @@ func r_butcher(p: Kin, pid: int) -> void:
 	# bounded by the same bag-trust lane as every guest inventory claim.
 	if p.mode != "box" or p.fav:
 		return
+	_unbind_mount(p) # impossible in practice — the cleaver doesn't take mounts — but the teardown contract is per-path, not per-hope
 	box.erase(p)
 	var mult := 3 if p.lucky else 1
 	for dr in p.spec.get("drops", []):
@@ -558,6 +570,7 @@ func r_sell_pal(p: Kin, pid: int) -> void:
 	if p.mode != "box" or p.fav or merchant == null \
 			or not _ghost_reaches(pid, merchant.pos, 6.0):
 		return # deals close face-to-face — a remote sell is a forged handshake
+	_unbind_mount(p) # sold mounts settle the same bill — every exit path unbinds
 	var gain := pal_sell_price(p)
 	box.erase(p)
 	p.free()
@@ -847,6 +860,7 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 	if p.net_id > 0:
 		return # replicas die by host snapshot, never by local simulation
 	player.dismount_if(p)
+	_unbind_mount(p) # a KO'd mount can't stay bound — the rider walks it off
 	var owned := p.mode in ["partner", "base", "bench"]
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
 		var mult := 4 if p.alpha else (3 if p.lucky else 1)
@@ -1331,7 +1345,12 @@ func respawn_player() -> void:
 		if death_marks.size() > 3:
 			death_marks.pop_front() # only the freshest few spills earn a mark
 	if player.mount != null: # dead men don't ride
-		player.mount.visible = true
+		if net != null and net.is_client() and player.mount.net_id > 0:
+			# the host still thinks we're in the saddle — the replica ref
+			# dies here, but mounted_by must be released host-side too
+			net.rpc("mount_req", float(player.mount.net_id))
+		else:
+			_unbind_mount(player.mount)
 		player.mount = null
 	player.hp = int(player.max_hp * 0.5)
 	player.hunger = 40.0
@@ -1521,9 +1540,26 @@ func throw_bait() -> void:
 	items["kin_bait"] -= 1
 	if items["kin_bait"] <= 0:
 		items.erase("kin_bait")
+	if net != null and net.is_client():
+		# the lure is host truth — our bag paid locally (client-authoritative
+		# lane, same as the cleaver), the pile lands under the ghost it saw
+		net.rpc("bait_req")
+		log_msg("Bait tossed — something hungry will smell it")
+		sfx_play("drop")
+		return
 	lure = {"pos": player.pos + player.facing * 3.0, "till": t + 25.0}
 	log_msg("Bait tossed — something hungry will smell it")
 	sfx_play("drop")
+
+func throw_bait_remote(pid: int) -> void:
+	# host-side bait: the pile lands ahead of the ghost the wire saw, not at
+	# a client-claimed spot. The bag debit already happened client-side —
+	# bounded by the same bag-trust lane as every guest inventory claim.
+	var at := _ghost_at(pid)
+	if at.x < -1e8:
+		return
+	lure = {"pos": at + Vector2(2.0, 0.0), "till": t + 25.0}
+	note_remote(pid, "Bait tossed — something hungry will smell it")
 
 func lure_take(p: Kin) -> void: # first snout to the pile eats it
 	lure = {}
@@ -3311,6 +3347,7 @@ func deploy_to_base(p: Kin) -> void:
 		_deploy_note(p, "Base is full (%d kin — level up for more slots)" % max_base_pals())
 		return
 	player.dismount_if(p)
+	_unbind_mount(p) # a mount taking a base post leaves the saddle for good
 	party.erase(p.uid)
 	if p.owner_id > 0:
 		rparty_for(p.owner_id).erase(p.uid) # a guest's slot frees when their pal takes a post
@@ -5120,9 +5157,8 @@ func mount_req_remote(pid: int, uid: int) -> int: # 0 refuse / 1 mount / 2 dismo
 		return 0
 	for p in pals:
 		if p.owner_id == pid and p.mounted_by == pid:
-			p.mounted_by = 0
-			p.visible = true
 			if p.uid == uid:
+				_unbind_mount(p)
 				return 2 # same kin = dismount toggle
 	for p2 in pals:
 		if p2.uid == uid:
@@ -5136,6 +5172,11 @@ func mount_req_remote(pid: int, uid: int) -> int: # 0 refuse / 1 mount / 2 dismo
 			if not SpeciesData.mountable(p2.species_id) and SpeciesData.body_of(p2.species_id) != "bird":
 				note_remote(pid, "%s won't carry a rider" % p2.spec["name"])
 				return 0
+			# validate first, unbind second — a refused swap can't orphan the
+			# saddle: the old mount stays claimed until the new one passes
+			for p3 in pals:
+				if p3.owner_id == pid and p3.mounted_by == pid:
+					_unbind_mount(p3)
 			p2.mounted_by = pid
 			p2.visible = false
 			p2.pos = at
@@ -6013,7 +6054,7 @@ func orphan_guest_kin(pid: int) -> void:
 	for p in pals.duplicate():
 		if is_instance_valid(p) and p.owner_id == pid:
 			player.dismount_if(p)
-			p.mounted_by = 0 # the rider is gone — the kin unbinds with them
+			_unbind_mount(p) # the rider is gone — the kin unbinds with them
 			if p.job_site != null:
 				p.job_site["workers"].erase(p)
 				p.job_site = null
@@ -6042,14 +6083,20 @@ func purge_replicas() -> void:
 	# left behind they'd be locally catchable clone-pals
 	for p in pals.duplicate():
 		if p.net_id > 0:
+			if player.mount == p:
+				player.mount = null # a purged replica can't stay saddled — the ref dies before the node does
 			pals.erase(p)
 			p.queue_free()
 	for q in box.duplicate():
 		if q.net_id > 0:
+			if player.mount == q:
+				player.mount = null
 			box.erase(q)
 			q.queue_free()
 	for q2 in bench.duplicate():
 		if q2.net_id > 0:
+			if player.mount == q2:
+				player.mount = null
 			bench.erase(q2)
 			q2.queue_free()
 	remote_parties.clear()
@@ -6216,6 +6263,17 @@ func struct_sync(arr: Array) -> void:
 	for st in uniq:
 		if seen.get(st["pos"]) != st["id"]:
 			net_remove_structure(st) # host demolished or replaced it
+
+# client: the join snapshot's mature-world layer — seed geometry can't tell a
+# joiner which trees the island already lost; host truth overwrites it whole
+func decor_snapshot_apply(d: Dictionary) -> bool:
+	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
+			and d.get("hp_map") is PackedByteArray and d["hp_map"].size() == world.hp.size():
+		world.decor = d["decor"]
+		world.hp = d["hp_map"]
+		queue_redraw_decor()
+		return true
+	return false
 
 # client: apply host decor deltas (harvests, regrowth, footprint clears)
 func decor_sync(arr: Array) -> void:

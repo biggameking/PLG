@@ -404,3 +404,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 79. **Snapshots sharing a field's truth must replace wholesale.** `state_sync`
     only placed rows — a same-cell local structure blocked `place_free` and
     left a phantom. Join-time application is raze-and-replace, not merge.
+80. **Object references die before the node does.** Any long-lived pointer to
+    a node the wire can free (mounts, focus targets, chest refs) must be
+    cleared at every free site AND guarded at every consumer —
+    `is_instance_valid` at the deref, not just the producer. `queue_free()`
+    leaves the ref truthy until frame end; a missing-guard bug reads as
+    per-frame freed-instance spam plus a wedged verb.
+81. **Bound-state fields have a teardown contract.** When a status link
+    (`mounted_by`, `job_site`, `carry`, `visible`) couples two entities,
+    every path that retires, relocates, converts or frees either side calls
+    the same unbind helper. New exit paths inherit the contract — grep the
+    helper's call sites before adding a sibling, never inline a partial
+    clear.

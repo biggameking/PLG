@@ -15,6 +15,7 @@ var send_timer := 0.0
 # never as goods minted into shared/durable truth. Reliable ordering makes
 # settles arrive FIFO, so each pops the oldest matching tag.
 var pending_pays: Array = []
+var mount_pending := false # a mount_req is in flight — the button can't double-toggle before mount_done lands
 func pay(tag: String, cost: Dictionary) -> void:
 	for k in cost:
 		game.add_item(str(k), -int(cost[k]))
@@ -195,21 +196,26 @@ func state_snapshot() -> Dictionary:
 	# origin, and state fields (egg timers, workers) join for free
 	var arr := struct_state_pack()
 	# share the living population too — a joining client should see the same
-	# wild/base kin, not an empty world (capped upstream by MAX_PALS)
-	var parr := []
-	for p in game.pals:
-		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			parr.append([p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.lucky, p.uid,
-				p.boss, p.alpha, p.spire_tag])
+	# wild/base kin, not an empty world (capped upstream by MAX_PALS). One
+	# packer for snapshots and ticks: the joiner gets hp/mounted_by too.
+	var parr := pal_state_pack()
 	var mp := {}
 	if game.merchant != null and is_instance_valid(game.merchant):
 		mp = {"on": true, "x": game.merchant.pos.x, "y": game.merchant.pos.y}
 	return {"structures": arr, "tod": game.tod, "day": game.day, "kin": parr,
+		# a mature world's decor isn't the seed's decor — the joiner lands on
+		# regenerated geometry, then these rows overwrite every harvest,
+		# regrowth and footprint clear the island remembers
+		"decor": game.world.decor.duplicate(), "hp_map": game.world.hp.duplicate(),
 		"unlocked": game.unlocked.duplicate(), # the host's tech bounds the client's build bar
 		"merch": mp, "stock": game.merchant_stock.duplicate()} # a joiner mid-visit still sees the trader
 
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
+	# mature-world decor lands BEFORE the structure rows — place_free reads
+	# decor, so host truth must be on the ground before a lair chest can
+	# claim its cell (regenerate() left the seed's pristine layer behind)
+	game.decor_snapshot_apply(d)
 	# joining replaces every local structure with the host's rows — a leftover
 	# from our own regenerate() would shadow its host twin (loot, cages, HP)
 	# and place_free would refuse the cell outright
@@ -239,8 +245,17 @@ func state_sync(d: Dictionary) -> void:
 			p.queue_free()
 	var np := 0
 	for e in d.get("kin", []):
+		if not (e is Array) or e.size() < 7:
+			continue
 		var n0 := game.pals.size()
-		game.spawn_net_pal(e) # each entry re-validated game-side
+		# kin rows ship in pal_state_pack shape — the same reorder pal_sync
+		# runs before spawn_net_pal applies its wire shape
+		game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
+			e[7] if e.size() > 7 else false, int(e[0]),
+			e[8] if e.size() > 8 else false,
+			e[9] if e.size() > 9 else false,
+			e[10] if e.size() > 10 else "",
+			e[11] if e.size() > 11 else 0])
 		np += 1 if game.pals.size() > n0 else 0
 	var md: Dictionary = d.get("merch", {}) if d.get("merch") is Dictionary else {}
 	game.net_merchant_apply(bool(md.get("on", false)),
@@ -292,6 +307,8 @@ func pal_sync(arr: Array) -> void:
 				p.visible = p.mounted_by == 0
 	for p in game.pals.duplicate():
 		if p.net_id > 0 and not seen.has(p.net_id): # host dropped it: caught, KO'd, despawned
+			if game.player.mount == p:
+				game.player.mount = null # a despawned mount can't stay saddled — freed-instance derefs every frame otherwise
 			game.pals.erase(p)
 			p.queue_free()
 
@@ -332,6 +349,9 @@ func _on_connection_failed() -> void:
 	# a dead dial isn't a session — free the peer so net_live()/retry stay honest
 	is_host = false
 	multiplayer.multiplayer_peer = null
+	pending_pays.clear() # unpaid claims die with the dial — never settle them into a later session
+	game.chest_ref = null # no chest was ever reached — the ref would mislead the next session
+	mount_pending = false # the mount handshake died with the dial too
 	game.log_msg("No host answered — check the address")
 
 func _on_server_disconnected() -> void:
@@ -341,6 +361,7 @@ func _on_server_disconnected() -> void:
 	ghosts.clear()
 	game.clear_net_drops() # replica loot dies with the session too
 	game.purge_replicas() # statue kin can't linger as free catches post-session
+	mount_pending = false # the mount handshake died with the wire
 	game.net_merchant_apply(false, 0.0, 0.0) # the mirrored trader leaves with the host
 	game.merchant_hp = 0
 	game.merchant_wanted = false
@@ -688,11 +709,29 @@ func chest_grant(_tx: int, _ty: int, items: Dictionary) -> void:
 func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
 	if is_host:
 		return
+	# the host accepted an intersection of our claim — the gap between what
+	# left the bag and what landed in the chest comes back, or goods vanish
+	for i in pending_pays.size():
+		if pending_pays[i]["tag"] == "chest_dep":
+			for id in pending_pays[i]["cost"]:
+				var gap: int = int(pending_pays[i]["cost"][id]) - int(items.get(id, 0))
+				if gap > 0:
+					game.add_item(str(id), gap)
+			break
 	pay_settle("chest_dep", false) # goods left the bag when the request flew
 	var n := 0
 	for id in items:
 		n += int(items[id])
 	game.log_msg("Stored %d items" % n)
+
+@rpc("any_peer", "call_remote", "reliable")
+func bait_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	game.throw_bait_remote(pid) # the pile lands under the ghost the wire saw
 
 @rpc("any_peer", "call_remote", "reliable")
 func fish_req() -> void:
@@ -841,7 +880,7 @@ func board_release(qid: String) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
-	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+	if not _throttle(pid, "board_bkt", 4.0, 6.0):
 		return
 	game.board_release_remote(pid, str(qid))
 
@@ -850,7 +889,9 @@ func board_paid(qid: String) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
-	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+	if not _throttle(pid, "board_bkt", 4.0, 6.0):
+		# settlement rides its own bucket — a spammed action lane can't starve
+		# the gold a keeper already paid goods for
 		return
 	var res := game.board_paid_remote(pid, str(qid))
 	if not res.is_empty() and multiplayer.get_peers().has(pid):
@@ -886,13 +927,14 @@ func mount_req(uid: float) -> void:
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		return
 	var r := game.mount_req_remote(pid, int(uid))
-	if r > 0 and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "mount_done", int(uid), r)
+	if multiplayer.get_peers().has(pid):
+		rpc_id(pid, "mount_done", int(uid), r) # refusals echo too — a pending bind can't wait forever
 
 @rpc("authority", "call_remote", "reliable")
 func mount_done(uid: int, state: int) -> void:
 	if is_host:
 		return
+	mount_pending = false # the handshake resolved — mount, dismount, or refuse
 	if int(state) == 1:
 		var p := game.find_net_pal(int(uid))
 		if p != null:

@@ -5267,6 +5267,118 @@ func run() -> void:
 		game.net.ghosts[99].net_pos = mt_ghost
 		game.remote_parties.erase("t99")
 		game.net.peer_tags.erase(99)
+		# S49: every path that retires a ridden kin owes it the unbind —
+		# retract, KO, owner-drop, replica despawn and rider death all settle
+		# the saddle, or the kin re-enters a roster invisible forever
+		game.net.peer_tags[99] = "t99" # rparty_for keys strips on the tag
+		var unb1: Kin = game.gen_pal("scalfang", 6, p.pos)
+		game.pals.append(unb1)
+		unb1.owner_id = 99
+		unb1.mode = "partner"
+		game.remote_parties["t99"] = [unb1.uid]
+		game.net.ghosts[99].net_pos = Vector3(unb1.pos.x, unb1.pos.y, 0)
+		check("a ghost mounts for the drill", game.mount_req_remote(99, unb1.uid) == 1)
+		game.r_retract(99)
+		check("retract unbinds the saddle", unb1.mounted_by == 0 and unb1.visible)
+		game.r_send_out(unb1.uid, 99)
+		game.mount_req_remote(99, unb1.uid)
+		var unb2: Kin = game.gen_pal("scalfang", 6, Vector2(unb1.pos.x + 40, unb1.pos.y))
+		game.pals.append(unb2)
+		unb2.owner_id = 99
+		unb2.mode = "partner"
+		game.remote_parties["t99"].append(unb2.uid)
+		check("a refused swap keeps the saddle",
+			game.mount_req_remote(99, unb2.uid) == 0 and unb1.mounted_by == 99)
+		game.pals.erase(unb2); unb2.queue_free()
+		game.kill_pal(unb1, true, 99)
+		check("a KO'd mount walks the rider off", unb1.mounted_by == 0 and unb1.visible)
+		var unb3: Kin = game.gen_pal("scalfang", 6, p.pos)
+		game.pals.append(unb3)
+		unb3.owner_id = 99
+		unb3.mode = "partner"
+		game.remote_parties["t99"].append(unb3.uid)
+		game.mount_req_remote(99, unb3.uid)
+		game.orphan_guest_kin(99)
+		check("a dropped keeper's mount unbinds", unb3.mounted_by == 0 and unb3.visible)
+		game.box.erase(unb1); game.box.erase(unb3)
+		unb1.free(); unb3.free() # box kin die by free() — never queue_free
+		game.remote_parties.erase("t99")
+		# replica despawn while mounted: the pal_sync removal row owes the rider
+		var unb4: Kin = game.gen_pal("scalfang", 6, p.pos)
+		unb4.net_id = 424242
+		game.pals.append(unb4)
+		var keep_rows := []
+		for rp4 in game.pals:
+			if rp4.net_id > 0 and rp4 != unb4:
+				keep_rows.append([rp4.net_id, rp4.species_id, rp4.pos.x, rp4.pos.y,
+					rp4.level, rp4.mode, rp4.hp, rp4.lucky, rp4.boss, rp4.alpha,
+					rp4.spire_tag, rp4.mounted_by])
+		p.mount = unb4
+		game.net.pal_sync(keep_rows)
+		check("a despawned replica drops the saddle", p.mount == null
+			and unb4 not in game.pals)
+		p.mount = null
+		# respawn while mounted — the host path unbinds, the replica path asks
+		var unb5: Kin = game.gen_pal("scalfang", 6, p.pos)
+		game.pals.append(unb5)
+		unb5.mode = "partner"
+		var pos5 := p.pos
+		var hp5 := p.hp
+		var stat5 := p.statuses.duplicate()
+		var items5 := game.items.duplicate()
+		game.items.clear() # no pack, no spill — the tombstone lane stays quiet
+		p.mount = unb5
+		unb5.visible = false
+		unb5.mounted_by = 1
+		game.respawn_player()
+		check("death unbinds the saddle", p.mount == null
+			and unb5.mounted_by == 0 and unb5.visible)
+		game.items = items5
+		p.pos = pos5
+		p.hp = hp5
+		p.statuses = stat5
+		game.pals.erase(unb5); unb5.queue_free()
+		# chest partial-accept: the gap between claim and chest comes home
+		game.net.pending_pays.clear()
+		var wood5 := game.item_count("wood")
+		var had5 := game.items.has("wood")
+		game.items["wood"] = 5 # a known baseline — stack caps can't eat the diff
+		game.net.pending_pays.append({"tag": "chest_dep", "cost": {"wood": 10}})
+		game.net.chest_took(0, 0, {"wood": 4})
+		check("partial deposit refunds the gap", game.item_count("wood") == 11
+			and game.net.pending_pays.is_empty())
+		if had5:
+			game.items["wood"] = wood5
+		else:
+			game.items.erase("wood")
+		# remote bait lands under the ghost the wire saw, not the claim
+		game.lure = {}
+		game.throw_bait_remote(99)
+		check("remote bait lands at the ghost", not game.lure.is_empty()
+			and Vector2(game.lure["pos"]).distance_to(
+				Vector2(game.net.ghosts[99].net_pos.x, game.net.ghosts[99].net_pos.y)) < 8.0)
+		game.lure = {}
+		# mature-world join: the snapshot's decor layer overwrites pristine seed
+		var dec_i := game.world.idx(int(p.pos.x), int(p.pos.y))
+		var dec_save: PackedByteArray = game.world.decor.duplicate()
+		var hp_save: PackedByteArray = game.world.hp.duplicate()
+		var dec_fake: PackedByteArray = game.world.decor.duplicate()
+		var hp_fake: PackedByteArray = game.world.hp.duplicate()
+		dec_fake[dec_i] = int(World.Decor.STUMP)
+		hp_fake[dec_i] = 0
+		check("mature-world decor applies on join",
+			game.decor_snapshot_apply({"decor": dec_fake, "hp_map": hp_fake})
+			and game.world.decor[dec_i] == int(World.Decor.STUMP))
+		check("a malformed decor map is refused",
+			not game.decor_snapshot_apply({"decor": PackedByteArray([1, 2])}))
+		game.world.decor = dec_save
+		game.world.hp = hp_save
+		# snapshot kin rows share the tick packer — hp and mounted_by ride along
+		var snap_rows: Array = game.net.state_snapshot().get("kin", [])
+		check("snapshot kin rows carry the full pack", snap_rows.size() > 0
+			and snap_rows[0].size() == 12)
+		game.net.ghosts[99].net_pos = mt_ghost
+		game.net.peer_tags.erase(99)
 	else:
 		check("guest deposit whitelists", false, "no chest spot seeded")
 	game.touch_ui = tui3

@@ -202,9 +202,10 @@ func throw_sphere(use_facing := false) -> void:
 	game.sphere_fly(sid, best)
 
 func flying() -> bool:
-	return mount != null and SpeciesData.body_of(mount.species_id) == "bird"
+	return _mount_guard() and SpeciesData.body_of(mount.species_id) == "bird"
 
 func can_enter(nx: float, ny: float) -> bool:
+	_mount_guard() # a stale mount ref can't carry us — check before it decides terrain
 	var tx := int(nx); var ty := int(ny)
 	if not world.blocked(tx, ty, pos.x, pos.y):
 		return true
@@ -259,7 +260,7 @@ func speed_mult() -> float:
 	var m := 1.0
 	if swimming():
 		m *= 0.5
-	if mount != null:
+	if _mount_guard():
 		# the island: mounts differ — a swift deer outruns a sluggish boar
 		m *= 1.3 + minf(float(mount.spec.get("speed", 2.6)), 5.0) * 0.2
 	if hunger < 25.0:
@@ -356,7 +357,7 @@ func _physics_process(dt: float) -> void:
 	var spd_mult := speed_mult()
 	if statuses.get("sleep", 0) > game.t:
 		iv = Vector2.ZERO
-	if mount != null:
+	if _mount_guard():
 		mount.pos = pos # ridden pal travels with the player
 	if iv.length() > 0 and dodge_t <= 0:
 		var sp := speed * spd_mult * (1.7 if (Input.is_action_pressed("sprint") \
@@ -388,17 +389,29 @@ func _physics_process(dt: float) -> void:
 		moving = true
 	sync_screen()
 
+func _mount_guard() -> bool:
+	# replicas die by snapshot — a mount ref can outlive its node by a frame;
+	# every consumer checks before it derefs (belt, on top of the free-site clears)
+	if mount != null and not is_instance_valid(mount):
+		mount = null
+	return mount != null
+
 func dismount_if(p: Kin) -> void:
+	_mount_guard()
 	if mount == p:
-		mount.visible = true
+		game._unbind_mount(mount)
 		mount = null
 
 func try_mount() -> void:
+	_mount_guard()
 	if mount:
 		if game.net != null and game.net.is_client():
+			if game.net.mount_pending:
+				return # the handshake is still out — a second press can't toggle twice
+			game.net.mount_pending = true
 			game.net.rpc("mount_req", float(mount.net_id)) # host unbinds it
 			return
-		mount.visible = true
+		game._unbind_mount(mount)
 		mount.mode = "partner"
 		mount = null
 		game.log_msg("Dismounted")
@@ -420,10 +433,14 @@ func try_mount() -> void:
 				best = p
 	if best:
 		if wired:
+			if game.net.mount_pending:
+				return # the handshake is still out — a second press can't toggle twice
+			game.net.mount_pending = true
 			game.net.rpc("mount_req", float(best.net_id)) # host binds it; mount_done rides
 			return
 		mount = best
 		best.visible = false
+		best.mounted_by = 1 # the host's saddle claims the kin too — replicas hide it for every watcher, not just us
 		game.log_msg("Riding %s" % best.spec["name"])
 	else:
 		game.log_msg("No mountable kin nearby (right saddle in pack?)")
