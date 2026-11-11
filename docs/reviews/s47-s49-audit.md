@@ -259,3 +259,57 @@ payer 自担（与账本案一致），旗标不再楔死。
 ### 验证
 smoke 745/0 ×2 零 ERROR（首次误设 `peer.server_relay` 即时脚本探明
 真名 `SceneMultiplayer.server_relay`——API 名未经验证的教训）。
+
+## 第十六轮外审处置（S55）— 存档/生命周期/迁移面
+
+外审快照 `ff88557`：**1H/6M/13L**。首轮非 net 面专审即中彩——存档
+反序列化是本弧最后一块未硬化的信任边界。
+
+### H1 非数值 Variant 炸 load_game → 半重建世界 → 存档覆写
+`int()`/`float()`/`x == true` 遇 Array/Dict/String-vs-bool 一律 abort，
+中止点介于"旧世界已清"与"世界重建"之间——半空世界在 play 态存活，
+下次 save 直接覆写真档。
+修法：边界强转 `Game._i/_f`（仅 bool/int/float/String 可转，余归默认），
+~35 个载入点全部接管；`== true` 同型炸点 7 处改 `is bool` 双段；
+冒烟新增敌意 Variant 夹具（day:[1,2]、items:{7:5}、meal:5、lv:{}、
+cap 伪种、inc.pair=5）——断言载入完成+袋键纯 String+meal_buff 纯
+dict+raid 旗按模式擦洗+伪造 captive 清空+pair 归一 null。
+
+### M（6/6 全落）
+- 载入结构缺 `pos`/`turret`（放置路都写）：demolish 的 kinbox 锚守卫
+  `st.get("pos")==kinbox_pos` 读 null→永不触发→存档后末座 kinbox 可拆
+  →基地孤儿化；载入炮塔 `turret` 恒 0→永不开火。重建补齐两键。
+- `meal_buff` 未验 is Dictionary → 每帧 `.get` abort→移动死。补验。
+- `items` 键未 `str()`+未过 ITEMS → `item_wt(sid:String)` 每帧参数错误
+  →速度死。双验（键白名单+值强转）。
+- 载入环无容量帽：kin/pals/box/bench/party/rparties/structures 全部接
+  既有 MAX_*（box 432 溢出道、bench 32、party 5、rparties 32、
+  structures 400）——规则 1 对存档同样生效。
+- `captive.sp` 未验 → `free_captive`→`gen_pal` 中道 abort→半建孤儿 kin
+  游离于 pals 之外。SpeciesData 白名单，载入+`_struct_wire_apply` 双端。
+- `egg_parents`/`inc.pair` 未验 Array → tick_ranch 每帧炸 / hatch 读
+  型化 sp_id 炸。egg 限 Array 滤项；pair 归一化 null（野蛋血统），
+  不丢蛋槽。
+
+### L（13/13 全落或证伪）
+- `np.raid` 仅 wild 模式可载（roster 化 raid 旗永钉 danger_active）；
+- KO 溢出释放补 `revive_t=0`（陈旧计时器会 wipe 再捕获的兽至 30%）；
+- `cap_lv` 钳 1..6 与线一致（原 1..20）；`unlocked` 过 TECH id+STRUCTURES
+  双白名单（TECH 是 dict 数组——`has(id)` 恒 false 的教训）；
+- `SAVE_VER` 前向闸门（v>2 拒载防静默误读）；`dirty_decor` 载入/重生
+  双清；`statuses/catch_streak/mission_t/last_merchant_day/focus_t`
+  载入复位补齐（与 regenerate 对称）；
+- box/bench 三处 `free()`→`queue_free()`（box_holder 在树内，规则 2）；
+- `bought` 价 `Game._i`；`struct_sync` store 逐键强转；
+- respawns pos 元素型验；board kind 白名单 supply/hunt；
+- drops id 过 ITEMS 白名单。
+- party_idx 损坏条目索引偏移：记档（uid 仍有效，mode 门限害）。
+
+### 自修复三处（套件抓回）
+1. `pd.get("raid") == true` 遇 "y" 字符串炸——`== true` 全族改 `is bool`
+2. `StructureData.TECH` 是 dict 数组，`has(id)` 恒 false→unlocked 滤空
+   →net_place 拒放：TECH id 展开成真集合
+3. 敌意夹具孵化器残留吃掉后续 deposit 测试：夹具尾 net_remove 清场
+
+### 验证
+smoke 749/0、747/0 零 ERROR。

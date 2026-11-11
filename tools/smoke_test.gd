@@ -3991,7 +3991,46 @@ func run() -> void:
 				and q.spire_tag == "" and q.phase == 1: # "hax"/"x" refused: no forged campaign tags
 			fok = true # mode 7 -> "wild" fallback, sex 9 -> "M", boss "yes" -> skipped (not a real bool)
 	check("foreign-typed save coerces", fload == true and fok and game.player.hp is float and game.item_count("wood") == 12, "kin=%d" % game.pals.size())
+	# hostile Variants: Array/Dict where numbers live — int()/float() aborts on
+	# those mid-load and the next save clobbers the real file (audit-16 H1)
+	var hf := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	hf.store_var({"seed": game.world.seed, "v": 2, "day": [1, 2], "tod": {"x": 8},
+		"tech_points": [], "raid_t": {}, "unlocked": ["kinbox", {"fake": 1}],
+		"items": {7: 5, "wood": [9]}, "party": [null, {"u": 1}],
+		"player": {"pos": [5.0, 5.0], "hp": [], "level": 1, "cap_lv": "9", "meal": 5,
+			"hunger": [], "stamina": {}, "xp": {}},
+		"board_quest": {"kind": "hax", "n": [3], "got": {}, "day": []},
+		"treasure": ["a", "b"], "grotto": [1, {}], "perks": [1, 2],
+		"catches": {"fenjelly": [2], 9: 1},
+		"kin": [{"sp": "fenjelly", "lv": {}, "hp": [], "pos": [game.player.pos.x + 1, game.player.pos.y],
+				"talent": [], "sb": {}, "bnt": [], "raid": true, "mode": "partner"}],
+		"structures": {"5,5": {"id": "kin_cage", "cap": {"sp": "no_such_species", "lv": 5}},
+			"9,9": {"id": "incubator", "inc": {"pair": 5, "left": []}}}})
+	hf.close()
+	var hload: bool = game.load_game()
+	var hkin_ok := false
+	for q in game.pals:
+		if q.species_id == "fenjelly" and q.level == 1 and q.mode == "partner" and q.raid == false:
+			hkin_ok = true # lv:{} → 1; the rostered raider flag is scrubbed
+	var hkeys_ok := true
+	for hk in game.items.keys():
+		if hk is not String: hkeys_ok = false
+	var hcap = game.structures.get(Vector2i(5, 5))
+	var hinc = game.structures.get(Vector2i(9, 9))
+	check("hostile-variant save loads whole", hload == true and hkin_ok and hkeys_ok
+		and game.day == 1 and game.player.meal_buff is Dictionary
+		and game.player.capture_level <= 6
+		and game.board_quest.get("kind", "") == "supply"
+		and game.treasure.is_empty()
+		and (hcap == null or not hcap.has("captive"))
+		and (hinc == null or hinc.get("egg_inc", {}).get("pair", "x") == null)
+		and game.items.get("wood", 0) == 0, "wood=%s" % str(game.items.get("wood")))
+	for hst in [hcap, hinc]: # hostile fixtures leave no structures behind — a lingering incubator eats the next deposit test
+		if hst != null:
+			game.net_remove_structure(hst)
 	game.tod = 8.0 # float("late") coerced tod to 0.0 = night: keep later checks on day shift
+	game.player.hp = game.player.max_hp # the hostile fixture zeroed it — the restore must write a living player
+	game.add_item("wood", 20) # ...and the hostile items dict ate the fixture wood the merchant tests need
 	game.save_game() # restore a sane save file for the rest of the run
 
 	# ---- new island-loop systems ----

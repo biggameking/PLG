@@ -1267,9 +1267,9 @@ func bought(res: Dictionary) -> void:
 	if is_host:
 		return
 	pay_settle("buy", true) # refund the mirrored price…
-	game.add_item("gold_coin", -int(res.get("price", 0))) # …then pay the host's truth
+	game.add_item("gold_coin", -Game._i(res.get("price", 0))) # …then pay the host's truth
 	game.log_msg("Bought %s (%dg)" % ["a kin" if res.has("kin") else "goods",
-		int(res.get("price", 0))])
+		Game._i(res.get("price", 0))])
 
 @rpc("authority", "call_remote", "reliable")
 func stock_sync(stock: Array) -> void:
