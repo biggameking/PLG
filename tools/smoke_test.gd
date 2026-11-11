@@ -5221,6 +5221,52 @@ func run() -> void:
 	game.touch_ui = tui3
 	hudn.touch_verb("more")
 	check("··· collapses the row", not hudn.touch_more)
+	# S41: the trader is a mirrored entity — pos rides env_sync, the
+	# briefcase rides stock_sync, and a guest's beating raises the squad
+	# on the host with the GUEST's aggro, not the keeper's
+	var v41_m0: Entity = game.merchant
+	var v41_mpos := Vector2.ZERO
+	var v41_s0: Array = []
+	if v41_m0 != null: # a live host merchant steps aside for the mirror drill
+		v41_mpos = v41_m0.pos
+		v41_s0 = game.merchant_stock.duplicate(true)
+		game.merchant = null
+	game.net_merchant_apply(true, p.pos.x + 3.0, p.pos.y + 1.0)
+	check("merchant mirror materializes", game.merchant != null
+		and game.merchant.pos.x == p.pos.x + 3.0)
+	game.net_merchant_apply(true, p.pos.x + 5.0, p.pos.y + 1.0)
+	check("mirror follows the wire", game.merchant.pos.x == p.pos.x + 5.0)
+	game.merchant_stock = [{"id": "wood", "n": 2, "price": 4}]
+	game.merchant_hp = 60
+	game.hit_merchant(10.0, 99)
+	check("a guest's beating is on the host ledger", game.merchant_hp == 50)
+	var v41_thugged := false
+	for v41_q in game.pals:
+		if v41_q.mode == "wild" and v41_q.aggro_pid == 99:
+			v41_thugged = true
+			game.pals.erase(v41_q)
+			v41_q.queue_free()
+	check("the hit squad answers to the guest", v41_thugged
+		and game.merchant_wanted)
+	game.merchant_wanted = false
+	game.net_merchant_apply(false, 0.0, 0.0)
+	check("mirror leaves with the trader", game.merchant == null
+		and game.merchant_stock.is_empty())
+	game.merchant = v41_m0 # put the host's trader back where he stood
+	if v41_m0 != null:
+		v41_m0.pos = v41_mpos
+		game.merchant_stock = v41_s0
+	var v41_snap: Dictionary = game.net.state_snapshot()
+	check("joiners mid-visit get the trader", v41_snap.has("merch")
+		and v41_snap.has("stock"))
+	var v41_wit: Kin = game.gen_pal("fenjelly", 7, p.pos) # a live entry so the
+	game.pals.append(v41_wit) # pack assertion can't pass vacuously on an empty roster
+	var v41_pack: Array = game.net.pal_state_pack() # the 2Hz pack must not die on .level
+	check("kin wire-pack carries the full roster shape",
+		v41_pack.any(func(e: Array) -> bool:
+			return e.size() == 11 and e[0] == v41_wit.uid and int(e[4]) == 7))
+	game.pals.erase(v41_wit)
+	v41_wit.queue_free()
 	# pause shell hosts the panel verbs for every input device
 	var peer_bak2 = game.net.multiplayer.multiplayer_peer
 	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer

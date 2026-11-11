@@ -472,3 +472,21 @@ S40 (seventh audit sweep — 0C/0H/4M/10L):
     (host's hp stays host's); net_catch peer-guard; r_butcher trust note;
     dup-claim + hold-lifecycle + hunt-discrimination smoke coverage.
   Smoke 676-678/0 x4.
+
+S41 (trader mirror — the last invisible NPC):
+  Guests now SEE the merchant: env_sync carries {on,x,y} at 2Hz and
+  net_merchant_apply builds a display-only Entity mirror (pos fed, till
+  stays host-side); despawn rides the same packet's on=false and clears
+  the mirrored briefcase. stock_sync broadcasts the shelf on spawn and
+  after every accepted buy so all watchers see it thin; state_snapshot/
+  state_sync carry merch+stock so a mid-visit joiner walks into the same
+  shop. merch_hit routes a guest's beating host-side (hit_bkt throttle,
+  3.0 melee reach vs merchant.pos — rifle-length swings are forged),
+  clamps dmg <=80, and the Iron Pact squad now spawns at the GUEST's
+  ghost with aggro_pid pointing home. hit_merchant(dmg, pid) keeps the
+  host path for local play.
+  Found while covering the pack: state_snapshot/pal_state_pack shipped
+  p.lv for a property named p.level — every real join-with-pals and
+  every 2Hz broadcast would have aborted mid-call. Fixed + harness now
+  invokes both packs directly (rule 69).
+  Smoke 682-686/0 x6, no ERRORs, no leaks.

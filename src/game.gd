@@ -6291,6 +6291,8 @@ func spawn_merchant() -> void:
 	merchant_home = at
 	gen_merchant_stock()
 	merchant_hp = 60
+	if net != null and multiplayer.multiplayer_peer != null:
+		net.rpc("stock_sync", merchant_stock) # guests see the same briefcase
 	log_msg("A wandering merchant has arrived! (E to trade)")
 	floater(at, "Merchant!", "#e8d44d")
 
@@ -6308,7 +6310,27 @@ func despawn_merchant() -> void:
 var merchant_wanted := false # one hit squad per visit — wanted loop
 var merchant_hp := 60          # Entity has no hp field — Kin/Player shadow it
 
-func hit_merchant(dmg: float) -> void:
+func net_merchant_apply(on: bool, x: float, y: float) -> void:
+	# the trader is a host-scheduled guest of honor — clients hold only a
+	# visual mirror; stock and hp stay authority-side (env_sync feeds pos)
+	if not on:
+		if merchant != null and is_instance_valid(merchant):
+			merchant.queue_free()
+		merchant = null
+		merchant_stock.clear()
+		return
+	if merchant == null or not is_instance_valid(merchant):
+		merchant = preload("res://src/entity.gd").new()
+		merchant.world = world
+		entity_layer.add_child(merchant)
+		merchant.setup_visuals("res://assets/kin/player_f0.png", "res://assets/kin/player_f1.png")
+	merchant.pos = Vector2(x, y)
+	merchant.sync_screen()
+
+func hit_merchant(dmg: float, pid := 0) -> void:
+	if net != null and net.is_client():
+		net.rpc("merch_hit", dmg) # the beating lands on the host's ledger
+		return
 	if merchant == null or not is_instance_valid(merchant):
 		return
 	merchant_hp -= int(dmg)
@@ -6318,15 +6340,16 @@ func hit_merchant(dmg: float) -> void:
 		merchant_wanted = true
 		# crime loop: raise a hand at a peaceful NPC and a Iron Pact
 		# hit squad materializes to collect — once per visit, killable like any foe
+		var at0: Vector2 = peer_pos_of(pid) if pid > 0 else player.pos
 		var squad := mini(2 + int(day / 6.0), 4)
 		for i in squad:
 			var a := rng.next() * TAU
-			var at := nearest_free(player.pos.x + cos(a) * 5.0, player.pos.y + sin(a) * 5.0)
+			var at := nearest_free(at0.x + cos(a) * 5.0, at0.y + sin(a) * 5.0)
 			var thug := gen_pal("ironpact_grunt" if i % 2 == 0 else "ironpact_sweeper",
 				maxi(3, player.level + rng.int_range(-1, 2)), at)
-			thug.mode = "wild"; thug.aggro = 0; thug.aggro_pid = 0; thug.home = player.pos
+			thug.mode = "wild"; thug.aggro = 0; thug.aggro_pid = pid; thug.home = at0
 			pals.append(thug)
-		merchant_tgt = merchant.pos + (merchant.pos - player.pos).normalized() * 20.0
+		merchant_tgt = merchant.pos + (merchant.pos - at0).normalized() * 20.0
 		log_msg("WANTED! The Iron Pact answers violence with violence")
 		floater(merchant.pos, "GUARDS!", "#ff5544")
 	if merchant_hp <= 0:

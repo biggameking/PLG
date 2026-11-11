@@ -347,3 +347,14 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     shared verb that mints rewards routes them by actor pid at the
     mutation point — `give_remote`/`xp_gain` — never to whichever bag is
     local on the authority.
+69. **A wire pack the harness never calls is already broken.**
+    `state_snapshot`/`pal_state_pack` shipped `p.lv` for a property named
+    `p.level` — every real join and every 2Hz broadcast would have died,
+    invisible until the suite invoked them directly. Any new pack/snapshot
+    function gets a harness call in the same commit; seed ≥1 live entry so
+    `all()`/`any()` can't pass vacuously on an empty roster.
+70. **A mirror writes to its own slot only.** Client replicas must never
+    overwrite a live authority entity — `net_merchant_apply` is called
+    solely from host-guarded handlers, and the smoke drill steps the real
+    merchant aside before applying. If a helper can clobber host truth
+    when invoked off-lane, gate it or quarantine it in the test.

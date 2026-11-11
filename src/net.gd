@@ -173,10 +173,14 @@ func state_snapshot() -> Dictionary:
 	var parr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			parr.append([p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.lucky, p.uid,
+			parr.append([p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.lucky, p.uid,
 				p.boss, p.alpha, p.spire_tag])
+	var mp := {}
+	if game.merchant != null and is_instance_valid(game.merchant):
+		mp = {"on": true, "x": game.merchant.pos.x, "y": game.merchant.pos.y}
 	return {"structures": arr, "tod": game.tod, "day": game.day, "kin": parr,
-		"unlocked": game.unlocked.duplicate()} # the host's tech bounds the client's build bar
+		"unlocked": game.unlocked.duplicate(), # the host's tech bounds the client's build bar
+		"merch": mp, "stock": game.merchant_stock.duplicate()} # a joiner mid-visit still sees the trader
 
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
@@ -199,6 +203,10 @@ func state_sync(d: Dictionary) -> void:
 		var n0 := game.pals.size()
 		game.spawn_net_pal(e) # each entry re-validated game-side
 		np += 1 if game.pals.size() > n0 else 0
+	var md: Dictionary = d.get("merch", {}) if d.get("merch") is Dictionary else {}
+	game.net_merchant_apply(bool(md.get("on", false)),
+		float(md.get("x", 0.0)), float(md.get("y", 0.0)))
+	stock_sync(d.get("stock", []) if d.get("stock") is Array else [])
 	game.log_msg("Synced %d structures, %d kin" % [d.get("structures", []).size(), np])
 
 # Live kin population: host rebroadcasts positions/health at 2Hz so replicas
@@ -209,7 +217,7 @@ func pal_state_pack() -> Array:
 	var arr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.lv, p.mode, p.hp, p.lucky, p.boss,
+			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.hp, p.lucky, p.boss,
 				p.alpha, p.spire_tag])
 	return arr
 
@@ -241,7 +249,7 @@ func pal_sync(arr: Array) -> void:
 
 @rpc("authority", "call_remote", "unreliable")
 func env_sync(tod: float, day: int, weather: String, danger: bool = false,
-		bq: Dictionary = {}) -> void:
+		bq: Dictionary = {}, merch: Dictionary = {}) -> void:
 	if is_host:
 		return
 	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
@@ -255,6 +263,10 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 	game.board_quest = {"kind": str(bq.get("kind", "supply")), "id": str(bq.get("id", "")),
 		"n": int(bq.get("n", 0)), "day": int(bq.get("day", -1)),
 		"sp": str(bq.get("sp", "")), "got": int(bq.get("got", 0))}
+	# the wandering trader rides the same tick — position only; the
+	# briefcase travels stock_sync, the till stays host-side
+	game.net_merchant_apply(bool(merch.get("on", false)),
+		float(merch.get("x", 0.0)), float(merch.get("y", 0.0)))
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
@@ -952,6 +964,7 @@ func buy_req(idx: float) -> void:
 	var res := game.buy_remote(pid, int(idx))
 	if not res.is_empty() and multiplayer.get_peers().has(pid):
 		rpc_id(pid, "bought", res)
+		rpc("stock_sync", game.merchant_stock) # every watcher sees the shelf thin
 
 @rpc("authority", "call_remote", "reliable")
 func bought(res: Dictionary) -> void:
@@ -960,6 +973,26 @@ func bought(res: Dictionary) -> void:
 	game.add_item("gold_coin", -int(res.get("price", 0))) # the bag pays on host acceptance
 	game.log_msg("Bought %s (%dg)" % ["a kin" if res.has("kin") else "goods",
 		int(res.get("price", 0))])
+
+@rpc("authority", "call_remote", "reliable")
+func stock_sync(stock: Array) -> void:
+	if is_host:
+		return
+	game.merchant_stock.clear()
+	for it in stock: # the shelf is display-only — buys still validate host-side
+		if it is Dictionary and str(it.get("id", "")) != "":
+			game.merchant_stock.append(it.duplicate())
+
+@rpc("any_peer", "call_remote", "reliable")
+func merch_hit(dmg: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
+		return
+	if game.merchant == null or not game._ghost_reaches(pid, game.merchant.pos, 3.0):
+		return # melee reach — a rifle-length beating is a forged swing
+	game.hit_merchant(clampf(float(dmg), 0.0, 80.0), pid)
 
 @rpc("any_peer", "call_remote", "reliable")
 func assign_req(x: float, y: float) -> void:
@@ -1007,8 +1040,11 @@ func _process(dt: float) -> void:
 			rpc("pal_sync", pal_state_pack())
 			rpc("drop_sync", drop_state_pack())
 			rpc("struct_sync", struct_state_pack())
+			var mp2 := {}
+			if game.merchant != null and is_instance_valid(game.merchant):
+				mp2 = {"on": true, "x": game.merchant.pos.x, "y": game.merchant.pos.y}
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
-				game.board_quest) # clock + sky + threat + the shared posting are host truth
+				game.board_quest, mp2) # clock + sky + threat + posting + trader are host truth
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
