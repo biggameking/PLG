@@ -15,11 +15,25 @@ var send_timer := 0.0
 # never as goods minted into shared/durable truth. Reliable ordering makes
 # settles arrive FIFO, so each pops the oldest matching tag.
 var pending_pays: Array = []
+const MAX_PENDING_PAYS := 32 # in-flight holds — every verb settles or rejs, but the ledger still answers to rule 1
 var mount_pending := false # a mount_req is in flight — the button can't double-toggle before mount_done lands
+var mount_pending_uid := -1 # which handshake is out — a stray echo can't re-arm the button early
+var unbind_retry_t := 0.0 # self-heal cooldown — the host keeps hearing "let go" until it does
 func pay(tag: String, cost: Dictionary) -> void:
+	# the ledger records what the bag ACTUALLY gave, not what the click
+	# claimed — add_item floors at zero, and a claimed refund would mint
+	var debited := {}
 	for k in cost:
+		var had := game.item_count(str(k))
 		game.add_item(str(k), -int(cost[k]))
-	pending_pays.append({"tag": tag, "cost": cost})
+		var took: int = had - game.item_count(str(k))
+		if took > 0:
+			debited[str(k)] = took
+	if debited.is_empty():
+		return # nothing left the bag — there is no hold to settle or refund
+	pending_pays.append({"tag": tag, "cost": debited})
+	if pending_pays.size() > MAX_PENDING_PAYS:
+		pending_pays.pop_front() # the stalest hold eats the loss — never grows a ledger
 func pay_settle(tag: String, refund: bool) -> void:
 	for i in pending_pays.size():
 		if pending_pays[i]["tag"] == tag:
@@ -241,6 +255,8 @@ func state_sync(d: Dictionary) -> void:
 	# kin replace it, otherwise clients see every kin twice
 	for p in game.pals.duplicate():
 		if p.mode in ["wild", "base", "partner"]: # partner replicas are host truth too
+			if game.player.mount == p:
+				game.player.mount = null # a re-synced world can't keep the saddle — same contract as purge_replicas
 			game.pals.erase(p)
 			p.queue_free()
 	var np := 0
@@ -306,9 +322,12 @@ func pal_sync(arr: Array) -> void:
 		else:
 			p.net_target = Vector2(float(e[2]), float(e[3]))
 			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp
+			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
+				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
 			p.mounted_by = int(e[11]) if e.size() > 11 else 0
 			if p != game.player.mount: # the rider's own mount hides via player.gd
 				p.visible = p.mounted_by == 0
+			_mount_selfheal_check(nid, p.mounted_by)
 	for p in game.pals.duplicate():
 		if p.net_id > 0 and not seen.has(p.net_id): # host dropped it: caught, KO'd, despawned
 			if game.player.mount == p:
@@ -929,6 +948,8 @@ func mount_req(uid: float) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "mount_done", int(uid), 0) # a starved request still resolves the pending handshake
 		return
 	var r := game.mount_req_remote(pid, int(uid))
 	if multiplayer.get_peers().has(pid):
@@ -938,16 +959,35 @@ func mount_req(uid: float) -> void:
 func mount_done(uid: int, state: int) -> void:
 	if is_host:
 		return
-	mount_pending = false # the handshake resolved — mount, dismount, or refuse
+	var wid := int(uid)
+	if mount_pending_uid == wid:
+		mount_pending = false # the handshake resolved — mount, dismount, or refuse
+		mount_pending_uid = -1
 	if int(state) == 1:
-		var p := game.find_net_pal(int(uid))
+		var p := game.find_net_pal(wid)
 		if p != null:
 			game.player.mount = p
 			p.visible = false # the kin hides — the rider's sprite carries the ride
 			game.log_msg("Riding %s" % p.spec["name"])
-	elif game.player.mount != null:
+	elif game.player.mount != null and game.player.mount.net_id == wid:
 		game.player.mount = null # the host unbound it (dismount, KO, or drop)
 		game.log_msg("Dismounted")
+
+# self-heal: host truth says WE ride this kin while our local ref says we
+# don't — an earlier unbind died on the wire (throttle/drop). Ask again,
+# bounded to one handshake per cooldown; the verb can't stay wedged.
+func _mount_selfheal_check(nid: int, rider: int) -> bool:
+	if not is_client() or rider != multiplayer.get_unique_id() \
+			or mount_pending or unbind_retry_t > 0.0:
+		return false
+	var p: Kin = game.find_net_pal(nid)
+	if p == null or p == game.player.mount:
+		return false
+	mount_pending = true
+	mount_pending_uid = nid
+	unbind_retry_t = 2.0
+	rpc("mount_req", float(nid))
+	return true
 
 @rpc("any_peer", "call_remote", "reliable")
 func cond_req() -> void:
@@ -1254,6 +1294,7 @@ func _process(dt: float) -> void:
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
 				rpc("decor_delta", dd)
+	unbind_retry_t = maxf(0.0, unbind_retry_t - dt)
 	send_timer += dt
 	if send_timer < 0.05:
 		return

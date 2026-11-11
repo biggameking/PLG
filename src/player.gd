@@ -409,6 +409,7 @@ func try_mount() -> void:
 			if game.net.mount_pending:
 				return # the handshake is still out — a second press can't toggle twice
 			game.net.mount_pending = true
+			game.net.mount_pending_uid = mount.net_id
 			game.net.rpc("mount_req", float(mount.net_id)) # host unbinds it
 			return
 		game._unbind_mount(mount)
@@ -436,6 +437,7 @@ func try_mount() -> void:
 			if game.net.mount_pending:
 				return # the handshake is still out — a second press can't toggle twice
 			game.net.mount_pending = true
+			game.net.mount_pending_uid = best.net_id
 			game.net.rpc("mount_req", float(best.net_id)) # host binds it; mount_done rides
 			return
 		mount = best

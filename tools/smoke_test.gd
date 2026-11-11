@@ -5347,6 +5347,33 @@ func run() -> void:
 		game.net.chest_took(0, 0, {"wood": 4})
 		check("partial deposit refunds the gap", game.item_count("wood") == 11
 			and game.net.pending_pays.is_empty())
+		# the ledger records what the bag actually gave — a claimed refund
+		# against an empty pocket can't mint goods back (audit-11 H1)
+		game.items["wood"] = 4
+		game.net.pay("selftest", {"wood": 10}) # claims 10, the floor gives 4
+		check("pay books the real debit", game.net.pending_pays.size() == 1
+			and int(game.net.pending_pays[0]["cost"].get("wood", -1)) == 4)
+		game.net.pay_settle("selftest", true)
+		check("a refund returns only what left", game.item_count("wood") == 4
+			and game.net.pending_pays.is_empty())
+		var stone5 := game.item_count("stone")
+		var hads5 := game.items.has("stone")
+		game.items.erase("stone") # an empty pocket owes no hold
+		game.net.pay("selftest", {"stone": 5})
+		check("a broke pay books no hold", game.net.pending_pays.is_empty())
+		if hads5:
+			game.items["stone"] = stone5
+		# mount_done is uid-scoped — a stray echo can't re-arm the handshake
+		game.net.mount_pending = true
+		game.net.mount_pending_uid = 555
+		game.net.mount_done(777, 0)
+		check("a stray echo can't clear the handshake", game.net.mount_pending)
+		game.net.mount_done(555, 0)
+		check("its own echo clears the handshake", not game.net.mount_pending
+			and game.net.mount_pending_uid == -1)
+		# self-heal exists but refuses offline — no wire, no unbind asks
+		check("unbind self-heal is client-gated",
+			not game.net._mount_selfheal_check(424243, 1))
 		if had5:
 			game.items["wood"] = wood5
 		else:

@@ -439,8 +439,13 @@ func run_click(cr: Dictionary) -> void:
 			if game.net != null and game.net.is_client():
 				var rw: Dictionary = game.merchant_stock[int(cr["arg"])] \
 					if int(cr["arg"]) >= 0 and int(cr["arg"]) < game.merchant_stock.size() else {}
-				game.net.pay("buy", {"gold_coin": int(rw.get("price", 0))})
-				game.net.rpc("buy_req", float(cr["arg"]))
+				if rw.is_empty():
+					game.log_msg("Nothing on the stand")
+				elif game.item_count("gold_coin") < int(rw.get("price", 0)):
+					game.log_msg("Not enough gold — %dg asked" % int(rw.get("price", 0)))
+				else:
+					game.net.pay("buy", {"gold_coin": int(rw.get("price", 0))})
+					game.net.rpc("buy_req", float(cr["arg"]))
 			else:
 				game.buy_from_merchant(cr["arg"])
 		"sell":
@@ -512,14 +517,14 @@ func run_click(cr: Dictionary) -> void:
 				game.upgrade_base()
 		"infuse":
 			if game.net != null and game.net.is_client():
-				if game.item_count("sprigmelt_effigy") < 1:
-					game.log_msg("No effigy to burn")
+				var sb := 0 # replica rows carry soul_boost — the panel cost is 1+boost
+				for q in game.pals:
+					if q.uid == int(cr["arg"]):
+						sb = q.soul_boost
+						break
+				if game.item_count("sprigmelt_effigy") < 1 + sb:
+					game.log_msg("Needs %d effigies" % (1 + sb))
 				else:
-					var sb := 0 # replica rows carry soul_boost — the panel cost is 1+boost
-					for q in game.pals:
-						if q.uid == int(cr["arg"]):
-							sb = q.soul_boost
-							break
 					game.net.pay("infuse", {"sprigmelt_effigy": 1 + sb})
 					game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth
 			else:

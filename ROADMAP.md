@@ -643,3 +643,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   can't starve behind act spam); _on_connection_failed clears pending
   ledger/mount handshake/chest ref. player.gd _mount_guard() belts every
   mount consumer. Smoke 729-731/0 x3 green.
+
+## S50 — audit-11: pay ledger honesty + mount handshake resilience
+  Eleventh context-free audit (2H/1M/5L) all landed. pay() now books
+  the ACTUAL debited delta, not the claimed cost — an underfunded
+  refund can't mint goods; empty debits book no hold; MAX_PENDING_PAYS
+  caps the ledger. buy/infuse call sites gained balance gates (the
+  only two verbs whose cost wasn't bag-constructed). mount_req's
+  throttle-drop now echoes mount_done(0) so mount_pending can't wedge
+  mid-session; the handshake is uid-scoped (a stray echo can't re-arm
+  it); _mount_selfheal_check re-asks the unbind when a replica still
+  reports us as its rider (2s cooldown). state_sync/pal_sync apply
+  mode + mount guards symmetric with purge_replicas. Smoke 736/0.

@@ -54,3 +54,34 @@ world_sync 只发种子 → joiner 重新生成的是原始几何；主机运行
 线级 sender_id 伪造不可测（RPC 门靠直调覆盖）；chest-dep 完全溯源
 （会破坏诚实手造存款——设计权衡）；Android release keystore、真机、
 制作级美术音频、客人骑乘手感打磨（ghost 锚定 vs 自由移动）。
+
+## 第十一轮外审处置（S50）
+2H/1M/5L —— 全部落地。
+
+### H1 pay() 记声明成本 → 欠资铸造
+`pay()` 存的是 click 声明，`add_item` 静默取 0 下限 → 0 金可买、
+拒绝退款反而铸金。修：`pay()` 记实际扣款差量（add_item 前后
+item_count 差），空扣不立账；`buy`/`infuse` 调用点补余额门
+（buy 镜像价、infuse 1+soul_boost）；`MAX_PENDING_PAYS=32` 封顶
+（规则 1）。冒烟断言实扣记账/空袋不立账。
+
+### H2 mount_req 节流丢包无回执 → mount_pending 整局卡死
+act_bkt 是 ~18 动词共享桶，拾取风暴即可饿死 mount_req 且旧码
+拒绝时不回 mount_done → pending 永卡。修：节流拒绝也回
+mount_done(uid,0)；pending 记 uid 作用域（mount_pending_uid），
+杂散回执不能提前复位；新增 `_mount_selfheal_check`——pal_sync
+应用端发现 replica 仍绑自己而本地未骑 → 2s 冷却内重发 unbind。
+
+### M respawn 解绑静默失败残留
+被 H2 回执保证 + 自愈检查双保险关闭；respawn 先 `_mount_guard()`
+再解引用（L6）。
+
+### L
+state_sync 清 kin 时同步清 player.mount（L5）；pal_sync 应用端
+补 mode 字段（L8，副本转岗也跟线）；uid 作用域 handshake（L4）；
+账本封顶（L7）。
+
+### 验证
+smoke 736/0 全绿，新增 6 断言（实扣账本/空袋无账/uid 回执作用域
+/自愈离线门）。审计另证：unbind 覆盖确属全面、快照字段序双端
+一致、has_saddle_for 为已记录客端权威通道。

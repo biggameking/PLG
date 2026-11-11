@@ -1344,7 +1344,7 @@ func respawn_player() -> void:
 		death_marks.append(player.pos) # the island tombstone: the map remembers the spill
 		if death_marks.size() > 3:
 			death_marks.pop_front() # only the freshest few spills earn a mark
-	if player.mount != null: # dead men don't ride
+	if player._mount_guard(): # dead men don't ride — and a stale ref can't ride either
 		if net != null and net.is_client() and player.mount.net_id > 0:
 			# the host still thinks we're in the saddle — the replica ref
 			# dies here, but mounted_by must be released host-side too
