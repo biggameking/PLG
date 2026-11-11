@@ -18,7 +18,7 @@ LANGUAGE,LANGUAGE,语言
 ON,ON,开
 off,off,关
 BACK,BACK,返回
-"Day 1 on the Wildmere — catch a kin, feed it, put it to work.","Day 1 on the Wildmere — catch a kin, feed it, put it to work.",荒野第一天——抓一只精灵，喂饱它，让它干活。
+"Day 1 on the Wildmere — catch a kin, feed it, put it to work.","Day 1 on the Wildmere — catch a kin, feed it, put it to work.",来到野泽的第一天——抓一只精灵，喂饱它，让它干活。
 Welcome to Kinbound. Press H for help.,Welcome to Kinbound. Press H for help.,欢迎来到《Kinbound》。按 H 查看帮助。
 Q aims — click a wild kin to throw an orb,Q aims — click a wild kin to throw an orb,按 Q 瞄准——点击野生精灵丢出精灵球
 X aims — RT throws at a wild kin,X aims — RT throws at a wild kin,按 X 瞄准——RT 向野生精灵丢球
@@ -40,10 +40,10 @@ JOIN SESSION,JOIN SESSION,加入会话
 TOUCH CONTROLS,TOUCH CONTROLS,触屏控制
 AUTO,AUTO,自动
 OFF,OFF,关
-"Join IP (blank=localhost): ","Join IP (blank=localhost): ","主机 IP（留空=本机）："
-"Say: ","Say: ","说："
-"The kinbox anchors the base — nobody razes it","The kinbox anchors the base — nobody razes it","精灵箱是基地的锚——谁也拆不掉"
-"That's not your build — guests raze only what they placed","That's not your build — guests raze only what they placed","这不是你建的——客人只能拆自己放的"
+Join IP (blank=localhost): ,Join IP (blank=localhost): ,主机 IP（留空=本机）：
+Say: ,Say: ,说：
+The kinbox anchors the base — nobody razes it,The kinbox anchors the base — nobody razes it,精灵箱是基地的锚点——谁也不能拆
+That's not your build — guests raze only what they placed,That's not your build — guests raze only what they placed,这不是你建的——客人只能拆自己放的
 CHAT,CHAT,聊天
 HOST SESSION,HOST SESSION,主持会话
 TECH TREE,TECH TREE,科技树
@@ -59,69 +59,65 @@ Attack,Attack,攻击
 BLD,BLD,建造
 BOSS,BOSS,领主
 BUY,BUY,购买
-"Can't use ","Can't use ","无法使用 "
+Can't use ,Can't use ,无法使用 
 Capture Power,Capture Power,捕获力
-"Catch %s Lv%d: %d%%","Catch %s Lv%d: %d%%","捕获 %s Lv%d：%d%%"
+Catch %s Lv%d: %d%%,Catch %s Lv%d: %d%%,捕获 %s Lv%d：%d%%
 CHEST,CHEST,箱子
 CRAFT,CRAFT,制作
-"Day %d  %02d:00%s","Day %d  %02d:00%s","第 %d 天  %02d:00%s"
-"Day 1 on the Wildmere — catch a kin, feed it, put it to work.","Day 1 on the Wildmere — catch a kin, feed it, put it to work.","来到野泽的第一天——抓一只精灵，喂饱它，让它干活。"
+Day %d  %02d:00%s,Day %d  %02d:00%s,第 %d 天  %02d:00%s
 DML,DML,拆除
 EFFIGIES,EFFIGIES,祭像
-"End the session first (quit to title)","End the session first (quit to title)","先结束会话（退回标题）"
-"Esc/n close · ←/→ turn the page · %d / %d","Esc/n close · ←/→ turn the page · %d / %d","Esc/n 关闭 · ←/→ 翻页 · %d / %d"
+End the session first (quit to title),End the session first (quit to title),先结束会话（退回标题）
+Esc/n close · ←/→ turn the page · %d / %d,Esc/n close · ←/→ turn the page · %d / %d,Esc/n 关闭 · ←/→ 翻页 · %d / %d
 Fists,Fists,空手
-"Glider descends cliffs. Sick kin need medicine in feed box/bag.","Glider descends cliffs. Sick kin need medicine in feed box/bag.","滑翔翼可下崖。生病的精灵需要把药放进饲料箱或背包。"
-"Incubating %s: %ds left","Incubating %s: %ds left","孵化中 %s：剩 %d 秒"
-"Incubator empty - bring a kin egg","Incubator empty - bring a kin egg","孵化器空着——放一枚精灵蛋"
+Glider descends cliffs. Sick kin need medicine in feed box/bag.,Glider descends cliffs. Sick kin need medicine in feed box/bag.,滑翔翼可下崖。生病的精灵需要把药放进饲料箱或背包。
+Incubating %s: %ds left,Incubating %s: %ds left,孵化中 %s：剩 %d 秒
+Incubator empty - bring a kin egg,Incubator empty - bring a kin egg,孵化器空着——放一枚精灵蛋
 INV,INV,背包
 INVENTORY,INVENTORY,背包
-"Join IP (blank=localhost): ","Join IP (blank=localhost): ","主机 IP（留空=本机）："
 Kin bed: base kin resting here recover SAN,Kin bed: base kin resting here recover SAN,精灵床：基地的精灵在此恢复理智
 Kinbox,Kinbox,精灵箱
 KSK,KSK,技能
-"Lv%d %s","Lv%d %s","Lv%d %s"
-"Lv%d %s  +%dg","Lv%d %s  +%dg","Lv%d %s  +%d 金"
+Lv%d %s,Lv%d %s,Lv%d %s
+Lv%d %s  +%dg,Lv%d %s  +%dg,Lv%d %s  +%d 金
 MAP,MAP,地图
 Max HP,Max HP,生命上限
-"Meal buff: %s for %ds","Meal buff: %s for %ds","食物增益：%s 持续 %d 秒"
+Meal buff: %s for %ds,Meal buff: %s for %ds,食物增益：%s 持续 %d 秒
 Move Speed,Move Speed,移动速度
-"Needs %d effigies","Needs %d effigies","需要 %d 个祭像"
-"No kin selected","No kin selected","未选择精灵"
+Needs %d effigies,Needs %d effigies,需要 %d 个祭像
+No kin selected,No kin selected,未选择精灵
 None,None,无
-"Not enough gold — %dg asked","Not enough gold — %dg asked","金币不足——需要 %d 金"
-"Not hungry","Not hungry","不饿"
-"Nothing close enough to demolish","Nothing close enough to demolish","附近没有可拆的建筑"
-"Nothing on the stand","Nothing on the stand","展示台上什么也没有"
-"Nothing to interact with","Nothing to interact with","没有可互动的目标"
+Not enough gold — %dg asked,Not enough gold — %dg asked,金币不足——需要 %d 金
+Not hungry,Not hungry,不饿
+Nothing close enough to demolish,Nothing close enough to demolish,附近没有可拆的建筑
+Nothing on the stand,Nothing on the stand,展示台上什么也没有
+Nothing to interact with,Nothing to interact with,没有可互动的目标
 ORB,ORB,捕获球
 PARTY,PARTY,队伍
 QUEUE,QUEUE,队列
 RDE,RDE,骑乘
 READY,READY,就绪
-"Research is the host's to direct","Research is the host's to direct","研究方向由主机决定"
+Research is the host's to direct,Research is the host's to direct,研究方向由主机决定
 ROLL,ROLL,翻滚
-"Say: ","Say: ","说："
-"Stat points: %d   Sprigmelt Effigies: %d","Stat points: %d   Sprigmelt Effigies: %d","属性点：%d   芽熔祭像：%d"
+Stat points: %d   Sprigmelt Effigies: %d,Stat points: %d   Sprigmelt Effigies: %d,属性点：%d   芽熔祭像：%d
 STN,STN,站姿
-"Stored %d items","Stored %d items","已存入 %d 件物品"
-"The gauntlet answers the host, not guests","The gauntlet answers the host, not guests","试炼只回应主机，不回应客人"
-"The horn is the host's to sound","The horn is the host's to sound","号角只有主机能吹响"
-"The kinbox anchors the base — nobody razes it","The kinbox anchors the base — nobody razes it","精灵箱是基地的锚点——谁也不能拆"
-"The merchant has left.","The merchant has left.","商人已离开。"
-"The shrine wants 3 lumenite","The shrine wants 3 lumenite","神龛需要 3 块流明石"
-"The stand answers the island's keeper","The stand answers the island's keeper","展示台只回应岛主"
-"The statue answers the island's keeper","The statue answers the island's keeper","雕像只回应岛主"
-"The statue only answers the island's keeper","The statue only answers the island's keeper","雕像只回应岛主"
-"Too far to demolish","Too far to demolish","距离太远，无法拆除"
-"Took %d items","Took %d items","已取出 %d 件物品"
+Stored %d items,Stored %d items,已存入 %d 件物品
+"The gauntlet answers the host, not guests","The gauntlet answers the host, not guests",试炼只回应主机，不回应客人
+The horn is the host's to sound,The horn is the host's to sound,号角只有主机能吹响
+The merchant has left.,The merchant has left.,商人已离开。
+The shrine wants 3 lumenite,The shrine wants 3 lumenite,神龛需要 3 块流明石
+The stand answers the island's keeper,The stand answers the island's keeper,展示台只回应岛主
+The statue answers the island's keeper,The statue answers the island's keeper,雕像只回应岛主
+The statue only answers the island's keeper,The statue only answers the island's keeper,雕像只回应岛主
+Too far to demolish,Too far to demolish,距离太远，无法拆除
+Took %d items,Took %d items,已取出 %d 件物品
 Waypoint,Waypoint,传送点
 WAYPOINT NET,WAYPOINT NET,传送网络
 Work Speed,Work Speed,工作速度
-"Wpn: %s   Arm: %s%s","Wpn: %s   Arm: %s%s","武器：%s   护甲：%s%s"
-"Wt %d/%d","Wt %d/%d","负重 %d/%d"
+Wpn: %s   Arm: %s%s,Wpn: %s   Arm: %s%s,武器：%s   护甲：%s%s
+Wt %d/%d,Wt %d/%d,负重 %d/%d
 KINBOX,KINBOX,精灵箱
-"— CROWNED","— CROWNED","——已加冕"
+— CROWNED,— CROWNED,——已加冕
 Fenjelly,Fenjelly,沼冻灵
 Puffmite,Puffmite,蓬团
 Fenlump,Fenlump,沼团
