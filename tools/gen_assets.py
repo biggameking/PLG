@@ -437,8 +437,12 @@ def dia_clip(img):
     ImageDraw.Draw(mask).polygon(DIA, fill=255)
     return mask
 
-def fill_dia(img, base, vary, seed, dark_bottom=0.0):
-    """Fill diamond with base color + per-pixel hash speckle."""
+VIOLET = (91, 74, 138)
+
+def fill_dia(img, base, vary, seed, dark_bottom=0.0, violet=0.0):
+    """Fill diamond with base color + per-pixel hash speckle.
+    dark_bottom shades toward the bottom vertex; violet>0 sends that shade
+    toward lilac instead of gray — the poster's shadow hue."""
     px = img.load()
     b = hxc(base)
     for y in range(33):
@@ -451,7 +455,13 @@ def fill_dia(img, base, vary, seed, dark_bottom=0.0):
                 f = 1 + (h - 0.5) * vary
                 # darken slightly toward bottom vertex (fake depth)
                 dd = 1 - dark_bottom * (y / 32.0)
-                px[x, y] = (int(b[0] * f * dd), int(b[1] * f * dd), int(b[2] * f * dd), 255)
+                r, g, bl = b[0] * f * dd, b[1] * f * dd, b[2] * f * dd
+                if violet > 0:
+                    vm = violet * (y / 32.0)
+                    r = r * (1 - vm) + VIOLET[0] * vm
+                    g = g * (1 - vm) + VIOLET[1] * vm
+                    bl = bl * (1 - vm) + VIOLET[2] * vm
+                px[x, y] = (min(255, int(r)), min(255, int(g)), min(255, int(bl)), 255)
 
 def in_dia(x, y):
     dx = abs(x - 32) / 32.0
@@ -482,7 +492,7 @@ def blades(img, n, seed, cols):
 def make_grass(v):
     img = tile_img()
     bases = ["#69ad4a", "#5f9f44", "#74b857", "#66a848"]
-    fill_dia(img, bases[v % 4], 0.12, 100 + v)
+    fill_dia(img, bases[v % 4], 0.12, 100 + v, dark_bottom=0.22, violet=0.5)
     blades(img, 14 + v * 3, 200 + v, ["#4e8a38", "#7fc463", "#589a3f"])
     speckle(img, ["#8ad06b", "#4a8034"], 8 + v * 2, 300 + v)
     return img
@@ -509,7 +519,7 @@ def make_flower(v):
 
 def make_sand(v):
     img = tile_img()
-    fill_dia(img, ["#e8d193", "#e0c887"][v % 2], 0.07, 500 + v)
+    fill_dia(img, ["#e8d193", "#e0c887"][v % 2], 0.07, 500 + v, dark_bottom=0.18, violet=0.45)
     speckle(img, ["#c9a86a", "#f4e6b4", "#b8946a"], 16, 600 + v)
     px = img.load()
     for i in range(3):  # ripples
@@ -528,7 +538,7 @@ def make_water(v):
             if in_dia(x, y):
                 t = y / 32.0
                 base = (61, 144, 205)
-                deep = (33, 96, 150)
+                deep = (48, 90, 158)  # deep end leans violet-blue, not gray
                 c = tuple(int(base[i] * (1 - t) + deep[i] * t) for i in range(3))
                 px[x, y] = c + (255,)
     speckle(img, ["#7fc4ee", "#a8dcf6"], 8, 700 + v)
@@ -542,7 +552,7 @@ def make_water(v):
 
 def make_stonefield(v):
     img = tile_img()
-    fill_dia(img, "#8a9096", 0.14, 800 + v)
+    fill_dia(img, "#8a9096", 0.14, 800 + v, dark_bottom=0.2, violet=0.55)
     px = img.load()
     for i in range(5):  # slabs
         x = int(hash2(i, v, 81) * 52) + 6
@@ -558,13 +568,13 @@ def make_stonefield(v):
 
 def make_dirt(v):
     img = tile_img()
-    fill_dia(img, "#a98a5e", 0.12, 900 + v)
+    fill_dia(img, "#a98a5e", 0.12, 900 + v, dark_bottom=0.2, violet=0.45)
     speckle(img, ["#8a6d4d", "#c4a678", "#6e5238"], 14, 950 + v)
     return img
 
 def make_farmland(v):
     img = tile_img()
-    fill_dia(img, "#7a5c3e", 0.08, 1000 + v)
+    fill_dia(img, "#7a5c3e", 0.08, 1000 + v, dark_bottom=0.22, violet=0.4)
     px = img.load()
     for i in range(4):  # tilled rows along x axis
         y0 = 7 + i * 6
@@ -607,18 +617,24 @@ def wall_img(kind):
                             cc = hxc("#5a4c3c")
                     else:
                         v = 1 + (h - 0.5) * 0.18
-                        base = hxc("#6e6250")
+                        # cliff = the poster's violet shadow face; +x wall catches
+                        # a little more light than +y so the pair reads lit/shaded
+                        base = hxc("#6b5d70") if f == "sx" else hxc("#584a66")
                         cc = tuple(min(255, int(c * v)) for c in base)
                         if t == 0:
-                            cc = hxc("#94866c")  # top rim light
+                            cc = INK  # ink contour where the wall meets the tile top
+                        elif t == 1:
+                            cc = hxc("#9a86b8")  # lilac rim light under the ink line
                         elif t in (5, 10) and h < 0.8:
-                            cc = hxc("#57503f")  # strata lines
+                            cc = hxc("#463e58")  # strata lines — violet ink, not gray
+                        elif t > WALL * 0.55 and ((xi + int(y)) % 6) < 2:
+                            cc = tuple(min(255, int(c * 0.72)) for c in INK)  # halftone dot lattice on the shaded half
                     px[xi, int(y)] = cc + (255,)
     if kind == "corner" or kind == "stair_corner":
         for t in range(WALL):
             for dy in range(2):
                 if 0 <= 32 + dy < 64 and 0 <= 30 + t < 64:
-                    px[31 + dy, 32 + t] = hxc("#3c352b") + (255,)
+                    px[31 + dy, 32 + t] = hxc("#3c3548") + (255,)
     return img
 
 def marker_img():

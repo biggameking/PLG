@@ -953,13 +953,16 @@ func _draw() -> void:
 		var w: int = s.get("w", 2)
 		var h: int = s.get("h", 2)
 		var ok := game.can_place(sid, int(tw.x), int(tw.y))
-		var col := Color(0.3, 0.9, 0.4, 0.45) if ok else Color(0.95, 0.3, 0.2, 0.45)
+		var col := Color(Ink.GREEN, 0.45) if ok else Color(Ink.RED, 0.45)
 		for dy in range(h):
 			for dx in range(w):
 				var e: int = game.world.elev_at(int(tw.x) + dx, int(tw.y) + dy)
 				var pc := Iso.to_screen(int(tw.x) + dx + 0.5, int(tw.y) + dy + 0.5, e)
 				var sc := w2s(pc)
-				draw_colored_polygon([sc + Vector2(0, -16), sc + Vector2(32, 0), sc + Vector2(0, 16), sc + Vector2(-32, 0)], col)
+				var dia := PackedVector2Array([sc + Vector2(0, -16), sc + Vector2(32, 0),
+					sc + Vector2(0, 16), sc + Vector2(-32, 0), sc + Vector2(0, -16)])
+				draw_polyline(dia, Ink.INK, 1.5)
+				draw_colored_polygon(dia.slice(0, 4), col)
 	match game.panel:
 		"build":
 			draw_build_bar(r)
@@ -1283,7 +1286,7 @@ func draw_weather_fx(r: Vector2) -> void:
 	if game.weather == "rain" or game.weather == "storm":
 		var drops := 56 if game.weather == "storm" else 40
 		var speed := 180.0 if game.weather == "storm" else 120.0
-		var rain_col := Color(0.55, 0.75, 1.0, 0.28 if game.weather == "storm" else 0.20)
+		var rain_col := Color(Ink.LILAC, 0.34 if game.weather == "storm" else 0.24) # ink-lilac rain, not neon blue
 		for d in drops:
 			var dx := fposmod(d * 97.0 + t * speed, r.x + 40.0) - 20.0
 			var dy := fposmod(d * 53.0 + t * speed * 1.35, r.y + 40.0) - 20.0
