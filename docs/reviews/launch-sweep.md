@@ -1,5 +1,10 @@
 # Kinbound launch sweep — verified vs deferred (S16)
 
+> **Stale — superseded by S60/audit-22** (HEAD ~`4469668`, 763-check
+> suite). Findings below are the S16-era snapshot; the authority surface
+> claims still hold but check counts, artifact names and the deferred
+> list have moved. See ROADMAP S55-S60 for the current release gate.
+
 Date basis: HEAD `fb9e7c1` + audit-fix batch `c775b20`.
 
 ## Verified by tool output (not claimed)
