@@ -40,6 +40,6 @@ case "$WHAT" in
 	all) pack_windows; pack_web; pack_android_debug ;;
 	*) echo "usage: $0 [windows|web|android|all]" >&2; exit 2 ;;
 esac
-(cd dist && shasum -a 256 kinbound-*.zip > SHA256SUMS)
+(cd dist && shasum -a 256 kinbound-*.zip kinbound-*.apk 2>/dev/null > SHA256SUMS)
 cat dist/SHA256SUMS
 ls -lh dist/
