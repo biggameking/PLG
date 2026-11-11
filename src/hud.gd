@@ -898,7 +898,7 @@ func _draw() -> void:
 	Ink.tag(self, Rect2(r.x - 140, 10, 128, 20))
 	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else ("  ☀" if game.weather == "drought" else ""))
 	var wcol := Ink.VIOLET if game.weather == "storm" else (Ink.TEAL if game.weather == "rain" else (Ink.GOLD if game.weather == "drought" else Ink.INK))
-	draw_string(font, Vector2(r.x - 132, 25), "Day %d  %02d:00%s" % [game.day, int(game.tod), wicon],
+	draw_string(font, Vector2(r.x - 132, 25), tr("Day %d  %02d:00%s") % [game.day, int(game.tod), wicon],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, wcol)
 	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0: # the island raid horn
 		var raid_r := Rect2(r.x / 2 - 80, 8, 160, 22)
@@ -961,7 +961,7 @@ func _draw() -> void:
 		var cd_left: float = float(psk_p.skill_cd.get("partner", 0.0)) - game.t
 		Ink.tag(self, Rect2(r.x - 150, py, 138, 16))
 		draw_string(font, Vector2(r.x - 144, py + 13),
-			"%s %s" % [game.PARTNER_SKILLS[psk_p.species_id]["name"],
+			"%s %s" % [tr(str(game.PARTNER_SKILLS[psk_p.species_id]["name"])),
 				"READY" if cd_left <= 0 else "%ds" % ceili(cd_left)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Ink.GOLD if cd_left <= 0 else Ink.INK_SOFT)
@@ -1269,7 +1269,7 @@ func draw_touch(r: Vector2) -> void:
 		var rad := 36.0 if b == "atk" else BTN_R
 		draw_circle(c, rad, Color(Ink.PAPER, 0.10))
 		draw_arc(c, rad, 0, TAU, 24, Color(Ink.PAPER, 0.4), 1.5)
-		var tl: String = BTN_LABELS[b]
+		var tl: String = tr(BTN_LABELS[b])
 		draw_string(font, c - Vector2(font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), tl,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(Ink.PAPER, 0.8))
 	if touch_more:
@@ -1277,7 +1277,7 @@ func draw_touch(r: Vector2) -> void:
 			var c2: Vector2 = lay["more_row"][b]
 			draw_circle(c2, MORE_BTN_R, Color(Ink.GOLD, 0.14))
 			draw_arc(c2, MORE_BTN_R, 0, TAU, 24, Color(Ink.GOLD, 0.45), 1.5)
-			var tl2: String = BTN_LABELS[b]
+			var tl2: String = tr(BTN_LABELS[b])
 			draw_string(font, c2 - Vector2(font.get_string_size(tl2, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x / 2, -4), tl2,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(Ink.GOLD, 0.85))
 
@@ -1549,7 +1549,7 @@ func draw_tech(r: Vector2) -> void:
 func draw_chest(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 220, 150, 440, 300)
 	Ink.card(self, rr)
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CHEST", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("CHEST"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
 	var st = game.chest_ref
 	if st == null:
 		return
@@ -1576,7 +1576,7 @@ func draw_chest(r: Vector2) -> void:
 func draw_craft(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 60, 480, 560)
 	Ink.card(self, rr)
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "CRAFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.ORANGE)
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("CRAFT"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.ORANGE)
 	var y := rr.position.y + 48
 	# the island repair: a worn weapon mends at the bench for half its recipe
 	var rep := game.repair_quote()
@@ -1634,7 +1634,7 @@ func draw_craft(r: Vector2) -> void:
 		_scroll_btns(rr, "craft_up", "craft_dn")
 	if not game.craft_queue.is_empty(): # the island bench queue: builds tick down live
 		y += 8
-		draw_string(font, Vector2(rr.position.x + 16, y), "QUEUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
+		draw_string(font, Vector2(rr.position.x + 16, y), tr("QUEUE"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
 		y += 16
 		for cq in game.craft_queue:
 			if y > rr.end.y - 14:
@@ -1647,11 +1647,11 @@ func draw_craft(r: Vector2) -> void:
 func draw_inv(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 230, 60, 460, 500)
 	Ink.card(self, rr)
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GREEN)
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("INVENTORY"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GREEN)
 	# the island carry weight: the bag drags once it tops capacity
 	var pl := game.player
 	var over: bool = pl.carry_wt() > pl.carry_cap()
-	draw_string(font, Vector2(rr.position + Vector2(330, 24)), "Wt %d/%d" % [int(pl.carry_wt()), int(pl.carry_cap())],
+	draw_string(font, Vector2(rr.position + Vector2(330, 24)), tr("Wt %d/%d") % [int(pl.carry_wt()), int(pl.carry_cap())],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.RED if over else Ink.TEAL)
 	var keys := game.items.keys()
 	keys.sort()
@@ -1686,7 +1686,7 @@ func draw_inv(r: Vector2) -> void:
 func draw_kinbox(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 540)
 	Ink.card(self, rr)
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "KINBOX",
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("KINBOX"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.TEAL)
 	draw_string(font, Vector2(rr.position + Vector2(112, 24)), "rows swap party/base",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
@@ -1706,7 +1706,7 @@ func draw_kinbox(r: Vector2) -> void:
 		draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 38), blv_txt + " MAX",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var y := rr.position.y + 54
-	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
+	draw_string(font, Vector2(rr.position.x + 16, y), tr("PARTY"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 	y += 18
 	for pr in party_rows():
 		var rect := Rect2(rr.position.x + 24, y - 11, 250, 17)
@@ -1858,7 +1858,7 @@ func draw_shop(r: Vector2) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK_SOFT)
 		return
 	var y := rr.position.y + 48
-	draw_string(font, Vector2(rr.position.x + 16, y), "BUY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GREEN)
+	draw_string(font, Vector2(rr.position.x + 16, y), tr("BUY"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GREEN)
 	draw_string(font, Vector2(rr.position.x + 316, y), "SELL (50%)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
 	y += 20
 	var sy := y
@@ -2037,7 +2037,7 @@ func use_item(k: String) -> void:
 							bstr += ("+" if bstr == "" else ",+") + str(bk).to_upper()
 					game.log_msg("Meal buff: %s for %ds" % [bstr, int(bf.get("t", 300))])
 			else:
-				game.log_msg("Can't use " + k)
+				game.log_msg(tr("Can't use ") + tr(str(k)))
 
 func _text_btns(rr: Rect2, ok_act: String) -> void:
 	# on-screen confirm/cancel — the only out when there's no Esc/Enter key
@@ -2152,7 +2152,7 @@ func passive_str(p: Kin) -> String:
 		var pv: Dictionary = PassiveData.PASSIVES.get(k, {})
 		if pv.is_empty():
 			continue # stale key from an older save — skip instead of crashing
-		s += "[" + pv["name"] + "]"
+		s += "[" + tr(str(pv["name"])) + "]"
 	return s
 
 const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "Attack",
@@ -2175,14 +2175,14 @@ func draw_statues(r: Vector2) -> void:
 	# SIZE as a position and painted the whole panel off-screen (dead UI)
 	var rr := Rect2(r.x / 2 - 230, 50, 460, r.y - 100)
 	Ink.card(self, rr)
-	draw_string(font, rr.position + Vector2(16, 24), "EFFIGIES", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GREEN)
+	draw_string(font, rr.position + Vector2(16, 24), tr("EFFIGIES"), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GREEN)
 	var y := rr.position.y + 56.0
-	draw_string(font, Vector2(rr.position.x + 16, y - 16), "Stat points: %d   Sprigmelt Effigies: %d" % [game.stat_pts, game.item_count("sprigmelt_effigy")],
+	draw_string(font, Vector2(rr.position.x + 16, y - 16), tr("Stat points: %d   Sprigmelt Effigies: %d") % [game.stat_pts, game.item_count("sprigmelt_effigy")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN)
 	for k in game.perks:
 		var lvl: int = game.perks[k]
 		var cost := 2 + lvl * 2
-		var txt := "%s  Lv%d/5  (cost %d)" % [PERK_LABEL.get(k, k), lvl, cost] # foreign saves can inject unknown perk keys
+		var txt := "%s  Lv%d/5  (cost %d)" % [tr(str(PERK_LABEL.get(k, k))), lvl, cost] # foreign saves can inject unknown perk keys
 		var rect := Rect2(rr.position.x + 16, y - 12, 360, 20)
 		var col := Ink.INK if lvl < 5 else Ink.INK_SOFT
 		if lvl < 5:
@@ -2282,7 +2282,7 @@ func draw_guide(r: Vector2) -> void:
 			Ink.ORANGE if head else Ink.INK)
 		y += 19
 	draw_string(font, Vector2(rr.position.x + 22, rr.end.y - 14),
-		"Esc/n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.pages().size()],
+		tr("Esc/n close · ←/→ turn the page · %d / %d") % [guide_page + 1, GuideData.pages().size()],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK_SOFT)
 	# tap turners — no arrow keys on a slab
 	var pv := Rect2(rr.end.x - 84, rr.end.y - 34, 34, 24)

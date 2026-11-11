@@ -79,7 +79,6 @@ Kin bed: base kin resting here recover SAN,Kin bed: base kin resting here recove
 Kinbox,Kinbox,精灵箱
 KSK,KSK,技能
 Lv%d %s,Lv%d %s,Lv%d %s
-Lv%d %s  +%dg,Lv%d %s  +%dg,Lv%d %s  +%d 金
 MAP,MAP,地图
 Max HP,Max HP,生命上限
 Meal buff: %s for %ds,Meal buff: %s for %ds,食物增益：%s 持续 %d 秒
@@ -117,7 +116,6 @@ Work Speed,Work Speed,工作速度
 Wpn: %s   Arm: %s%s,Wpn: %s   Arm: %s%s,武器：%s   护甲：%s%s
 Wt %d/%d,Wt %d/%d,负重 %d/%d
 KINBOX,KINBOX,精灵箱
-— CROWNED,— CROWNED,——已加冕
 Fenjelly,Fenjelly,沼冻灵
 Puffmite,Puffmite,蓬团
 Fenlump,Fenlump,沼团
@@ -353,3 +351,14 @@ ground,ground,地
 ice,ice,冰
 neutral,neutral,无
 water,water,水
+depressed,depressed,消沉
+sprain,sprain,扭伤
+ulcer,ulcer,溃疡
+XP Gain,XP Gain,经验获取
+Flamethrower,Flamethrower,喷射火焰
+SMG Burst,SMG Burst,冲锋枪连射
+Rifle Shot,Rifle Shot,步枪射击
+Milk Maker,Milk Maker,挤奶工
+Egg-cellent Lay,Egg-cellent Lay,妙手下蛋
+Penguin Cannon,Penguin Cannon,企鹅加农炮
+Roly Poly,Roly Poly,滚动圆球

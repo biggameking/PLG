@@ -860,3 +860,18 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   names (95) stay romanized — coined proper nouns, defensible
   for EA. Suite 763/0. zh coverage is now effectively complete:
   every user-facing string class localizes.
+
+## S63b — audit-23 verify: SHIP + honesty-gap closures
+  Twenty-third audit passed logic-clean (zero tr() into logic
+  paths, zero syntax residue, working locale switch) but flagged
+  that literal UI sinks sat unwrapped, leaving ~91 csv rows dead.
+  Landed the high-traffic sinks: all panel headers, BTN_LABELS
+  touch buttons, passive_str, PERK_LABEL, PARTNER_SKILLS names,
+  Day/Wt/Stat-points/guide-footer literals, Can't-use concat,
+  skill-learn messages. csv: added real ailment ids
+  (depressed/sprain/ulcer), XP Gain, 7 partner-skill names; dropped
+  the 2 wrong-authored keys and the unspaced — CROWNED dup.
+  Suite 761/0. Remaining known-partial: ~95 procgen species names
+  stay romanized (coined proper nouns), ~200 log_msg literals and
+  pace/stance labels still English — documented EA gap, not a
+  defect: tr() keys added later localize without code change.

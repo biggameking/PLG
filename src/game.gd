@@ -6028,11 +6028,11 @@ func fruit_req_remote(pid: int, item_id: String) -> bool:
 			pool.append(sid)
 	pool = pool.filter(func(s): return s not in p.learned_skills())
 	if pool.is_empty():
-		note_remote(pid, "%s already knows every %s move" % [tr(str(p.spec["name"])), elem])
+		note_remote(pid, "%s already knows every %s move" % [tr(str(p.spec["name"])), tr(str(elem))])
 		return false
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	p.extra_skills.append(sid)
-	note_remote(pid, "%s learned %s!" % [tr(str(p.spec["name"])), SkillData.SKILLS[sid].get("name", sid)])
+	note_remote(pid, "%s learned %s!" % [tr(str(p.spec["name"])), tr(str(SkillData.SKILLS[sid].get("name", sid)))])
 	floater(p.pos, "+ skill!", "#a8e6a1")
 	return true
 
@@ -6073,17 +6073,17 @@ func partner_skill() -> void:
 	var psk = PARTNER_SKILLS.get(p.species_id)
 	if psk != null and not partner_gear_ok(p.species_id):
 		log_msg("%s's %s needs its kin gear — unlock %s in the tech tree"
-			% [tr(str(p.spec["name"])), psk["name"], PARTNER_GEAR[p.species_id]])
+			% [tr(str(p.spec["name"])), tr(str(psk["name"])), PARTNER_GEAR[p.species_id]])
 		psk = null # the pal falls back to its strongest learned move instead
 	if psk != null:
 		if p.skill_cd.get("partner", 0) > t:
 			log_msg("%s is reloading" % tr(str(p.spec["name"])))
 			return
 		if not run_partner_skill(p, tw0, psk):
-			log_msg("%s's %s found no target" % [tr(str(p.spec["name"])), psk["name"]])
+			log_msg("%s's %s found no target" % [tr(str(p.spec["name"])), tr(str(psk["name"]))])
 			return
 		p.skill_cd["partner"] = t + float(psk["cd"])
-		log_msg("%s: %s!" % [tr(str(p.spec["name"])), psk["name"]])
+		log_msg("%s: %s!" % [tr(str(p.spec["name"])), tr(str(psk["name"]))])
 		return
 	var tw: Vector2 = tw0
 	var best: Dictionary = {}
@@ -6102,7 +6102,7 @@ func partner_skill() -> void:
 		return
 	p.skill_cd[best["id"]] = t + best.get("cooldown", 2)
 	cast_skill(p, tw, best)
-	log_msg("%s casts %s!" % [tr(str(p.spec["name"])), best["name"]])
+	log_msg("%s casts %s!" % [tr(str(p.spec["name"])), tr(str(best["name"]))])
 
 func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 	# bespoke actives — returns false when nothing in the cone/aim was worth
@@ -6569,12 +6569,12 @@ func teach_skill_fruit(item_id: String) -> void:
 			pool.append(sid)
 	pool = pool.filter(func(s): return s not in p.learned_skills())
 	if pool.is_empty():
-		log_msg("%s already knows every %s move" % [tr(str(p.spec["name"])), elem])
+		log_msg("%s already knows every %s move" % [tr(str(p.spec["name"])), tr(str(elem))])
 		return
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	add_item(item_id, -1)
 	p.extra_skills.append(sid)
-	log_msg("%s learned %s!" % [tr(str(p.spec["name"])), SkillData.SKILLS[sid].get("name", sid)])
+	log_msg("%s learned %s!" % [tr(str(p.spec["name"])), tr(str(SkillData.SKILLS[sid].get("name", sid)))])
 	floater(p.pos, "+ skill!", "#a8e6a1")
 
 # ---------- wandering merchant ----------
