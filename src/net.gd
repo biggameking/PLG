@@ -590,6 +590,43 @@ func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
 			n += c
 	game.log_msg("Stored %d items" % n)
 
+@rpc("any_peer", "call_remote", "reliable")
+func fish_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "fish_bkt", 0.7, 1.0):
+		return # the rod needs a beat between casts
+	game.cast_line_remote(pid)
+
+@rpc("any_peer", "call_remote", "reliable")
+func mimic_req(tx: float, ty: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "chest_bkt", 1.0, 1.0):
+		return
+	game.mimic_req_remote(pid, Vector2i(int(tx), int(ty)))
+	# a real mimic answers itself: the structure despawns on the wire and
+	# a mouth charges the asker — no echo needed, the world is the reply
+
+@rpc("any_peer", "call_remote", "reliable")
+func fert_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	if game.fert_req_remote(pid) and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "fert_done")
+
+@rpc("authority", "call_remote", "reliable")
+func fert_done() -> void:
+	if is_host:
+		return
+	game.add_item("fertilizer", -1) # the bag pays only on host acceptance
+	game.log_msg("Fertilizer spread — five minutes of surge")
+
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
 # kinbox clicks travel back as box_req ops the host validates + runs.

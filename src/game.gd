@@ -319,13 +319,15 @@ func give_remote(pid: int, id: String, n: int) -> void:
 	# a remote-owned kin's produce routes to its keeper's bag over the wire;
 	# host kin keep the local path — and a peer that dropped mid-op spills
 	# into ours rather than vanishing
-	if pid > 0 and net != null and multiplayer.get_peers().has(pid):
+	if pid > 0 and net != null and multiplayer.multiplayer_peer != null \
+			and multiplayer.get_peers().has(pid):
 		net.rpc_id(pid, "got_loot", id, n)
 	else:
 		add_item(id, n)
 
 func note_remote(pid: int, msg: String) -> void:
-	if pid > 0 and net != null and multiplayer.get_peers().has(pid):
+	if pid > 0 and net != null and multiplayer.multiplayer_peer != null \
+			and multiplayer.get_peers().has(pid):
 		net.rpc_id(pid, "net_note", msg)
 	else:
 		log_msg(msg) # offline rigs and absent peers hear it in the keeper's log
@@ -3018,19 +3020,37 @@ func cast_line() -> bool:
 	# the island fishing: stand at the water's edge, wait for a bite — mostly
 	# loot, sometimes a live aquatic kin surfaces to fight or catch
 	var c := Vector2i(int(player.pos.x), int(player.pos.y))
-	var wc := Vector2i(-1, -1)
-	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-		var k: Vector2i = c + d
-		if world.in_bounds(k.x, k.y) and world.tiles[world.idx(k.x, k.y)] == World.Tile.WATER:
-			wc = k
-			break
+	var wc := _water_cell(c)
 	if wc.x < 0:
 		log_msg("Cast at the water's edge")
 		return false
+	return _fish_roll(wc, 0)
+
+func _water_cell(c: Vector2i) -> Vector2i:
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var k: Vector2i = c + d
+		if world.in_bounds(k.x, k.y) and world.tiles[world.idx(k.x, k.y)] == World.Tile.WATER:
+			return k
+	return Vector2i(-1, -1)
+
+# host-side guest cast: the ghost's shore is the honest one — you can't
+# fish a coast you aren't standing on
+func cast_line_remote(pid: int) -> void:
+	var gp = net.ghosts.get(pid) if net != null else null
+	if gp == null:
+		return
+	var wc := _water_cell(Vector2i(int(gp.net_pos.x), int(gp.net_pos.y)))
+	if wc.x < 0:
+		note_remote(pid, "Cast at the water's edge")
+		return
+	_fish_roll(wc, pid)
+
+func _fish_roll(wc: Vector2i, pid: int) -> bool:
 	var roll := rng.next()
 	var bite := fish_bite_p() # fish feed in the rain
 	if roll < bite and pals.size() < MAX_PALS:
-		# a live catch: an aquatic kin from this zone's pool surfaces
+		# a live catch: an aquatic kin from this zone's pool surfaces —
+		# always host truth; pal_sync carries it to every client
 		var zone := world.zone_at(wc.x, wc.y)
 		var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
 			func(s): return "water" in SpeciesData.species_of(str(s)).get("elements", []))
@@ -3045,21 +3065,22 @@ func cast_line() -> bool:
 		fp.setup(self, sid, rng.int_range(1 + zone * 3, 4 + zone * 5), Vector2(wc.x + 0.5, wc.y + 0.5))
 		fp.home = fp.pos
 		pals.append(fp)
-		log_msg("A wild %s took the bait!" % fp.spec["name"])
+		note_remote(pid, "A wild %s took the bait!" % fp.spec["name"])
 		floater(fp.pos, "SPLASH!", "#4d9de0")
 	elif roll < 0.7:
 		var n := rng.int_range(1, 2)
-		add_item("kin_fluid", n)
-		log_msg("Caught kin fluids x%d" % n)
+		give_remote(pid, "kin_fluid", n)
+		note_remote(pid, "Caught kin fluids x%d" % n)
 	elif roll < 0.9:
-		add_item("gold_coin", rng.int_range(4, 12))
-		log_msg("A soggy coin purse!")
+		var n2 := rng.int_range(4, 12)
+		give_remote(pid, "gold_coin", n2)
+		note_remote(pid, "A soggy coin purse!")
 	elif roll < 0.95:
-		add_item("red_berries", 2)
-		log_msg("Just weeds and berries.")
+		give_remote(pid, "red_berries", 2)
+		note_remote(pid, "Just weeds and berries.")
 	else: # the sea keeps the odd corked promise
-		add_item("treasure_map", 1)
-		log_msg("A corked bottle — inside, a faded treasure chart!")
+		give_remote(pid, "treasure_map", 1)
+		note_remote(pid, "A corked bottle — inside, a faded treasure chart!")
 	floater(Vector2(wc.x + 0.5, wc.y + 0.5), "~splash~", "#9fd8ff")
 	return true
 
@@ -4752,7 +4773,7 @@ func dig_fossil(st: Dictionary) -> void:
 	log_msg("Fossil dug: %d ancient parts%s" % [n, " and a lumenite shard" if shard else ""])
 	sfx_play("catch")
 
-func open_mimic(st: Dictionary) -> void:
+func open_mimic(st: Dictionary, opener_pid := 0) -> void:
 	if client_locked():
 		return
 	# some dungeon chests are only chest-shaped — open it and it opens back
@@ -4765,11 +4786,46 @@ func open_mimic(st: Dictionary) -> void:
 		Vector2(cell.x + 0.5, cell.y + 0.5))
 	m.mode = "wild"
 	m.aggro = 0 # the mimic picks its fight before you pick yours
-	m.aggro_pid = 0 # chest-opening is a keeper verb — the opener is the mark
+	m.aggro_pid = opener_pid # chest-opening is a keeper verb — the opener is the mark
 	pals.append(m)
 	floater(m.pos, "IT GRINS.", "#e8452f")
 	log_msg("The chest was a %s — it was never a chest!" % m.spec["name"])
 	sfx_play("fail")
+
+# host-side guest probe: clients can't see the mimic flag (the trap stays
+# armed on the wire) — they ask, and if it was a mouth it opens on THEM
+func mimic_req_remote(pid: int, cell: Vector2i) -> bool:
+	var st = structures.get(cell)
+	if st == null or str(st.get("mimic", "")) == "":
+		return false
+	var gp = net.ghosts.get(pid) if net != null else null
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(
+			Vector2(cell.x + 0.5, cell.y + 0.5)) > 6.0:
+		return false
+	open_mimic(st, pid)
+	return true
+
+# host-side guest fertilize: ghost proximity is the honest reach — the
+# guest's own bag pays on the fert_done echo, never up front
+func fert_req_remote(pid: int) -> bool:
+	var gp = net.ghosts.get(pid) if net != null else null
+	if gp == null:
+		return false
+	var best := Vector2i(-1, -1)
+	var bd := 4.0
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if k != cell_of(st):
+			continue
+		if not StructureData.STRUCTURES.get(st["id"], {}).get("farmField", false):
+			continue
+		var d: float = Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if d < bd:
+			bd = d; best = k
+	if best.x < 0:
+		return false
+	structures[best]["fert"] = t + 300.0
+	return true
 
 func spawn_lairs() -> void:
 	# Zone-3 boss lairs: torch ring + an Alpha guarding elite guards

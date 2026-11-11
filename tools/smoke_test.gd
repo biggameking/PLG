@@ -4874,6 +4874,66 @@ func run() -> void:
 			check("feed box keeps the food rule", int(acc_fb.get("baked_berries", 0)) == 2
 				and not acc_fb.has("wood"), "acc=%s" % acc_fb)
 			game.net_remove_structure(fbx_st)
+		# S35 guest world-verbs: the mouth answers the asker, the farm
+		# takes guest labor, the rod rolls host-side at the ghost's shore
+		var vt_mk := Vector2i(-1, -1)
+		for vt_r2 in range(3, 10):
+			for vt_a10 in range(16):
+				var vt_c7 := Vector2i(int(p.pos.x + cos(vt_a10 * TAU / 16.0) * vt_r2),
+					int(p.pos.y + sin(vt_a10 * TAU / 16.0) * vt_r2))
+				if game.can_place("chest", vt_c7.x, vt_c7.y):
+					game.place_free("chest", vt_c7.x, vt_c7.y); vt_mk = vt_c7; break
+			if vt_mk.x >= 0: break
+		if vt_mk.x >= 0:
+			var vt_mst: Dictionary = game.structures[vt_mk]
+			vt_mst["mimic"] = "fenjelly"
+			var vt_p0 := game.pals.size()
+			game.net.ghosts[99].net_pos = Vector3(vt_mk.x + 40, vt_mk.y, 0)
+			check("far ghost can't spring the trap",
+				not game.mimic_req_remote(99, vt_mk)
+				and game.structures.has(vt_mk) and game.pals.size() == vt_p0)
+			game.net.ghosts[99].net_pos = Vector3(vt_mk.x, vt_mk.y, 0)
+			check("the trap opens on the asker", game.mimic_req_remote(99, vt_mk)
+				and not game.structures.has(vt_mk) and game.pals.size() == vt_p0 + 1)
+			if game.pals.size() > vt_p0:
+				var vt_mp: Kin = game.pals.back()
+				check("the mouth hunts the asker", vt_mp.aggro_pid == 99)
+				game.pals.erase(vt_mp)
+				vt_mp.queue_free()
+			check("a plain chest stays a chest", not game.mimic_req_remote(99, vt_mk))
+		var vt_fk := Vector2i(-1, -1)
+		for vt_r3 in range(3, 10):
+			for vt_a11 in range(16):
+				var vt_c8 := Vector2i(int(p.pos.x + cos(vt_a11 * TAU / 16.0) * vt_r3),
+					int(p.pos.y + sin(vt_a11 * TAU / 16.0) * vt_r3))
+				if game.can_place("wheat_farm", vt_c8.x, vt_c8.y):
+					game.place_free("wheat_farm", vt_c8.x, vt_c8.y); vt_fk = vt_c8; break
+			if vt_fk.x >= 0: break
+		if vt_fk.x >= 0:
+			var vt_fst: Dictionary = game.structures[vt_fk]
+			game.net.ghosts[99].net_pos = Vector3(vt_fk.x + 40, vt_fk.y, 0)
+			check("far ghost can't fertilize", not game.fert_req_remote(99))
+			game.net.ghosts[99].net_pos = Vector3(vt_fk.x, vt_fk.y, 0)
+			check("guest fertilize lands host-side", game.fert_req_remote(99)
+				and float(vt_fst.get("fert", 0.0)) > 0.0)
+			game.net_remove_structure(vt_fst)
+		# fishing: find a shore cell — the roll lands somewhere (a kin
+		# spawns host-truth, or loot echoes to the asker's bag)
+		var vt_wc := Vector2i(-1, -1)
+		for vt_wy in range(4, World.WORLD_H - 4):
+			for vt_wx in range(4, World.WORLD_W - 4):
+				if game.world.tiles[game.world.idx(vt_wx, vt_wy)] == World.Tile.WATER:
+					vt_wc = Vector2i(vt_wx + 1, vt_wy); break
+			if vt_wc.x >= 0: break
+		if vt_wc.x >= 0:
+			game.net.ghosts[99].net_pos = Vector3(vt_wc.x, vt_wc.y, 0)
+			var vt_bag := game.item_count("kin_fluid") + game.item_count("gold_coin") \
+				+ game.item_count("red_berries") + game.item_count("treasure_map")
+			var vt_p1 := game.pals.size()
+			game.cast_line_remote(99)
+			check("guest cast lands a roll", game.pals.size() > vt_p1 or
+				game.item_count("kin_fluid") + game.item_count("gold_coin") \
+				+ game.item_count("red_berries") + game.item_count("treasure_map") > vt_bag)
 	else:
 		check("guest deposit whitelists", false, "no chest spot seeded")
 	game.touch_ui = tui3

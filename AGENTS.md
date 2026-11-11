@@ -324,3 +324,7 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     0.8s wait) lived in both the key path and the touch verb — three magic
     numbers to drift. Extract the verb (`dodge()`) too; a shared predicate
     with duplicated effects is half a contract.
+65. **`get_peers()` needs a live peer, not just a pointer.** Calling it
+    while `multiplayer_peer == null` emits an engine ERROR — every
+    `give_remote`/`note_remote` on an offline rig or test harness was
+    dirtying output. Guard the peer handle before asking for the list.

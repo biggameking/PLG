@@ -634,6 +634,11 @@ func interact() -> void:
 				if str(st.get("mimic", "")) != "":
 					game.open_mimic(st)
 					return
+				if game.net != null and game.net.is_client():
+					var mcc: Vector2i = game.cell_of(st)
+					game.net.rpc("mimic_req", float(mcc.x), float(mcc.y))
+					# the trap isn't on the wire — ask the host; if it was
+					# a mouth the structure dies and the answer charges us
 				game.chest_ref = st
 				game.panel = "chest"
 				return
@@ -754,12 +759,12 @@ func _draw() -> void:
 		if n <= 0:
 			continue
 		var sel := tiers.find(id) == pl.sphere_sel
-		Ink.tag(self, Rect2(sx, 44, 70, 20))
+		Ink.tag(self, Rect2(sx, 44, 78, 20))
 		if sel:
-			draw_rect(Rect2(sx, 44, 70, 20), Ink.ORANGE, false, 1.5)
-		draw_string(font, Vector2(sx + 4, 49), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
+			draw_rect(Rect2(sx, 44, 78, 20), Ink.ORANGE, false, 1.5)
+		draw_string(font, Vector2(sx + 4, 59), "%s x%d" % [ItemData.ITEMS[id]["name"].left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
-		sx += 74
+		sx += 82
 	draw_equipment_line() # gear row under the orb chips
 	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # the island meal timer chip
 		var btxt := ""
@@ -1188,8 +1193,13 @@ func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Co
 	click_rects.append({"rect": rr, "act": act, "arg": null})
 	var tl := tr(label)
 	var tc := Ink.INK if col == Color.WHITE else Ink.RED # pale red = the quit row
-	draw_string(font, Vector2(cx - font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x / 2, y + 20), tl,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, tc)
+	var fs := 14
+	var tw := font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	if tw > w - 14: # long labels shrink to fit the tag instead of spilling onto dark world
+		fs = maxi(11, int(floor(fs * (w - 14.0) / tw)))
+		tw = font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_string(font, Vector2(cx - tw / 2, y + 20), tl,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tc)
 	return y + 40
 
 func draw_weather_fx(r: Vector2) -> void:
@@ -1230,18 +1240,24 @@ func draw_title_sky(r: Vector2) -> void:
 	for i in 16:
 		draw_rect(Rect2(0, r.y * i / 16.0, r.x, r.y / 16.0 + 1.0), sky_top.lerp(sky_bot, i / 15.0))
 	var sun := Vector2(r.x * 0.72, r.y * 0.28)
-	for i in 14: # the COO halo: a ring of ink dots, never a glow
-		var a := i * TAU / 14.0
-		draw_circle(sun + Vector2(cos(a), sin(a)) * 62.0, 2.6, Ink.ORANGE)
-	draw_circle(sun, 44.0, Ink.PAPER)
-	draw_arc(sun, 44.0, 0, TAU, 48, Ink.INK, 2.0)
-	draw_circle(sun + Vector2(-12, -10), 14.0, Color(Ink.GOLD, 0.45)) # cel shade on the disc
-	for c in 5: # paper clouds — each on its own slow lane, wrapping forever
+	for i in 22: # the COO halo: rings of ink dots, never a glow
+		var a := i * TAU / 22.0
+		draw_circle(sun + Vector2(cos(a), sin(a)) * 64.0, 2.8, Ink.ORANGE)
+	for i in 12:
+		var a2 := i * TAU / 12.0 + 0.26
+		draw_circle(sun + Vector2(cos(a2), sin(a2)) * 52.0, 1.6, Ink.GOLD)
+	draw_circle(sun, 46.0, Ink.PAPER.lerp(Ink.GOLD, 0.3))
+	draw_arc(sun, 46.0, 0, TAU, 48, Ink.INK, 2.0)
+	draw_circle(sun + Vector2(-13, -12), 16.0, Ink.GOLD) # cel shade on the disc
+	draw_circle(sun + Vector2(14, 14), 12.0, Ink.PAPER.lerp(Ink.GOLD, 0.5))
+	for c in 5: # paper clouds — flat blobs with an ink lip, each on its own slow lane
 		var cxx := fposmod(r.x * (0.08 + c * 0.23) + t * (4.0 + c * 1.3), r.x + 160.0) - 80.0
 		var cyy := r.y * (0.10 + c * 0.055)
 		for b in 3:
-			draw_circle(Vector2(cxx + b * 26.0, cyy - absf(b - 1) * 8.0),
-				22.0 - absf(b - 1) * 6.0, Color(Ink.PAPER, 0.5))
+			var cp := Vector2(cxx + b * 26.0, cyy - absf(b - 1) * 8.0)
+			var cr := 22.0 - absf(b - 1) * 6.0
+			draw_circle(cp, cr, Ink.PAPER)
+			draw_arc(cp, cr, PI * 0.9, PI * 2.1, 20, Ink.INK, 1.2) # ink lip on the lit edge only
 	var sea_y := r.y * 0.68
 	draw_rect(Rect2(0, sea_y, r.x, r.y - sea_y), Color(0.16, 0.32, 0.42))
 	Ink.dots(self, Rect2(0, sea_y, r.x, r.y - sea_y), 0.14) # halftone swell on the water
@@ -1282,8 +1298,8 @@ func draw_title(r: Vector2) -> void:
 		draw_circle(Vector2(ox, ty - 16), 6, Ink.INK)
 		draw_circle(Vector2(ox - 2, ty - 19), 2, Ink.PAPER)
 	var tagline := tr("the Wildmere keeps what you catch")
-	wtext(Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
-		Ink.PAPER)
+	wtext(Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 34), tagline,
+		Ink.PAPER) # baseline clears the wordmark's underline (draw_string y = baseline)
 	var y := r.y * 0.42
 	for row in title_rows():
 		y = menu_row(cx, y, 220, row[0], row[1], row[2])
@@ -1309,7 +1325,7 @@ func draw_pause(r: Vector2) -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Ink.INK)
 	draw_string(font, Vector2(cx - pw / 2, r.y * 0.3), ptxt,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Ink.PAPER)
-	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 6, pw, 2), Ink.ORANGE) # signal rule under the header
+	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 14, pw, 2), Ink.ORANGE) # signal rule clears 40px descenders
 	var rows := pause_rows()
 	if rows.size() <= 7:
 		var y := r.y * 0.42
@@ -1571,22 +1587,24 @@ func draw_inv(r: Vector2) -> void:
 func draw_kinbox(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 540)
 	Ink.card(self, rr)
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "KINBOX — click to swap party/base",
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "KINBOX",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.TEAL)
+	draw_string(font, Vector2(rr.position + Vector2(112, 24)), "click a row to swap party/base",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
 	# the island base level: the terminal grades your base and pays slots
 	var blv_txt := "BASE LV%d" % game.base_level
 	if game.base_level < game.BASE_LEVEL_MAX:
 		var bmet: bool = game.base_mission_done(game.base_level)
-		blv_txt += " · next: " + game.BASE_MISSION_TEXT[game.base_level]
-		draw_string(font, Vector2(rr.position.x + 330, rr.position.y + 24), blv_txt,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN if bmet else Ink.INK_SOFT)
+		blv_txt += " · next: " + String(game.BASE_MISSION_TEXT[game.base_level]).left(16)
+		draw_string(font, Vector2(rr.position.x + 350, rr.position.y + 24), blv_txt.left(32),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GREEN if bmet else Ink.INK_SOFT)
 		if bmet and (game.net == null or not game.net.is_client()):
 			click_rects.append({"rect": Rect2(rr.position.x + 505, rr.position.y + 12, 80, 20),
 				"act": "base_up"})
 			draw_string(font, Vector2(rr.position.x + 505, rr.position.y + 26), "[UPGRADE]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	else:
-		draw_string(font, Vector2(rr.position.x + 330, rr.position.y + 24), blv_txt + " MAX",
+		draw_string(font, Vector2(rr.position.x + 350, rr.position.y + 24), blv_txt + " MAX",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var y := rr.position.y + 44
 	draw_string(font, Vector2(rr.position.x + 16, y), "PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
@@ -1846,12 +1864,22 @@ func use_item(k: String) -> void:
 		"kin_egg", "huge_kin_egg":
 			game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
 		"fishing_rod":
-			game.cast_line() # reusable — the rod never leaves the pack
+			# reusable — the rod never leaves the pack; guests ask the host
+			# to roll at their ghost's shore
+			if game.net != null and game.net.is_client():
+				game.net.rpc("fish_req")
+			else:
+				game.cast_line()
 		"memory_wipe":
 			if game.respec():
 				game.add_item(k, -1)
 		"fertilizer":
-			game.fertilize()
+			# guests: host validates a farm near the ghost, then fert_done
+			# pays the bag — never up front
+			if game.net != null and game.net.is_client():
+				game.net.rpc("fert_req")
+			else:
+				game.fertilize()
 		"kin_bait":
 			game.throw_bait()
 		"treasure_map":

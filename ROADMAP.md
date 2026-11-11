@@ -375,3 +375,15 @@ S34 (guest container protocol): chest/feed_box buttons were dead for
   the truth). Coverage: deposit whitelist (coin/junk refused), store
   arrival, far-ghost refuse, withdraw empties, non-container refuse,
   feed-box food rule. Smoke 637/0 x2.
+S35 (guest world-verbs): the interact layer left three verbs dead for
+  clients — fishing (a personal rod that only locked because live catches
+  are host truth), fertilizer (farm labor), and dungeon mimics (the flag
+  stays off the wire on purpose, so a guest's click opened a plain panel
+  and the trap never sprang). fish_req rolls host-side at the ghost's
+  shore — a live catch spawns host-truth and pal_sync carries it, loot
+  echoes through give_remote/note_remote. fert_req validates a farmField
+  near the ghost, then fert_done pays the bag on acceptance — never up
+  front. mimic_req probes on chest-open: the structure dies on the wire
+  and open_mimic(st, opener_pid) marks the asker, not the host. Bonus:
+  give_remote/note_remote needed a multiplayer_peer null-guard —
+  get_peers() itself errors on offline rigs. Smoke 644/0 x2.
