@@ -5078,6 +5078,42 @@ func run() -> void:
 					game.box_holder.remove_child(np2)
 					np2.free()
 			game.net_remove_structure(game.structures[ib_k])
+		# S38: merchant + kin-panel surface — buy drains real stock, infuse
+		# and skill toggles land only on the asker's own kin
+		if game.merchant != null and game.merchant_stock.size() > 0:
+			var m_idx := -1
+			for mi in game.merchant_stock.size():
+				var mit: Dictionary = game.merchant_stock[mi]
+				if not mit.has("kin") and int(mit.get("n", 0)) > 0:
+					m_idx = mi; break
+			if m_idx >= 0:
+				var m_st: Dictionary = game.merchant_stock[m_idx]
+				var m_id := str(m_st.get("id", ""))
+				var m_n0 := int(m_st.get("n", 0))
+				var m_res := game.buy_remote(99, m_idx)
+				check("guest buy drains the real stock",
+					int(m_res.get("price", -1)) == int(m_st.get("price", -2))
+					and int(m_st.get("n", 0)) == m_n0 - 1)
+				check("bad shelf refused", game.buy_remote(99, m_idx + 40).is_empty())
+		var if_p: Kin = game.gen_pal("fenjelly", 5, p.pos)
+		game.pals.append(if_p)
+		if_p.owner_id = 99
+		if_p.mode = "partner"
+		var sb0 := if_p.soul_boost
+		check("guest infusion burns their own kin",
+			game.infuse_req_remote(99, if_p.uid) > 0 and if_p.soul_boost == sb0 + 1)
+		var if_host: Kin = game.gen_pal("fenjelly", 5, p.pos)
+		game.pals.append(if_host)
+		if_host.owner_id = 0
+		check("host's kin can't take guest effigies",
+			game.infuse_req_remote(99, if_host.uid) < 0)
+		var eq0: Array = if_p.equipped.duplicate()
+		var lsk: Array = if_p.learned_skills()
+		if not lsk.is_empty():
+			game.box_op_remote("toggle_skill", if_p.uid, 99, str(lsk[0]))
+			check("guest skill toggle lands host-side", if_p.equipped != eq0)
+		game.pals.erase(if_p); if_p.queue_free()
+		game.pals.erase(if_host); if_host.queue_free()
 		game.remote_parties.erase("t99")
 		game.net.peer_tags.erase(99)
 	else:

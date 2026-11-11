@@ -752,6 +752,24 @@ func egg_done(egg_id: String) -> void:
 	game.add_item(str(egg_id), -1) # the bag pays its egg only on host acceptance
 	game.log_msg("Egg in the incubator — 90s to hatch")
 
+@rpc("any_peer", "call_remote", "reliable")
+func infuse_req(uid: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	var cost := game.infuse_req_remote(pid, int(uid))
+	if cost > 0 and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "infuse_done", cost)
+
+@rpc("authority", "call_remote", "reliable")
+func infuse_done(cost: int) -> void:
+	if is_host:
+		return
+	game.add_item("sprigmelt_effigy", -int(cost)) # effigies burn only on host acceptance
+	game.log_msg("The offering burns — a soul burns brighter")
+
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
 # kinbox clicks travel back as box_req ops the host validates + runs.
@@ -852,14 +870,33 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 			break
 
 @rpc("any_peer", "call_remote", "reliable")
-func box_req(op: String, uid: int) -> void:
+func box_req(op: String, uid: int, extra := "") -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		return
 	# every roster is private — the op lands only if the kin answers to the sender
-	game.box_op_remote(str(op), int(uid), pid)
+	game.box_op_remote(str(op), int(uid), pid, str(extra))
+
+@rpc("any_peer", "call_remote", "reliable")
+func buy_req(idx: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	var res := game.buy_remote(pid, int(idx))
+	if not res.is_empty() and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "bought", res)
+
+@rpc("authority", "call_remote", "reliable")
+func bought(res: Dictionary) -> void:
+	if is_host:
+		return
+	game.add_item("gold_coin", -int(res.get("price", 0))) # the bag pays on host acceptance
+	game.log_msg("Bought %s (%dg)" % ["a kin" if res.has("kin") else "goods",
+		int(res.get("price", 0))])
 
 @rpc("any_peer", "call_remote", "reliable")
 func assign_req(x: float, y: float) -> void:

@@ -414,3 +414,16 @@ S37 (guest incubation): deposit_egg was the last core-loop verb locked —
   into the depositor's roster slice. egg_done pays the bag on acceptance.
   Known bound: occupied-state (egg_inc) isn't wire-mirrored — a busy
   incubator answers through the honest refusal note. Smoke 659-660/0 x2.
+S38 (panel-act sweep): the run_click act table had a second, worse class
+  of guest holes — not locked but divergent. buy decremented mirror stock
+  (real exploit: struct_sync resync meant infinite purchases); skill_tgl/
+  base_in/lead/deploy/box_out/party_in/sell_pal/butcher/fav mutated local
+  replicas or no-op'd on the empty client box. All now route through
+  box_req (owner-gated remote ops already existed) + box_req grew an
+  extra arg slot for toggle_skill's sid. New buy_req/buy_remote/bought:
+  host drains real stock, items via give_remote, kin owner-tagged, gold
+  paid on echo. perk/base_up found to be a real grief surface — guest
+  clicks spent the HOST's stat_pts/base claim; now honestly refused.
+  soul_infuse wired as infuse_req (uid must own-check). sell/equip/repair/
+  craft audited: client-authoritative bag+player, already correct. Smoke
+  663-665/0 x2.

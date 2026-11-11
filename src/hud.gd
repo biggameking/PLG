@@ -404,32 +404,64 @@ func run_click(cr: Dictionary) -> void:
 		"tech":
 			game.unlock(cr["arg"])
 		"box_out":
-			game.box_to_party(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "box_to_party", int(cr["arg"].uid))
+			else:
+				game.box_to_party(cr["arg"])
 		"party_in":
-			game.party_to_box(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "party_to_box", int(cr["arg"]))
+			else:
+				game.party_to_box(cr["arg"])
 		"lead":
-			game.make_active(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "make_active", int(cr["arg"]))
+			else:
+				game.make_active(cr["arg"])
 		"deploy":
-			game.deploy_to_base(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "deploy_to_base", int(cr["arg"].uid))
+			else:
+				game.deploy_to_base(cr["arg"])
 		"base_in":
-			game.base_to_box(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "base_to_box", int(cr["arg"].uid))
+			else:
+				game.base_to_box(cr["arg"])
 		"use_item":
 			use_item(cr["arg"])
 		"buy":
-			game.buy_from_merchant(cr["arg"])
+			# the stock is the island's — guests ask, hosts decrement, the
+			# bag pays on the bought echo (mirror stock is read-only)
+			if game.net != null and game.net.is_client():
+				game.net.rpc("buy_req", float(cr["arg"]))
+			else:
+				game.buy_from_merchant(cr["arg"])
 		"sell":
-			game.sell_to_merchant(cr["arg"])
+			game.sell_to_merchant(cr["arg"]) # your bag + your gold — local is honest
 		"sell_pal":
-			game.sell_pal_to_merchant(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "sell_pal", int(cr["arg"]))
+			else:
+				game.sell_pal_to_merchant(cr["arg"])
 		"butcher":
-			game.butcher_pal(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "butcher_pal", int(cr["arg"]))
+			else:
+				game.butcher_pal(cr["arg"])
 		"fav":
-			game.toggle_fav(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "toggle_fav", int(cr["arg"]))
+			else:
+				game.toggle_fav(cr["arg"])
 		"skills":
 			game.skill_target = cr["arg"]
 			game.panel = "skills"
 		"skill_tgl":
-			game.toggle_skill(cr["arg"]["p"], cr["arg"]["sid"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("box_req", "toggle_skill", int(cr["arg"]["p"].uid), str(cr["arg"]["sid"]))
+			else:
+				game.toggle_skill(cr["arg"]["p"], cr["arg"]["sid"])
 		"travel":
 			game.travel_to(cr["arg"])
 		"chat_send":
@@ -463,11 +495,20 @@ func run_click(cr: Dictionary) -> void:
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
-			game.upgrade_perk(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.log_msg("The statue answers the island's keeper") # perks are the host keeper's own
+			else:
+				game.upgrade_perk(cr["arg"])
 		"base_up":
-			game.upgrade_base()
+			if game.net != null and game.net.is_client():
+				game.log_msg("The stand answers the island's keeper") # base level is the host's claim
+			else:
+				game.upgrade_base()
 		"infuse":
-			game.soul_infuse(cr["arg"])
+			if game.net != null and game.net.is_client():
+				game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth, bag pays on echo
+			else:
+				game.soul_infuse(cr["arg"])
 		# ---- shell menu acts (title / pause / settings) ----
 		_:
 			if cr["act"] in SHELL_ACTS:

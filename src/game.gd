@@ -397,7 +397,7 @@ func rebind_owner(pid: int, tag: String) -> void:
 			kept.push_front(p3.uid) # the field pal leads its keeper's strip
 	remote_parties[tag] = kept.slice(0, 5)
 
-func box_op_remote(op: String, uid: int, pid: int) -> void:
+func box_op_remote(op: String, uid: int, pid: int, extra := "") -> void:
 	# a client's kinbox click, host-validated: only the kin's owner may move
 	# it — box, party strip and work posts are all private
 	var p: Kin = find_pal(uid)
@@ -416,6 +416,7 @@ func box_op_remote(op: String, uid: int, pid: int) -> void:
 			"cycle_stance": cycle_stance(p.uid)
 			"butcher_pal": butcher_pal(p.uid)
 			"sell_pal": sell_pal_to_merchant(p.uid)
+			"toggle_skill": toggle_skill(p, extra)
 		return
 	match op:
 		"box_to_party": r_box_to_party(p, pid)
@@ -427,6 +428,7 @@ func box_op_remote(op: String, uid: int, pid: int) -> void:
 		"cycle_stance": cycle_stance(p.uid)
 		"butcher_pal": r_butcher(p, pid)
 		"sell_pal": r_sell_pal(p, pid)
+		"toggle_skill": toggle_skill(p, extra)
 
 func r_out_pal(pid: int) -> Kin:
 	for p in pals:
@@ -5582,6 +5584,26 @@ func soul_infuse(uid: int) -> void:
 	target.apply_bonuses()
 	log_msg("%s's soul burns brighter (+%d)" % [target.spec["name"], target.soul_boost])
 
+# host-side guest infusion: the uid must resolve to the ASKER's kin —
+# you can't burn effigies into someone else's soul. Cost echoes back.
+func infuse_req_remote(pid: int, uid: int) -> int:
+	var target: Kin = null
+	for q in pals:
+		if q.uid == uid and q.owner_id == pid and q.mode in ["partner", "base"]:
+			target = q
+	for bp in box:
+		if bp.uid == uid and bp.owner_id == pid:
+			target = bp
+	for bb in bench:
+		if bb.uid == uid and bb.owner_id == pid:
+			target = bb
+	if target == null or target.soul_boost >= 10:
+		return -1
+	var cost := 1 + target.soul_boost
+	target.soul_boost += 1
+	target.apply_bonuses()
+	return cost
+
 # the island signature partner skills: a few species get bespoke actives
 # instead of "cast your best learned skill at the cursor"
 const PARTNER_SKILLS := {
@@ -6245,6 +6267,36 @@ func buy_from_merchant(idx: int) -> void:
 	add_item(it["id"], 1)
 	it["n"] -= 1
 	log_msg("Bought %s (%dg)" % [ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]), it["price"]])
+
+# host-side guest buy: the stock is the island's — decrementing a mirror
+# would just resync and never run out. Items land via give_remote; a kin
+# purchase arrives owner-tagged through box_sync. The gold is the bag's
+# own business — paid on the bought echo.
+func buy_remote(pid: int, idx: int) -> Dictionary:
+	if merchant == null or idx < 0 or idx >= merchant_stock.size():
+		return {}
+	var it: Dictionary = merchant_stock[idx]
+	if int(it.get("n", 0)) <= 0:
+		return {}
+	var price := int(it.get("price", 0))
+	if it.has("kin"):
+		var sid := str(it["kin"])
+		if SpeciesData.species_of(sid).is_empty() or box.size() >= MAX_BOX:
+			return {}
+		var np := gen_pal(sid, int(it["lv"]), peer_pos_of(pid))
+		np.mode = "box"
+		np.owner_id = pid
+		np.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
+		box.append(np)
+		box_pal(np)
+		it["n"] -= 1
+		return {"price": price, "kin": sid}
+	var iid := str(it.get("id", ""))
+	if not ItemData.ITEMS.has(iid):
+		return {}
+	it["n"] -= 1
+	give_remote(pid, iid, 1)
+	return {"price": price}
 
 func pal_sell_price(bp: Kin) -> int:
 	# black-market buyback: worth less than the sticker price, more if rare
