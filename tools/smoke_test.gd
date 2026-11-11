@@ -4716,6 +4716,12 @@ func run() -> void:
 	game.panel = "shop"
 	hudn.run_click({"act": "shop_dn", "arg": null})
 	check("shop scroll moves", hudn.shop_scroll == 1)
+	game.panel = "inv"
+	hudn.run_click({"act": "inv_dn", "arg": null})
+	check("inv scroll moves", hudn.inv_scroll == 1)
+	game.panel = "kinbox"
+	hudn.run_click({"act": "kin_dn", "arg": null})
+	check("kin scroll moves", hudn.kin_scroll == 1)
 	game.panel = ""
 
 	# ---- S7: bosses phase, spires crown ----

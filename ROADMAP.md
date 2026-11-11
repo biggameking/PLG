@@ -308,3 +308,6 @@ build-tools/apksigner).
   shared _scroll_btns tap arrows (shop rides the column gutter), wheel
   dispatch extended to all four panels, guide gains ‹/› tap turners.
   Smoke +7. Suite 579/0.
+  S29b: the same clip class covered inv (54-stack cap) and kinbox brows
+  (column-spill) — display-index offsets inv_scroll/kin_scroll, same
+  _scroll_btns + wheel path. Suite 581–582/0.

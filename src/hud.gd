@@ -10,6 +10,8 @@ var dex_scroll := 0
 var chest_scroll := 0
 var craft_scroll := 0
 var shop_scroll := 0
+var inv_scroll := 0
+var kin_scroll := 0
 var build_sel := -1
 var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
@@ -234,7 +236,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "dex" else "dex" # P: kindex
 		dex_scroll = 0
 		return
-	if game.panel in ["dex", "chest", "craft", "shop"] and event is InputEventMouseButton and event.pressed:
+	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_panel_scroll(-1)
 			get_viewport().set_input_as_handled()
@@ -334,6 +336,8 @@ func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to re
 		"chest": chest_scroll = maxi(0, chest_scroll + dir)
 		"craft": craft_scroll = maxi(0, craft_scroll + dir)
 		"shop": shop_scroll = maxi(0, shop_scroll + dir)
+		"inv": inv_scroll = maxi(0, inv_scroll + dir)
+		"kinbox": kin_scroll = maxi(0, kin_scroll + dir)
 
 func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked := false) -> void:
 	# tap scrollers — lists taller than the panel need a slab-reachable tail
@@ -432,6 +436,10 @@ func run_click(cr: Dictionary) -> void:
 		"craft_dn": _panel_scroll(1)
 		"shop_up": _panel_scroll(-1)
 		"shop_dn": _panel_scroll(1)
+		"inv_up": _panel_scroll(-1)
+		"inv_dn": _panel_scroll(1)
+		"kin_up": _panel_scroll(-1)
+		"kin_dn": _panel_scroll(1)
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -1418,10 +1426,12 @@ func draw_inv(r: Vector2) -> void:
 	keys.sort()
 	var colw := 222.0
 	var rows: int = int((rr.size.y - 66) / 16) # ~27 rows per column
-	for ki in range(keys.size()):
+	inv_scroll = clampi(inv_scroll, 0, maxi(0, keys.size() - rows))
+	for ki in range(inv_scroll, keys.size()):
 		var k: String = keys[ki]
-		var cx0: float = rr.position.x + 12 + (ki / rows) * colw
-		var y0: float = rr.position.y + 46 + (ki % rows) * 16
+		var di := ki - inv_scroll
+		var cx0: float = rr.position.x + 12 + (di / rows) * colw
+		var y0: float = rr.position.y + 46 + (di % rows) * 16
 		if cx0 + colw - 10 > rr.end.x: # third column would spill — stop
 			break
 		var nm: String = ItemData.ITEMS.get(k, {}).get("name", k)
@@ -1439,6 +1449,8 @@ func draw_inv(r: Vector2) -> void:
 			nm += "  [use]"
 		draw_string(font, Vector2(cx0, y0), "%s x%d" % [nm.left(16), game.items[k]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffd76e") if usable else Color.WHITE)
+	if keys.size() > rows:
+		_scroll_btns(rr, "inv_up", "inv_dn")
 
 func draw_kinbox(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 540)
@@ -1511,10 +1523,12 @@ func draw_kinbox(r: Vector2) -> void:
 	y += 18
 	var colw := 288.0
 	var rows: int = int((rr.end.y - y - 8) / 16)
-	for bi in range(brows.size()):
+	kin_scroll = clampi(kin_scroll, 0, maxi(0, brows.size() - rows))
+	for bi in range(kin_scroll, brows.size()):
 		var rd: Dictionary = brows[bi]
-		var cx0: float = rr.position.x + 16 + (bi / rows) * colw
-		var y0: float = y + (bi % rows) * 16
+		var di := bi - kin_scroll
+		var cx0: float = rr.position.x + 16 + (di / rows) * colw
+		var y0: float = y + (di % rows) * 16
 		if cx0 + colw - 8 > rr.end.x:
 			break
 		var butcher := game.item_count("meat_cleaver") > 0
@@ -1535,6 +1549,8 @@ func draw_kinbox(r: Vector2) -> void:
 			str(rd.get("wk", "")).left(15)]
 		draw_string(font, Vector2(cx0, y0), label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#d06a6a") if rd["ko"] or rd["ailment"] != "" else Color("#c8d3d5"))
+	if brows.size() > rows:
+		_scroll_btns(rr, "kin_up", "kin_dn")
 
 func party_rows() -> Array:
 	# normalized party rows: ● marks the one kin out of its ball. Host reads
