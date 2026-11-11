@@ -486,3 +486,13 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     button that cannot work on the target (quit on web, ENet co-op in
     a browser) gets gated at the surface — `OS.has_feature("web")` —
     and marketing copy carries the same platform qualifier.
+95. **Batch-wrap edits verify parse per pattern, not per file.** The
+    tr(str()) sweep failed twice on whole-file regex — winning
+    approach was one explicit pattern per shape, parse-check after
+    each. A silent no-match reads as success; grep for residue after
+    every pass, and never let a wrapper regex span string literals.
+96. **Translation keys are authored from call-site truth, not scrape.**
+    ~91 zh.csv rows were dead because the keys were scraped from
+    literals that never reached tr(). A key that no call site can
+    produce is worse than a missing one — it lies about coverage.
+    Verify keys against actual tr() args (incl. trailing spaces).
