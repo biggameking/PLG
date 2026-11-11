@@ -5041,6 +5041,43 @@ func run() -> void:
 			and v6_lead.star == v6_star + 1)
 		game.pals.erase(v6_lead)
 		v6_lead.queue_free()
+		var ib_k := Vector2i(-1, -1)
+		for rad8 in range(3, 12):
+			for ang16 in range(16):
+				var ck13 := Vector2i(int(p.pos.x + cos(ang16 * TAU / 16.0) * rad8),
+					int(p.pos.y + sin(ang16 * TAU / 16.0) * rad8))
+				if game.can_place("incubator", ck13.x, ck13.y):
+					game.place_free("incubator", ck13.x, ck13.y); ib_k = ck13; break
+			if ib_k.x >= 0: break
+		if ib_k.x >= 0:
+			game.net.ghosts[99].net_pos = Vector3(ib_k.x + 40, ib_k.y, 0)
+			check("far ghost can't deposit an egg",
+				not game.egg_req_remote(99, "kin_egg"))
+			game.net.ghosts[99].net_pos = Vector3(ib_k.x, ib_k.y, 0)
+			check("bogus egg refused", not game.egg_req_remote(99, "dragon_egg"))
+			check("guest egg claims the slot", game.egg_req_remote(99, "kin_egg")
+				and int(game.structures[ib_k].get("egg_inc", {}).get("own_pid", 0)) == 99)
+			var pals_b4 := game.pals.size()
+			game.hatch_incubated(ib_k, game.structures[ib_k])
+			var np2: Kin = null
+			for q3 in game.pals:
+				if q3.owner_id == 99:
+					np2 = q3; break
+			if np2 == null:
+				for q4 in game.box:
+					if q4.owner_id == 99:
+						np2 = q4; break
+			check("guest egg hatches into their slice", game.pals.size() > pals_b4
+				or np2 != null)
+			if np2 != null:
+				if game.pals.has(np2):
+					game.pals.erase(np2)
+					np2.queue_free()
+				else:
+					game.box.erase(np2)
+					game.box_holder.remove_child(np2)
+					np2.free()
+			game.net_remove_structure(game.structures[ib_k])
 		game.remote_parties.erase("t99")
 		game.net.peer_tags.erase(99)
 	else:

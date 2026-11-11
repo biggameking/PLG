@@ -735,6 +735,23 @@ func cond_req() -> void:
 		return
 	game.condense_remote(pid)
 
+@rpc("any_peer", "call_remote", "reliable")
+func egg_req(egg_id: String) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	if game.egg_req_remote(pid, str(egg_id)) and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "egg_done", str(egg_id))
+
+@rpc("authority", "call_remote", "reliable")
+func egg_done(egg_id: String) -> void:
+	if is_host:
+		return
+	game.add_item(str(egg_id), -1) # the bag pays its egg only on host acceptance
+	game.log_msg("Egg in the incubator — 90s to hatch")
+
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
 # kinbox clicks travel back as box_req ops the host validates + runs.

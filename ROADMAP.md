@@ -400,3 +400,17 @@ S36 (guest interact parity): swept every remaining interact branch —
   own bag, client-authoritative — already correct. deposit_egg/soul_infuse/
   start_gauntlet stay host-only by design (hatch ownership + roster trust
   bounds documented). Smoke 657-658/0 x2.
+S37 (guest incubation): deposit_egg was the last core-loop verb locked —
+  guests couldn't hatch. _free_incubator extracted; egg_req whitelists the
+  claimed egg kind, claims the nearest free slot by ghost reach, and the
+  egg_inc slot carries own_pid so hatch_incubated owner-tags the newborn
+  into the depositor's roster slice. egg_done pays the bag on acceptance.
+  Known bound: occupied-state (egg_inc) isn't wire-mirrored — a busy
+  incubator answers through the honest refusal note. Smoke 659-660/0 x2.
+S37 (guest incubation): deposit_egg was the last core-loop verb locked —
+  guests couldn't hatch. _free_incubator extracted; egg_req whitelists the
+  claimed egg kind, claims the nearest free slot by ghost reach, and the
+  egg_inc slot carries own_pid so hatch_incubated owner-tags the newborn
+  into the depositor's roster slice. egg_done pays the bag on acceptance.
+  Known bound: occupied-state (egg_inc) isn't wire-mirrored — a busy
+  incubator answers through the honest refusal note. Smoke 659-660/0 x2.

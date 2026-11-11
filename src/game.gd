@@ -4556,15 +4556,8 @@ func deposit_egg() -> void:
 		egg_id = "kin_egg"
 	else:
 		return
-	var site = null; var bd := 20.0
-	for k in structures:
-		var st: Dictionary = structures[k]
-		if st["id"] != "incubator" or st.has("egg_inc"):
-			continue
-		var dd := player.pos.distance_squared_to(Vector2(k.x + 0.5, k.y + 0.5))
-		if dd < bd:
-			bd = dd; site = k
-	if site == null:
+	var site: Vector2i = _free_incubator(player.pos)
+	if site.x < 0:
 		log_msg("Need a free incubator nearby")
 		return
 	add_item(egg_id, -1)
@@ -4587,6 +4580,40 @@ func deposit_egg() -> void:
 		% ["Huge egg" if egg_id == "huge_kin_egg" else "Egg",
 			"" if warm_hint else " (a campfire would hurry it)",
 			" — " + hint if hint != "" else ""])
+
+func _free_incubator(at: Vector2) -> Vector2i:
+	var site := Vector2i(-1, -1)
+	var bd := 20.0
+	for k in structures:
+		var st: Dictionary = structures[k]
+		if st["id"] != "incubator" or st.has("egg_inc"):
+			continue
+		var dd := at.distance_squared_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if dd < bd:
+			bd = dd; site = k
+	return site
+
+# host-side guest deposit: the claimed egg kind is whitelisted, the slot
+# carries the depositor's pid so the hatch lands in THEIR slice
+func egg_req_remote(pid: int, egg_id: String) -> bool:
+	if egg_id not in ["kin_egg", "huge_kin_egg"]:
+		return false
+	var at := _ghost_at(pid)
+	if at.x < -1e8:
+		return false
+	var site := _free_incubator(at)
+	if site.x < 0:
+		note_remote(pid, "Need a free incubator nearby")
+		return false
+	var pair = null
+	for k2 in structures:
+		var q = structures[k2].get("egg_parents")
+		if q is Array and q.size() > 0:
+			pair = q.pop_front() # oldest egg's parentage
+			break
+	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
+		"huge": egg_id == "huge_kin_egg", "own_pid": pid}
+	return true
 
 func egg_hint(pair) -> String:
 	# the island tells you what's inside: named pairings show their species,
@@ -4674,6 +4701,10 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		np.hp = np.max_hp
 		np.sprite.scale = Vector2(1.5, 1.5)
 		np.sprite.position.y = -48.0
+	var opid := int(inc.get("own_pid", 0)) if inc is Dictionary else 0
+	if opid > 0: # a guest's deposit hatches into their slice of the roster
+		np.owner_id = opid
+		np.owner_tag = str(net.peer_tags.get(opid, "")) if net != null else ""
 	if kinbox_pos.x >= 0:
 		np.mode = "base"
 		pals.append(np)

@@ -695,8 +695,12 @@ func interact() -> void:
 					var hint: String = game.egg_hint(inc.get("pair"))
 					game.log_msg("Incubating %s: %ds left" % [hint if hint != "" else "egg",
 						int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t))])
-				elif game.item_count("kin_egg") > 0:
-					game.deposit_egg()
+				elif game.item_count("kin_egg") > 0 or game.item_count("huge_kin_egg") > 0:
+					if game.net != null and game.net.is_client():
+						var eg := "huge_kin_egg" if game.item_count("huge_kin_egg") > 0 else "kin_egg"
+						game.net.rpc("egg_req", eg)
+					else:
+						game.deposit_egg()
 				else:
 					game.log_msg("Incubator empty - bring a kin egg")
 				return
