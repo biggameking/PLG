@@ -849,3 +849,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   to 253 rows: 21 core species + all 108 items translated. Deferred
   to S63: 120 structure names, 95 procgen species (proper nouns —
   romanized acceptable for EA), skills/passives names.
+
+## S63 — zh coverage complete: structures/skills/passives/ailments/elements/guide
+  zh.csv now 343 rows: +49 structures, +29 skills/passives, +7
+  ailments, +9 elements, +13 work labels (dead data but future-
+  proof). Ailment and element strings are tr()-wrapped at their
+  three render sites. The 8-volume Field Guide ships a full
+  PAGES_ZH parallel set; GuideData.pages() picks by locale, so a
+  zh player sees the entire manual in Chinese. Procgen species
+  names (95) stay romanized — coined proper nouns, defensible
+  for EA. Suite 763/0. zh coverage is now effectively complete:
+  every user-facing string class localizes.

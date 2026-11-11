@@ -172,7 +172,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# guide paging rides the same hoist — pause rows can open it too
 	if game.panel == "guide" and event is InputEventKey and event.pressed:
 		if event.is_action_pressed("ui_right"):
-			guide_page = mini(guide_page + 1, GuideData.PAGES.size() - 1)
+			guide_page = mini(guide_page + 1, GuideData.pages().size() - 1)
 		elif event.is_action_pressed("ui_left"):
 			guide_page = maxi(guide_page - 1, 0)
 		elif event.is_action_pressed("ui_cancel") or event.keycode == KEY_N or event.keycode == KEY_G:
@@ -486,7 +486,7 @@ func run_click(cr: Dictionary) -> void:
 		"guide_prev":
 			guide_page = maxi(guide_page - 1, 0)
 		"guide_next":
-			guide_page = mini(guide_page + 1, GuideData.PAGES.size() - 1)
+			guide_page = mini(guide_page + 1, GuideData.pages().size() - 1)
 		"chest_up": _panel_scroll(-1)
 		"chest_dn": _panel_scroll(1)
 		"craft_up": _panel_scroll(-1)
@@ -1723,7 +1723,7 @@ func draw_kinbox(r: Vector2) -> void:
 		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d T%d %s HP%d/%d" % [
 			"● " if pr["out"] else "○ ", pr["name"],
 			"☆" if pr["lucky"] else "", pr["sex"], pr["star_s"], pr["lv"], pr["talent"],
-			(pr["ailment"] + "! ") if pr["ailment"] != "" else pr["sub"], pr["hp"], pr["max_hp"]],
+			(tr(str(pr["ailment"])) + "! ") if pr["ailment"] != "" else pr["sub"], pr["hp"], pr["max_hp"]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if pr["ailment"] != "" else Ink.INK)
 		y += 17
 	# deployed workforce (the island: kin working the base live in the world)
@@ -1743,7 +1743,7 @@ func draw_kinbox(r: Vector2) -> void:
 			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d T%d %s%s" % [tr(str(wp.spec["name"])),
 				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
 				wp.job_site["id"] if wp.job_site else "idle",
-				" [%s]" % wp.ailment if wp.ailment != "" else ""],
+				" [%s]" % tr(str(wp.ailment)) if wp.ailment != "" else ""],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if wp.ailment != "" else Ink.TEAL)
 			if game.net == null or not game.net.is_client():
 				click_rects.append({"rect": Rect2(wrect.position + Vector2(258, 0), Vector2(34, 17)), "act": "skills", "arg": wp})
@@ -1778,7 +1778,7 @@ func draw_kinbox(r: Vector2) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED)
 		var label := "%s%s %s%s Lv%d T%d HP%d/%d%s%s %s" % [rd["name"], "☆" if rd["lucky"] else "", rd["sex"], rd["star_s"], rd["lv"], rd["talent"],
 			int(maxi(0, rd["hp"])), int(rd["max_hp"]), rd["ko_t"],
-			" [%s]" % rd["ailment"] if rd["ailment"] != "" else "",
+			" [%s]" % tr(str(rd["ailment"])) if rd["ailment"] != "" else "",
 			str(rd.get("wk", "")).left(15)]
 		draw_string(font, Vector2(cx0, y0), label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if rd["ko"] or rd["ailment"] != "" else Ink.INK_SOFT)
@@ -2099,7 +2099,7 @@ func draw_dex(r: Vector2) -> void:
 		var sp: Dictionary = SpeciesData.species_of(sid)
 		var cc: int = game.catch_counts.get(sid, 0)
 		if cc > 0:
-			var els: String = "/".join(sp.get("elements", []))
+			var els: String = "/".join(sp.get("elements", []).map(func(e): return tr(str(e))))
 			draw_string(font, Vector2(rr.position.x + 16, y), "%s %s" % [sp.get("glyph", "?"), str(tr(str(sp.get("name", sid)))).left(18)],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 			var hz := SpeciesGen.habitat(sid) # Kindex habitat: where to hunt it
@@ -2261,7 +2261,7 @@ func draw_guide(r: Vector2) -> void:
 	var rr := Rect2(Vector2(r.x - w, 10) / 2.0 + Vector2(0, 20), Vector2(w, h - 30))
 	Ink.card(self, rr, Ink.PAPER)
 	var lines := []
-	for raw in GuideData.PAGES[guide_page].split("\n"):
+	for raw in GuideData.pages()[guide_page].split("\n"):
 		if raw.length() <= 74:
 			lines.append(raw)
 			continue
@@ -2282,7 +2282,7 @@ func draw_guide(r: Vector2) -> void:
 			Ink.ORANGE if head else Ink.INK)
 		y += 19
 	draw_string(font, Vector2(rr.position.x + 22, rr.end.y - 14),
-		"Esc/n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.PAGES.size()],
+		"Esc/n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.pages().size()],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK_SOFT)
 	# tap turners — no arrow keys on a slab
 	var pv := Rect2(rr.end.x - 84, rr.end.y - 34, 34, 24)
