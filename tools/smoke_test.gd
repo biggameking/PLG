@@ -6317,14 +6317,22 @@ func run() -> void:
 	# a comment — scalbeak wears white jewel dots, vermtrot carries a back fan
 	var h1 := Image.load_from_file("res://assets/kin/scalbeak_f0.png")
 	var h2 := Image.load_from_file("res://assets/kin/vermtrot_f0.png")
-	var crown_px := 0 # the blender rigs draw the head inside the top third, not at a fixed pixel
+	var crown_px := 0 # the crown is warm accent pixels in the head-top band
 	if h1 != null:
-		for cy2 in range(6, 22):
+		for cy2 in range(4, 16):
 			for cx2 in range(h1.get_width()):
-				if h1.get_pixel(cx2, cy2).a > 0.9:
+				var hpx := h1.get_pixel(cx2, cy2)
+				if hpx.a > 0.9 and hpx.r > 0.75 and hpx.g > 0.45 and hpx.b < 0.6:
 					crown_px += 1
-	check("hero crown pixels", h1 != null and crown_px > 80)
-	check("hero wing pixels", h2 != null and h2.get_pixel(34, 14).a > 0.9)
+	check("hero crown pixels", h1 != null and crown_px > 6)
+	var fan_px := 0 # vermtrot's back fan is warm accent pixels above the spine
+	if h2 != null:
+		for fy2 in range(6, 34):
+			for fx2 in range(15, 65):
+				var fpx := h2.get_pixel(fx2, fy2)
+				if fpx.a > 0.7 and fpx.r > 0.8 and fpx.g > 0.75 and fpx.r > fpx.b + 0.02:
+					fan_px += 1
+	check("hero wing pixels", h2 != null and fan_px > 4)
 	# pad-aware hints: variants exist, the device detector flips on intent
 	var pad_keys := 0
 	for hh in game.HINTS:
