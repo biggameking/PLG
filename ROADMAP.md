@@ -719,3 +719,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   mission_t, last_merchant_day) reset on load like regenerate; wire
   hp clamps to the save's ceiling. New hostile-Variant fixture feeds
   Array/Dict payloads through the whole path. Smoke 749/0, 747/0.
+
+## S56 — audit-17: structural aborts can't reach post-teardown code
+  Seventeenth audit, reviewing S55 itself (4C/3H/2M/3L): the numeric-
+  coercion layer held, but typed-arg/iterator/key-type aborts remained —
+  seed into generate(), int keys under split(), raw sp into species_of(),
+  has()-gated party_idx. All refuse-or-skip now; migrate's pre-guard loops
+  and load's post-teardown loops both take is-Array; boss_respawns rows
+  rebuild whitelisted (hostile tails could ghost-node at tick); pending_jobs
+  queues only after placement; _norm_pair() shares head+tail validation
+  across save inc / wire inc / egg_parents; spawn_net_pal pre-evaluates
+  wire casts before gen_pal; MAX_BENCH names the co-op orb bound.
+  Smoke 752/0, 749/0 zero-error.
