@@ -955,10 +955,38 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		hy += 17
 	if game.spires_done.size() > 0 or game.crowned: # the campaign spine's tally
-		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
-		draw_string(font, Vector2(r.x - 212, hy),
+		Ink.tag(self, Rect2(r.x - 230, hy - 11, 222, 15))
+		draw_string(font, Vector2(r.x - 226, hy),
 			tr("SPIRES %d/%d") % [game.spires_done.size(), game.SPIRE_DEFS.size()]
 				+ (tr(" — CROWNED") if game.crowned else ""),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
+		hy += 17
+	# post-crown purpose: the den keeps calling catchable heirs — surface
+	# the collection count and whether one roams right now, or the chase
+	# dies at "CROWNED" with no next step
+	if game.crowned:
+		var legs := 0
+		for ls in Game.LEGENDARY_DEN:
+			if game.catch_counts.get(ls, 0) > 0:
+				legs += 1
+		var den := ""
+		for q in game.pals:
+			if is_instance_valid(q) and q.mode == "wild" and q.species_id in Game.LEGENDARY_DEN:
+				# the first warden fights; only the heir is ball-able
+				den = tr(" · warden up") if q.boss else tr(" · heir roams")
+				break
+		if den == "":
+			var soon := -1.0
+			for br in game.boss_respawns:
+				if str(br.get("sid", "")) in Game.LEGENDARY_DEN:
+					var eta: float = float(br.get("at", 0.0)) - game.t
+					if soon < 0.0 or eta < soon:
+						soon = eta
+			if soon >= 0.0:
+				den = tr(" · stirs ~%dh") % maxi(1, int(soon / Game.DAY_LEN * 24.0))
+		Ink.tag(self, Rect2(r.x - 230, hy - 11, 222, 15))
+		draw_string(font, Vector2(r.x - 226, hy),
+			tr("DEN %d/%d") % [legs, Game.LEGENDARY_DEN.size()] + den,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var my := r.y - 24
 	for i in range(game.messages.size()):
