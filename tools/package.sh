@@ -13,15 +13,16 @@ mkdir -p dist
 pack_windows() {
 	rm -rf export/windows && mkdir -p export/windows
 	"$GODOT" --headless --path . --export-release "Windows Desktop (Steam)" export/windows/kinbound.exe
-	# everything the preset emits — if embed_pck ever flips off, the .pck rides along
+	# zip refreshes in place — stale entries from a previous build would survive
+	rm -f "dist/kinbound-$VER-windows.zip"
 	(cd export/windows && zip -qr "$ROOT/dist/kinbound-$VER-windows.zip" . -x '.*')
 	echo "dist/kinbound-$VER-windows.zip"
 }
 pack_web() {
 	rm -rf export/web && mkdir -p export/web
 	"$GODOT" --headless --path . --export-release "Web" export/web/index.html
-	# the bundle is exactly index.* — dotfiles (eg .DS_Store) never ship
-	(cd export/web && zip -qr "$ROOT/dist/kinbound-$VER-web.zip" 'index.*')
+	rm -f "dist/kinbound-$VER-web.zip" # same stale-entry trap as the windows zip
+	(cd export/web && zip -qr "$ROOT/dist/kinbound-$VER-web.zip" index.*)
 	echo "dist/kinbound-$VER-web.zip"
 }
 case "$WHAT" in
