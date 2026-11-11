@@ -150,8 +150,10 @@ func hit(dmg: int, mult: float, by_player: bool, provoked_pid: int = 0) -> void:
 
 # ---- boss phases: at half health the guardian changes the fight ----
 var phase := 1
-var summon_t := 0.0
-var slam_windup := 0.0 # rooted telegraph before the ring lands — dodge window
+var summon_t := 0.0 # transient by design — a save mid-charge just re-arms
+var slam_windup := 0.0 # rooted telegraph before the ring lands — dodge
+# window. transient by design: phase (the durable bit) is serialized;
+# a reload during the tell simply re-arms the cadence
 var spire_tag := "" # non-empty on Pact-spire guardians; game.record_spire reads it
 
 func enter_phase_two() -> void:
@@ -184,24 +186,27 @@ func pact_slam() -> int:
 	# victim count so tests can see the zone hit who it should.
 	game.floater(pos, "PACT SLAM", "#ff5544")
 	var hits := 0
-	var pl = game.player
-	if pl != null and pos.distance_to(pl.pos) <= 2.6:
-		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
-		hits += 1
-	if aggro_pid > 0 and game.net != null: # the ring is a zone — a guest inside it eats it too
-		var gp2 = game.net.ghosts.get(aggro_pid)
-		if gp2 != null and gp2.net_pos.x >= 0 \
-				and pos.distance_to(Vector2(gp2.net_pos.x, gp2.net_pos.y)) <= 2.6:
-			if game.net.multiplayer.multiplayer_peer != null:
-				game.net.rpc_id(aggro_pid, "guest_hit",
-					spec.get("atk", 50) * 0.8 * rage_mult())
-			hits += 1 # the zone contained them — the rpc is the delivery, not the verdict
 	var ail := ""
 	if game.spire_tag_ok(spire_tag): # int() eats garbage→0; the validator doesn't
 		var si := int(spire_tag.trim_prefix("spire_"))
 		ail = {"fire": "burn", "water": "soak", "grass": "poison",
 			"dark": "sleep", "dragon": ""}.get(str(game.SPIRE_DEFS[si]["elem"]), "")
-	for q in game.pals:
+	var pl = game.player
+	if pl != null and pos.distance_to(pl.pos) <= 2.6:
+		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
+		hits += 1
+		if ail != "": # the ring carries the shrine's element — everyone in it
+			game.player_status(ail, 3.0)
+	if aggro_pid > 0 and game.net != null: # the ring is a zone — a guest inside it eats it too
+		var gp2 = game.net.ghosts.get(aggro_pid)
+		if gp2 != null and gp2.net_pos.x >= 0 \
+				and pos.distance_to(Vector2(gp2.net_pos.x, gp2.net_pos.y)) <= 2.6:
+			if game.net_live(): # a dead peer can't take the rpc — the count still stands
+				game.net.rpc_id(aggro_pid, "guest_skill_hit",
+					spec.get("atk", 50) * 0.8 * rage_mult(), ail, 3.0)
+			hits += 1 # the zone contained them — the rpc is the delivery, not the verdict
+	# hit→kill_pal erases pals — snapshot or the next victim walks free
+	for q in game.pals.duplicate():
 		if q != self and q.hp > 0 and q.mode == "partner" \
 				and pos.distance_to(q.pos) <= 2.6: # punish the pile-up, not parked farmhands
 			q.hit(maxi(2, int(spec.get("atk", 40) * 0.5 * rage_mult())), 1.0, false)
@@ -369,7 +374,8 @@ func wild_ai(dt: float) -> void:
 					summon_t = 0.0
 					slam_windup = 0.8
 					game.floater(pos, "IT REARS UP", "#ffcc44") # the tell
-					if game.net != null and game.net.ghosts.size() > 0:
+					if game.net != null and game.net.ghosts.size() > 0 \
+							and game.net_live(): # a ghost can outlive its peer by a frame
 						game.net.rpc("net_floater", pos.x, pos.y,
 							"IT REARS UP", "#ffcc44") # guests read the same cue
 			# skills aim at whoever holds the aggro — the keeper or a guest's
@@ -390,8 +396,9 @@ func wild_ai(dt: float) -> void:
 				elif atk_cd <= 0:
 					atk_cd = 1.1
 					if aggro_pid > 0:
-						game.net.rpc_id(aggro_pid, "guest_hit",
-							spec.get("atk", 50) * rage_mult()) # the host's bite lands on the guest
+						if game.net_live(): # bite only ships while the peer can receive it
+							game.net.rpc_id(aggro_pid, "guest_hit",
+								spec.get("atk", 50) * rage_mult()) # the host's bite lands on the guest
 					else:
 						game.hurt_player(spec.get("atk", 50) * rage_mult(), self)
 			elif tdist > spec.get("reach", 4.0):

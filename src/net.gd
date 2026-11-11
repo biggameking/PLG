@@ -204,8 +204,9 @@ func guest_hit(dmg: float) -> void:
 func guest_skill_hit(power: float, status_kind: String = "", status_dur: float = 0.0) -> void:
 	if multiplayer.is_server() or not is_finite(power) or not is_finite(status_dur):
 		return # a skill shot mirrors the same formula on the guest's own armor
-	if status_kind != "" and status_kind not in ["burn", "soak", "freeze"]:
-		status_kind = ""
+	if status_kind != "" and status_kind not in ["burn", "soak", "freeze", "poison", "sleep"]:
+		status_kind = "" # kinds the player body actually supports — "shock" and
+		# kin-only ailments stay off the wire
 	game.hurt_player_skill(clampf(float(power), 0.0, 500.0), status_kind,
 		clampf(status_dur, 0.0, 12.0))
 

@@ -117,8 +117,8 @@ def gen():
         skl = [[1, ELEM_SKILLS[e0][0]], [7, ELEM_SKILLS[e0][1]]]
         if e1 != e0:
             skl.append([12, ELEM_SKILLS[e1][0]])
-        if tier >= 2:
-            skl.append([15, ELEM_SKILLS[e1][1]])
+        if tier >= 2 and e1 != e0: # single-element species would re-learn
+            skl.append([15, ELEM_SKILLS[e1][1]]) # their lv-7 move — skip the dupe
         skl.append([20, ELEM_SKILLS[e1][2]]) # every species banks a lv-20 signature — fans/pierces/drains
         skills = [[l, s] for l, s in skl]
         ent = {"id":sid,"name":name,"glyph":name[0].lower(),"color":cols[0],"elements":elems,

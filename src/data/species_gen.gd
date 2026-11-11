@@ -226,10 +226,6 @@ const SPECIES = {
     "ignitionBreath"
    ],
    [
-    15,
-    "ignitionBreath"
-   ],
-   [
     20,
     "cinderFeast"
    ]
@@ -276,10 +272,6 @@ const SPECIES = {
    ],
    [
     7,
-    "ignitionBreath"
-   ],
-   [
-    15,
     "ignitionBreath"
    ],
    [
@@ -332,10 +324,6 @@ const SPECIES = {
     "ignitionBreath"
    ],
    [
-    15,
-    "ignitionBreath"
-   ],
-   [
     20,
     "cinderFeast"
    ]
@@ -381,10 +369,6 @@ const SPECIES = {
    ],
    [
     7,
-    "ignitionBreath"
-   ],
-   [
-    15,
     "ignitionBreath"
    ],
    [
@@ -434,10 +418,6 @@ const SPECIES = {
    ],
    [
     7,
-    "ignitionBreath"
-   ],
-   [
-    15,
     "ignitionBreath"
    ],
    [
@@ -1230,10 +1210,6 @@ const SPECIES = {
     "grassTornado"
    ],
    [
-    15,
-    "grassTornado"
-   ],
-   [
     20,
     "sporeFan"
    ]
@@ -1388,10 +1364,6 @@ const SPECIES = {
     "grassTornado"
    ],
    [
-    15,
-    "grassTornado"
-   ],
-   [
     20,
     "sporeFan"
    ]
@@ -1488,10 +1460,6 @@ const SPECIES = {
    ],
    [
     7,
-    "grassTornado"
-   ],
-   [
-    15,
     "grassTornado"
    ],
    [
@@ -1767,10 +1735,6 @@ const SPECIES = {
     "lightningStrike"
    ],
    [
-    15,
-    "lightningStrike"
-   ],
-   [
     20,
     "arcLance"
    ]
@@ -1816,10 +1780,6 @@ const SPECIES = {
    ],
    [
     7,
-    "lightningStrike"
-   ],
-   [
-    15,
     "lightningStrike"
    ],
    [
@@ -1961,10 +1921,6 @@ const SPECIES = {
    ],
    [
     7,
-    "lightningStrike"
-   ],
-   [
-    15,
     "lightningStrike"
    ],
    [
@@ -2110,10 +2066,6 @@ const SPECIES = {
     "blizzard"
    ],
    [
-    15,
-    "blizzard"
-   ],
-   [
     20,
     "glacierPike"
    ]
@@ -2160,10 +2112,6 @@ const SPECIES = {
    ],
    [
     7,
-    "blizzard"
-   ],
-   [
-    15,
     "blizzard"
    ],
    [
@@ -2261,10 +2209,6 @@ const SPECIES = {
    ],
    [
     7,
-    "blizzard"
-   ],
-   [
-    15,
     "blizzard"
    ],
    [
@@ -2504,10 +2448,6 @@ const SPECIES = {
    ],
    [
     7,
-    "stoneShot"
-   ],
-   [
-    15,
     "stoneShot"
    ],
    [
@@ -3502,10 +3442,6 @@ const SPECIES = {
     "nightmare"
    ],
    [
-    15,
-    "nightmare"
-   ],
-   [
     20,
     "soulSiphon"
    ]
@@ -3552,10 +3488,6 @@ const SPECIES = {
    ],
    [
     7,
-    "nightmare"
-   ],
-   [
-    15,
     "nightmare"
    ],
    [
@@ -3709,10 +3641,6 @@ const SPECIES = {
     "dragonCanon"
    ],
    [
-    15,
-    "dragonCanon"
-   ],
-   [
     20,
     "wyrmLance"
    ]
@@ -3762,10 +3690,6 @@ const SPECIES = {
     "airCannon"
    ],
    [
-    15,
-    "airCannon"
-   ],
-   [
     20,
     "packVolley"
    ]
@@ -3812,10 +3736,6 @@ const SPECIES = {
    ],
    [
     7,
-    "dragonCanon"
-   ],
-   [
-    15,
     "dragonCanon"
    ],
    [
@@ -3922,10 +3842,6 @@ const SPECIES = {
    ],
    [
     7,
-    "dragonCanon"
-   ],
-   [
-    15,
     "dragonCanon"
    ],
    [
@@ -4654,10 +4570,6 @@ const SPECIES = {
    ],
    [
     7,
-    "aquaBurst"
-   ],
-   [
-    15,
     "aquaBurst"
    ],
    [

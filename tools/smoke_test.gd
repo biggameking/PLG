@@ -1843,6 +1843,10 @@ func run() -> void:
 	game.cast_skill(sp_pal, p, SkillData.SKILLS["packVolley"])
 	check("multi fires a fan", game.projectiles.size() == prj_m + 3,
 		"+%d shots" % [game.projectiles.size() - prj_m])
+	while game.projectiles.size() > prj_m: # a live fan bolt resolving in the
+		var pr_f = game.projectiles.pop_back() # pierce window below could clip
+		if is_instance_valid(pr_f.get("node")): # a lane body and flake the count
+			pr_f["node"].queue_free()
 	# the bolt needs a verified lane — 7 clear cells of terrain/elev/decor/struct
 	# (same wall contract update_projectiles checks) or it dies short of ln2
 	var lane_o := Vector2(-1, -1)
@@ -6510,12 +6514,16 @@ func run() -> void:
 	victim.pos = slam_boss.pos + Vector2(0.5, 0)
 	victim.statuses.clear()
 	slam_boss.pact_slam()
-	check("fire spire slam burns", victim.statuses.has("burn"))
-	slam_boss.spire_tag = "spire_3" # dark
-	victim.statuses.clear()
+	check("fire spire slam burns", victim.statuses.has("burn")
+		and game.player.statuses.has("burn")) # the ring's element bites
+	slam_boss.spire_tag = "spire_3" # dark     # players too — a spire asks
+	victim.statuses.clear()                    # the same question of everyone
 	slam_boss.pact_slam()
-	check("dark spire slam sleeps", victim.statuses.has("sleep"))
+	check("dark spire slam sleeps", victim.statuses.has("sleep")
+		and game.player.statuses.has("sleep"))
 	victim.statuses.clear()
+	game.player.statuses.erase("burn")
+	game.player.statuses.erase("sleep") # a slept keeper can't run later verbs
 	game.pals.erase(slam_boss); slam_boss.queue_free()
 	if not game.party.has(victim.uid):
 		game.pals.erase(victim); victim.queue_free()
@@ -6523,7 +6531,8 @@ func run() -> void:
 	# the boss planted; a guest inside the zone eats it through guest_hit
 	game.net.spawn_ghost(99)
 	var tod_w3 := game.tod
-	game.tod = 12.0 # the grunt is diurnal — a night fixture would sleep through its own telegraph
+	game.tod = 12.0 # forced aggro=0 already bypasses the nap gate — pin the
+	# clock anyway so nothing else in this window reads a drifting tod
 	var wb: Kin = game.gen_pal("ironpact_grunt", 40, game.nearest_free(p.pos.x + 24, p.pos.y))
 	wb.boss = true; wb.phase = 2; wb.mode = "wild"
 	wb.aggro = 0; wb.aggro_pid = 99
@@ -6556,7 +6565,9 @@ func run() -> void:
 	game.pals.erase(wb)
 	if wb.get_parent(): wb.get_parent().remove_child(wb)
 	wb.free()
-	game.net.ghosts.erase(99)
+	if game.net.ghosts.has(99): # mirror the disconnect path — an erased-but-
+		game.net.ghosts[99].queue_free() # parented ghost renders for the rest
+		game.net.ghosts.erase(99) # of the suite
 
 	# i18n — zh translation registered, toggle swaps tr() output, garbage coerced
 	check("zh translation loaded", "zh" in TranslationServer.get_loaded_locales())
@@ -6951,7 +6962,15 @@ func run() -> void:
 		["projectile", "self"]) and game.projectiles.size() == n_pr + 1,
 		"pr=%d" % game.projectiles.size())
 	caster2.skill_cd.clear()
-	check("ghost skips body skills", not caster2.cast_skills(Vector2(165, 150), 0.1, ["lunge"]))
+	# a bare Vector2 can't eat body skills — production whitelists them out.
+	# Strip the learn table to tackle-only (in reach) so ONLY the kinds gate
+	# can refuse; a broken whitelist casts the lunge at the Vector2 -> red.
+	caster2.spec = caster2.spec.duplicate()
+	caster2.spec["skills"] = [[1, "tackle"]]
+	caster2.extra_skills = [] # the taught airCannon above still qualifies —
+	caster2.equipped = []     # strip the whole loadout to the in-range lunge
+	check("ghost skips body skills", not caster2.cast_skills(Vector2(161, 150), 0.1,
+		["projectile", "multi", "self"]))
 	while game.projectiles.size() > n_pr: # spawned shots hold the caster — free him last
 		var pr_c = game.projectiles.pop_back()
 		if is_instance_valid(pr_c.get("node")):

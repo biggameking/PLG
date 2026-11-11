@@ -3709,17 +3709,25 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 		_: # projectile
 			spawn_shot(caster, (tpos - caster.pos).normalized(), sk)
 
+var _orb_atlases := {} # elem -> AtlasTexture — one per element, shared by
+# every bolt of that element (create-once, bounded by the element enum)
+func _elem_orb(elem: String) -> AtlasTexture:
+	var at: AtlasTexture = _orb_atlases.get(elem)
+	if at == null:
+		at = AtlasTexture.new()
+		at.atlas = orb_tex
+		at.region = Rect2(ELEM_ORB_IDX.get(elem, 0) * 16, 0, 16, 16)
+		at.filter_clip = true
+		_orb_atlases[elem] = at
+	return at
+
 func spawn_shot(caster: Kin, dir: Vector2, sk: Dictionary) -> void:
 	if projectiles.size() >= MAX_PROJECTILES:
 		var old = projectiles.pop_front()
 		if is_instance_valid(old.get("node")):
 			old["node"].queue_free() # volley backstop: oldest shot fizzles
 	var spr := Sprite2D.new()
-	var at := AtlasTexture.new()
-	at.atlas = orb_tex
-	at.region = Rect2(ELEM_ORB_IDX.get(sk.get("element", "neutral"), 0) * 16, 0, 16, 16)
-	at.filter_clip = true
-	spr.texture = at
+	spr.texture = _elem_orb(sk.get("element", "neutral"))
 	spr.scale = Vector2(1.5, 1.5)
 	entity_layer.add_child(spr)
 	projectiles.append({
@@ -3731,6 +3739,9 @@ func spawn_shot(caster: Kin, dir: Vector2, sk: Dictionary) -> void:
 	})
 
 func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
+	if not (target_ent is Kin or target_ent is Player):
+		return # a bare Vector2 has no body — callers whitelist lunge away from
+		# ghosts, but a slip fails closed here rather than typing Kin <- Vector2
 	var elem: String = sk.get("element", "neutral")
 	if target_ent is Player:
 		if (state != "play" and not net_live()) or player.dodge_t > 0:
@@ -3740,7 +3751,10 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			return
 		var dr0 := float(sk.get("drain", 0.0))
 		if dr0 > 0.0 and caster.hp > 0:
-			caster.hp = minf(caster.max_hp, caster.hp + final * dr0) # the bite feeds its biter
+			var back0 := minf(caster.max_hp - caster.hp, final * dr0) # the bite
+			if back0 > 0.0: # feeds its biter — same +N the kin path shows
+				caster.hp += back0
+				floater(caster.pos, "+%d" % int(back0), "#a8e6a1")
 		var st = sk.get("status")
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
@@ -3782,7 +3796,8 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus * caster.atk_mult(),
 			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus * tp.def_mult(), mult, rng)
 		tp.hit(d, mult, caster.mode != "wild", caster.owner_id) # a guest's pal provokes the guest
-		tp.apply_skill_status(sk)
+		if tp.hp > 0: # statuses on a corpse die in the box — gate the corpse case
+			tp.apply_skill_status(sk)
 		var dr := float(sk.get("drain", 0.0))
 		if dr > 0.0 and caster.hp > 0:
 			var back := minf(caster.max_hp - caster.hp, maxf(1.0, d * dr))
@@ -3793,6 +3808,8 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			gain_xp(maxi(1, d / 4))
 
 func update_projectiles(dt: float) -> void:
+	if projectiles.is_empty():
+		return
 	var pal_snap := pals.duplicate() # one snapshot per tick — raid volleys were allocating per projectile per frame
 	for pr in projectiles.duplicate():
 		pr["ttl"] -= dt
@@ -3846,7 +3863,8 @@ func update_projectiles(dt: float) -> void:
 				if not dead and net != null: # a guest standing in the line of fire eats it —
 					for pid in net.ghosts: # host computes, the wire delivers
 						var g = net.ghosts[pid]
-						if g != null and g.net_pos.x >= 0 and not pr["hitset"].has(pid) \
+						# "g%d" namespaces the key — a peer id can collide with a kin uid
+						if g != null and g.net_pos.x >= 0 and not pr["hitset"].has("g%d" % pid) \
 								and pp.distance_to(Vector2(g.net_pos.x, g.net_pos.y)) < 0.55:
 							var gk_st: Dictionary = pr["skill"].get("status", {})
 							var gk_apply: bool = not gk_st.is_empty() \
@@ -3855,7 +3873,11 @@ func update_projectiles(dt: float) -> void:
 								float(pr["skill"].get("power", 10)),
 								str(gk_st.get("kind", "")) if gk_apply else "",
 								float(gk_st.get("dur", 0.0)) if gk_apply else 0.0)
-							pr["hitset"][pid] = true
+							pr["hitset"]["g%d" % pid] = true
+							var gdr := float(pr["skill"].get("drain", 0.0)) # drain
+							if gdr > 0.0 and caster.hp > 0: # pays regardless of
+								caster.hp = minf(caster.max_hp, caster.hp + # whose armor took
+									maxf(1.0, float(pr["skill"].get("power", 10)) * 0.6 * gdr))
 							dead = not pr["pierce"]
 							break
 				if not dead:
