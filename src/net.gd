@@ -322,6 +322,8 @@ func pal_sync(arr: Array) -> void:
 		else:
 			p.net_target = Vector2(float(e[2]), float(e[3]))
 			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp
+			if e.size() > 4:
+				p.level = int(e[4]) # host-side xp growth must reach the replica
 			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
 				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
 			p.mounted_by = int(e[11]) if e.size() > 11 else 0
