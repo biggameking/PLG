@@ -4738,6 +4738,98 @@ func run() -> void:
 	hudn.run_click({"act": "build_pick", "arg": 0})
 	check("re-tap cancels the ghost", hudn.build_sel == -1)
 	game.panel = ""
+	# chest panel scrolls too — last list left untested
+	game.panel = "chest"
+	hudn.run_click({"act": "chest_dn", "arg": null})
+	check("chest scroll moves", hudn.chest_scroll == 1)
+	hudn.run_click({"act": "chest_up", "arg": null})
+	check("chest scroll back", hudn.chest_scroll == 0)
+	game.panel = ""
+
+	# ---- S30 audit fixes: paused text panels, paused X, click hygiene ----
+	game.state = "paused" # pause-shell rows open text panels — they must still type
+	game.panel = "chat"; hudn.chat_buf = ""
+	var k_ev := InputEventKey.new()
+	k_ev.pressed = true; k_ev.keycode = KEY_A; k_ev.unicode = 97
+	hudn._unhandled_input(k_ev)
+	check("paused chat still types", hudn.chat_buf == "a", "buf='%s'" % hudn.chat_buf)
+	k_ev = InputEventKey.new()
+	k_ev.pressed = true; k_ev.keycode = KEY_ESCAPE
+	hudn._unhandled_input(k_ev)
+	check("paused chat Esc bails", game.panel == "" and hudn.chat_buf == "")
+	game.panel = "join"; hudn.join_buf = ""
+	k_ev = InputEventKey.new()
+	k_ev.pressed = true; k_ev.keycode = KEY_1; k_ev.unicode = 49
+	hudn._unhandled_input(k_ev)
+	check("paused join still types", hudn.join_buf == "1", "buf='%s'" % hudn.join_buf)
+	game.panel = ""
+	game.panel = "guide"; hudn.guide_page = 0 # guide hoisted with the text panels
+	k_ev = InputEventKey.new()
+	k_ev.pressed = true; k_ev.keycode = KEY_RIGHT
+	hudn._unhandled_input(k_ev)
+	check("paused guide pages on keys", hudn.guide_page == 1)
+	k_ev = InputEventKey.new()
+	k_ev.pressed = true; k_ev.keycode = KEY_N
+	hudn._unhandled_input(k_ev)
+	check("paused guide N closes", game.panel == "")
+	# paused panels still carry the touch X — a slab has no Esc
+	var tui2 := game.touch_ui
+	game.touch_ui = true # route REAL events — the gate is the thing under test
+	game.panel = "tech"
+	var t_touch := InputEventScreenTouch.new()
+	t_touch.pressed = true; t_touch.index = 9
+	t_touch.position = lay_t["btns"]["menu"]
+	hudn._unhandled_input(t_touch)
+	check("paused panel X closes", game.panel == "")
+	game.panel = "inv" # a non-X tap under the shell must NOT fire verbs
+	t_touch = InputEventScreenTouch.new()
+	t_touch.pressed = true; t_touch.index = 9
+	t_touch.position = lay_t["joy"]
+	hudn._unhandled_input(t_touch)
+	check("paused joy tap grabs no stick", hudn.joy_idx < 0 and p.touch_vec == Vector2.ZERO)
+	t_touch = InputEventScreenTouch.new()
+	t_touch.pressed = false; t_touch.index = 9
+	t_touch.position = lay_t["joy"]
+	hudn._unhandled_input(t_touch)
+	game.panel = ""; game.state = "play"; game.touch_ui = tui2
+	# a click that lands on a rect is HANDLED — it must not leak to melee/throw
+	game.panel = "chat"
+	var m_ev2 := InputEventMouseButton.new()
+	m_ev2.pressed = true; m_ev2.button_index = MOUSE_BUTTON_LEFT
+	m_ev2.position = Vector2(5, 5)
+	hudn._unhandled_input(m_ev2) # flush the state transition so rects survive
+	hudn.click_rects.append({"rect": Rect2(Vector2(5, 5), Vector2(30, 20)), "act": "text_cancel", "arg": null})
+	m_ev2 = InputEventMouseButton.new()
+	m_ev2.pressed = true; m_ev2.button_index = MOUSE_BUTTON_LEFT
+	m_ev2.position = Vector2(10, 10)
+	hudn._unhandled_input(m_ev2)
+	check("rect click marks handled", game.panel == "" and hudn.get_viewport().is_input_handled())
+	# every virtual control sits inside the zone gate — taps on them can't place ghosts
+	var all_zones := true
+	for b0 in lay_t["btns"]:
+		if not hudn.touch_zone_hit(lay_t["btns"][b0]): all_zones = false
+	if not hudn.touch_zone_hit(lay_t["joy"]): all_zones = false
+	check("every control inside the zone gate", all_zones)
+	check("more_row radius beats spacing", hudn.btn_r("dml") * 2.0 <= 56.0
+		and hudn.btn_r("dml") < hudn.btn_r("atk"))
+	# sell rail carries only your own kin
+	var gkin = Kin.new()
+	gkin.owner_id = 5
+	game.box.append(gkin)
+	check("guest kin stays off the sell rail", gkin not in hudn.sellable_pals())
+	game.box.erase(gkin); gkin.free()
+	# pause rows ride the real click path, not just the data
+	var peer_bak3 = game.net.multiplayer.multiplayer_peer
+	game.net.multiplayer.multiplayer_peer = null
+	hudn.run_click({"act": "m_host", "arg": null})
+	check("host row actually hosts", game.net.multiplayer.multiplayer_peer != null)
+	game.net.multiplayer.multiplayer_peer.close()
+	game.net.multiplayer.multiplayer_peer = peer_bak3
+	for act0 in ["m_dex", "m_statues", "m_guide"]:
+		game.panel = ""
+		hudn.run_click({"act": act0, "arg": null})
+		check("pause row %s opens" % act0, game.panel == act0.trim_prefix("m_"))
+	game.panel = ""
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))

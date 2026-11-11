@@ -60,7 +60,7 @@ func _process(_dt: float) -> void:
 	game.drawer.queue_redraw()
 
 func _unhandled_input(e: InputEvent) -> void:
-	if game.panel == "dex": # the dex eats the wheel for scrolling, not zoom
+	if game.panel != "": # panels eat the wheel for scrolling, not zoom
 		return
 	if e.is_action_pressed("zoom_in"):
 		cam.zoom = (cam.zoom * 1.15).clampf(0.35, 2.5) * Vector2.ONE

@@ -325,3 +325,21 @@ build-tools/apksigner).
   axes), so perks and soul infusion were a dead system since the panel
   shipped. Rebuilt on a proper rr rect; infusion list (party+box, up to
   400+) now clips + scrolls like its siblings.
+S30 (5th context-free audit — S27..S29 touch batch, 2H/5M/9L):
+  H1 pause-shell rows opened chat/join but their key handlers sat below
+  the shell's eat-everything branch — panels drew, typing was dead.
+  chat/join/guide hoisted above the shell (guide gets N/G/Esc close +
+  ←/→ paging under pause). H2 draw_touch/event gate required
+  state=="play" so a pause-opened panel had NO ✕ — a keyless trap.
+  Panel escape now covers any panel!="" while verbs stay play-only.
+  M1 wheel-zoom exempted only dex — now any panel. M2 rect clicks mark
+  set_input_as_handled (no more close-tap leaking to melee). M3
+  place_ghost skips taps inside touch zones. M4 the sell rail listed
+  guests' boxed kin — sellable_pals() filters owner_id and sell_n now
+  counts the real list. M5 more-row drew 19px but hit-tested 33 — one
+  MORE_BTN_R const feeds both. L2 CHAT row gates on net_live() not peer
+  presence. L4 a mid-drag touch toggle now releases the stick. L5
+  scroll buttons only render on overflow. L7 guide footer says Esc.
+  Coverage: paused typing/paging/X/joy-guard, handled-flag, all-zone
+  containment, row-radius spacing, sellable_pals, run_click for
+  m_host/m_dex/m_statues/m_guide, chest scroll. Smoke 603-606/0 x3.

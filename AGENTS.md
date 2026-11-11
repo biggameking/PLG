@@ -295,3 +295,16 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     were a dead system) because it treated `r` as a Rect2. First statement
     of every panel draw is `var rr := Rect2(...)` built from the size —
     and a smoke check or eyeball must prove rows land inside it.
+59. **A feature's input gate must cover every state that can reach it.**
+    Pause-shell rows opened chat/join/guide, but their key handlers sat
+    below the shell's eat-everything return — typing worked only in
+    "play". When a panel gains a new entry point, audit its handlers
+    against every state that can reach it and hoist the handler above
+    the earliest consumer it must outrank.
+60. **Handled clicks are a contract, not a courtesy.** Any event a panel
+    consumes must call `set_input_as_handled()` — otherwise the same
+    press falls through to melee/throw/ghost-placement below. Assert the
+    flag in smoke, not just the side effect.
+61. **Presence is not liveness.** `multiplayer_peer != null` stays true
+    on a dropped socket — gate UI on a `net_live()`-style check that
+    reads `get_connection_status()`, never on pointer presence.

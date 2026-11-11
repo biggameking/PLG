@@ -98,6 +98,8 @@ func _process(dt: float) -> void:
 		nav_hold = 0.0
 	if game != null and game.panel != "" and touch_more:
 		touch_more = false # panels own the taps — collapse the verb row out of the way
+	if game != null and not game.touch_ui and joy_idx >= 0:
+		_release_stick() # a mid-drag touch toggle can't leave a ghost stick
 	# text panels on touch need the OS keyboard — it never appears on its own
 	var texty := game != null and game.panel in ["join", "chat"]
 	if texty != _vkbd_open:
@@ -132,7 +134,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		click_rects.clear()
 		menu_sel = 0
 		_release_stick()
-	if game.touch_ui and game.state == "play":
+	if game.touch_ui and (game.state == "play" or game.panel != ""):
 		if event is InputEventScreenTouch:
 			if event.pressed:
 				touch_down(event.position, event.index)
@@ -144,6 +146,40 @@ func _unhandled_input(event: InputEvent) -> void:
 			touch_move(event.position, event.index)
 			get_viewport().set_input_as_handled()
 			return
+	# text panels type in EVERY state — the pause shell can open them, so the
+	# buffers must live above the shell's eat-everything branch
+	if game.panel == "chat" and event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			_chat_submit()
+		elif event.keycode == KEY_ESCAPE:
+			chat_buf = ""; game.panel = ""
+		elif event.keycode == KEY_BACKSPACE:
+			chat_buf = chat_buf.left(-1)
+		elif event.unicode >= 32:
+			chat_buf += char(event.unicode) # CJK keepers chat too — ASCII-only was a cage
+		get_viewport().set_input_as_handled()
+		return
+	if game.panel == "join" and event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			_join_submit()
+		elif event.keycode == KEY_ESCAPE:
+			join_buf = ""; game.panel = ""
+		elif event.keycode == KEY_BACKSPACE:
+			join_buf = join_buf.left(-1)
+		elif event.unicode >= 33 and event.unicode < 127 and not event.unicode == 32:
+			join_buf += char(event.unicode)
+		get_viewport().set_input_as_handled()
+		return
+	# guide paging rides the same hoist — pause rows can open it too
+	if game.panel == "guide" and event is InputEventKey and event.pressed:
+		if event.is_action_pressed("ui_right"):
+			guide_page = mini(guide_page + 1, GuideData.PAGES.size() - 1)
+		elif event.is_action_pressed("ui_left"):
+			guide_page = maxi(guide_page - 1, 0)
+		elif event.is_action_pressed("ui_cancel") or event.keycode == KEY_N or event.keycode == KEY_G:
+			game.panel = ""
+		get_viewport().set_input_as_handled()
+		return
 	# shell states own the whole input stack — menus don't leak to gameplay
 	if game.state == "title" or game.state == "paused":
 		if event.is_action_pressed("ui_cancel"):
@@ -176,30 +212,6 @@ func _unhandled_input(event: InputEvent) -> void:
 					break
 		get_viewport().set_input_as_handled() # the shell owns every event here
 		return
-	# chat input mode (net only)
-	if game.panel == "chat" and event is InputEventKey and event.pressed:
-		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			_chat_submit()
-		elif event.keycode == KEY_ESCAPE:
-			chat_buf = ""; game.panel = ""
-		elif event.keycode == KEY_BACKSPACE:
-			chat_buf = chat_buf.left(-1)
-		elif event.unicode >= 32:
-			chat_buf += char(event.unicode) # CJK keepers chat too — ASCII-only was a cage
-		get_viewport().set_input_as_handled()
-		return
-	# join-ip input mode
-	if game.panel == "join" and event is InputEventKey and event.pressed:
-		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			_join_submit()
-		elif event.keycode == KEY_ESCAPE:
-			join_buf = ""; game.panel = ""
-		elif event.keycode == KEY_BACKSPACE:
-			join_buf = join_buf.left(-1)
-		elif event.unicode >= 33 and event.unicode < 127 and not event.unicode == 32:
-			join_buf += char(event.unicode)
-		get_viewport().set_input_as_handled()
-		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER 		and game.panel == "" and game.net and multiplayer.multiplayer_peer != null:
 		game.panel = "chat"; chat_buf = ""
 		return
@@ -210,11 +222,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "guide" else "guide"
 		guide_page = 0
 		return
-	if game.panel == "guide":
-		if event.is_action_pressed("ui_right"):
-			guide_page = mini(guide_page + 1, GuideData.PAGES.size() - 1)
-		elif event.is_action_pressed("ui_left"):
-			guide_page = maxi(guide_page - 1, 0)
 	if event.is_action_pressed("ui_cancel") and game.panel != "":
 		game.panel = ""
 		return
@@ -325,9 +332,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		for cr in click_rects:
 			if cr["rect"].has_point(event.position):
 				run_click(cr)
+				get_viewport().set_input_as_handled() # a panel-closing act must not fall through to melee
 				return
-		if game.panel == "build" and build_sel >= 0:
-			place_ghost()
+		if game.panel == "build" and build_sel >= 0 and not (game.touch_ui and touch_zone_hit(event.position)):
+			place_ghost() # the ✕ tap arrives as a mouse event first — never plant under it
+			get_viewport().set_input_as_handled()
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and game.panel == "build":
 		build_sel = -1
 		game.panel = ""
@@ -927,11 +936,14 @@ func touch_layout(r: Vector2) -> Dictionary: # cached — draw_touch asks every 
 	return _lay_cache
 
 const MORE_VERBS := ["asg", "stn", "ksk", "rde", "dml", "map"]
+const MORE_BTN_R := 19.0 # drawn AND hit-tested smaller — 56px spacing can't take BTN_R+8
 var touch_more := false
 
 func joy_grab_r() -> float: return JOY_R * 1.7 # one radius table — touch_down AND zone gate share it
 
-func btn_r(b: String) -> float: return (36.0 if b == "atk" else BTN_R) + 8.0
+func btn_r(b: String) -> float:
+	if b in MORE_VERBS: return MORE_BTN_R + 8.0 # 27 < 28 half-spacing — no edge bleed
+	return (36.0 if b == "atk" else BTN_R) + 8.0
 
 func touch_zone_hit(p: Vector2) -> bool: # does this point land on a virtual control?
 	var lay := touch_layout(get_viewport_rect().size)
@@ -948,6 +960,8 @@ func touch_zone_hit(p: Vector2) -> bool: # does this point land on a virtual con
 
 func touch_down(p: Vector2, idx: int) -> void:
 	var lay0 := touch_layout(get_viewport_rect().size)
+	if game.state != "play" and game.panel == "":
+		return # verbs sleep under the shell; only the ✕ works in a panel
 	if game.panel != "":
 		# panels own taps — except ☰, which becomes the only way out on a slab
 		if p.distance_to(lay0["btns"]["menu"]) <= btn_r("menu"):
@@ -1059,7 +1073,7 @@ func touch_verb(b: String) -> void:
 				pl.melee()
 
 func draw_touch(r: Vector2) -> void:
-	if not game.touch_ui or game.state != "play":
+	if not game.touch_ui:
 		return
 	var lay := touch_layout(r)
 	if game.panel != "":
@@ -1069,6 +1083,8 @@ func draw_touch(r: Vector2) -> void:
 		draw_arc(c, BTN_R, 0, TAU, 24, Color(0.95, 0.6, 0.6, 0.45), 1.5)
 		draw_string(font, c - Vector2(font.get_string_size("X", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), "X",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.8, 0.8, 0.8))
+		return
+	if game.state != "play":
 		return
 	var jc: Vector2 = lay["joy"]
 	draw_circle(jc, JOY_R, Color(0.9, 0.95, 1.0, 0.10))
@@ -1089,8 +1105,8 @@ func draw_touch(r: Vector2) -> void:
 	if touch_more:
 		for b in lay["more_row"]:
 			var c2: Vector2 = lay["more_row"][b]
-			draw_circle(c2, BTN_R - 8, Color(0.85, 0.8, 0.6, 0.14))
-			draw_arc(c2, BTN_R - 8, 0, TAU, 24, Color(0.95, 0.9, 0.6, 0.4), 1.5)
+			draw_circle(c2, MORE_BTN_R, Color(0.85, 0.8, 0.6, 0.14))
+			draw_arc(c2, MORE_BTN_R, 0, TAU, 24, Color(0.95, 0.9, 0.6, 0.4), 1.5)
 			var tl2: String = labels[b]
 			draw_string(font, c2 - Vector2(font.get_string_size(tl2, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x / 2, -4), tl2,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 0.98, 0.85, 0.8))
@@ -1228,7 +1244,7 @@ func pause_rows() -> Array:
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join"])
 		rows.append(["HOST SESSION", "m_host"])
-	if multiplayer.multiplayer_peer != null:
+	if game.net_live():
 		rows.append(["CHAT", "m_chat"])
 	rows.append(["TECH TREE", "m_tech"])
 	rows.append(["KINDEX", "m_dex"])
@@ -1649,7 +1665,7 @@ func draw_shop(r: Vector2) -> void:
 	for k0 in game.items.keys():
 		if ItemData.ITEMS.get(k0, {}).get("price", 0) > 0 and k0 != "gold_coin" and game.items[k0] > 0:
 			sell_n += 1
-	sell_n += mini(game.box.size(), 12)
+	sell_n += sellable_pals().size()
 	shop_scroll = clampi(shop_scroll, 0, maxi(0, maxi(game.merchant_stock.size(), sell_n) - 22))
 	for i in range(shop_scroll, game.merchant_stock.size()):
 		var it: Dictionary = game.merchant_stock[i]
@@ -1687,7 +1703,7 @@ func draw_shop(r: Vector2) -> void:
 		if y > rr.end.y - 14:
 			break
 	var shown := 0
-	for bp in game.box: # black-market: sell spare pals for coin
+	for bp in sellable_pals(): # black-market: sell spare pals for coin
 		si += 1
 		if si < shop_scroll:
 			continue
@@ -1700,7 +1716,15 @@ func draw_shop(r: Vector2) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8963c"))
 		y += 17
 		shown += 1
-	_scroll_btns(rr, "shop_up", "shop_dn", rr.position.x + 289, true) # column gutter
+	if maxi(game.merchant_stock.size(), sell_n) > 22:
+		_scroll_btns(rr, "shop_up", "shop_dn", rr.position.x + 289, true) # column gutter
+
+func sellable_pals() -> Array: # only your OWN kin ride the sell rail — guests' stay off it
+	var out: Array = []
+	for bp in game.box:
+		if bp.owner_id == 0:
+			out.append(bp)
+	return out
 
 func use_item(k: String) -> void:
 	match k:
@@ -1850,7 +1874,8 @@ func draw_dex(r: Vector2) -> void:
 		y += 15
 	draw_string(font, Vector2(rr.position.x + 16, rr.end.y - 16),
 		"wheel scroll · every 10 species caught pays +2 tech", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.6, 0.65))
-	_scroll_btns(rr, "dex_up", "dex_dn")
+	if ids.size() > rows:
+		_scroll_btns(rr, "dex_up", "dex_dn")
 
 func draw_chat(r: Vector2) -> void:
 	var rr := Rect2(12, r.y - 40, 480, 28)
@@ -2004,7 +2029,7 @@ func draw_guide(r: Vector2) -> void:
 			Color("#5a3a1a") if head else Color(0.22, 0.18, 0.12))
 		y += 19
 	draw_string(font, Vector2(rr.position.x + 22, rr.end.y - 14),
-		"n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.PAGES.size()],
+		"Esc/n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.PAGES.size()],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#7a6a4a"))
 	# tap turners — no arrow keys on a slab
 	var pv := Rect2(rr.end.x - 84, rr.end.y - 34, 34, 24)
