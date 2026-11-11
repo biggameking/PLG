@@ -6458,7 +6458,7 @@ func struct_sync(arr: Array) -> void:
 func decor_snapshot_apply(d: Dictionary) -> bool:
 	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
 			and d.get("hp_map") is PackedByteArray and d["hp_map"].size() == world.hp.size():
-		var raw: PackedByteArray = d["decor"]
+		var raw: PackedByteArray = d["decor"].duplicate() # clamp a copy — the caller's dict isn't ours to mutate
 		for i2 in raw.size(): # an off-enum byte reaches harvest_cell's literal lookup — same clamp as decor_sync
 			if raw[i2] > int(World.Decor.STUMP):
 				raw[i2] = World.Decor.NONE
