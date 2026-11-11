@@ -4903,9 +4903,11 @@ func work_req_remote(pid: int) -> int:
 	work_mode = (work_mode + 1) % WORK_MODES.size()
 	return work_mode
 
-# one keeper's bed turns everyone's clock — hostiles veto it for all
+# one keeper's bed turns everyone's clock — hostiles veto it for all, and
+# you still have to be AT a bed: remote napping is a heal exploit
 func sleep_req_remote(pid: int) -> bool:
-	if _ghost_at(pid).x < -1e8:
+	var at := _ghost_at(pid)
+	if at.x < -1e8 or _nearest_struct("straw_bed", at, 6.0).x < 0:
 		return false
 	for q in pals:
 		if q.hp > 0 and (q.raid or (q.mode == "wild" and q.aggro >= 0)):

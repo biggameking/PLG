@@ -4973,8 +4973,23 @@ func run() -> void:
 			v6_q2.aggro = -1
 			v6_q2.raid = false
 		var v6_day := game.day
-		check("guest sleep turns the clock", game.sleep_req_remote(99)
-			and game.day == v6_day + 1)
+		check("sleep needs a bed in reach", not game.sleep_req_remote(99))
+		var bd_k := Vector2i(-1, -1)
+		for rad9 in range(3, 10):
+			for ang17 in range(16):
+				var ck14 := Vector2i(int(p.pos.x + cos(ang17 * TAU / 16.0) * rad9),
+					int(p.pos.y + sin(ang17 * TAU / 16.0) * rad9))
+				if game.can_place("straw_bed", ck14.x, ck14.y):
+					game.place_free("straw_bed", ck14.x, ck14.y); bd_k = ck14; break
+			if bd_k.x >= 0: break
+		if bd_k.x >= 0:
+			game.net.ghosts[99].net_pos = Vector3(bd_k.x, bd_k.y, 0)
+			check("guest sleep turns the clock", game.sleep_req_remote(99)
+				and game.day == v6_day + 1)
+			var bd_st2: Dictionary = game.structures[bd_k]
+			for bdk in game.structures.keys():
+				if game.structures[bdk] == bd_st2:
+					game.structures.erase(bdk) # footprint out now — deferred removal blocks the hop tile
 		var v6_fs := Vector2i(-1, -1)
 		for v6_r6 in range(3, 10):
 			for v6_a14 in range(16):

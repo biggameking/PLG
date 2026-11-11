@@ -427,3 +427,6 @@ S38 (panel-act sweep): the run_click act table had a second, worse class
   soul_infuse wired as infuse_req (uid must own-check). sell/equip/repair/
   craft audited: client-authoritative bag+player, already correct. Smoke
   663-665/0 x2.
+S38b (sleep reach): sleep_req_remote had no bed check — a guest could nap
+  remotely for a party-wide heal. _nearest_struct("straw_bed") gate added;
+  smoke covers both the no-bed refusal and the honest clock turn.
