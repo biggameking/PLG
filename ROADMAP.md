@@ -790,3 +790,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   never shipped — now clamps like state_sync. Hostile fixtures drive
   pal_hit/merch_hit/chest_grant/board_done/stock_sync/spawn rows.
   Smoke 761-762/0 x2, zero-error.
+
+## S59b/c — audit-21 (SHIP): residual echo signs + dedup parity
+  Twenty-first audit shipped S59 clean (no C/H) with a fast
+  follow-up list, all landed: state_sync chest stores take the
+  same per-entry _i/0 clamp struct_sync runs (M1); every echo
+  amount floors at zero — bought price, infuse cost, board_pay
+  gold+xp, got_loot n — and board_done whitelists ITEMS ids so a
+  forged ask can't deduct real stacks (M2); saved rparties and
+  wire party strips dedup uids and share the 5-slot bound (L1/L2);
+  stock_sync item rows whitelist ITEMS (L4); decor snapshot
+  clamps a duplicate, not the caller's dict. Smoke 760-761/0.

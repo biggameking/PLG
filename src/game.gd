@@ -4329,8 +4329,9 @@ func load_game() -> bool:
 				break # same roster cap the runtime path enforces
 			var arr := []
 			for pi2 in (rps[tag] if rps[tag] is Array else []):
-				if _fin(pi2) and int(pi2) >= 0 and int(pi2) < loaded.size():
-					arr.append(loaded[int(pi2)].uid)
+				if _fin(pi2) and int(pi2) >= 0 and int(pi2) < loaded.size() \
+						and not arr.has(loaded[int(pi2)].uid):
+					arr.append(loaded[int(pi2)].uid) # a forged strip can't pin a guest "full" on dup uids
 			var rtk := str(tag).substr(0, 24)
 			if not arr.is_empty() and rtk != "": # an empty tag can't own a roster — rebind_owner refuses it too
 				remote_parties[rtk] = arr.slice(0, 5)

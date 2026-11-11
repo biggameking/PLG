@@ -267,7 +267,10 @@ func state_sync(d: Dictionary) -> void:
 	game.world.structures.clear()
 	for e in (d["structures"] if d.get("structures") is Array else []): # a scalar/nil here aborts the whole rebuild — after the world was already razed
 		if e is Array and e.size() >= 3 and Game._fin(e[1]) and Game._fin(e[2]):
-			var st_store: Dictionary = e[3] if e.size() > 3 and e[3] is Dictionary else {}
+			var st_store := {}
+			if e.size() > 3 and e[3] is Dictionary: # same per-entry coercion struct_sync runs — raw wire values don't reach store math
+				for sk2 in e[3]:
+					st_store[str(sk2)] = maxi(Game._i(e[3][sk2]), 0)
 			if game.place_free(str(e[0]), int(e[1]), int(e[2]), st_store) \
 					and e.size() > 4 and e[4] is Dictionary:
 				var sk := Vector2i(int(e[1]), int(e[2]))
@@ -668,8 +671,9 @@ func got_loot(id: String, n: int) -> void:
 	var it: Dictionary = ItemData.ITEMS.get(str(id), {})
 	if it.is_empty():
 		return
-	game.add_item(str(id), int(n))
-	game.floater(game.player.pos, "+%d %s" % [int(n), it.get("name", id)], "#ffe08a")
+	var ln := clampi(n, 0, 999) # a negative echo drains the bag — loot only ever adds
+	game.add_item(str(id), ln)
+	game.floater(game.player.pos, "+%d %s" % [ln, it.get("name", id)], "#ffe08a")
 
 # Shared-world editing: clients ask, the host validates + mutates, everyone
 # converges on the next broadcast. Same trust rules as take_drop — the
@@ -957,6 +961,8 @@ func board_done(res: Dictionary) -> void:
 		return
 	var qid := str(res.get("id", ""))
 	var qn := maxi(Game._i(res.get("n", 0)), 0) # a negative ask would mint goods through add_item
+	if not ItemData.ITEMS.has(qid):
+		return # a forged ask can't deduct ids the board never posts
 	# the bag pays its goods first, then asserts it — gold arrives via
 	# board_paid once the host sees the settlement claim
 	if qid == board_paid_out:
@@ -1006,9 +1012,9 @@ func board_pay(gold: int, xp: int) -> void:
 	if is_host:
 		return
 	board_paid_out = "" # the settlement landed — the next ask may deduct again
-	game.add_item("gold_coin", int(gold))
-	game.gain_xp(int(xp)) # same bounty math the keeper's own fill pays
-	game.log_msg("Board request filled — +%d gold" % int(gold))
+	game.add_item("gold_coin", maxi(gold, 0)) # a negative bounty can't drain the purse
+	game.gain_xp(maxi(int(xp), 0)) # same bounty math the keeper's own fill pays
+	game.log_msg("Board request filled — +%d gold" % maxi(int(gold), 0))
 
 @rpc("authority", "call_remote", "reliable")
 func xp_gain(n: int) -> void:
@@ -1124,7 +1130,7 @@ func infuse_done(uid: float, cost: int) -> void:
 	if is_host:
 		return
 	pay_settle("infuse", true) # refund the optimistic burn…
-	game.add_item("sprigmelt_effigy", -int(cost)) # …then charge the host's truth
+	game.add_item("sprigmelt_effigy", -maxi(cost, 0)) # …then charge the host's truth — a negative cost mints effigies
 	var p: Kin = game.find_net_pal(int(uid))
 	if p != null:
 		p.soul_boost = mini(p.soul_boost + 1, 10) # the mirror learns what the wire doesn't carry — capped like the real verb
@@ -1245,9 +1251,9 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 	game.net_party = np
 	game.party.clear() # typed Array[int] — a plain Array won't assign
 	for u in pty:
-		if Game._fin(u):
+		if Game._fin(u) and not game.party.has(int(u)):
 			game.party.append(int(u))
-		if game.party.size() >= 8:
+		if game.party.size() >= 5: # same strip bound the save path enforces
 			break
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1281,7 +1287,7 @@ func bought(res: Dictionary) -> void:
 	if is_host:
 		return
 	pay_settle("buy", true) # refund the mirrored price…
-	game.add_item("gold_coin", -Game._i(res.get("price", 0))) # …then pay the host's truth
+	game.add_item("gold_coin", -maxi(Game._i(res.get("price", 0)), 0)) # …then pay the host's truth — a negative price would mint gold
 	game.log_msg("Bought %s (%dg)" % ["a kin" if res.has("kin") else "goods",
 		Game._i(res.get("price", 0))])
 
@@ -1300,7 +1306,7 @@ func stock_sync(stock: Array) -> void:
 			game.merchant_stock.append({"kin": sid,
 				"lv": clampi(Game._i(it.get("lv", 1)), 1, 60), "n": 1,
 				"price": maxi(0, Game._i(it.get("price", 0)))})
-		elif str(it.get("id", "")) != "":
+		elif str(it.get("id", "")) != "" and ItemData.ITEMS.has(str(it["id"])):
 			game.merchant_stock.append({"id": str(it["id"]),
 				"n": clampi(Game._i(it.get("n", 1)), 0, 999),
 				"price": maxi(0, Game._i(it.get("price", 0)))})
