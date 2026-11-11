@@ -11,17 +11,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DUMP = os.path.join(HERE, "..", "species_dump.json")
 OUT = os.path.join(HERE, "rigs_gen.py")
 
-# Core species carry no "body" field — assigned by hand (fenjelly keeps its
-# authored rig in render_kin.py; this map is only for the other 20).
-CORE_BODY = {
-    "puffmite": "blob", "fenlump": "cow", "cindlump": "blob",
-    "corlmite": "bird", "dozantler": "deer", "sprigmelt": "human",
-    "briargoo": "blob", "voltgoo": "blob", "faradlump": "cow",
-    "loammelt": "blob", "shademite": "mouse", "shadelump": "cow",
-    "shademelt": "blob", "loampuff": "blob", "nibjelly": "cow",
-    "piplump": "bird", "marlump": "cow", "quackbill": "bird",
-    "ironpact_grunt": "human", "ironpact_sweeper": "human",
-    "fenjelly": "cow",
+# Legendary accessories — the old procedural sprites stamped these; the rigs
+# keep the same identity marks (see gen_assets.py ACCESSORY).
+ACCESSORY = {
+    "scalbeak": "crown", "snovstride": "halo", "nibhand": "mask",
+    "shadekin": "horns", "wyrmhoof": "horns", "cindchew": "crest",
+    "flarbeak": "crest", "tidscale": "fins", "scalcrest": "crown",
+    "vermtrot": "wings",
 }
 
 INK = (0.11, 0.10, 0.18)
@@ -53,6 +49,33 @@ def eyes(x, y, z, r, mat, dx=0.0):
             {"kind": "sph", "c": (x + dx, y, z), "r": r, "mat": mat}]
 
 
+def accessory(kind, top):
+    """Extra parts stamped on the head anchor `top` = (x, y, z) approx."""
+    x, y, z = top
+    if kind == "crown":
+        P = [{"kind": "cyl", "c": (x, y, z + 0.06), "r": 0.09, "depth": 0.12, "mat": 4}]
+        P += [{"kind": "cyl", "c": (x + dx, y, z + 0.18), "r": 0.035, "depth": 0.12, "mat": 4}
+              for dx in (-0.07, 0.0, 0.07)]
+        return P
+    if kind == "halo":
+        return [{"kind": "sph", "c": (x + 0.16 * math.cos(a), y, z + 0.05 + 0.16 * math.sin(a)),
+                 "r": 0.035, "mat": 4} for a in [i * 1.2566 for i in range(5)]]
+    if kind == "horns":
+        return [{"kind": "cyl", "c": (x + sx * 0.16, y, z + 0.1), "r": 0.04, "depth": 0.22,
+                 "rot": (0, sx * 0.7, 0), "mat": 4} for sx in (-1, 1)]
+    if kind == "crest":
+        return [{"kind": "sph", "c": (x, y, z + 0.08), "r": (0.05, 0.14, 0.16), "mat": 4}]
+    if kind == "fins":
+        return [{"kind": "sph", "c": (x + sx * 0.24, y + 0.05, z + 0.02),
+                 "r": (0.04, 0.16, 0.12), "rot": (0, 0, sx * 0.5), "mat": 4} for sx in (-1, 1)]
+    if kind == "mask":
+        return [{"kind": "sph", "c": (x, y - 0.05, z), "r": (0.26, 0.05, 0.09), "mat": 1}]
+    if kind == "wings":  # back fan
+        return [{"kind": "sph", "c": (x, y + 0.3, z), "r": (0.3, 0.05, 0.18),
+                 "rot": (0.5, 0, 0), "mat": 4}]
+    return []
+
+
 def gen(sid, body, col, rng):
     """Return a rig dict: mats + parts (+ optional f1 bob)."""
     m0 = col                       # body
@@ -74,7 +97,7 @@ def gen(sid, body, col, rng):
         # stubby feet
         for sx in (-1, 1):
             P.append({"kind": "cyl", "c": (sx * r * 0.42, -0.1, 0.08), "r": 0.09, "depth": 0.16, "mat": 1})
-        P += eyes(r * 0.4, -r * 0.86, r * 1.12, 0.085, 2)
+        P += eyes(r * 0.4, -r * 0.93, r * 1.12, 0.085, 2)
         P.append({"kind": "sph", "c": (0, -r * 0.72, r * 0.55), "r": (r * 0.55, r * 0.5, r * 0.45), "mat": 3})
         P.append({"kind": "sph", "c": (0, -r * 0.98, r * 0.8), "r": (0.1, 0.04, 0.05), "mat": 2})
 
@@ -83,14 +106,15 @@ def gen(sid, body, col, rng):
         bl = 0.62 * s * scale      # body length half-extent
         bh = 0.40 * s * scale      # body half-height
         bz = 0.62 * s * scale      # body center z
+        hz = bz + bh * (0.55 + (head_z - 1.0) * 0.8)  # head_z raises the head
         P.append({"kind": "sph", "c": (0, 0.1, bz), "r": (bh * 0.9, bl, bh), "mat": 0})
-        P.append({"kind": "sph", "c": (0, -bl - 0.12, bz + bh * 0.55), "r": (0.24, 0.26, 0.26), "mat": 1})
+        P.append({"kind": "sph", "c": (0, -bl - 0.12, hz), "r": (0.24, 0.26, 0.26), "mat": 1})
         P += legs(bh * 0.62, bl * 0.55, 0, bz - bh * 0.7 + 0.18, 0.085, 1)
         for sx in (-1, 1):  # ears / horns
-            P.append({"kind": "sph", "c": (sx * 0.20, -bl - 0.06, bz + bh * 0.9),
+            P.append({"kind": "sph", "c": (sx * 0.20, -bl - 0.06, hz + bh * 0.35),
                       "r": (ear_r, 0.07, ear_r + horn), "rot": (0, 0, sx * 0.45), "mat": 1})
         P.append({"kind": "sph", "c": (0, bl + 0.2, bz + bh * 0.3), "r": (0.07, 0.16, 0.07), "mat": 1})  # tail
-        P += eyes(0.12, -bl - 0.36, bz + bh * 0.68, 0.065, 2)
+        P += eyes(0.12, -bl - 0.38, hz + bh * 0.14, 0.065, 2)
 
     def bird():
         nonlocal P
@@ -104,7 +128,7 @@ def gen(sid, body, col, rng):
         P.append({"kind": "sph", "c": (0, r * 0.85, r * 1.35), "r": (0.12, 0.3, 0.1), "mat": 1})  # tail
         for sx in (-1, 1):
             P.append({"kind": "cyl", "c": (sx * 0.14, -0.05, 0.12), "r": 0.05, "depth": 0.24, "mat": 1})
-        P += eyes(0.17, -r * 1.18, r * 2.05, 0.065, 2)
+        P += eyes(0.17, -r * 1.34, r * 2.0, 0.065, 2)
 
     def ghost():
         nonlocal P
@@ -115,7 +139,7 @@ def gen(sid, body, col, rng):
                   "sq": 0.9, "seed": rng.randint(1, 999), "jitter": 0.1, "mat": 0})
         for sx in (-1, 1):  # stub arms
             P.append({"kind": "sph", "c": (sx * r * 1.0, -0.1, r * 1.2), "r": (0.16, 0.12, 0.2), "mat": 0})
-        P += eyes(0.21, -r * 0.82, r * 1.95, 0.08, 2)
+        P += eyes(0.21, -r * 0.94, r * 1.95, 0.08, 2)
 
     def human():
         nonlocal P
@@ -127,7 +151,7 @@ def gen(sid, body, col, rng):
             P.append({"kind": "cyl", "c": (sx * (t + 0.1), -0.05, 0.95 * s), "r": 0.09, "depth": 0.55 * s,
                       "mat": 1})
             P.append({"kind": "cyl", "c": (sx * 0.14, 0, 0.28 * s), "r": 0.1, "depth": 0.56 * s, "mat": 1})
-        P += eyes(0.1, -0.23, 1.58 * s, 0.06, 2)
+        P += eyes(0.1, -0.28, 1.58 * s, 0.06, 2)
 
     def serpent():
         nonlocal P
@@ -140,7 +164,7 @@ def gen(sid, body, col, rng):
                       "r": (r * (1 - k * 0.45),) * 3, "mat": 0 if i % 2 == 0 else 1})
         hx, hy, hz = 0.0, -r - 0.1, r * 1.2
         P.append({"kind": "sph", "c": (hx, hy, hz), "r": (r * 1.1, r * 1.15, r), "mat": 0})
-        P += eyes(0.15, hy - r * 1.05, hz + 0.06, 0.065, 2)
+        P += eyes(0.15, hy - r * 1.18, hz + 0.06, 0.065, 2)
 
     def small_quad(ear_big, tail_len):
         nonlocal P
@@ -153,18 +177,21 @@ def gen(sid, body, col, rng):
         P += legs(r * 0.55, r * 0.6, 0, r * 0.7, 0.06, 1)
         P.append({"kind": "cyl", "c": (0, r * 1.2, r + 0.2), "r": 0.04, "depth": tail_len, "mat": 1,
                   "rot": (0.7, 0, 0)})
-        P += eyes(0.16, -r * 1.7, r * 1.98, 0.065, 2)
+        P += eyes(0.16, -r * 1.8, r * 1.95, 0.065, 2)
 
     def hedgehog():
         nonlocal P
         r = 0.5 * s
-        P.append({"kind": "fluff", "c": (0, 0.1, r + 0.15), "r": r * 1.15, "n": 22,
-                  "sq": 0.75, "seed": rng.randint(1, 999), "jitter": 0.2, "mat": 1})
-        P.append({"kind": "sph", "c": (0, -r * 1.15, r * 0.9), "r": (r * 0.55, r * 0.6, r * 0.5), "mat": 3})
+        # body mound first so the fluff sits on its back half, feet under body
+        P.append({"kind": "sph", "c": (0, 0.05, r * 0.75), "r": (r * 0.8, r * 1.0, r * 0.75), "mat": 0})
+        P.append({"kind": "fluff", "c": (0, 0.28, r * 1.05), "r": r * 0.95, "n": 20,
+                  "sq": 0.8, "seed": rng.randint(1, 999), "jitter": 0.15, "mat": 1})
+        # face out front, clear of the fluff
+        P.append({"kind": "sph", "c": (0, -r * 1.05, r * 0.85), "r": (r * 0.5, r * 0.55, r * 0.45), "mat": 3})
         for sx in (-1, 1):
-            P.append({"kind": "cyl", "c": (sx * r * 0.5, -0.2, 0.08), "r": 0.07, "depth": 0.16, "mat": 3})
-        P.append({"kind": "sph", "c": (0, -r * 1.7, r * 0.8), "r": (0.07, 0.05, 0.06), "mat": 2})  # nose
-        P += eyes(0.17, -r * 1.55, r * 1.08, 0.065, 2)
+            P.append({"kind": "cyl", "c": (sx * r * 0.45, -r * 0.35, 0.08), "r": 0.07, "depth": 0.16, "mat": 1})
+        P.append({"kind": "sph", "c": (0, -r * 1.62, r * 0.8), "r": (0.08, 0.05, 0.06), "mat": 2})  # nose
+        P += eyes(0.17, -r * 1.58, r * 1.0, 0.065, 2)
 
     def monkey():
         nonlocal P
@@ -176,7 +203,7 @@ def gen(sid, body, col, rng):
             P.append({"kind": "cyl", "c": (sx * (t + 0.12), -0.02, 0.75 * s), "r": 0.08, "depth": 0.7 * s, "mat": 1})
             P.append({"kind": "cyl", "c": (sx * 0.13, 0, 0.24 * s), "r": 0.09, "depth": 0.48 * s, "mat": 1})
         P.append({"kind": "sph", "c": (0, t * 1.6, 0.7 * s), "r": (0.06, 0.3, 0.06), "rot": (-0.6, 0, 0), "mat": 1})
-        P += eyes(0.11, -0.25, 1.5 * s, 0.06, 2)
+        P += eyes(0.11, -0.29, 1.5 * s, 0.06, 2)
 
     archetypes = {
         "blob": blob, "quadruped": quadruped, "bird": bird, "ghost": ghost,
@@ -189,6 +216,18 @@ def gen(sid, body, col, rng):
         "hedgehog": hedgehog,
     }
     archetypes.get(body, blob)()
+    acc = ACCESSORY.get(sid)
+    if acc:  # head-top anchor per archetype (approx, in rig units)
+        top = {
+            "blob": (0, 0, 1.15 * s), "quadruped": (0, -0.62, 1.05 * s),
+            "cow": (0, -0.72, 1.15 * s), "deer": (0, -0.62, 1.2 * s),
+            "boar": (0, -0.66, 1.05 * s), "bird": (0, -0.42, 1.25 * s),
+            "ghost": (0, 0, 1.6 * s), "human": (0, -0.02, 1.85 * s),
+            "serpent": (0, -0.35, 0.7 * s), "kitty": (0, -0.5, 1.0 * s),
+            "mouse": (0, -0.5, 1.0 * s), "hedgehog": (0, -0.1, 1.0 * s),
+            "monkey": (0, -0.02, 1.75 * s),
+        }.get(body, (0, 0, 1.2 * s))
+        P += accessory(acc, top)
     return {"mats": [m0, m1, m2, m3, m4], "parts": tuple(P),
             "f1": {"fluff_dy": 0.06, "ear_drop": 0.3, "head_dy": 0.04}}
 
@@ -200,7 +239,7 @@ def fmt_col(c):
 def emit(species):
     lines = ["# Auto-generated by rig_auto.py — do not edit by hand", "RIGS_GEN = {"]
     for sp in species:
-        sid, body, col = sp["id"], sp["body"] or CORE_BODY.get(sp["id"], "blob"), hx(sp["color"])
+        sid, body, col = sp["id"], sp.get("body") or "blob", hx(sp["color"])
         rng = random.Random(sid)
         rig = gen(sid, body, col, rng)
         lines.append('    "%s": {' % sid)
@@ -210,7 +249,8 @@ def emit(species):
             d = dict(p)
             c = d.pop("c"); kind = d.pop("kind"); mat = d.pop("mat")
             rest = ", ".join('%r: %r' % (k, v) for k, v in d.items())
-            lines.append('            {"kind": %r, "c": %r, %s, "mat": %d},' % (kind, tuple(round(v,3) for v in c), rest, mat))
+            rest = (rest + ", ") if rest else ""
+            lines.append('            {"kind": %r, "c": %r, %s"mat": %d},' % (kind, tuple(round(v,3) for v in c), rest, mat))
         lines.append('        ),')
         lines.append('        "f1": %r,' % rig["f1"])
         lines.append('    },')

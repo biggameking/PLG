@@ -6,5 +6,5 @@ Every non-original source used by the art pipeline. CC0/CC-BY only.
 |---|---|---|---|
 | fenjelly rig | built by hand in `render_kin.py` from Blender primitives | original work | `assets/kin/fenjelly_f{0,1}.png` |
 | auto rigs | `tools/art/rig_auto.py` → `rigs_gen.py` — 13 archetypes parameterized from `species_dump.json` (body/color/elements), seeded per id | original work | `assets/kin/<sid>_f{0,1}.png` for 115 non-fenjelly species |
-| farm animals pack | `tools/art/src/farm_animals/` — Quaternius (patreon.com/quaternius) | CC0 1.0, `License.txt` in-tree | reference geometry only during rig exploration; **not loaded** by the shipped pipeline — `tools/art/render/src_sheep.png` |
+| farm animals pack — `Sheep.blend` (307-face mesh + 24-bone armature + Idle/Walk/Run/Jump/Death actions) | `tools/art/src/farm_animals/` — Quaternius (patreon.com/quaternius), opengameart.org/content/lowpoly-animated-farm-animal-pack | CC0 1.0, `License.txt` in-tree | loaded by `render_src_asset.py` → `assets/kin/fenjelly_f{0,1}.png`; other six animals (cow/horse/pig/llama/pug/zebra) available for future species |
 | `render_src.py` | renders a source `.blend` for inspection | original work | tooling only |

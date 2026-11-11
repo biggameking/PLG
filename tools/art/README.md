@@ -1,40 +1,48 @@
 # Kin Art Pipeline — Blender → post → `assets/kin/`
 
 Replaces `tools/gen_assets.py` shape-stacking for species sprites, one species
-at a time. Each species is a rigged primitive build in Blender, rendered at
-512px, then posterized/inked/halftoned down to the game's 80×64 sprite.
+at a time. Preferred source: **licensed rigged meshes** (CC0, GitHub/HF) —
+render_src_asset.py upgrades them to our look. Primitive rigs
+(render_kin.py RIGS/RIGS_GEN) remain the fallback when no source exists.
 
-## Flow
+## Flow — source-asset path (preferred)
 
 ```
-RIGS entry (tools/art/render_kin.py)
-   │  blender -b -P tools/art/render_kin.py -- <species_id>
+tools/art/src/<pack>/… .blend            (downloaded, licensed, see PROVENANCE)
+   │  blender -b <model.blend> -P tools/art/render_src_asset.py -- <sid>
+   │    · splits wool/skin materials · Subsurf×N (×60-140 base faces)
+   │    · procedural displace on wool · puff-shell fleece (bone-parented)
+   │    · auto-placed ink eyes/nose on the Head bone · palette recolor
+   │    · drives the model's OWN armature action → real skeletal frames
    ▼
-tools/art/render/<sid>_f{0,1}.png          (512px raw EEVEE render)
-   │  python3 tools/art/post_kin.py <species_id>
+tools/art/render/<sid>_f{0,1}.png        (512px raw EEVEE render)
+   │  python3 tools/art/post_kin.py <sid>
+   │    · alpha crop → 5-level cel banding (hue kept) → warm pastel lift
+   │    · violet shade → halftone dots in shade → navy ink contour → 80×64
    ▼
-assets/kin/<sid>_f{0,1}.png                (80×64 game sprite)
-   + tools/art/render/<sid>_f{0,1}_x4.png  (4× review preview)
+assets/kin/<sid>_f{0,1}.png + render/<sid>_f{0,1}_x4.png (review preview)
    │  godot --headless --path . --import   (AGENTS.md rule 7)
    ▼
-godot --path . -s tools/shot_kin.gd        → /tmp/plg-kin-<sid>.png
+godot --path . -s tools/shot_kin.gd      → /tmp/plg-kin-<sid>.png
 ```
 
-## Authoring a new species
+## Authoring a new species (source path)
 
-1. Read the species entry in `src/data/species.gd` (color, glyph, description,
-   body plan) — the rig must read as that description at 80px.
-2. Add a `RIGS["<sid>"]` entry: `mats` (fleece/skin/ink palette as linear RGB)
-   + `parts` list. Kinds: `sph` (ellipsoid via r tuple), `cyl`, `fluff`
-   (deterministic squashed-sphere cluster — seed makes it reproducible).
-   `f1` dict = idle-frame deltas (bob, ear lift).
-3. Coordinate convention: ground plane z=0, creature ~1.5–2.0 units tall,
-   faces -Y. Camera is a fixed ortho ¾ view — do not move it per-species.
-4. Render + post + shot_kin. Review the `_x4.png` preview AND the in-game
-   screenshot. Iterate on the rig, not the post knobs — post is shared.
-5. External CC0 meshes (GitHub/HF): import in `build()`, scale to the same
-   unit convention, apply the same `mat()` slots. Record source + license in
-   `tools/art/PROVENANCE.md`.
+1. Species data first: `src/data/species.gd` color/description/body plan must
+   read in the final sprite.
+2. Find a licensed mesh (CC0 > CC-BY). Quaternius packs on OpenGameArt /
+   poly.pizza cover most quadrupeds/creatures. Record in `PROVENANCE.md`
+   BEFORE shipping the sprite.
+3. `render_src.py` quick-view the raw model to check pose/materials.
+4. Add `CFG["<sid>"]` in render_src_asset.py: wool material index, palette,
+   subd levels, displace, rot_z (face the camera), action + frame pair,
+   eye params (head bone auto-solve), puff shell for woolly species.
+5. Render → post → shot_kin → review x4 + in-game shot. Iterate CFG, not post.
+
+## Primitive path (fallback)
+
+`render_kin.py` RIGS/RIGS_GEN: dict-driven parts (sph/cyl/fluff), isometric
+camera, same post. Use only when no rigged source fits the species.
 
 ## Look rules (post_kin.py — shared, tune globally not per-species)
 

@@ -27,9 +27,10 @@ CFG = {
         "rot_z": 55.0,              # turn the rig until it faces the camera
         "action": "Idle", "frames": (10, 85),
         "eye_r": 0.04, "eye_gap": 0.065, "eye_fwd": -0.03, "eye_up": 0.17,
+        "nose_r": 0.035, "nose_up": 0.055,
         # puff shell over the wool bbox — real fleece clumps on real anatomy
-        "puffs": {"n": 30, "r": 0.16, "sq": 0.78, "shell": (0.9, 1.1),
-                  "z_lo": 0.45, "seed": 5, "bone": "Body"},
+        "puffs": {"n": 48, "r": 0.15, "sq": 0.78, "shell": (0.7, 0.95),
+                  "shrink": 0.85, "z_lo": 0.45, "seed": 5, "bone": "Body"},
         "target_h": 1.45,
     },
 }
@@ -113,15 +114,12 @@ def normalize(objs, target_h):
 
 def bone_attach(arm, bone_name, ob, world_m):
     """Parent `ob` to a bone so it lands at `world_m` right now and rides the
-    bone afterward. Bone-parent children resolve against the bone TAIL in
-    pose space — invert that chain or the offset gets applied twice."""
-    pb = arm.pose.bones[bone_name]
-    tail = mathutils.Matrix.Translation((0, -arm.data.bones[bone_name].length, 0))
-    base = arm.matrix_world @ pb.matrix @ tail
+    bone afterward. The matrix_world setter already carries Blender's own
+    bone-parent correction — hand-solving matrix_basis double-applies it."""
     ob.parent = arm
     ob.parent_type = 'BONE'
     ob.parent_bone = bone_name
-    ob.matrix_basis = base.inverted() @ world_m
+    ob.matrix_world = world_m
 
 
 def add_eyes(arm, bone_name, cfg, m):
@@ -148,6 +146,16 @@ def add_eyes(arm, bone_name, cfg, m):
         bone_attach(arm, bone_name, e, mathutils.Matrix.Translation(p))
         bpy.ops.object.shade_smooth()
     print("EYES at", tuple(round(c, 3) for c in center))
+    if cfg.get("nose_r"):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12,
+                                             radius=cfg["nose_r"])
+        e = bpy.context.active_object
+        e.data.materials.append(m)
+        p = t + fwd * (cfg["eye_fwd"] + 0.04) + mathutils.Vector(
+            (0, 0, cfg["nose_up"]))
+        bone_attach(arm, bone_name, e,
+                    mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
+                        (1.15, 1.0, 0.8, 1)))
 
 
 def fluff_shell(arm, wool, cfg, m):
@@ -159,7 +167,7 @@ def fluff_shell(arm, wool, cfg, m):
     lo = mathutils.Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb)))
     hi = mathutils.Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))
     c = (lo + hi) / 2
-    ext = (hi - lo) / 2
+    ext = (hi - lo) / 2 * cfg.get("shrink", 1.0)
     z_min = lo.z + (hi.z - lo.z) * cfg["z_lo"]
     bone = cfg["bone"] if cfg["bone"] in arm.data.bones else arm.data.bones[0].name
     rng = random.Random(cfg["seed"])

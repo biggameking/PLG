@@ -55,6 +55,27 @@ RIGS = {
         # f1 idle variation: fluff bobs up, ears lift a touch
         "f1": {"fluff_dy": 0.06, "ear_drop": 0.35, "head_dy": 0.03},
     },
+    # the rancher — same render pipeline so the player reads like the kin
+    "player": {
+        "mats": [(0.82, 0.48, 0.24),      # 0 jacket #d17b3c
+                 (0.30, 0.62, 0.88),      # 1 trousers #4d9de0
+                 (0.11, 0.10, 0.18),      # 2 ink beads
+                 (0.91, 0.79, 0.63),      # 3 skin #e8c9a0
+                 (0.16, 0.14, 0.18)],     # 4 hat
+        "parts": (
+            {"kind": "sph", "c": (0, 0, 0.95), "r": (0.34, 0.27, 0.48), "mat": 0},   # coat
+            {"kind": "sph", "c": (0, -0.02, 1.58), "r": (0.24, 0.22, 0.24), "mat": 3}, # head
+            {"kind": "cyl", "c": (0, -0.02, 1.82), "r": 0.27, "depth": 0.14, "mat": 4}, # hat brim
+            {"kind": "cyl", "c": (0, -0.02, 1.94), "r": 0.16, "depth": 0.16, "mat": 4}, # hat crown
+            {"kind": "cyl", "c": (-0.42, -0.05, 0.98), "r": 0.09, "depth": 0.5, "mat": 0},
+            {"kind": "cyl", "c": (0.42, -0.05, 0.98), "r": 0.09, "depth": 0.5, "mat": 0},
+            {"kind": "cyl", "c": (-0.14, 0, 0.28), "r": 0.1, "depth": 0.56, "mat": 1},
+            {"kind": "cyl", "c": (0.14, 0, 0.28), "r": 0.1, "depth": 0.56, "mat": 1},
+            {"kind": "sph", "c": (-0.1, -0.27, 1.6), "r": 0.06, "mat": 2},
+            {"kind": "sph", "c": (0.1, -0.27, 1.6), "r": 0.06, "mat": 2},
+        ),
+        "f1": {"fluff_dy": 0.05, "ear_drop": 0.2, "head_dy": 0.04},
+    },
 }
 
 
@@ -113,12 +134,12 @@ def build(sid, frame):
     for p in rig["parts"]:
         c = list(p["c"])
         if frame == 1:
-            if p["kind"] == "fluff" and c[2] > 1.0:
-                c[2] += fluff_dy
-            elif p["kind"] == "sph" and p.get("rot"):
-                c[2] += f1.get("ear_drop", 0) * 0.05
-            elif p["mat"] == 1 and c[2] > 0.8:
-                c[1] += f1.get("head_dy", 0)
+            if p["kind"] == "fluff":
+                c[2] += fluff_dy                    # all fluff bobs
+            elif p.get("rot") and p["kind"] in ("sph", "cyl"):
+                c[2] += f1.get("ear_drop", 0) * 0.15  # ears/appendages lift
+            elif c[2] > 0.8:
+                c[2] += f1.get("head_dy", 0) * 2.0    # upper body bobs on Z
         if p["kind"] == "fluff":
             fluff(tuple(c), p["r"], p["n"], p["sq"], p["seed"] + frame,
                   p["jitter"], mats[p["mat"]])
