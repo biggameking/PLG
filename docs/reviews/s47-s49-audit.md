@@ -156,3 +156,32 @@ ENet 可靠通道保证）、net_live 严格等效 CONNECTED、infuse_done
 ### 验证
 smoke 743/0 零 ERROR；新断言 3 条（拒绝下马保鞍、确认释放显形、
 账本化退饵/退料）。
+
+## 第十四轮外审处置（S53）
+2M/8L —— 全部落地；审计同时验证 S52 全部主张成立。
+
+### M1 board 结算非幂等 → 已付货可被节流吞 + 双倍扣货
+`board_done` 先扣货再发 `board_paid`，后者挂 board_bkt 节流——
+饿死则货没了金没了，重读板子再扣一轮。修：结算动词撤节流
+（`board_paid_remote` 自验 pid+id 持有、首次成功即擦——天然
+自我限流）；客户端 `board_paid_out` 旗标令 `board_done` 对同
+ask 幂等（回执在飞期间重显示不再扣）。`rpc_id(1)` 改 `rpc()`
+广播（叶子客户端唯一远端即主机，且消除对未注册远端的硬编码）。
+
+### M2 路由层覆盖
+新增真回环段（ENET 服务端+客户端握手）：board 幂等三断言 +
+respawn armed 断言（`multiplayer.poll()` 同步泵 API 注册）。
+
+### L
+- `bait_req` 节流拒路补 `get_peers().has(pid)`（与全族对齐）；
+  `_pay_rej` 同补 pid 存在性。
+- `mount_done` state 1 补 `mount == null` 门（陈旧绑定回执不能
+  顶掉现骑）；state 2 走 `_mount_guard()`。
+- `_close_peer` 统一清 pending_pays/mount_pending/uid/retry/
+  board_paid_out（peer-swap 即闸口）；两个断线回调补齐 uid/
+  retry/board 旗标。
+- `place_structure` 账本满拒时返回 false（点击按拒绝结算）。
+- 冒烟夹具：wood 种子化+还原。
+
+### 验证
+smoke 746/0 零 ERROR。

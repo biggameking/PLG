@@ -4805,12 +4805,17 @@ func run() -> void:
 	check("build bar intersects host tech", bl_now.size() == 1 and bl_now[0] == "campfire",
 		"list=%s" % str(bl_now))
 	var w00 := game.item_count("wood") if "wood" in game.items else 0
+	var whad := game.items.has("wood")
+	game.items["wood"] = 2 # a known pile — the hold books only what leaves
 	game.net.pending_pays.clear()
-	game.net.pay("build", {"wood": 2}) # the ledger holds what the click paid
+	game.net.pay("build", {"wood": 2})
 	game.net.pay_rej("build") # every deny path settles the hold, not the price table
-	var w01 := game.item_count("wood") if "wood" in game.items else 0
-	check("a refused build refunds the hold", w01 == w00
-		and game.net.pending_pays.is_empty(), "w=%d->%d" % [w00, w01])
+	check("a refused build refunds the hold", game.item_count("wood") == 2
+		and game.net.pending_pays.is_empty())
+	if whad:
+		game.items["wood"] = w00
+	else:
+		game.items.erase("wood")
 	game.net_unlocked = []
 	var tec_rows := 0
 	for row in hudn.pause_rows():
@@ -5441,6 +5446,49 @@ func run() -> void:
 			game.items["kin_bait"] = bait6
 		else:
 			game.items.erase("kin_bait")
+		# real CONNECTED loopback — board settle idempotency + the respawn arm
+		var ra_srv := ENetMultiplayerPeer.new()
+		ra_srv.create_server(17892, 2)
+		var ra_cli := ENetMultiplayerPeer.new()
+		ra_cli.create_client("127.0.0.1", 17892)
+		var ra_t0 := Time.get_ticks_msec()
+		while ra_cli.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED \
+				and Time.get_ticks_msec() - ra_t0 < 2000:
+			ra_srv.poll(); ra_cli.poll()
+			OS.delay_msec(10)
+		var peer_bak2 = game.net.multiplayer.multiplayer_peer
+		game.net.multiplayer.multiplayer_peer = ra_cli
+		for _api_tick in 4: # the API learns the remote synchronously — no frame to await
+			game.net.multiplayer.poll()
+		var items_ra := game.items.duplicate() # the whole bag — board + respawn both touch it
+		game.items["wood"] = 10
+		game.net.board_paid_out = ""
+		game.net.board_done({"id": "wood", "n": 3})
+		check("the board takes its goods once", game.item_count("wood") == 7
+			and game.net.board_paid_out == "wood")
+		game.net.board_done({"id": "wood", "n": 3}) # the ask re-shown mid-flight
+		check("a re-shown ask deducts nothing", game.item_count("wood") == 7)
+		game.net.board_paid_out = ""
+		var ra1: Kin = game.gen_pal("scalfang", 6, p.pos)
+		ra1.net_id = 424246
+		game.pals.append(ra1)
+		p.mount = ra1
+		var pos_ra := p.pos
+		var hp_ra := p.hp
+		var stat_ra := p.statuses.duplicate()
+		game.items.clear() # no pack, no spill — keep the bag math out of it
+		game.respawn_player()
+		check("a dying client arms the release", game.net.mount_pending
+			and game.net.mount_pending_uid == 424246 and p.mount == null)
+		game.net.mount_pending = false
+		game.net.mount_pending_uid = -1
+		game.items = items_ra
+		p.pos = pos_ra
+		p.hp = hp_ra
+		p.statuses = stat_ra
+		game.pals.erase(ra1); ra1.queue_free()
+		game.net.multiplayer.multiplayer_peer = peer_bak2
+		ra_srv.close(); ra_cli.close()
 		if had5:
 			game.items["wood"] = wood5
 		else:

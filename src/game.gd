@@ -2339,8 +2339,9 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 				log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
 				return false
 			cost[str(c[0])] = int(c[1])
-		if net.pay("build", cost): # ledger pays the debit — every deny path refunds the hold, not the price table
-			net.rpc("build_req", sid, tx, ty)
+		if not net.pay("build", cost): # ledger full — the click resolves as a refusal, not a silent send
+			return false
+		net.rpc("build_req", sid, tx, ty) # ledger pays the debit — every deny path refunds the hold, not the price table
 		return true
 	if sid == "kinbox" and kinbox_count() >= 1 + MAX_EXTRA_BOXES:
 		log_msg("Max %d kinboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))

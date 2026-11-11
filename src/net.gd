@@ -19,6 +19,7 @@ const MAX_PENDING_PAYS := 32 # in-flight holds — every verb settles or rejs, b
 var mount_pending := false # a mount_req is in flight — the button can't double-toggle before mount_done lands
 var mount_pending_uid := -1 # which handshake is out — a stray echo can't re-arm the button early
 var unbind_retry_t := 0.0 # self-heal cooldown — the host keeps hearing "let go" until it does
+var board_paid_out := "" # goods already asserted for this ask — a re-shown board_done can't double-deduct
 func pay(tag: String, cost: Dictionary) -> bool:
 	# the ledger records what the bag ACTUALLY gave, not what the click
 	# claimed — add_item floors at zero, and a claimed refund would mint
@@ -58,7 +59,8 @@ func pay_rej(tag: String) -> void:
 # host-side: every refused paid verb owes the asker a refund echo
 func _pay_rej(pid: int, tag: String) -> void:
 	if multiplayer.multiplayer_peer != null \
-			and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+			and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED \
+			and multiplayer.get_peers().has(pid):
 		rpc_id(pid, "pay_rej", tag)
 var is_host := false
 var peer_tags := {} # peer_id -> install token — a guest's stable keeper identity
@@ -99,6 +101,12 @@ func _close_peer() -> void:
 	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = null
+	# peer-swap is the choke — no hold or handshake may leak into the next dial
+	pending_pays.clear()
+	mount_pending = false
+	mount_pending_uid = -1
+	unbind_retry_t = 0.0
+	board_paid_out = ""
 
 func is_client() -> bool:
 	# "not host" alone is also true offline — and a headless/offline run
@@ -395,6 +403,8 @@ func _on_connection_failed() -> void:
 	pending_pays.clear() # unpaid claims die with the dial — never settle them into a later session
 	game.chest_ref = null # no chest was ever reached — the ref would mislead the next session
 	mount_pending = false # the mount handshake died with the dial too
+	mount_pending_uid = -1
+	board_paid_out = ""
 	game.log_msg("No host answered — check the address")
 
 func _on_server_disconnected() -> void:
@@ -405,6 +415,9 @@ func _on_server_disconnected() -> void:
 	game.clear_net_drops() # replica loot dies with the session too
 	game.purge_replicas() # statue kin can't linger as free catches post-session
 	mount_pending = false # the mount handshake died with the wire
+	mount_pending_uid = -1
+	unbind_retry_t = 0.0
+	board_paid_out = ""
 	game.net_merchant_apply(false, 0.0, 0.0) # the mirrored trader leaves with the host
 	game.merchant_hp = 0
 	game.merchant_wanted = false
@@ -774,7 +787,8 @@ func bait_req() -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
-		rpc_id(pid, "bait_done", false) # the bait left the bag on the click — the hold refunds it
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "bait_done", false) # the bait left the bag on the click — the hold refunds it
 		return
 	var landed := game.throw_bait_remote(pid) # the pile lands under the ghost the wire saw
 	if multiplayer.get_peers().has(pid):
@@ -923,12 +937,15 @@ func board_done(res: Dictionary) -> void:
 	var qn := int(res.get("n", 0))
 	# the bag pays its goods first, then asserts it — gold arrives via
 	# board_paid once the host sees the settlement claim
+	if qid == board_paid_out:
+		return # already asserted — a re-shown ask can't double-deduct while the gold echo flies
 	if game.item_count(qid) < qn:
 		game.log_msg("Notice board: the goods weren't in your pack")
-		rpc_id(1, "board_release", qid) # an honest miss frees the board early
+		rpc("board_release", qid) # a leaf client's only remote is the host — an honest miss frees the board early
 		return
 	game.add_item(qid, -qn)
-	rpc_id(1, "board_paid", qid) # tell the host the goods left our pack
+	board_paid_out = qid
+	rpc("board_paid", qid) # tell the host the goods left our pack
 
 @rpc("any_peer", "call_remote", "reliable")
 func board_release(qid: String) -> void:
@@ -944,10 +961,9 @@ func board_paid(qid: String) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
-	if not _throttle(pid, "board_bkt", 4.0, 6.0):
-		# settlement rides its own bucket — a spammed action lane can't starve
-		# the gold a keeper already paid goods for
-		return
+	# no bucket on a settle: board_paid_remote self-guards (pid+id must match
+	# the live hold, and the first success erases it) — a starved settle would
+	# eat goods the keeper already shipped. Spam buys a dict lookup, nothing else
 	var res := game.board_paid_remote(pid, str(qid))
 	if not res.is_empty() and multiplayer.get_peers().has(pid):
 		rpc_id(pid, "board_pay", int(res["gold"]), int(res["xp"]))
@@ -956,6 +972,7 @@ func board_paid(qid: String) -> void:
 func board_pay(gold: int, xp: int) -> void:
 	if is_host:
 		return
+	board_paid_out = "" # the settlement landed — the next ask may deduct again
 	game.add_item("gold_coin", int(gold))
 	game.gain_xp(int(xp)) # same bounty math the keeper's own fill pays
 	game.log_msg("Board request filled — +%d gold" % int(gold))
@@ -997,11 +1014,11 @@ func mount_done(uid: int, state: int) -> void:
 		mount_pending_uid = -1
 	if int(state) == 1:
 		var p := game.find_net_pal(wid)
-		if p != null:
+		if p != null and game.player.mount == null: # a stale bind can't unseat the saddle we already hold
 			game.player.mount = p
 			p.visible = false # the kin hides — the rider's sprite carries the ride
 			game.log_msg("Riding %s" % p.spec["name"])
-	elif int(state) == 2 and game.player.mount != null and game.player.mount.net_id == wid:
+	elif int(state) == 2 and game.player._mount_guard() and game.player.mount.net_id == wid:
 		# host confirms the release — drop the saddle AND show the kin now;
 		# a state-0 refusal owns only the handshake, never the saddle
 		game.player.mount.visible = true

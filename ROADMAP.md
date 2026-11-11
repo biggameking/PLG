@@ -681,3 +681,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   debit, never the cost table — build_deny/bait_deny deleted for
   build_done/bait_done(ok) settles; throw_bait_remote reports landing
   so a hold never hangs. Smoke 743/0.
+
+## S53 — audit-14: settle verbs can't starve, board idempotent
+  Fourteenth audit (2M/8L): board_done deducted goods then sent a
+  throttle-able settle — a starved board_paid ate paid goods and a
+  re-shown ask double-deducted. Settle verbs no longer throttle
+  (board_paid_remote self-guards + first success erases the hold);
+  client-side board_paid_out makes re-shown asks no-ops; rpc_id(1)
+  became rpc() broadcast — a leaf's only remote IS the host. Respawn
+  arm, mount_done guards, _close_peer ledger wipes, and peer-existence
+  guards on every refusal echo rounded out the batch. Smoke now drives
+  a real CONNECTED loopback for board+respawn coverage. 746/0.
