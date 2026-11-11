@@ -283,3 +283,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     that vary by state need a fit rule — the pause shell falls back to two
     columns over 7 rows. New rows must be counted against the worst-case
     viewport, not the dev screen.
+57. **A list that can outgrow its panel must scroll.** Six panels clipped
+    at the floor (chest/craft/shop/inv/kinbox/statues) and the tech tree
+    silently amputated 34 of 70 unlocks — dead content on EVERY input
+    class. Any list drawn from an unbounded collection gets a per-panel
+    `*_scroll` offset, `_panel_scroll` wheel arm, and `_scroll_btns` tap
+    arrows when it overflows — drawn via display index (`di = i - scroll`),
+    never by mutating the source index.
+58. **draw_* receives viewport SIZE, not a panel rect.** `draw_statues`
+    painted every row off-screen for its entire existence (perks/infusion
+    were a dead system) because it treated `r` as a Rect2. First statement
+    of every panel draw is `var rr := Rect2(...)` built from the size —
+    and a smoke check or eyeball must prove rows land inside it.
