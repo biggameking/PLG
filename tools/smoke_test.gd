@@ -4855,6 +4855,26 @@ func run() -> void:
 		hudn.run_click({"act": act0, "arg": null})
 		check("pause row %s opens" % act0, game.panel == act0.trim_prefix("m_"))
 	game.panel = ""
+	# title JOIN: co-op straight from boot — rows are data, arrival is a hook
+	game.state = "title"
+	var join_title := 0
+	for row in hudn.title_rows():
+		if row[1] == "m_join": join_title += 1
+	check("title offers join", join_title == 1)
+	hudn.run_click({"act": "m_join", "arg": null})
+	check("title join row opens the panel", game.panel == "join")
+	game.panel = ""
+	game.net.is_host = false # the dial succeeded — arrival hook only fires for guests
+	game.net._arrive_guest()
+	check("title-joined guest lands in play", game.state == "play")
+	game.state = "paused" # a mid-pause join must NOT yank the shell out from under you
+	game.net._arrive_guest()
+	check("paused join stays paused", game.state == "paused")
+	game.state = "play"
+	game.net._on_connection_failed() # a dead dial frees the peer + says why
+	check("failed dial says why + frees peer", game.net.multiplayer.multiplayer_peer == null
+		and game.messages.back() == "No host answered — check the address",
+		"msg=%s" % game.messages.back())
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))

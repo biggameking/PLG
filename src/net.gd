@@ -19,6 +19,7 @@ func setup(g: Game, layer: Node2D) -> void:
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	multiplayer.connection_failed.connect(_on_connection_failed)
 
 func host() -> void:
 	var peer := ENetMultiplayerPeer.new()
@@ -250,6 +251,12 @@ func peer_pos(id: int, x: float, y: float, elev: float) -> void:
 	if ghosts.has(id):
 		ghosts[id].net_pos = Vector3(float(x), float(y), float(elev))
 
+func _on_connection_failed() -> void:
+	# a dead dial isn't a session — free the peer so net_live()/retry stay honest
+	is_host = false
+	multiplayer.multiplayer_peer = null
+	game.log_msg("No host answered — check the address")
+
 func _on_server_disconnected() -> void:
 	for gid in ghosts.keys(): # frozen ghosts shouldn't outlive the session
 		if is_instance_valid(ghosts[gid]):
@@ -275,6 +282,11 @@ func spawn_ghost(id: int) -> void:
 func world_sync(s: int) -> void:
 	game.regenerate(int(s))
 	game.log_msg("Synced world seed %d" % int(s))
+	_arrive_guest()
+
+func _arrive_guest() -> void: # a title-screen join lands IN the world, not on the menu
+	if game.state == "title" and not is_host:
+		game.state = "play"
 
 @rpc("any_peer", "call_remote", "unreliable")
 func sync_pos(x: float, y: float, elev: float) -> void:

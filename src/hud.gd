@@ -1218,12 +1218,20 @@ func draw_title(r: Vector2) -> void:
 	draw_string(font, Vector2(cx - font.get_string_size(tagline, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2, ty + 18), tagline,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.8, 0.85))
 	var y := r.y * 0.42
-	if game.has_save:
-		y = menu_row(cx, y, 220, "CONTINUE", "continue")
-	y = menu_row(cx, y, 220, "NEW GAME", "new_game")
-	y = menu_row(cx, y, 220, "SETTINGS", "m_settings")
-	y = menu_row(cx, y, 220, "QUIT", "quit", Color(0.85, 0.6, 0.6))
+	for row in title_rows():
+		y = menu_row(cx, y, 220, row[0], row[1], row[2])
 	draw_string(font, Vector2(14, r.y - 12), tr("enter = continue · click a row"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 0.55, 0.6))
+
+func title_rows() -> Array: # the title menu's rows as data — pad nav and smoke both read this
+	var rows := []
+	if game.has_save:
+		rows.append(["CONTINUE", "continue", Color.WHITE])
+	rows.append(["NEW GAME", "new_game", Color.WHITE])
+	if game.net != null and multiplayer.multiplayer_peer == null:
+		rows.append(["JOIN SESSION", "m_join", Color.WHITE]) # co-op straight from boot
+	rows.append(["SETTINGS", "m_settings", Color.WHITE])
+	rows.append(["QUIT", "quit", Color(0.85, 0.6, 0.6)])
+	return rows
 
 func draw_pause(r: Vector2) -> void:
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.02, 0.03, 0.05, 0.6))
