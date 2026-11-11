@@ -4702,6 +4702,21 @@ func run() -> void:
 	hudn.run_click({"act": "m_tech", "arg": null})
 	check("tech row opens the panel", game.panel == "tech")
 	game.panel = ""
+	# list panels scroll on tap + wheel — clipped tails were unreachable before
+	game.panel = "dex"
+	hudn.run_click({"act": "dex_dn", "arg": null}); hudn.run_click({"act": "dex_dn", "arg": null})
+	check("dex scrolls down", hudn.dex_scroll == 2, "s=%d" % hudn.dex_scroll)
+	hudn.run_click({"act": "dex_up", "arg": null}); hudn.run_click({"act": "dex_up", "arg": null})
+	check("dex scroll clamps at 0", hudn.dex_scroll == 0)
+	game.panel = "guide"; hudn.guide_page = 0
+	hudn.run_click({"act": "guide_prev", "arg": null})
+	check("guide prev clamps at 0", hudn.guide_page == 0)
+	hudn.run_click({"act": "guide_next", "arg": null})
+	check("guide next turns", hudn.guide_page == 1)
+	game.panel = "shop"
+	hudn.run_click({"act": "shop_dn", "arg": null})
+	check("shop scroll moves", hudn.shop_scroll == 1)
+	game.panel = ""
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))

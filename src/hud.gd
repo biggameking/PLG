@@ -7,6 +7,9 @@ var font: Font = ThemeDB.fallback_font
 var show_help := false
 var guide_page := 0
 var dex_scroll := 0
+var chest_scroll := 0
+var craft_scroll := 0
+var shop_scroll := 0
 var build_sel := -1
 var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
@@ -231,13 +234,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "dex" else "dex" # P: kindex
 		dex_scroll = 0
 		return
-	if game.panel == "dex" and event is InputEventMouseButton and event.pressed:
+	if game.panel in ["dex", "chest", "craft", "shop"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			dex_scroll = maxi(0, dex_scroll - 1)
+			_panel_scroll(-1)
 			get_viewport().set_input_as_handled()
 			return
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			dex_scroll += 1
+			_panel_scroll(1)
 			get_viewport().set_input_as_handled()
 			return
 	# panels take the pad cursor too: dpad/arrows pick a row, A/Enter
@@ -325,6 +328,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		build_sel = -1
 		game.panel = ""
 
+func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to real bounds
+	match game.panel:
+		"dex": dex_scroll = maxi(0, dex_scroll + dir)
+		"chest": chest_scroll = maxi(0, chest_scroll + dir)
+		"craft": craft_scroll = maxi(0, craft_scroll + dir)
+		"shop": shop_scroll = maxi(0, shop_scroll + dir)
+
+func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked := false) -> void:
+	# tap scrollers — lists taller than the panel need a slab-reachable tail
+	if bx < 0.0:
+		bx = rr.end.x - 30
+	var up_r := Rect2(bx, rr.position.y + 8, 24, 24)
+	var dn_r := Rect2(bx, rr.position.y + 36 if stacked else rr.end.y - 32, 24, 24)
+	for b2 in [[up_r, up_act, "▲"], [dn_r, dn_act, "▼"]]:
+		draw_rect(b2[0], Color(0.15, 0.18, 0.24, 0.9))
+		draw_rect(b2[0], Color(0.5, 0.6, 0.7), false, 1.0)
+		draw_string(font, b2[0].position + Vector2(6, 17), b2[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		click_rects.append({"rect": b2[0], "act": b2[1], "arg": null})
+
 func _chat_submit() -> void:
 	if chat_buf.strip_edges() != "" and game.net:
 		game.net.rpc("chat", chat_buf, multiplayer.get_unique_id())
@@ -398,6 +420,18 @@ func run_click(cr: Dictionary) -> void:
 			_join_submit()
 		"text_cancel": # the touch out — no Esc key on a slab
 			chat_buf = ""; join_buf = ""; game.panel = ""
+		"dex_up": _panel_scroll(-1)
+		"dex_dn": _panel_scroll(1)
+		"guide_prev":
+			guide_page = maxi(guide_page - 1, 0)
+		"guide_next":
+			guide_page = mini(guide_page + 1, GuideData.PAGES.size() - 1)
+		"chest_up": _panel_scroll(-1)
+		"chest_dn": _panel_scroll(1)
+		"craft_up": _panel_scroll(-1)
+		"craft_dn": _panel_scroll(1)
+		"shop_up": _panel_scroll(-1)
+		"shop_dn": _panel_scroll(1)
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -1288,12 +1322,17 @@ func draw_chest(r: Vector2) -> void:
 	draw_string(font, rect1.position, "[ deposit all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
 	draw_string(font, rect2.position, "[ take all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#a8e6a1"))
 	y += 28
-	for iid in st.get("store", {}).keys():
+	var skeys: Array = st.get("store", {}).keys()
+	chest_scroll = clampi(chest_scroll, 0, maxi(0, skeys.size() - 12))
+	for i2 in range(chest_scroll, skeys.size()):
+		var iid: String = skeys[i2]
 		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [ItemData.ITEMS.get(iid, {}).get("name", iid), st["store"][iid]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		y += 18
 		if y > rr.end.y - 16:
 			break
+	if skeys.size() > 12:
+		_scroll_btns(rr, "chest_up", "chest_dn")
 
 func draw_craft(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 60, 480, 560)
@@ -1325,11 +1364,16 @@ func draw_craft(r: Vector2) -> void:
 			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(46)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8ef0ff") if rep_a["afford"] else Color("#5a6068"))
 		y += 24
+	var vis := []
 	for rec in ItemData.RECIPES:
 		if rec.get("station") not in [game.craft_station, "hand"]:
 			continue
 		if rec.get("tech", "") != "" and rec["tech"] not in game.unlocked:
 			continue
+		vis.append(rec)
+	craft_scroll = clampi(craft_scroll, 0, maxi(0, vis.size() - 20))
+	for ri in range(craft_scroll, vis.size()):
+		var rec: Dictionary = vis[ri]
 		var afford := true
 		var cost := ""
 		for c in rec.get("cost", []):
@@ -1347,6 +1391,8 @@ func draw_craft(r: Vector2) -> void:
 		y += 20
 		if y > rr.end.y - 16:
 			break
+	if vis.size() > 20:
+		_scroll_btns(rr, "craft_up", "craft_dn")
 	if not game.craft_queue.is_empty(): # the island bench queue: builds tick down live
 		y += 8
 		draw_string(font, Vector2(rr.position.x + 16, y), "QUEUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
@@ -1567,7 +1613,13 @@ func draw_shop(r: Vector2) -> void:
 	draw_string(font, Vector2(rr.position.x + 316, y), "SELL (50%)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#e8963c"))
 	y += 20
 	var sy := y
-	for i in range(game.merchant_stock.size()):
+	var sell_n := 0 # sell column counts only rows that actually render
+	for k0 in game.items.keys():
+		if ItemData.ITEMS.get(k0, {}).get("price", 0) > 0 and k0 != "gold_coin" and game.items[k0] > 0:
+			sell_n += 1
+	sell_n += mini(game.box.size(), 12)
+	shop_scroll = clampi(shop_scroll, 0, maxi(0, maxi(game.merchant_stock.size(), sell_n) - 22))
+	for i in range(shop_scroll, game.merchant_stock.size()):
 		var it: Dictionary = game.merchant_stock[i]
 		var nm: String
 		if it.has("kin"):
@@ -1587,9 +1639,13 @@ func draw_shop(r: Vector2) -> void:
 	y = sy
 	var skeys := game.items.keys()
 	skeys.sort()
+	var si := -1 # sell column scrolls with the buy column — one offset, two rails
 	for k in skeys:
 		var price: int = ItemData.ITEMS.get(k, {}).get("price", 0)
 		if price <= 0 or k == "gold_coin" or game.items[k] <= 0:
+			continue
+		si += 1
+		if si < shop_scroll:
 			continue
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
 		click_rects.append({"rect": rect, "act": "sell", "arg": k})
@@ -1600,6 +1656,9 @@ func draw_shop(r: Vector2) -> void:
 			break
 	var shown := 0
 	for bp in game.box: # black-market: sell spare pals for coin
+		si += 1
+		if si < shop_scroll:
+			continue
 		if y > rr.end.y - 14 or shown >= 12:
 			break
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
@@ -1609,6 +1668,7 @@ func draw_shop(r: Vector2) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#e8963c"))
 		y += 17
 		shown += 1
+	_scroll_btns(rr, "shop_up", "shop_dn", rr.position.x + 289, true) # column gutter
 
 func use_item(k: String) -> void:
 	match k:
@@ -1758,6 +1818,7 @@ func draw_dex(r: Vector2) -> void:
 		y += 15
 	draw_string(font, Vector2(rr.position.x + 16, rr.end.y - 16),
 		"wheel scroll · every 10 species caught pays +2 tech", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.6, 0.65))
+	_scroll_btns(rr, "dex_up", "dex_dn")
 
 func draw_chat(r: Vector2) -> void:
 	var rr := Rect2(12, r.y - 40, 480, 28)
@@ -1901,3 +1962,11 @@ func draw_guide(r: Vector2) -> void:
 	draw_string(font, Vector2(rr.position.x + 22, rr.end.y - 14),
 		"n close · ←/→ turn the page · %d / %d" % [guide_page + 1, GuideData.PAGES.size()],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#7a6a4a"))
+	# tap turners — no arrow keys on a slab
+	var pv := Rect2(rr.end.x - 84, rr.end.y - 34, 34, 24)
+	var nx := Rect2(rr.end.x - 42, rr.end.y - 34, 34, 24)
+	for b3 in [[pv, "guide_prev", "‹"], [nx, "guide_next", "›"]]:
+		draw_rect(b3[0], Color(0.55, 0.4, 0.2, 0.85))
+		draw_rect(b3[0], Color(0.35, 0.25, 0.1), false, 1.0)
+		draw_string(font, b3[0].position + Vector2(11, 18), b3[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#f4e8c8"))
+		click_rects.append({"rect": b3[0], "act": b3[1], "arg": null})

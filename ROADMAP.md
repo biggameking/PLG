@@ -302,3 +302,9 @@ build-tools/apksigner).
   two-column fallback over 7 rows. zh.csv += 5 rows. Smoke +12 (trap
   close, stray-tap rejection, row zones, verb toggles, demolish fixture,
   pause rows, m_tech route). Suite 575–578 checks, 0 failures ×3.
+- S29 list-panel scroll reach — DONE: clipped list tails were unreachable
+  on EVERY input class, not just touch — chest/craft/shop broke at the
+  panel floor and only dex had a wheel hook. Per-panel scroll offsets +
+  shared _scroll_btns tap arrows (shop rides the column gutter), wheel
+  dispatch extended to all four panels, guide gains ‹/› tap turners.
+  Smoke +7. Suite 579/0.
