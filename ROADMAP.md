@@ -282,3 +282,12 @@ build-tools/apksigner).
   peer-guarded `note_remote`, zh-localized), foreign-build test covers
   all three gate branches (tagless/mismatch/owner), dead LMB panel-guard
   removed, orphan-cargo comment made honest, VER fallback reachable.
+- S27 text-panel touch parity — DONE: chat opened only via ENTER, join/chat
+  closed only via Enter/Esc — keyless slabs could neither reach nor leave
+  either panel. Pause menu gains a peer-gated CHAT row (mirrors JOIN);
+  both text panels draw on-screen OK/X buttons routed through the real
+  `run_click` path; submit logic extracted to `_chat_submit`/`_join_submit`
+  shared by keys and taps. zh.csv += CHAT. Smoke +7 (row gating by live
+  peer, send/cancel routes, vkbd drop). Suite 563/0.
+  Android blocker narrowed: Homebrew openjdk@21 is present and runnable —
+  only the SDK itself is absent (install declined: 6.1GB free disk).

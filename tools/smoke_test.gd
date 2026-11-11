@@ -4643,6 +4643,16 @@ func run() -> void:
 	check("join panel opens + vkbd tracks", game.panel == "join" and hudn._vkbd_open,
 		"panel=%s vkbd=%s" % [game.panel, hudn._vkbd_open])
 	game.panel = ""
+	# text panels get on-screen OK/X — the only out on a keyless slab
+	game.panel = "chat"; hudn.chat_buf = "hi"
+	hudn.run_click({"act": "text_cancel", "arg": null})
+	check("X button bails chat", game.panel == "" and hudn.chat_buf == "")
+	game.panel = "chat"
+	hudn.run_click({"act": "chat_send", "arg": null})
+	check("OK closes an empty chat", game.panel == "")
+	game.panel = "join"; hudn.join_buf = "  "
+	hudn.run_click({"act": "text_cancel", "arg": null})
+	check("X bails join + wipes buf", game.panel == "" and hudn.join_buf == "")
 	hudn._process(0.016)
 	check("vkbd drops with panel", not hudn._vkbd_open)
 	game.state = "play"

@@ -170,10 +170,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# chat input mode (net only)
 	if game.panel == "chat" and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			if chat_buf.strip_edges() != "" and game.net:
-				game.net.rpc("chat", chat_buf, multiplayer.get_unique_id())
-				game.log_msg("[you] " + chat_buf)
-			chat_buf = ""; game.panel = ""
+			_chat_submit()
 		elif event.keycode == KEY_ESCAPE:
 			chat_buf = ""; game.panel = ""
 		elif event.keycode == KEY_BACKSPACE:
@@ -185,10 +182,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# join-ip input mode
 	if game.panel == "join" and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-			var ip := join_buf.strip_edges()
-			if ip == "": ip = "127.0.0.1"
-			if game.net: game.net.join(ip)
-			join_buf = ""; game.panel = ""
+			_join_submit()
 		elif event.keycode == KEY_ESCAPE:
 			join_buf = ""; game.panel = ""
 		elif event.keycode == KEY_BACKSPACE:
@@ -341,6 +335,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		build_sel = -1
 		game.panel = ""
 
+func _chat_submit() -> void:
+	if chat_buf.strip_edges() != "" and game.net:
+		game.net.rpc("chat", chat_buf, multiplayer.get_unique_id())
+		game.log_msg("[you] " + chat_buf)
+	chat_buf = ""; game.panel = ""
+
+func _join_submit() -> void:
+	var ip := join_buf.strip_edges()
+	if ip == "": ip = "127.0.0.1"
+	if game.net: game.net.join(ip)
+	join_buf = ""; game.panel = ""
+
 func run_click(cr: Dictionary) -> void:
 	# client kinbox ops are host business: the host owns the one real box.
 	# Replica kin carry their wire id in net_id — a replica's own uid is a
@@ -396,6 +402,12 @@ func run_click(cr: Dictionary) -> void:
 			game.toggle_skill(cr["arg"]["p"], cr["arg"]["sid"])
 		"travel":
 			game.travel_to(cr["arg"])
+		"chat_send":
+			_chat_submit()
+		"join_go":
+			_join_submit()
+		"text_cancel": # the touch out — no Esc key on a slab
+			chat_buf = ""; join_buf = ""; game.panel = ""
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -1549,11 +1561,25 @@ func use_item(k: String) -> void:
 			else:
 				game.log_msg("Can't use " + k)
 
+func _text_btns(rr: Rect2, ok_act: String) -> void:
+	# on-screen confirm/cancel — the only out when there's no Esc/Enter key
+	var ok := Rect2(rr.end.x + 6, rr.position.y, 40, rr.size.y)
+	var cx := Rect2(ok.end.x + 6, rr.position.y, 34, rr.size.y)
+	draw_rect(ok, Color(0.15, 0.4, 0.2, 0.9))
+	draw_rect(ok, Color(0.4, 0.8, 0.5), false, 1.0)
+	draw_string(font, ok.position + Vector2(11, rr.size.y - 10), "OK", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
+	draw_rect(cx, Color(0.4, 0.15, 0.15, 0.9))
+	draw_rect(cx, Color(0.8, 0.4, 0.4), false, 1.0)
+	draw_string(font, cx.position + Vector2(11, rr.size.y - 10), "X", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#e6a1a1"))
+	click_rects.append({"rect": ok, "act": ok_act, "arg": null})
+	click_rects.append({"rect": cx, "act": "text_cancel", "arg": null})
+
 func draw_join(r: Vector2) -> void:
 	var rr := Rect2(10, r.y - 58, 520, 44)
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), tr("Join IP (blank=localhost): ") + join_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9fd8ff"))
+	_text_btns(rr, "join_go")
 
 func draw_travel(r: Vector2) -> void:
 	var nodes := game.travel_nodes()
@@ -1638,6 +1664,7 @@ func draw_chat(r: Vector2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.8))
 	draw_string(font, rr.position + Vector2(10, 19), tr("Say: ") + chat_buf + "_",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8e6a1"))
+	_text_btns(rr, "chat_send")
 
 func star_str(p: Kin) -> String:
 	var s := ""
