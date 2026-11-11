@@ -33,6 +33,8 @@ func host() -> void:
 	game.log_msg("Hosting on port %d — friends join with K" % PORT)
 
 func join(ip: String) -> void:
+	if game.state != "title": # world_sync razes this world — an unsaved solo run would evaporate
+		game.save_game() # clients self-refuse inside save_game — safe from every state
 	var peer := ENetMultiplayerPeer.new()
 	if peer.create_client(ip, PORT) != OK:
 		game.log_msg("Join failed")

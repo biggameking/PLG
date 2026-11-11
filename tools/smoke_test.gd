@@ -4875,6 +4875,13 @@ func run() -> void:
 	check("failed dial says why + frees peer", game.net.multiplayer.multiplayer_peer == null
 		and game.messages.back() == "No host answered — check the address",
 		"msg=%s" % game.messages.back())
+	# joining mid-run autosaves first — world_sync razes the world under your feet
+	game.net.join("127.0.0.1")
+	check("join autosaves the solo run", game.messages.size() >= 2
+		and game.messages[-2] == tr("Saved."), "tail=%s" % game.messages[-2])
+	check("join dial spins up", game.net.multiplayer.multiplayer_peer != null)
+	game.net._close_peer() # a lingering fake client would refuse every save below
+	check("peer released after probe", game.net.multiplayer.multiplayer_peer == null)
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))
