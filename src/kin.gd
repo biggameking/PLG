@@ -383,7 +383,7 @@ func wild_ai(dt: float) -> void:
 				var g = game.net.ghosts.get(aggro_pid)
 				if g != null and g.net_pos.x >= 0:
 					shot = cast_skills(Vector2(g.net_pos.x, g.net_pos.y), dt,
-						["projectile", "self"])
+						["projectile", "multi", "self"])
 			if not shot:
 				if tdist > 1.1:
 					step_toward(tpos, dt)

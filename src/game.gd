@@ -3674,7 +3674,6 @@ var orb_tex: Texture2D = preload("res://assets/ui/element_orbs.png")
 
 func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 	var kind: String = sk.get("kind", "projectile")
-	var elem: String = sk.get("element", "neutral")
 	var tpos: Vector2 = target_ent if target_ent is Vector2 else target_ent.pos
 	match kind:
 		"self":
@@ -3700,25 +3699,36 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
 						skill_hit(caster, p, sk)
 			floater(caster.pos, sk["name"] + "!", "#ffd76e")
+		"multi": # a fan of shots — pack-clearing signature
+			var n2: int = maxi(2, int(sk.get("shots", 3)))
+			var spread := deg_to_rad(float(sk.get("spread_deg", 14.0)))
+			var aim := (tpos - caster.pos).normalized()
+			for i in n2:
+				spawn_shot(caster, aim.rotated(spread * (i - (n2 - 1) / 2.0)), sk)
+			floater(caster.pos, sk["name"] + "!", "#ffd76e")
 		_: # projectile
-			if projectiles.size() >= MAX_PROJECTILES:
-				var old = projectiles.pop_front()
-				if is_instance_valid(old.get("node")):
-					old["node"].queue_free() # volley backstop: oldest shot fizzles
-			var spr := Sprite2D.new()
-			var at := AtlasTexture.new()
-			at.atlas = orb_tex
-			at.region = Rect2(ELEM_ORB_IDX.get(elem, 0) * 16, 0, 16, 16)
-			at.filter_clip = true
-			spr.texture = at
-			spr.scale = Vector2(1.5, 1.5)
-			entity_layer.add_child(spr)
-			projectiles.append({
-				"elev": world.elev_at(int(caster.pos.x), int(caster.pos.y)),
-				"pos": caster.pos, "dir": (tpos - caster.pos).normalized(),
-				"speed": sk.get("projectileSpeed", 12), "ttl": sk.get("range", 8) / maxf(1.0, sk.get("projectileSpeed", 12)),
-				"skill": sk, "from": caster, "node": spr,
-			})
+			spawn_shot(caster, (tpos - caster.pos).normalized(), sk)
+
+func spawn_shot(caster: Kin, dir: Vector2, sk: Dictionary) -> void:
+	if projectiles.size() >= MAX_PROJECTILES:
+		var old = projectiles.pop_front()
+		if is_instance_valid(old.get("node")):
+			old["node"].queue_free() # volley backstop: oldest shot fizzles
+	var spr := Sprite2D.new()
+	var at := AtlasTexture.new()
+	at.atlas = orb_tex
+	at.region = Rect2(ELEM_ORB_IDX.get(sk.get("element", "neutral"), 0) * 16, 0, 16, 16)
+	at.filter_clip = true
+	spr.texture = at
+	spr.scale = Vector2(1.5, 1.5)
+	entity_layer.add_child(spr)
+	projectiles.append({
+		"elev": world.elev_at(int(caster.pos.x), int(caster.pos.y)),
+		"pos": caster.pos, "dir": dir,
+		"speed": sk.get("projectileSpeed", 12), "ttl": sk.get("range", 8) / maxf(1.0, sk.get("projectileSpeed", 12)),
+		"skill": sk, "from": caster, "node": spr,
+		"pierce": sk.get("pierce", false), "hitset": {}, # pierce: one wound per body
+	})
 
 func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 	var elem: String = sk.get("element", "neutral")
@@ -3728,6 +3738,9 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 		var final := apply_player_damage(maxi(1, int(sk.get("power", 10) * 0.6)))
 		if final <= 0:
 			return
+		var dr0 := float(sk.get("drain", 0.0))
+		if dr0 > 0.0 and caster.hp > 0:
+			caster.hp = minf(caster.max_hp, caster.hp + final * dr0) # the bite feeds its biter
 		var st = sk.get("status")
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
@@ -3770,6 +3783,12 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			sk.get("power", 10), Combat.stat_at(tp.spec["def"], tp.level, tp.talent) * tp.def_bonus * tp.def_mult(), mult, rng)
 		tp.hit(d, mult, caster.mode != "wild", caster.owner_id) # a guest's pal provokes the guest
 		tp.apply_skill_status(sk)
+		var dr := float(sk.get("drain", 0.0))
+		if dr > 0.0 and caster.hp > 0:
+			var back := minf(caster.max_hp - caster.hp, maxf(1.0, d * dr))
+			if back > 0.0:
+				caster.hp += back
+				floater(caster.pos, "+%d" % int(back), "#a8e6a1")
 		if caster.mode == "partner":
 			gain_xp(maxi(1, d / 4))
 
@@ -3820,13 +3839,14 @@ func update_projectiles(dt: float) -> void:
 			dead = true
 		if not dead:
 			if caster.mode == "wild":
-				if pp.distance_to(player.pos) < 0.55:
+				if pp.distance_to(player.pos) < 0.55 and not pr["hitset"].has("@pl"):
 					skill_hit(caster, player, pr["skill"])
-					dead = true
-				elif net != null: # a guest standing in the line of fire eats it —
+					pr["hitset"]["@pl"] = true
+					dead = not pr["pierce"]
+				if not dead and net != null: # a guest standing in the line of fire eats it —
 					for pid in net.ghosts: # host computes, the wire delivers
 						var g = net.ghosts[pid]
-						if g != null and g.net_pos.x >= 0 \
+						if g != null and g.net_pos.x >= 0 and not pr["hitset"].has(pid) \
 								and pp.distance_to(Vector2(g.net_pos.x, g.net_pos.y)) < 0.55:
 							var gk_st: Dictionary = pr["skill"].get("status", {})
 							var gk_apply: bool = not gk_st.is_empty() \
@@ -3835,20 +3855,27 @@ func update_projectiles(dt: float) -> void:
 								float(pr["skill"].get("power", 10)),
 								str(gk_st.get("kind", "")) if gk_apply else "",
 								float(gk_st.get("dur", 0.0)) if gk_apply else 0.0)
-							dead = true
+							pr["hitset"][pid] = true
+							dead = not pr["pierce"]
 							break
 				if not dead:
 					for p in pal_snap:
-						if p.mode in ["partner", "base"] and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
+						if p.mode in ["partner", "base"] and p.hp > 0 and not pr["hitset"].has(p.uid) \
+								and pp.distance_to(p.pos) < 0.6:
 							skill_hit(caster, p, pr["skill"]) # wild shots hit partners AND base workers
-							dead = true
-							break
+							pr["hitset"][p.uid] = true
+							if not pr["pierce"]:
+								dead = true
+								break
 			else:
 				for p in pal_snap:
-					if p.mode == "wild" and p.hp > 0 and pp.distance_to(p.pos) < 0.6:
+					if p.mode == "wild" and p.hp > 0 and not pr["hitset"].has(p.uid) \
+							and pp.distance_to(p.pos) < 0.6:
 						skill_hit(caster, p, pr["skill"])
-						dead = true
-						break
+						pr["hitset"][p.uid] = true
+						if not pr["pierce"]:
+							dead = true
+							break
 		if dead:
 			n.queue_free()
 			projectiles.erase(pr)

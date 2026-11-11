@@ -104,9 +104,9 @@ NEW = [
 ]
 
 TIER_STATS = {0: (70,70,70,40,35,2,70), 1: (82,82,76,52,45,3,75), 2: (96,96,86,70,60,4,80), 3: (115,115,98,88,80,5,90)}
-ELEM_SKILLS = {"neutral":["tackle","airCannon"],"fire":["flameBurst","ignitionBreath"],"water":["hydroJet","aquaBurst"],
- "grass":["seedMachine","grassTornado"],"electric":["shockwave","lightningStrike"],"ice":["iceMissile","blizzard"],
- "ground":["sandBlast","stoneShot"],"dark":["darkBall","nightmare"],"dragon":["dragonBurst","dragonCanon"]}
+ELEM_SKILLS = {"neutral":["tackle","airCannon","packVolley"],"fire":["flameBurst","ignitionBreath","cinderFeast"],"water":["hydroJet","aquaBurst","undertowPull"],
+ "grass":["seedMachine","grassTornado","sporeFan"],"electric":["shockwave","lightningStrike","arcLance"],"ice":["iceMissile","blizzard","glacierPike"],
+ "ground":["sandBlast","stoneShot","faultPike"],"dark":["darkBall","nightmare","soulSiphon"],"dragon":["dragonBurst","dragonCanon","wyrmLance"]}
 
 def gen():
     entries = []
@@ -119,12 +119,24 @@ def gen():
             skl.append([12, ELEM_SKILLS[e1][0]])
         if tier >= 2:
             skl.append([15, ELEM_SKILLS[e1][1]])
+        skl.append([20, ELEM_SKILLS[e1][2]]) # every species banks a lv-20 signature — fans/pierces/drains
         skills = [[l, s] for l, s in skl]
         ent = {"id":sid,"name":name,"glyph":name[0].lower(),"color":cols[0],"elements":elems,
                "hp":hp,"atk":atk,"def":de_,"speed":speed,"capturePower":cap,"food":food,"san":san,
                "work":work,"skills":skills,"drops":drops,"desc":desc,"hostile":hostile,"body":body}
         entries.append(ent)
         sprites[sid] = (body, cols, fluff)
+
+    # glyphs are curated in the shipped file — name[0] is the fallback for
+    # new ids only, never a revert of the hand-picked letterforms
+    try:
+        for m in re.finditer(r'"(\w+)": \{\s*"id": "\w+",\s*"name": "\w+",\s*"glyph": "(\w)"',
+                             io.open(R+'src/data/species_gen.gd',encoding='utf-8').read()):
+            for ent in entries:
+                if ent["id"] == m.group(1):
+                    ent["glyph"] = m.group(2)
+    except FileNotFoundError:
+        pass
 
     out = 'class_name SpeciesGen\n\nconst SPECIES = ' + json.dumps({e["id"]:e for e in entries}, indent=1) + '\n\n'
     zmap = {0: [], 1: [], 2: [], 3: []}

@@ -1199,6 +1199,10 @@ def decor():
 
 
 
+
+
+
+
 SPRITES.update({
     "pyrejelly": ("blob", ["#e8734a", "#c9552f", "#ffd54f"], 0.25),
     "branpurr": ("kitty", ["#c93a4d", "#a32c3d", "#f5eee0"], 0.3),

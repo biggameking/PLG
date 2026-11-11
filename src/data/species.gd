@@ -34,6 +34,10 @@ const SPECIES = {
    [
     10,
     "healingBreeze"
+   ],
+   [
+    20,
+    "packVolley"
    ]
   ],
   "drops": [
@@ -84,6 +88,10 @@ const SPECIES = {
    [
     5,
     "airCannon"
+   ],
+   [
+    20,
+    "packVolley"
    ]
   ],
   "drops": [
@@ -124,6 +132,10 @@ const SPECIES = {
    [
     1,
     "tackle"
+   ],
+   [
+    20,
+    "packVolley"
    ]
   ],
   "drops": [
@@ -175,6 +187,10 @@ const SPECIES = {
    [
     12,
     "ignitionBreath"
+   ],
+   [
+    20,
+    "cinderFeast"
    ]
   ],
   "drops": [
@@ -226,6 +242,10 @@ const SPECIES = {
    [
     10,
     "iceMissile"
+   ],
+   [
+    20,
+    "glacierPike"
    ]
   ],
   "drops": [
@@ -273,6 +293,10 @@ const SPECIES = {
    [
     14,
     "stoneShot"
+   ],
+   [
+    20,
+    "packVolley"
    ]
   ],
   "drops": [
@@ -324,6 +348,10 @@ const SPECIES = {
    [
     10,
     "grassTornado"
+   ],
+   [
+    20,
+    "sporeFan"
    ]
   ],
   "drops": [
@@ -375,6 +403,10 @@ const SPECIES = {
    [
     12,
     "grassTornado"
+   ],
+   [
+    20,
+    "sporeFan"
    ]
   ],
   "drops": [
@@ -424,6 +456,10 @@ const SPECIES = {
    [
     12,
     "lightningStrike"
+   ],
+   [
+    20,
+    "arcLance"
    ]
   ],
   "drops": [
@@ -462,6 +498,10 @@ const SPECIES = {
    [
     4,
     "shockwave"
+   ],
+   [
+    20,
+    "arcLance"
    ]
   ],
   "drops": [
@@ -507,6 +547,10 @@ const SPECIES = {
    [
     12,
     "stoneShot"
+   ],
+   [
+    20,
+    "faultPike"
    ]
   ],
   "drops": [
@@ -551,6 +595,10 @@ const SPECIES = {
    [
     10,
     "nightmare"
+   ],
+   [
+    20,
+    "soulSiphon"
    ]
   ],
   "drops": [
@@ -596,6 +644,10 @@ const SPECIES = {
    [
     12,
     "nightmare"
+   ],
+   [
+    20,
+    "soulSiphon"
    ]
   ],
   "drops": [
@@ -635,6 +687,10 @@ const SPECIES = {
    [
     5,
     "darkBall"
+   ],
+   [
+    20,
+    "soulSiphon"
    ]
   ],
   "drops": [
@@ -682,6 +738,10 @@ const SPECIES = {
    [
     12,
     "stoneShot"
+   ],
+   [
+    20,
+    "faultPike"
    ]
   ],
   "drops": [
@@ -726,6 +786,10 @@ const SPECIES = {
    [
     4,
     "airCannon"
+   ],
+   [
+    20,
+    "packVolley"
    ]
   ],
   "drops": [
@@ -768,6 +832,10 @@ const SPECIES = {
    [
     5,
     "airCannon"
+   ],
+   [
+    20,
+    "packVolley"
    ]
   ],
   "drops": [
@@ -823,6 +891,10 @@ const SPECIES = {
    [
     16,
     "blizzard"
+   ],
+   [
+    20,
+    "glacierPike"
    ]
   ],
   "drops": [
@@ -868,6 +940,10 @@ const SPECIES = {
    [
     4,
     "hydroJet"
+   ],
+   [
+    20,
+    "undertowPull"
    ]
   ],
   "drops": [
@@ -911,6 +987,10 @@ const SPECIES = {
    [
     6,
     "darkBall"
+   ],
+   [
+    20,
+    "soulSiphon"
    ]
   ],
   "drops": [
@@ -955,6 +1035,10 @@ const SPECIES = {
    [
     10,
     "nightmare"
+   ],
+   [
+    20,
+    "soulSiphon"
    ]
   ],
   "drops": [

@@ -1838,6 +1838,73 @@ func run() -> void:
 		if is_instance_valid(tmp3):
 			tmp3.free()
 
+	# S71 signature mechanics: fans fire `shots`, pierces run the line, drains pay back
+	var prj_m := game.projectiles.size()
+	game.cast_skill(sp_pal, p, SkillData.SKILLS["packVolley"])
+	check("multi fires a fan", game.projectiles.size() == prj_m + 3,
+		"+%d shots" % [game.projectiles.size() - prj_m])
+	# the bolt needs a verified lane — 7 clear cells of terrain/elev/decor/struct
+	# (same wall contract update_projectiles checks) or it dies short of ln2
+	var lane_o := Vector2(-1, -1)
+	var lane_d := Vector2(1, 0)
+	for offx in range(-10, 11):
+		if lane_o.x >= 0:
+			break
+		for offy in range(-10, 11):
+			if lane_o.x >= 0:
+				break
+			var s := p.pos + Vector2(offx, offy)
+			if not game.world.in_bounds(int(s.x), int(s.y)):
+				continue
+			var sev := game.world.elev_at(int(s.x), int(s.y))
+			for d2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
+				var ok := true
+				for st2 in range(8):
+					var cx9: int = int(s.x + d2.x * st2); var cy9: int = int(s.y + d2.y * st2)
+					if not game.world.in_bounds(cx9, cy9) \
+							or game.world.elev_at(cx9, cy9) > sev \
+							or game.world.decor[game.world.idx(cx9, cy9)] != World.Decor.NONE \
+							or game.structures.has(Vector2i(cx9, cy9)):
+						ok = false; break
+				if ok:
+					lane_o = s; lane_d = d2; break
+	var pcc: Kin = game.gen_pal("fenjelly", 20, lane_o)
+	pcc.mode = "partner"; game.pals.append(pcc)
+	var ln1: Kin = game.gen_pal("fenlump", 10, lane_o + lane_d * 3)
+	ln1.mode = "wild"; ln1.hp = 99999; ln1.max_hp = 99999; game.pals.append(ln1)
+	var ln2: Kin = game.gen_pal("corlmite", 10, lane_o + lane_d * 6)
+	ln2.mode = "wild"; ln2.hp = 99999; ln2.max_hp = 99999; game.pals.append(ln2)
+	game.cast_skill(pcc, ln2, SkillData.SKILLS["arcLance"]) # the bolt aims through ln1
+	for i in 60: # fine dt — 15-tile shots can tunnel a 0.6 wound radius at 0.1
+		game.update_projectiles(0.03)
+		if ln1.hp < 99999 and ln2.hp < 99999:
+			break
+	check("pierce runs the whole line", ln1.hp < 99999 and ln2.hp < 99999,
+		"ln1=%.0f ln2=%.0f" % [ln1.hp, ln2.hp])
+	var hp_victim := ln2.hp
+	for i in 40: # a pierced body never takes a second wound from the same bolt
+		game.update_projectiles(0.03)
+	check("pierce wounds once per body", ln2.hp == hp_victim, "hp=%.0f" % ln2.hp)
+	pcc.hp = 50.0
+	game.skill_hit(pcc, ln2, SkillData.SKILLS["soulSiphon"])
+	check("drain pays the caster", pcc.hp > 50.0, "hp=%.1f" % pcc.hp)
+	for pr in game.projectiles.duplicate():
+		if is_instance_valid(pr.get("node")):
+			pr["node"].queue_free()
+		game.projectiles.erase(pr)
+	for tmp4 in [pcc, ln1, ln2]:
+		game.pals.erase(tmp4)
+		if tmp4.get_parent(): tmp4.get_parent().remove_child(tmp4)
+		tmp4.free()
+	# every species banks a lv-20 signature — the new ids must resolve as data
+	check("gen species bank a lv-20 signature",
+		SpeciesGen.SPECIES["flarbeak"]["skills"].back()[1] == "cinderFeast"
+		and SpeciesGen.SPECIES["noctfang"]["skills"].back()[1] == "wyrmLance"
+		and SpeciesGen.SPECIES["sprigveil"]["skills"].back()[1] == "sporeFan")
+	check("core species bank signatures too",
+		SpeciesData.SPECIES["fenjelly"]["skills"].back()[1] == "packVolley"
+		and SpeciesData.SPECIES["quackbill"]["skills"].back()[1] == "undertowPull")
+
 	# armor + damage reduction
 	var hp_p := p.hp
 	p.hp = 100
@@ -3860,9 +3927,9 @@ func run() -> void:
 	# lair alpha: engages on approach, tethered to its lair
 	var la: Kin = null
 	for q in game.pals:
-		if q.alpha and q.mode == "wild":
-			la = q
-			break
+		if q.alpha and q.mode == "wild" and not q.raid:
+			la = q # raiders siege structures first — a raid-flagged alpha
+			break   # isn't on lair duty this run
 	if la:
 		# tod must match the species' clock: a dark alpha at noon is napping
 		# and wild_ai sleeps it again before the lair branch — ambient-spawn
