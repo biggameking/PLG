@@ -875,3 +875,12 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   stay romanized (coined proper nouns), ~200 log_msg literals and
   pace/stance labels still English — documented EA gap, not a
   defect: tr() keys added later localize without code change.
+
+## S64 — release candidates refreshed + Android debug lane
+  Rebuilt win/web zips at ad63d84 (carries zh arc + web co-op
+  gating + packaging hardening). Android export verified end-to-end
+  through alignment — release signing is the only missing piece
+  (owner keystore). --export-debug produces a sideloadable
+  debug-signed APK today: dist/kinbound-0.9.0-debug.apk (33M),
+  checksummed into SHA256SUMS; package.sh gained an `android`
+  lane so all three artifacts come from one command.

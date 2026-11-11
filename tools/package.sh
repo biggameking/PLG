@@ -27,11 +27,18 @@ pack_web() {
 	(cd export/web && zip -qr "$ROOT/dist/kinbound-$VER-web.zip" index.*)
 	echo "dist/kinbound-$VER-web.zip"
 }
+pack_android_debug() {
+	mkdir -p export/android
+	"$GODOT" --headless --path . --export-debug "Android" "export/android/kinbound-$VER-debug.apk"
+	cp "export/android/kinbound-$VER-debug.apk" dist/
+	echo "dist/kinbound-$VER-debug.apk"
+}
 case "$WHAT" in
 	windows) pack_windows ;;
 	web) pack_web ;;
-	all) pack_windows; pack_web ;;
-	*) echo "usage: $0 [windows|web|all]" >&2; exit 2 ;;
+	android) pack_android_debug ;;
+	all) pack_windows; pack_web; pack_android_debug ;;
+	*) echo "usage: $0 [windows|web|android|all]" >&2; exit 2 ;;
 esac
 (cd dist && shasum -a 256 kinbound-*.zip > SHA256SUMS)
 cat dist/SHA256SUMS
