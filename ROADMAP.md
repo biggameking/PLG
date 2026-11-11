@@ -311,3 +311,8 @@ build-tools/apksigner).
   S29b: the same clip class covered inv (54-stack cap) and kinbox brows
   (column-spill) — display-index offsets inv_scroll/kin_scroll, same
   _scroll_btns + wheel path. Suite 581–582/0.
+  S29c: worst clip of the class — StructureData.TECH holds 70 entries but
+  the tech panel drew 36 (2 cols × 18) with the third column painting
+  OFF-PANEL as floating text — 34 techs could never be unlocked on any
+  device, silently amputating the progression tree. Display-index offset
+  + cap-aware clamp + _scroll_btns, same contract as the rest. +3 checks.

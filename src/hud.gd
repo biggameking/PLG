@@ -12,6 +12,7 @@ var craft_scroll := 0
 var shop_scroll := 0
 var inv_scroll := 0
 var kin_scroll := 0
+var tech_scroll := 0
 var build_sel := -1
 var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
@@ -236,7 +237,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "dex" else "dex" # P: kindex
 		dex_scroll = 0
 		return
-	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox"] and event is InputEventMouseButton and event.pressed:
+	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox", "tech"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_panel_scroll(-1)
 			get_viewport().set_input_as_handled()
@@ -338,6 +339,7 @@ func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to re
 		"shop": shop_scroll = maxi(0, shop_scroll + dir)
 		"inv": inv_scroll = maxi(0, inv_scroll + dir)
 		"kinbox": kin_scroll = maxi(0, kin_scroll + dir)
+		"tech": tech_scroll = maxi(0, tech_scroll + dir)
 
 func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked := false) -> void:
 	# tap scrollers — lists taller than the panel need a slab-reachable tail
@@ -440,6 +442,8 @@ func run_click(cr: Dictionary) -> void:
 		"inv_dn": _panel_scroll(1)
 		"kin_up": _panel_scroll(-1)
 		"kin_dn": _panel_scroll(1)
+		"tech_up": _panel_scroll(-1)
+		"tech_dn": _panel_scroll(1)
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -1295,7 +1299,13 @@ func draw_tech(r: Vector2) -> void:
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "TECH  (pts: %d)" % game.tech_points,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e8d44d"))
 	var colw := 232.0
-	for ti in StructureData.TECH.size():
+	var cap := int((rr.size.x - 24) / colw) * 18 # columns × rows that actually fit
+	tech_scroll = clampi(tech_scroll, 0, maxi(0, StructureData.TECH.size() - cap))
+	for ti in range(tech_scroll, StructureData.TECH.size()):
+		var di := ti - tech_scroll
+		var cx0: float = rr.position.x + 12 + (di / 18) * colw
+		if cx0 + colw - 10 > rr.end.x:
+			break # past the last column — scrolled tail lives behind the arrows
 		var t: Dictionary = StructureData.TECH[ti]
 		var k: String = t["id"]
 		var has: bool = k in game.unlocked
@@ -1306,14 +1316,13 @@ func draw_tech(r: Vector2) -> void:
 			col = Color("#9c8bd4") if afford else Color("#5a4a80") # ancient tech is purple
 		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), t.get("name", k).left(14), t.get("cost", 0),
 			"+%d❖" % t["parts"] if t.get("parts", 0) > 0 else "", " ✓" if has else ""]
-		var cx0: float = rr.position.x + 12 + (ti / 18) * colw
-		var cy0: float = rr.position.y + 44 + (ti % 18) * 17
-		if cy0 > rr.end.y - 10:
-			continue # click rects only for rows actually drawn
+		var cy0: float = rr.position.y + 44 + (di % 18) * 17
 		var rect := Rect2(cx0, cy0 - 12, colw - 14, 17)
 		if not has:
 			click_rects.append({"rect": rect, "act": "tech", "arg": k})
 		draw_string(font, Vector2(cx0, cy0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
+	if StructureData.TECH.size() > cap:
+		_scroll_btns(rr, "tech_up", "tech_dn")
 
 func draw_chest(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 220, 150, 440, 300)
