@@ -36,6 +36,15 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	await _shot("pause")
+	game.state = "play"
+	game.tod = 18.6 # golden hour
+	for i in 10:
+		await process_frame
+	await _shot("dusk")
+	game.tod = 22.0 # ink night
+	for i in 10:
+		await process_frame
+	await _shot("night")
 	quit()
 
 func _process(_dt: float) -> bool:

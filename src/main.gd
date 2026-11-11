@@ -37,17 +37,22 @@ func _process(_dt: float) -> void:
 	var pl := game.player
 	if not pl:
 		return
-	# day/night tint: 6-18 bright, dusk/dawn warm, night dark blue
+	# day/night tint in the poster's own hues: night falls into the ink
+	# shadow violet, dusk holds a golden-hour band before dropping through it
+	const NIGHT := Color(0.38, 0.32, 0.62)  # ink-violet, not gray-blue
+	const GOLDH := Color(1.0, 0.76, 0.42)   # golden hour
 	var h := game.tod
 	var col: Color
 	if h < 5 or h >= 20: # tod==20.0 exactly would fall through every branch and leave col unset
-		col = Color(0.42, 0.48, 0.72)
+		col = NIGHT
 	elif h < 7:
-		col = Color(0.85, 0.72, 0.62).lerp(Color.WHITE, (h - 5) / 2)
+		col = Color(0.98, 0.74, 0.52).lerp(Color.WHITE, (h - 5) / 2) # rose-gold dawn
 	elif h < 17:
 		col = Color.WHITE
-	elif h < 20:
-		col = Color.WHITE.lerp(Color(0.9, 0.6, 0.5), (h - 17) / 3).lerp(Color(0.42, 0.48, 0.72), maxf(0, h - 18.5) / 1.5)
+	elif h < 19:
+		col = Color.WHITE.lerp(GOLDH, (h - 17) / 2)
+	else:
+		col = GOLDH.lerp(NIGHT, h - 19)
 	$CanvasModulate.color = col
 	cam.global_position = cam.global_position.lerp(pl.global_position, 0.12)
 	cam.offset = Vector2(randf() - 0.5, randf() - 0.5) * game.shake * 14.0 if game.shake > 0.001 else Vector2.ZERO
