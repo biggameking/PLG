@@ -320,3 +320,8 @@ build-tools/apksigner).
   so touch could open BLD but never select a structure (build fully
   broken on slabs). Rows now run_click "build_pick" toggles (re-tap =
   the RMB-cancel glass never had).
+  S29e: the statues panel never rendered — draw_statues treated the
+  viewport SIZE as a position (rows at r.x+16 / r.y+40, off-screen both
+  axes), so perks and soul infusion were a dead system since the panel
+  shipped. Rebuilt on a proper rr rect; infusion list (party+box, up to
+  400+) now clips + scrolls like its siblings.

@@ -13,6 +13,7 @@ var shop_scroll := 0
 var inv_scroll := 0
 var kin_scroll := 0
 var tech_scroll := 0
+var stat_scroll := 0
 var build_sel := -1
 var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
@@ -237,7 +238,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "dex" else "dex" # P: kindex
 		dex_scroll = 0
 		return
-	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox", "tech"] and event is InputEventMouseButton and event.pressed:
+	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox", "tech", "statues"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_panel_scroll(-1)
 			get_viewport().set_input_as_handled()
@@ -340,6 +341,7 @@ func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to re
 		"inv": inv_scroll = maxi(0, inv_scroll + dir)
 		"kinbox": kin_scroll = maxi(0, kin_scroll + dir)
 		"tech": tech_scroll = maxi(0, tech_scroll + dir)
+		"statues": stat_scroll = maxi(0, stat_scroll + dir)
 
 func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked := false) -> void:
 	# tap scrollers — lists taller than the panel need a slab-reachable tail
@@ -444,6 +446,8 @@ func run_click(cr: Dictionary) -> void:
 		"kin_dn": _panel_scroll(1)
 		"tech_up": _panel_scroll(-1)
 		"tech_dn": _panel_scroll(1)
+		"stat_up": _panel_scroll(-1)
+		"stat_dn": _panel_scroll(1)
 		"build_pick": # tap toggles — there's no right-click on glass
 			build_sel = -1 if build_sel == int(cr["arg"]) else int(cr["arg"])
 		"equip":
@@ -1888,14 +1892,19 @@ func _eq_line() -> String:
 	return "Wpn: %s   Arm: %s%s" % [wn, an, acc]
 
 func draw_statues(r: Vector2) -> void:
-	var y := r.y + 40.0
-	draw_string(font, Vector2(r.x + 16, y - 16), "Stat points: %d   Sprigmelt Effigies: %d" % [game.stat_pts, game.item_count("sprigmelt_effigy")],
+	# panel rect like every sibling — the old body treated the viewport
+	# SIZE as a position and painted the whole panel off-screen (dead UI)
+	var rr := Rect2(r.x / 2 - 230, 50, 460, r.y - 100)
+	draw_rect(rr, Color(0, 0, 0, 0.85))
+	draw_string(font, rr.position + Vector2(16, 24), "EFFIGIES", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#9be8a0"))
+	var y := rr.position.y + 56.0
+	draw_string(font, Vector2(rr.position.x + 16, y - 16), "Stat points: %d   Sprigmelt Effigies: %d" % [game.stat_pts, game.item_count("sprigmelt_effigy")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#9be8a0"))
 	for k in game.perks:
 		var lvl: int = game.perks[k]
 		var cost := 2 + lvl * 2
 		var txt := "%s  Lv%d/5  (cost %d)" % [PERK_LABEL.get(k, k), lvl, cost] # foreign saves can inject unknown perk keys
-		var rect := Rect2(r.x + 16, y - 12, 360, 20)
+		var rect := Rect2(rr.position.x + 16, y - 12, 360, 20)
 		var col := Color.WHITE if lvl < 5 else Color(0.5, 0.5, 0.5)
 		if lvl < 5:
 			click_rects.append({"rect": rect, "act": "perk", "arg": k})
@@ -1903,7 +1912,7 @@ func draw_statues(r: Vector2) -> void:
 		y += 24
 	# soul infusion: the same effigies harden a kin you own
 	y += 10
-	draw_string(font, Vector2(r.x + 16, y - 16), "SOUL INFUSION (+4%/soul)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c08cff"))
+	draw_string(font, Vector2(rr.position.x + 16, y - 16), "SOUL INFUSION (+4%/soul)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c08cff"))
 	var infused := []
 	for uid in game.party:
 		var qp: Kin = game.find_pal(uid)
@@ -1913,10 +1922,15 @@ func draw_statues(r: Vector2) -> void:
 			infused.append(qp)
 	for bp2 in game.box:
 		infused.append(bp2)
-	for q2 in infused:
+	var rows2: int = int((rr.end.y - y - 8) / 20)
+	stat_scroll = clampi(stat_scroll, 0, maxi(0, infused.size() - rows2))
+	for i3 in range(stat_scroll, infused.size()):
+		var q2: Kin = infused[i3]
 		var cost2: int = 1 + q2.soul_boost
 		var full: bool = q2.soul_boost >= 10
-		var rect2 := Rect2(r.x + 16, y - 12, 360, 20)
+		if y > rr.end.y - 14:
+			break
+		var rect2 := Rect2(rr.position.x + 16, y - 12, 360, 20)
 		if not full:
 			click_rects.append({"rect": rect2, "act": "infuse", "arg": q2.uid})
 		var col2 := Color(0.5, 0.5, 0.5) if full else Color.WHITE
@@ -1924,6 +1938,8 @@ func draw_statues(r: Vector2) -> void:
 			[str(q2.spec["name"]).left(14), q2.level, q2.soul_boost, cost2],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col2)
 		y += 20
+	if infused.size() > rows2:
+		_scroll_btns(rr, "stat_up", "stat_dn")
 
 func draw_equipment_line() -> void:
 	draw_string(font, Vector2(14, 80), _eq_line(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#c9d8e8"))

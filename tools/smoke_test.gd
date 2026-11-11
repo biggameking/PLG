@@ -4727,6 +4727,9 @@ func run() -> void:
 	check("tech scroll moves", hudn.tech_scroll == 1)
 	hudn.run_click({"act": "tech_up", "arg": null})
 	check("tech scroll back", hudn.tech_scroll == 0)
+	game.panel = "statues"
+	hudn.run_click({"act": "stat_dn", "arg": null})
+	check("statues scroll moves", hudn.stat_scroll == 1)
 	game.panel = ""
 	# build bar rows pick on tap — 1-9 was the only door in
 	game.panel = "build"; hudn.build_sel = -1
