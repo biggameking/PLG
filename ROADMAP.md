@@ -731,3 +731,17 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   across save inc / wire inc / egg_parents; spawn_net_pal pre-evaluates
   wire casts before gen_pal; MAX_BENCH names the co-op orb bound.
   Smoke 752/0, 749/0 zero-error.
+
+## S57 — audit-18: NaN-class, dict-values and cap-lane gaps
+  Eighteenth audit on the S56 surface (1C/3M/3L). meal_buff dict
+  VALUES reached int()/float() readers per-frame — rebuilt against
+  the six-key whitelist. NaN/INF passed every "is float" gate —
+  _i/_f now reject non-finite and _fin() replaces all 18 boundary
+  numeric gates (save + wire + settings). remote_parties' row cap
+  was bypassed by rebind_owner's raw write while evicted orbs
+  stayed on the bench (+5/cycle unbounded) — tags route through
+  the eviction lane, evicted orbs box, and _bench_add is the one
+  overflow lane all six bench sites take. hatch_incubated gains
+  the MAX_PALS/max_base_pals/box caps every other kin path had.
+  Fixture asserts all six respawn fields and fires one row live.
+  Smoke 750/0, 749/0 zero-error.
