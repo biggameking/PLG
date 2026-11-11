@@ -5,10 +5,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 GODOT="${GODOT:-/Volumes/17333023680/Godot/Godot.app/Contents/MacOS/Godot}"
-VER="$(rg -o 'version/name="[^"]+"' export_presets.cfg | head -1 | cut -d'"' -f2 || true)"
+VER="$(grep -o 'application/product_version="[^"]*"' export_presets.cfg | head -1 | cut -d'"' -f2 || true)"
+VER="${VER:-$(grep -o 'version/name="[^"]*"' export_presets.cfg | head -1 | cut -d'"' -f2 || true)}"
 VER="${VER:-0.0.0}"
 WHAT="${1:-all}"
 mkdir -p dist
+git rev-parse --short HEAD > dist/build.txt # ties shipped bytes to a commit
 
 pack_windows() {
 	rm -rf export/windows && mkdir -p export/windows
@@ -31,4 +33,6 @@ case "$WHAT" in
 	all) pack_windows; pack_web ;;
 	*) echo "usage: $0 [windows|web|all]" >&2; exit 2 ;;
 esac
+(cd dist && shasum -a 256 kinbound-*.zip > SHA256SUMS)
+cat dist/SHA256SUMS
 ls -lh dist/

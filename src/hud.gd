@@ -1410,7 +1410,8 @@ func title_rows() -> Array: # the title menu's rows as data — pad nav and smok
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join", Color.WHITE]) # co-op straight from boot
 	rows.append(["SETTINGS", "m_settings", Color.WHITE])
-	rows.append(["QUIT", "quit", Color(0.85, 0.6, 0.6)])
+	if not OS.has_feature("web"): # quit() on web just freezes the canvas
+		rows.append(["QUIT", "quit", Color(0.85, 0.6, 0.6)])
 	return rows
 
 func draw_pause(r: Vector2) -> void:
@@ -1448,7 +1449,8 @@ func pause_rows() -> Array:
 	rows.append(["STATUES", "m_statues"])
 	rows.append(["GUIDE", "m_guide"])
 	rows.append(["SAVE & QUIT TO TITLE", "to_title"])
-	rows.append(["SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6)])
+	if not OS.has_feature("web"): # same freeze trap as the title quit
+		rows.append(["SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6)])
 	return rows
 
 func draw_settings(r: Vector2) -> void:

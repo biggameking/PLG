@@ -31,8 +31,8 @@ disconnect orphans your kin safely and rejoining reclaims them.
 ## Controls
 - **Keyboard/mouse** — WASD, mouse aims, orbs, dodge, build/chat panels
 - **Gamepad** — full navigation, RT throws down the facing line
-- **Touch** — virtual stick (rim-push = sprint), verb buttons, panels
-  summon the OS keyboard for chat and join-IP
+- **Touch** — virtual stick (rim-push = sprint), verb buttons; on
+  Android, panels summon the OS keyboard for chat and join-IP
 
 ## Honest limitations
 - Save file carries the whole island: roster, structures, tech, time.
