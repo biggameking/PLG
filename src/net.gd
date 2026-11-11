@@ -256,8 +256,13 @@ func pal_state_pack() -> Array:
 	var arr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
+			if p.mounted_by > 0 and ghosts.has(p.mounted_by):
+				# a bound mount lives where its rider is — the ghost's validated
+				# pos is the only honest source, and every watcher needs it
+				var rg = ghosts[p.mounted_by]
+				p.pos = Vector2(rg.net_pos.x, rg.net_pos.y)
 			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.hp, p.lucky, p.boss,
-				p.alpha, p.spire_tag])
+				p.alpha, p.spire_tag, p.mounted_by])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -277,10 +282,14 @@ func pal_sync(arr: Array) -> void:
 				e[7] if e.size() > 7 else false, nid,
 				e[8] if e.size() > 8 else false,
 				e[9] if e.size() > 9 else false,
-				e[10] if e.size() > 10 else ""])
+				e[10] if e.size() > 10 else "",
+				e[11] if e.size() > 11 else 0])
 		else:
 			p.net_target = Vector2(float(e[2]), float(e[3]))
 			p.hp = maxf(0.0, float(e[6])) if e.size() > 6 else p.hp
+			p.mounted_by = int(e[11]) if e.size() > 11 else 0
+			if p != game.player.mount: # the rider's own mount hides via player.gd
+				p.visible = p.mounted_by == 0
 	for p in game.pals.duplicate():
 		if p.net_id > 0 and not seen.has(p.net_id): # host dropped it: caught, KO'd, despawned
 			game.pals.erase(p)
@@ -868,6 +877,31 @@ func sleep_done() -> void:
 	# one keeper's bed heals every roster through the shared loops — but the
 	# sleeper's own body is local state only they can mend
 	game.player.hp = game.player.max_hp
+
+@rpc("any_peer", "call_remote", "reliable")
+func mount_req(uid: float) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	var r := game.mount_req_remote(pid, int(uid))
+	if r > 0 and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "mount_done", int(uid), r)
+
+@rpc("authority", "call_remote", "reliable")
+func mount_done(uid: int, state: int) -> void:
+	if is_host:
+		return
+	if int(state) == 1:
+		var p := game.find_net_pal(int(uid))
+		if p != null:
+			game.player.mount = p
+			p.visible = false # the kin hides — the rider's sprite carries the ride
+			game.log_msg("Riding %s" % p.spec["name"])
+	elif game.player.mount != null:
+		game.player.mount = null # the host unbound it (dismount, KO, or drop)
+		game.log_msg("Dismounted")
 
 @rpc("any_peer", "call_remote", "reliable")
 func cond_req() -> void:

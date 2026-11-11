@@ -49,6 +49,7 @@ var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
 var net_target := Vector2.INF # last host-reported world pos (INF = none yet)
 var owner_id := 0           # multiplayer owner: 0 = the keeper (host/local), >0 = a client's peer id
+var mounted_by := 0         # peer id of the rider — a bound mount follows its rider, never wanders
 var owner_tag := ""         # keeper's stable install token — survives save/load across sessions
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
@@ -234,6 +235,13 @@ func _notification(what: int) -> void:
 
 func _physics_process(dt: float) -> void:
 	if hp <= 0:
+		return
+	if mounted_by > 0:
+		# bound to a rider — AI sleeps, but a replica still renders the host's
+		# reported pos (the rider's own copy also gets pos-set by player.gd)
+		if net_id > 0 and net_target.x < 1e17:
+			pos = pos.lerp(net_target, minf(1.0, dt * 6.0))
+			sync_screen()
 		return
 	if game != null and game.state == "paused" and not game.net_live():
 		return # pause freezes wildlife; the title lets it wander for ambience

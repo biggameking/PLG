@@ -615,3 +615,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   "unsigned/unverified" to signed-debug-APK; "five biomes" replaced with
   honest terrain description (4 spawn bands + meadows/stonefields/shore).
   IP check CLEAN (tools/check_ip.sh).
+
+## S48 — guest mounting: the last dead mechanic comes online
+  Guests were honestly refused "can't ride a host kin" — now the mount
+  lane is host-truth: mount_req → mount_req_remote gates ghost reach,
+  roster ownership (rparty), species/body and one-saddle-one-steed; the
+  bound kin's pos rides the validated ghost pos in pal_state_pack (all
+  watchers converge); mounted_by rides the wire as field 11; replicas
+  hide under their rider and sleep their AI; orphan_guest_kin unbinds
+  on disconnect. Client try_mount scans own-roster replicas and mount_done
+  completes the handoff. Smoke: far/stranger/species/owner gates + toggle.

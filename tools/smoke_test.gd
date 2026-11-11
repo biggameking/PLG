@@ -5234,6 +5234,37 @@ func run() -> void:
 		game.pals.erase(fr_lead); fr_lead.queue_free()
 		game.pals.erase(if_p); if_p.queue_free()
 		game.pals.erase(if_host); if_host.queue_free()
+		# S48: guest mounting — the host binds a roster kin to the asker's ghost;
+		# mount truth stays host-side, ownership + reach + species all gate it
+		var mt_p: Kin = game.gen_pal("scalfang", 6, p.pos)
+		game.pals.append(mt_p)
+		mt_p.owner_id = 99
+		mt_p.mode = "partner"
+		game.remote_parties["t99"] = [mt_p.uid]
+		var mt_ghost: Vector3 = game.net.ghosts[99].net_pos
+		game.net.ghosts[99].net_pos = Vector3(mt_p.pos.x + 40, mt_p.pos.y, 0)
+		check("a far ghost can't mount", game.mount_req_remote(99, mt_p.uid) == 0)
+		game.net.ghosts[99].net_pos = Vector3(mt_p.pos.x, mt_p.pos.y, 0)
+		check("guest mounts their own kin", game.mount_req_remote(99, mt_p.uid) == 1
+			and mt_p.mounted_by == 99 and not mt_p.visible)
+		check("a stranger can't steal the saddle", game.mount_req_remote(7, mt_p.uid) == 0)
+		check("the mount toggle dismounts", game.mount_req_remote(99, mt_p.uid) == 2
+			and mt_p.mounted_by == 0 and mt_p.visible)
+		var mt_b: Kin = game.gen_pal("pyrejelly", 5, p.pos) # a blob won't carry
+		game.pals.append(mt_b)
+		mt_b.owner_id = 99
+		mt_b.mode = "partner"
+		game.remote_parties["t99"].append(mt_b.uid)
+		check("a non-mountable kin refuses", game.mount_req_remote(99, mt_b.uid) == 0)
+		var mt_host: Kin = game.gen_pal("scalfang", 6, p.pos)
+		game.pals.append(mt_host)
+		mt_host.owner_id = 1
+		game.remote_parties["t99"].append(mt_host.uid)
+		check("the host's kin isn't the guest's mount", game.mount_req_remote(99, mt_host.uid) == 0)
+		game.pals.erase(mt_p); mt_p.queue_free()
+		game.pals.erase(mt_b); mt_b.queue_free()
+		game.pals.erase(mt_host); mt_host.queue_free()
+		game.net.ghosts[99].net_pos = mt_ghost
 		game.remote_parties.erase("t99")
 		game.net.peer_tags.erase(99)
 	else:
@@ -5284,7 +5315,7 @@ func run() -> void:
 	var v41_pack: Array = game.net.pal_state_pack() # the 2Hz pack must not die on .level
 	check("kin wire-pack carries the full roster shape",
 		v41_pack.any(func(e: Array) -> bool:
-			return e.size() == 11 and e[0] == v41_wit.uid and int(e[4]) == 7))
+			return e.size() == 12 and e[0] == v41_wit.uid and int(e[4]) == 7))
 	game.pals.erase(v41_wit)
 	v41_wit.queue_free()
 	# S42 eighth-audit batch: honest-path economy + ownership edge cases

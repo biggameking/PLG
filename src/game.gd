@@ -796,6 +796,8 @@ func spawn_net_pal(d) -> void:
 	var nstag := str(d[9]) if d.size() > 9 else ""
 	if spire_tag_ok(nstag):
 		np.spire_tag = nstag # same whitelist the save path uses
+	np.mounted_by = int(d[10]) if d.size() > 10 else 0
+	np.visible = np.mounted_by == 0 # a ridden mount hides under its rider
 	pals.append(np)
 
 func find_net_pal(nid: int) -> Kin:
@@ -5109,6 +5111,37 @@ func board_paid_remote(pid: int, qid: String) -> Dictionary:
 
 # remote condense: same fodder rule, filtered to the asker's own slice —
 # heart-locked and other keepers' kin are never fuel
+# a guest's mount handoff: host binds a roster kin to their ghost — the kin
+# stays host truth but its position rides the ghost's (pal_state_pack lane).
+# One saddle, one steed: a new pick frees the old mount automatically.
+func mount_req_remote(pid: int, uid: int) -> int: # 0 refuse / 1 mount / 2 dismount
+	var at := _ghost_at(pid)
+	if at.x < -1e8:
+		return 0
+	for p in pals:
+		if p.owner_id == pid and p.mounted_by == pid:
+			p.mounted_by = 0
+			p.visible = true
+			if p.uid == uid:
+				return 2 # same kin = dismount toggle
+	for p2 in pals:
+		if p2.uid == uid:
+			if p2.owner_id != pid or p2.mode != "partner" or not (p2.uid in rparty_for(pid)):
+				return 0 # only your own roster carries you
+			if p2.mounted_by != 0 or p2.hp <= 0:
+				return 0
+			if at.distance_to(p2.pos) > 6.0:
+				note_remote(pid, "Too far to mount")
+				return 0
+			if not SpeciesData.mountable(p2.species_id) and SpeciesData.body_of(p2.species_id) != "bird":
+				note_remote(pid, "%s won't carry a rider" % p2.spec["name"])
+				return 0
+			p2.mounted_by = pid
+			p2.visible = false
+			p2.pos = at
+			return 1
+	return 0
+
 func condense_remote(pid: int) -> bool:
 	var at := _ghost_at(pid)
 	if at.x < -1e8 or _nearest_struct("kin_condenser", at, 6.0).x < 0:
@@ -5980,6 +6013,7 @@ func orphan_guest_kin(pid: int) -> void:
 	for p in pals.duplicate():
 		if is_instance_valid(p) and p.owner_id == pid:
 			player.dismount_if(p)
+			p.mounted_by = 0 # the rider is gone — the kin unbinds with them
 			if p.job_site != null:
 				p.job_site["workers"].erase(p)
 				p.job_site = null

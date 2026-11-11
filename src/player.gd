@@ -395,27 +395,33 @@ func dismount_if(p: Kin) -> void:
 
 func try_mount() -> void:
 	if mount:
+		if game.net != null and game.net.is_client():
+			game.net.rpc("mount_req", float(mount.net_id)) # host unbinds it
+			return
 		mount.visible = true
 		mount.mode = "partner"
 		mount = null
 		game.log_msg("Dismounted")
 		return
-	if game.net != null and game.net.is_client():
-		# replicas are host-driven — riding one would fight its net_target lerp
-		game.log_msg("Can't ride a host kin over the wire")
-		return
 	var best: Kin = null
 	var bd := 1.4
+	var wired: bool = game.net != null and game.net.is_client()
 	for p in game.pals:
 		# the island: land mounts AND rideable flyers (bird body) — but each
 		# wants its own tack (land/sky/wave saddle)
-		if p.uid in game.party and p.mode == "partner" and game.has_saddle_for(p) \
-				and (SpeciesData.mountable(p.species_id) or SpeciesData.body_of(p.species_id) == "bird"):
+		if p.mode == "partner" and game.has_saddle_for(p) \
+				and (SpeciesData.mountable(p.species_id) or SpeciesData.body_of(p.species_id) == "bird") \
+				and ((p.uid in game.party and not wired) \
+					or (wired and p.mounted_by == 0 and p.net_id > 0 \
+						and game.net_party.any(func(r): return int(r.get("uid", -1)) == p.net_id))):
 			var d := pos.distance_to(p.pos)
 			if d < bd:
 				bd = d
 				best = p
 	if best:
+		if wired:
+			game.net.rpc("mount_req", float(best.net_id)) # host binds it; mount_done rides
+			return
 		mount = best
 		best.visible = false
 		game.log_msg("Riding %s" % best.spec["name"])
