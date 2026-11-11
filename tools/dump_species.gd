@@ -8,7 +8,7 @@ func _init() -> void:
 		out.append({"id": sid, "name": d.get("name", sid),
 			"color": d.get("color", "#888888"),
 			"elements": d.get("elements", []),
-			"body": d.get("body", "")})
+			"body": SpeciesData.body_of(sid)})
 	for sid in SpeciesGen.SPECIES:
 		var d: Dictionary = SpeciesGen.SPECIES[sid]
 		out.append({"id": sid, "name": d.get("name", sid),

@@ -1298,9 +1298,12 @@ SPRITES.update({
 })
 
 if __name__ == "__main__":
-    print("generating kin…")
-    for sid in SPRITES:
-        render_pal(sid)
+    # kin sprites moved to the Blender pipeline (tools/art/render_kin.py);
+    # pass --kin-legacy to regenerate the flat procedural fallbacks.
+    if "--kin-legacy" in sys.argv:
+        print("generating kin (legacy flat)…")
+        for sid in SPRITES:
+            render_pal(sid)
     print("generating atlas…")
     atlas()
     print("generating decor…")

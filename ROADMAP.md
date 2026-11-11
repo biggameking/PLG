@@ -896,3 +896,19 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   silhouette, a face, and its species color. Smoke 761/0 (the crown
   assertion now checks the head zone's opaque pixels, not one magic
   coordinate from the placeholder era).
+
+## S66 — kin art audit fix (external review, HOLD → closed)
+  Context-free audit caught: dump read d["body"] instead of
+  SpeciesData.body_of() so 15 species rendered the wrong archetype
+  (mounts as birds, non-mounts as cows) — fixed; CORE_BODY deleted.
+  gen_assets.py kin writer gated behind --kin-legacy (footgun that
+  silently reverted the whole roster). 10 legendary accessories
+  (crown/halo/mask/horns/crest/fins/back-fan) restored as rig parts;
+  hedgehog rig rebuilt (fluff mound no longer buries the face);
+  eyes moved proud of head surfaces on every archetype; bird heads
+  lifted + face tint; f1 frame now bobs the top half per-rig (was a
+  ~1px no-op for 80% of species); player rendered through the same
+  pipeline. Smoke grew a per-species sprite check (load + opaque +
+  ink floor over all 232 frames) — 762/0. Render dir left git;
+  rules 97-100 record the process lessons (reproducible artifacts,
+  authoritative accessors, retire old writers, never weaken tests).

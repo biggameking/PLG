@@ -3802,6 +3802,26 @@ func run() -> void:
 			and load("res://assets/kin/%s_f0.png" % nsid) != null,
 			str({"elem": nsd.get("elements"), "hab": SpeciesGen.habitat(nsid)}))
 
+	# every kin sprite: real pixels + a face — the Blender pipeline must not
+	# ship an empty frame, a clipped blob, or a featureless lump
+	var bad_kin := []
+	for ksid in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
+		for kf in ["f0", "f1"]:
+			var kimg := Image.load_from_file("res://assets/kin/%s_%s.png" % [ksid, kf])
+			if kimg == null:
+				bad_kin.append("%s_%s:missing" % [ksid, kf]); continue
+			var opaque := 0; var ink := 0
+			for ky2 in kimg.get_height():
+				for kx2 in kimg.get_width():
+					var kpx := kimg.get_pixel(kx2, ky2)
+					if kpx.a > 0.9:
+						opaque += 1
+						if kpx.r < 0.25 and kpx.g < 0.25 and kpx.b < 0.3:
+							ink += 1 # ink contour / eye beads
+			if opaque < 40 or ink < 2:
+				bad_kin.append("%s_%s:opaque=%d,ink=%d" % [ksid, kf, opaque, ink])
+	check("all kin sprites have bodies + ink", bad_kin.is_empty(), ",".join(bad_kin))
+
 	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
 	var apex: Kin = null
 	for q in game.pals:

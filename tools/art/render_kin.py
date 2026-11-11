@@ -131,6 +131,7 @@ def build(sid, frame):
     mats = [mat(c) for c in rig["mats"]]
     f1 = rig.get("f1", {}) if frame == 1 else {}
     fluff_dy = f1.get("fluff_dy", 0.0)
+    zmax = max((p["c"][2] for p in rig["parts"]), default=1.0)
     for p in rig["parts"]:
         c = list(p["c"])
         if frame == 1:
@@ -138,8 +139,8 @@ def build(sid, frame):
                 c[2] += fluff_dy                    # all fluff bobs
             elif p.get("rot") and p["kind"] in ("sph", "cyl"):
                 c[2] += f1.get("ear_drop", 0) * 0.15  # ears/appendages lift
-            elif c[2] > 0.8:
-                c[2] += f1.get("head_dy", 0) * 2.0    # upper body bobs on Z
+            elif c[2] > zmax * 0.5:
+                c[2] += f1.get("head_dy", 0) * 2.0    # upper half bobs on Z
         if p["kind"] == "fluff":
             fluff(tuple(c), p["r"], p["n"], p["sq"], p["seed"] + frame,
                   p["jitter"], mats[p["mat"]])

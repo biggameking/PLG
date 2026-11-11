@@ -66,8 +66,8 @@ def accessory(kind, top):
     if kind == "crest":
         return [{"kind": "sph", "c": (x, y, z + 0.08), "r": (0.05, 0.14, 0.16), "mat": 4}]
     if kind == "fins":
-        return [{"kind": "sph", "c": (x + sx * 0.24, y + 0.05, z + 0.02),
-                 "r": (0.04, 0.16, 0.12), "rot": (0, 0, sx * 0.5), "mat": 4} for sx in (-1, 1)]
+        return [{"kind": "sph", "c": (x + sx * 0.15, y + 0.02, z + 0.02),
+                 "r": (0.04, 0.13, 0.11), "rot": (0, 0, sx * 0.5), "mat": 4} for sx in (-1, 1)]
     if kind == "mask":
         return [{"kind": "sph", "c": (x, y - 0.05, z), "r": (0.26, 0.05, 0.09), "mat": 1}]
     if kind == "wings":  # back fan
@@ -120,15 +120,15 @@ def gen(sid, body, col, rng):
         nonlocal P
         r = 0.5 * s
         P.append({"kind": "sph", "c": (0, 0, r + 0.25), "r": (r * 0.85, r, r * 1.05), "mat": 0})
-        P.append({"kind": "sph", "c": (0, -r * 0.8, r * 1.9), "r": (r * 0.55, r * 0.55, r * 0.55), "mat": 0})
-        P.append({"kind": "sph", "c": (0, -r * 1.35, r * 1.82), "r": (0.14, 0.26, 0.11), "mat": 4})  # beak
+        P.append({"kind": "sph", "c": (0, -r * 0.85, r * 2.1), "r": (r * 0.58, r * 0.58, r * 0.58), "mat": 3})
+        P.append({"kind": "sph", "c": (0, -r * 1.45, r * 2.02), "r": (0.14, 0.26, 0.11), "mat": 4})  # beak
         for sx in (-1, 1):  # wings
             P.append({"kind": "sph", "c": (sx * r * 0.9, 0.05, r + 0.2),
                       "r": (0.1, r * 0.55, r * 0.42), "rot": (0.15, 0, sx * 0.2), "mat": 1})
         P.append({"kind": "sph", "c": (0, r * 0.85, r * 1.35), "r": (0.12, 0.3, 0.1), "mat": 1})  # tail
         for sx in (-1, 1):
             P.append({"kind": "cyl", "c": (sx * 0.14, -0.05, 0.12), "r": 0.05, "depth": 0.24, "mat": 1})
-        P += eyes(0.17, -r * 1.34, r * 2.0, 0.065, 2)
+        P += eyes(0.18, -r * 1.44, r * 2.18, 0.07, 2)
 
     def ghost():
         nonlocal P
@@ -164,7 +164,7 @@ def gen(sid, body, col, rng):
                       "r": (r * (1 - k * 0.45),) * 3, "mat": 0 if i % 2 == 0 else 1})
         hx, hy, hz = 0.0, -r - 0.1, r * 1.2
         P.append({"kind": "sph", "c": (hx, hy, hz), "r": (r * 1.1, r * 1.15, r), "mat": 0})
-        P += eyes(0.15, hy - r * 1.18, hz + 0.06, 0.065, 2)
+        P += eyes(0.15, hy - r * 1.18, hz + 0.08, 0.078, 2)
 
     def small_quad(ear_big, tail_len):
         nonlocal P
@@ -223,7 +223,7 @@ def gen(sid, body, col, rng):
             "cow": (0, -0.72, 1.15 * s), "deer": (0, -0.62, 1.2 * s),
             "boar": (0, -0.66, 1.05 * s), "bird": (0, -0.42, 1.25 * s),
             "ghost": (0, 0, 1.6 * s), "human": (0, -0.02, 1.85 * s),
-            "serpent": (0, -0.35, 0.7 * s), "kitty": (0, -0.5, 1.0 * s),
+            "serpent": (0, -0.4, 0.45 * s), "kitty": (0, -0.5, 1.0 * s),
             "mouse": (0, -0.5, 1.0 * s), "hedgehog": (0, -0.1, 1.0 * s),
             "monkey": (0, -0.02, 1.75 * s),
         }.get(body, (0, 0, 1.2 * s))

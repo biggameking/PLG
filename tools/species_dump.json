@@ -1,6 +1,6 @@
 [
   {
-    "body": "",
+    "body": "quadruped",
     "color": "#ede0c8",
     "elements": [
       "neutral"
@@ -9,7 +9,7 @@
     "name": "Fenjelly"
   },
   {
-    "body": "",
+    "body": "kitty",
     "color": "#f2a0b5",
     "elements": [
       "neutral"
@@ -18,7 +18,7 @@
     "name": "Puffmite"
   },
   {
-    "body": "",
+    "body": "bird",
     "color": "#e8f0f2",
     "elements": [
       "neutral"
@@ -27,7 +27,7 @@
     "name": "Fenlump"
   },
   {
-    "body": "",
+    "body": "kitty",
     "color": "#e8963c",
     "elements": [
       "fire"
@@ -36,7 +36,7 @@
     "name": "Cindlump"
   },
   {
-    "body": "",
+    "body": "bird",
     "color": "#4d9de0",
     "elements": [
       "water",
@@ -46,7 +46,7 @@
     "name": "Corlmite"
   },
   {
-    "body": "",
+    "body": "deer",
     "color": "#d4b96e",
     "elements": [
       "neutral"
@@ -55,7 +55,7 @@
     "name": "Dozantler"
   },
   {
-    "body": "",
+    "body": "mouse",
     "color": "#4caf50",
     "elements": [
       "grass"
@@ -64,7 +64,7 @@
     "name": "Sprigmelt"
   },
   {
-    "body": "",
+    "body": "monkey",
     "color": "#9acd32",
     "elements": [
       "grass"
@@ -73,7 +73,7 @@
     "name": "Briargoo"
   },
   {
-    "body": "",
+    "body": "mouse",
     "color": "#e8d44d",
     "elements": [
       "electric"
@@ -82,7 +82,7 @@
     "name": "Voltgoo"
   },
   {
-    "body": "",
+    "body": "hedgehog",
     "color": "#e8e05c",
     "elements": [
       "electric"
@@ -91,7 +91,7 @@
     "name": "Faradlump"
   },
   {
-    "body": "",
+    "body": "serpent",
     "color": "#b8935f",
     "elements": [
       "ground"
@@ -100,7 +100,7 @@
     "name": "Loammelt"
   },
   {
-    "body": "",
+    "body": "blob",
     "color": "#6fa8d1",
     "elements": [
       "dark"
@@ -109,7 +109,7 @@
     "name": "Shademite"
   },
   {
-    "body": "",
+    "body": "ghost",
     "color": "#c678dd",
     "elements": [
       "dark"
@@ -118,7 +118,7 @@
     "name": "Shadelump"
   },
   {
-    "body": "",
+    "body": "kitty",
     "color": "#a8b5c4",
     "elements": [
       "dark"
@@ -127,7 +127,7 @@
     "name": "Shademelt"
   },
   {
-    "body": "",
+    "body": "boar",
     "color": "#d1813c",
     "elements": [
       "ground"
@@ -136,7 +136,7 @@
     "name": "Loampuff"
   },
   {
-    "body": "",
+    "body": "kitty",
     "color": "#f5eee0",
     "elements": [
       "neutral"
@@ -145,7 +145,7 @@
     "name": "Nibjelly"
   },
   {
-    "body": "",
+    "body": "cow",
     "color": "#ede0c8",
     "elements": [
       "neutral"
@@ -154,7 +154,7 @@
     "name": "Piplump"
   },
   {
-    "body": "",
+    "body": "bird",
     "color": "#4d9de0",
     "elements": [
       "water",
@@ -164,7 +164,7 @@
     "name": "Marlump"
   },
   {
-    "body": "",
+    "body": "bird",
     "color": "#4dd0e1",
     "elements": [
       "water"
@@ -173,7 +173,7 @@
     "name": "Quackbill"
   },
   {
-    "body": "",
+    "body": "human",
     "color": "#3a3a4a",
     "elements": [
       "dark"
@@ -182,7 +182,7 @@
     "name": "Ironpact Grunt"
   },
   {
-    "body": "",
+    "body": "human",
     "color": "#5a2e4a",
     "elements": [
       "dark"

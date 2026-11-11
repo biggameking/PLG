@@ -29,12 +29,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
    Bracket-access on foreign dicts is a crash — use `.get()`.
 6. **AI cost scales with `pals.size()`** — `MAX_PALS` is also a CPU guard.
 7. **New PNGs must be imported before headless runs.** After
-   `tools/gen_assets.py` creates a file, run
+   `tools/gen_assets.py` or the Blender kin pipeline creates a file, run
    `godot --headless --path . --import` once — `load()` silently returns null
    on unimported resources, and a null texture mid-`load_game` aborts the
    rebuild. Every `spr.texture` consumer guards with the chest.png fallback.
-   Far wild pals already tick at ~8Hz; keep new per-pal work behind the same
-   accumulation pattern.
+   Kin sprites are Blender-only: `tools/art/rig_auto.py` → `rigs_gen.py`
+   (do not hand-edit), `blender -b -P tools/art/render_kin.py -- <sid>`,
+   `python3 tools/art/post_kin.py <sid>`. `gen_assets.py` no longer writes
+   `assets/kin/` unless `--kin-legacy` is passed. Far wild pals already
+   tick at ~8Hz; keep new per-pal work behind the same accumulation pattern.
 8. After changes: smoke test must report 0 failures, and the exit banner must
    not grow new `ObjectDB instances were leaked` counts vs. baseline
    (observed jitter is ~8-17 — treat >13 as a flag, re-run once).
@@ -496,3 +499,23 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     literals that never reached tr(). A key that no call site can
     produce is worse than a missing one — it lies about coverage.
     Verify keys against actual tr() args (incl. trailing spaces).
+97. **Generated artifacts must be reproducible from committed source.**
+    `rigs_gen.py` regenerates from `rig_auto.py` + `species_dump.json`;
+    verify `python3 tools/art/rig_auto.py` produces no diff before
+    calling a render batch done. A generator committed older than its
+    output silently regresses the next regeneration.
+98. **Data dumps must read the authoritative accessor, not the row.**
+    `dump_species.gd` used `d.get("body")` while the truth lives in
+    `SpeciesData.body_of()` — 15 species rendered the wrong archetype
+    and mounts rendered unmountable. Any field with an accessor
+    (`body_of`, `species_of`, `mountable`) is dumped via the accessor.
+99. **Replacing an asset means retiring its old writer.** The
+    procedural kin writer in `gen_assets.py` stayed live after the
+    Blender pipeline shipped — one documented run would silently
+    revert all sprites. Old generators get a flag gate (`--kin-legacy`)
+    or are removed; never leave two writers targeting the same files.
+100. **Verification is weakened never.** The crown-pixel check was
+    loosened to pass the new sprites instead of restoring the
+    accessory. When a pinned assertion fails after an asset swap,
+    restore the feature the test described or move the pin to a real
+    equivalent — do not widen it until anything passes.
