@@ -444,6 +444,8 @@ func run_click(cr: Dictionary) -> void:
 		"kin_dn": _panel_scroll(1)
 		"tech_up": _panel_scroll(-1)
 		"tech_dn": _panel_scroll(1)
+		"build_pick": # tap toggles — there's no right-click on glass
+			build_sel = -1 if build_sel == int(cr["arg"]) else int(cr["arg"])
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -1281,7 +1283,7 @@ func draw_build_bar(r: Vector2) -> void:
 	var bx := 10.0
 	var by := r.y - 200.0
 	draw_rect(Rect2(bx, by, 620, 56), Color(0, 0, 0, 0.75))
-	draw_string(font, Vector2(bx + 8, by + 16), "BUILD — pick 1-9" + ("  (placing: %s)" % StructureData.STRUCTURES[game.buildable_list()[build_sel]]["name"] if build_sel >= 0 else ""),
+	draw_string(font, Vector2(bx + 8, by + 16), "BUILD — tap/1-9 pick, tap again to cancel" + ("  (placing: %s)" % StructureData.STRUCTURES[game.buildable_list()[build_sel]]["name"] if build_sel >= 0 else ""),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#4dd0e1"))
 	for i in range(mini(9, lst.size())):
 		var s: Dictionary = StructureData.STRUCTURES[lst[i]]
@@ -1291,6 +1293,7 @@ func draw_build_bar(r: Vector2) -> void:
 		var col := Color("#4dd0e1") if i == build_sel else Color.WHITE
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
+		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": i})
 		draw_string(font, Vector2(x, y), "%d %s %s" % [i + 1, s["name"].left(7), cost.left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 func draw_tech(r: Vector2) -> void:

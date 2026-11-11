@@ -4728,6 +4728,13 @@ func run() -> void:
 	hudn.run_click({"act": "tech_up", "arg": null})
 	check("tech scroll back", hudn.tech_scroll == 0)
 	game.panel = ""
+	# build bar rows pick on tap — 1-9 was the only door in
+	game.panel = "build"; hudn.build_sel = -1
+	hudn.run_click({"act": "build_pick", "arg": 0})
+	check("tap picks a structure", hudn.build_sel == 0)
+	hudn.run_click({"act": "build_pick", "arg": 0})
+	check("re-tap cancels the ghost", hudn.build_sel == -1)
+	game.panel = ""
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))

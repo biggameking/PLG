@@ -316,3 +316,7 @@ build-tools/apksigner).
   OFF-PANEL as floating text — 34 techs could never be unlocked on any
   device, silently amputating the progression tree. Display-index offset
   + cap-aware clamp + _scroll_btns, same contract as the rest. +3 checks.
+  S29d: build bar rows had NO click rects — 1-9 keys were the only picker,
+  so touch could open BLD but never select a structure (build fully
+  broken on slabs). Rows now run_click "build_pick" toggles (re-tap =
+  the RMB-cancel glass never had).
