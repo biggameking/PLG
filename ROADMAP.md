@@ -669,3 +669,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   a graceful drop; pal_sync refuses nonpositive uids; infuse_done
   feeds the replica's soul_boost so guest price mirrors converge.
   Smoke 741/0, IP CLEAN.
+
+## S52 — audit-13: armed respawn unbind + ledger-wide paid verbs
+  Thirteenth audit (1M/6L): respawn's mount_req was the only unarmed
+  sender — a stale pal_sync row could fire the self-heal toggle inside
+  the echo window and re-BIND the just-released kin (toggles can't
+  express release-only). respawn now arms pending+uid like every
+  sender. mount_done splits state 0 (refuse → handshake only, saddle
+  stays) from state 2 (release → unbind + instant re-show). build and
+  bait moved onto the ledger: deny refunds draw from the recorded
+  debit, never the cost table — build_deny/bait_deny deleted for
+  build_done/bait_done(ok) settles; throw_bait_remote reports landing
+  so a hold never hangs. Smoke 743/0.

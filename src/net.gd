@@ -683,25 +683,25 @@ func build_req(sid: String, tx: int, ty: int) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "build_bkt", 0.7, 1.0):
-		rpc_id(pid, "build_deny", str(sid)) # materials were paid at click — a silent drop eats them
+		_pay_rej(pid, "build") # materials were paid at click — a silent drop eats them
 		return # one blueprint per breath — a fill script can't pave the island
 	if not game.unlocked.has(str(sid)):
 		# an honest client CAN out-tech the host (developed save joins fresh
 		# host) — deny + refund; bags are client-authoritative anyway so a
 		# forger gains nothing either way
-		rpc_id(pid, "build_deny", str(sid))
+		_pay_rej(pid, "build")
 		return
-	if not game.net_place(str(sid), int(tx), int(ty), pid):
-		rpc_id(pid, "build_deny", str(sid)) # site contested mid-click — the one honest deny
+	if game.net_place(str(sid), int(tx), int(ty), pid):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "build_done", str(sid)) # planted — the hold settles, materials stay spent
+	else:
+		_pay_rej(pid, "build") # site contested mid-click — the hold refunds
 
 @rpc("authority", "call_remote", "reliable")
-func build_deny(sid: String) -> void:
-	var s: Dictionary = StructureData.STRUCTURES.get(str(sid), {})
-	if s.is_empty():
+func build_done(_sid: String) -> void:
+	if is_host:
 		return
-	for c in s.get("cost", []):
-		game.add_item(str(c[0]), int(c[1]))
-	game.log_msg("Host refused %s - materials refunded" % s.get("name", sid))
+	pay_settle("build", false) # the ledger releases the hold — the island keeps the goods
 
 @rpc("any_peer", "call_remote", "reliable")
 func demolish_req(tx: int, ty: int) -> void:
@@ -774,16 +774,19 @@ func bait_req() -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
-		rpc_id(pid, "bait_deny") # the bait left the bag on the click — give it back
+		rpc_id(pid, "bait_done", false) # the bait left the bag on the click — the hold refunds it
 		return
-	game.throw_bait_remote(pid) # the pile lands under the ghost the wire saw
+	var landed := game.throw_bait_remote(pid) # the pile lands under the ghost the wire saw
+	if multiplayer.get_peers().has(pid):
+		rpc_id(pid, "bait_done", landed) # settle or refund — a hold never hangs
 
 @rpc("authority", "call_remote", "reliable")
-func bait_deny() -> void:
+func bait_done(ok: bool) -> void:
 	if is_host:
 		return
-	game.add_item("kin_bait", 1)
-	game.log_msg("The bait came back — the island didn't hear it")
+	pay_settle("bait", not ok) # a landed pile keeps the bait; a miss refunds the hold
+	if not ok:
+		game.log_msg("The bait came back — the island didn't hear it")
 
 @rpc("any_peer", "call_remote", "reliable")
 func fish_req() -> void:
@@ -998,8 +1001,11 @@ func mount_done(uid: int, state: int) -> void:
 			game.player.mount = p
 			p.visible = false # the kin hides — the rider's sprite carries the ride
 			game.log_msg("Riding %s" % p.spec["name"])
-	elif game.player.mount != null and game.player.mount.net_id == wid:
-		game.player.mount = null # the host unbound it (dismount, KO, or drop)
+	elif int(state) == 2 and game.player.mount != null and game.player.mount.net_id == wid:
+		# host confirms the release — drop the saddle AND show the kin now;
+		# a state-0 refusal owns only the handshake, never the saddle
+		game.player.mount.visible = true
+		game.player.mount = null
 		game.log_msg("Dismounted")
 
 # self-heal: host truth says WE ride this kin while our local ref says we

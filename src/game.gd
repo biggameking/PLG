@@ -1348,9 +1348,12 @@ func respawn_player() -> void:
 		if net != null and net.is_client() and net_live() and player.mount.net_id > 0:
 			# the host still thinks we're in the saddle — the replica ref
 			# dies here, but mounted_by must be released host-side too.
-			# Skip when the in-flight handshake already targets this kin —
-			# its echo unbinds; a second toggle would re-BIND post-respawn
+			# ARM like every other sender: an unarmed release lets the
+			# self-heal lane fire a second toggle inside the echo window —
+			# and a toggle can't say "release only", so req#2 re-BINDS
 			if not (net.mount_pending and net.mount_pending_uid == player.mount.net_id):
+				net.mount_pending = true
+				net.mount_pending_uid = player.mount.net_id
 				net.rpc("mount_req", float(player.mount.net_id))
 		else:
 			_unbind_mount(player.mount)
@@ -1540,29 +1543,31 @@ func pray_weather() -> void:
 func throw_bait() -> void:
 	if not items.get("kin_bait", 0):
 		return
+	if net != null and net.is_client():
+		# the lure is host truth — the ledger pays, the pile lands under the
+		# ghost it saw, and bait_done settles the hold either way
+		if net.pay("bait", {"kin_bait": 1}):
+			net.rpc("bait_req")
+			log_msg("Bait tossed — something hungry will smell it")
+			sfx_play("drop")
+		return
 	items["kin_bait"] -= 1
 	if items["kin_bait"] <= 0:
 		items.erase("kin_bait")
-	if net != null and net.is_client():
-		# the lure is host truth — our bag paid locally (client-authoritative
-		# lane, same as the cleaver), the pile lands under the ghost it saw
-		net.rpc("bait_req")
-		log_msg("Bait tossed — something hungry will smell it")
-		sfx_play("drop")
-		return
 	lure = {"pos": player.pos + player.facing * 3.0, "till": t + 25.0}
 	log_msg("Bait tossed — something hungry will smell it")
 	sfx_play("drop")
 
-func throw_bait_remote(pid: int) -> void:
+func throw_bait_remote(pid: int) -> bool:
 	# host-side bait: the pile lands ahead of the ghost the wire saw, not at
 	# a client-claimed spot. The bag debit already happened client-side —
 	# bounded by the same bag-trust lane as every guest inventory claim.
 	var at := _ghost_at(pid)
 	if at.x < -1e8:
-		return
+		return false # no ghost, no pile — the caller owes the ledger a refund
 	lure = {"pos": at + Vector2(2.0, 0.0), "till": t + 25.0}
 	note_remote(pid, "Bait tossed — something hungry will smell it")
+	return true
 
 func lure_take(p: Kin) -> void: # first snout to the pile eats it
 	lure = {}
@@ -2328,13 +2333,14 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		if not can_place(sid, tx, ty):
 			log_msg("Can't build there")
 			return false
+		var cost := {}
 		for c in s.get("cost", []):
 			if item_count(c[0]) < c[1]:
 				log_msg("Need %d %s" % [c[1], ItemData.ITEMS.get(c[0], {}).get("name", c[0])])
 				return false
-		for c in s.get("cost", []):
-			add_item(c[0], -c[1])
-		net.rpc("build_req", sid, tx, ty)
+			cost[str(c[0])] = int(c[1])
+		if net.pay("build", cost): # ledger pays the debit — every deny path refunds the hold, not the price table
+			net.rpc("build_req", sid, tx, ty)
 		return true
 	if sid == "kinbox" and kinbox_count() >= 1 + MAX_EXTRA_BOXES:
 		log_msg("Max %d kinboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))

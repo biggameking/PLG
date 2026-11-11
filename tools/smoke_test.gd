@@ -4805,10 +4805,12 @@ func run() -> void:
 	check("build bar intersects host tech", bl_now.size() == 1 and bl_now[0] == "campfire",
 		"list=%s" % str(bl_now))
 	var w00 := game.item_count("wood") if "wood" in game.items else 0
-	game.net.build_deny("campfire") # the honest deny refunds what the host refused
+	game.net.pending_pays.clear()
+	game.net.pay("build", {"wood": 2}) # the ledger holds what the click paid
+	game.net.pay_rej("build") # every deny path settles the hold, not the price table
 	var w01 := game.item_count("wood") if "wood" in game.items else 0
-	check("build_deny refunds the cost", w01 > w00
-		or game.messages.back().contains("refunded"), "w=%d->%d" % [w00, w01])
+	check("a refused build refunds the hold", w01 == w00
+		and game.net.pending_pays.is_empty(), "w=%d->%d" % [w00, w01])
 	game.net_unlocked = []
 	var tec_rows := 0
 	for row in hudn.pause_rows():
@@ -5371,6 +5373,19 @@ func run() -> void:
 		game.net.mount_done(555, 0)
 		check("its own echo clears the handshake", not game.net.mount_pending
 			and game.net.mount_pending_uid == -1)
+		# state 0 owns the handshake only — a refused dismount can't drop a
+		# saddle the host still holds (throttle-starved press, not a release)
+		var dm1: Kin = game.gen_pal("scalfang", 6, p.pos)
+		dm1.net_id = 424245
+		game.pals.append(dm1)
+		p.mount = dm1
+		dm1.visible = false # riding hides the kin
+		game.net.mount_done(424245, 0)
+		check("a refused dismount keeps the saddle", p.mount == dm1 and not dm1.visible)
+		game.net.mount_done(424245, 2)
+		check("a confirmed release drops the saddle + shows the kin",
+			p.mount == null and dm1.visible)
+		game.pals.erase(dm1); dm1.queue_free()
 		# self-heal exists but refuses offline — no wire, no unbind asks
 		check("unbind self-heal is client-gated",
 			not game.net._mount_selfheal_check(424243, 1))
@@ -5413,10 +5428,19 @@ func run() -> void:
 			and game.net.pending_pays.size() == 32
 			and game.item_count("wood") == wood6)
 		game.net.pending_pays.clear()
-		# a denied toss hands the bait back
+		# a denied toss settles the hold — the bait comes home through the
+		# ledger, not a bespoke cost-table refund
 		var bait6 := game.item_count("kin_bait")
-		game.net.bait_deny()
-		check("a denied toss returns the bait", game.item_count("kin_bait") == bait6 + 1)
+		var had6 := game.items.has("kin_bait")
+		game.items["kin_bait"] = 5
+		game.net.pay("bait", {"kin_bait": 1})
+		game.net.bait_done(false)
+		check("a denied toss returns the bait", game.item_count("kin_bait") == 5
+			and game.net.pending_pays.is_empty())
+		if had6:
+			game.items["kin_bait"] = bait6
+		else:
+			game.items.erase("kin_bait")
 		if had5:
 			game.items["wood"] = wood5
 		else:

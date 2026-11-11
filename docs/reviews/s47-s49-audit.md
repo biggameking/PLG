@@ -127,3 +127,32 @@ uid 作用域握手、全 unbind 兄弟站点（唯一缺口即 deploy M 项）�
 smoke 741/0 零 ERROR；新断言 5 条（存活 replica 掉鞍、wire 等级
 落地、非正 uid 不生成、满账拒绝+退款、deny 退饵）。
 IP CHECK: CLEAN。
+
+## 第十三轮外审处置（S52）
+1M/6L —— 全部落地；审计同时验证 S51 全部主张成立。
+
+### M respawn 未上膛 mount_req → 自愈车道可重绑
+respawn 的释放请求是唯一不登记 pending 的发送方：陈旧 pal_sync
+行（mounted_by=me）在回执窗口内触发自愈 → 第二个 toggle 把
+刚释放的兽重新绑定（toggle 无法表达"仅解绑"）。修：respawn
+发送前先 `mount_pending + mount_pending_uid` 上膛，与其他发送
+方同约；自愈在 armed 窗口内被 pending 门挡住。
+
+### L
+- mount_done state 0/2 车道拆分：0（拒绝）只放握手不碰鞍——
+  节流饿死的下马按键不再误清仍绑定坐骑；state 2 确认释放时
+  顺手恢复 replica 可见性（不再等 500ms pal_sync）。
+- build/bait 并入账本：删掉按"成本表"退款的 build_deny/
+  bait_deny——退款现在来自挂账的实扣记录（拒路全部 _pay_rej /
+  bait_done(false)，成功 build_done/bait_done(true) 结算）。
+  throw_bait_remote 补返回值（ghost 缺失也回执——挂账不再悬挂）。
+- 冒烟夹具纪律：kin_bait 备份还原。
+
+### 审计验证为正确
+pay() 退款无损耗、8 调用点全门控、myid 守卫正确（回执排序由
+ENet 可靠通道保证）、net_live 严格等效 CONNECTED、infuse_done
+签名一致、_close_peer 全状态安全。
+
+### 验证
+smoke 743/0 零 ERROR；新断言 3 条（拒绝下马保鞍、确认释放显形、
+账本化退饵/退料）。
