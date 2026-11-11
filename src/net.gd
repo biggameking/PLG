@@ -5,10 +5,39 @@ class_name Net
 # players. Kin/combat remain locally authoritative for now (sync them next).
 
 const PORT := 7777
+const MAX_PEERS := 8 # co-op scale — ghosts/tags/fan-out all grow per peer
 var game: Game
 var entity_layer: Node2D
 var ghosts := {}  # peer_id -> Node2D
 var send_timer := 0.0
+# Pay-first ledger: cost verbs debit the bag when the request flies, not when
+# the echo lands — a dropped wire strands the payment as a loss on the payer,
+# never as goods minted into shared/durable truth. Reliable ordering makes
+# settles arrive FIFO, so each pops the oldest matching tag.
+var pending_pays: Array = []
+func pay(tag: String, cost: Dictionary) -> void:
+	for k in cost:
+		game.add_item(str(k), -int(cost[k]))
+	pending_pays.append({"tag": tag, "cost": cost})
+func pay_settle(tag: String, refund: bool) -> void:
+	for i in pending_pays.size():
+		if pending_pays[i]["tag"] == tag:
+			if refund:
+				for k in pending_pays[i]["cost"]:
+					game.add_item(str(k), int(pending_pays[i]["cost"][k]))
+			pending_pays.remove_at(i)
+			return
+@rpc("authority", "call_remote", "reliable")
+func pay_rej(tag: String) -> void:
+	if is_host:
+		return
+	pay_settle(str(tag), true)
+	game.log_msg("Request refused — goods returned")
+# host-side: every refused paid verb owes the asker a refund echo
+func _pay_rej(pid: int, tag: String) -> void:
+	if multiplayer.multiplayer_peer != null \
+			and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		rpc_id(pid, "pay_rej", tag)
 var is_host := false
 var peer_tags := {} # peer_id -> install token — a guest's stable keeper identity
 
@@ -23,7 +52,7 @@ func setup(g: Game, layer: Node2D) -> void:
 
 func host() -> void:
 	var peer := ENetMultiplayerPeer.new()
-	if peer.create_server(PORT) != OK:
+	if peer.create_server(PORT, MAX_PEERS) != OK:
 		game.log_msg("Host failed: port %d busy" % PORT)
 		return
 	_close_peer() # never swap a live peer — that leaks the session and
@@ -181,6 +210,15 @@ func state_snapshot() -> Dictionary:
 
 @rpc("authority", "call_remote", "reliable")
 func state_sync(d: Dictionary) -> void:
+	# joining replaces every local structure with the host's rows — a leftover
+	# from our own regenerate() would shadow its host twin (loot, cages, HP)
+	# and place_free would refuse the cell outright
+	for k0 in game.structures.keys():
+		var n0 = game.structures[k0].get("node")
+		if is_instance_valid(n0):
+			n0.queue_free()
+	game.structures.clear()
+	game.world.structures.clear()
 	for e in d.get("structures", []):
 		if e is Array and e.size() >= 3 and (e[1] is float or e[1] is int) and (e[2] is float or e[2] is int):
 			var st_store: Dictionary = e[3] if e.size() > 3 and e[3] is Dictionary else {}
@@ -301,6 +339,9 @@ func _on_server_disconnected() -> void:
 	game.net_party = [] # the mirrors were the host's truth — stop showing them
 	game.net_box = []
 	game.net_unlocked = []
+	pending_pays.clear() # in-flight pays die as a loss — refunding locally would
+	# mint goods the host may already have banked (loss, never mint)
+	game.chest_ref = null # a chest open at drop can't follow into the next session
 	is_host = false
 	multiplayer.multiplayer_peer = null # a dead peer must not keep net_live() true
 	game.net_danger = false # the raid verdict belonged to the session — rejoin clean
@@ -333,12 +374,23 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		return # another guest's position arrives via the host's peer_pos relay — direct claims are noise
 	if not ghosts.has(id):
 		return
+	var g = ghosts[id]
+	if is_host:
+		# packet-rate cap, separate from the distance bucket: a flood of
+		# bucket-conformant baby steps still forces a relay per packet —
+		# the cap starves the amplification before the claims are read
+		var now0: float = Time.get_ticks_msec() / 1000.0
+		var pps: float = minf(float(g.get_meta("pos_pps", POS_PPS_BURST)) \
+			+ (now0 - float(g.get_meta("pos_pps_t", now0))) * POS_PPS, POS_PPS_BURST)
+		g.set_meta("pos_pps_t", now0)
+		if pps < 1.0:
+			return
+		g.set_meta("pos_pps", pps - 1.0)
 	var nx := float(x); var ny := float(y); var nz := float(elev)
 	if not (is_finite(nx) and is_finite(ny) and is_finite(nz)):
 		return # NaN/infinity coordinates are not a place anyone can stand
 	if nx < 0.0 or ny < 0.0 or nx >= World.WORLD_W or ny >= World.WORLD_H:
 		return # every proximity gate trusts this position — keep it inside the island
-	var g = ghosts[id]
 	if g.net_pos.x < 0:
 		# the first fix is where the join actually materializes — spawn, or a
 		# pad beside it. Anything else stays -1 and keeps failing every gate.
@@ -350,11 +402,14 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		var sp := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
 		if Vector2(nx, ny).distance_to(sp) > 12.0 and _near_travel_node(Vector2(nx, ny)) == "":
 			return
-	else:
+	elif not (not is_host and id == 1):
 		# token-bucket speed cap: allowance accrues at POS_RATE tiles/sec up to
 		# POS_BURST, so honest packets (and lossy-network clumping) always fit
 		# while sustained spoofed walking converges to the cap — and legit big
-		# moves (waypoint hops, death respawns) take the shaped blink lane
+		# moves (waypoint hops, death respawns) take the shaped blink lane.
+		# Host packets on a client skip this entirely — authority positions are
+		# truth, and a host teleport policed by the guest bucket freezes its
+		# ghost until it drifts back into range
 		var now: float = Time.get_ticks_msec() / 1000.0
 		var allow: float = minf(float(g.get_meta("pos_allow", POS_BURST)) \
 			+ (now - float(g.get_meta("pos_t", now))) * POS_RATE, POS_BURST)
@@ -376,6 +431,8 @@ const BLINK_RADIUS := 5.0 # landing tolerance: nearest_free can shove a few tile
 const POS_RATE := 40.0 # mounted sprint peaks ~29 u/s; cap leaves 38% headroom
 const POS_BURST := 6.0 # absorbs ~5 dropped 20Hz packets before honest steps clip
 const BLINK_CD := 3.0 # home-lane cooldown — deaths are minutes apart, not seconds
+const POS_PPS := 45.0 # honest senders fire ~20-30Hz; the cap admits that + jitter
+const POS_PPS_BURST := 60.0 # absorbs a burst without letting a flood through
 
 var _tn_stamp := -1
 var _tn_t := 0.0
@@ -587,10 +644,14 @@ func chest_req(op: String, tx: float, ty: float, payload: Dictionary = {}) -> vo
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "chest_bkt", 1.0, 1.0):
+		if str(op) == "dep":
+			_pay_rej(pid, "chest_dep")
 		return # a bulk-macro gets one container op per beat
 	var cell := Vector2i(int(tx), int(ty))
 	var res := game.chest_req_remote(pid, cell, str(op), payload)
 	if res.is_empty():
+		if str(op) == "dep":
+			_pay_rej(pid, "chest_dep") # refused AFTER payment — refund it
 		return # refused — nothing moved, nothing to echo
 	if multiplayer.get_peers().has(pid):
 		rpc_id(pid, "chest_grant" if str(op) == "wd" else "chest_took",
@@ -618,12 +679,10 @@ func chest_grant(_tx: int, _ty: int, items: Dictionary) -> void:
 func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
 	if is_host:
 		return
+	pay_settle("chest_dep", false) # goods left the bag when the request flew
 	var n := 0
 	for id in items:
-		var c := mini(int(items[id]), game.item_count(str(id)))
-		if c > 0:
-			game.add_item(str(id), -c)
-			n += c
+		n += int(items[id])
 	game.log_msg("Stored %d items" % n)
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -652,15 +711,19 @@ func fert_req() -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "fert")
 		return
-	if game.fert_req_remote(pid) and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "fert_done")
+	if game.fert_req_remote(pid):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "fert_done")
+	else:
+		_pay_rej(pid, "fert")
 
 @rpc("authority", "call_remote", "reliable")
 func fert_done() -> void:
 	if is_host:
 		return
-	game.add_item("fertilizer", -1) # the bag pays only on host acceptance
+	pay_settle("fert", false) # the fertilizer left the bag at request time
 	game.log_msg("Fertilizer spread — five minutes of surge")
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -669,16 +732,20 @@ func shrine_req() -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "shrine")
 		return
-	if game.shrine_req_remote(pid) and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "shrine_done", game.weather)
+	if game.shrine_req_remote(pid):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "shrine_done", game.weather)
+	else:
+		_pay_rej(pid, "shrine")
 
 @rpc("authority", "call_remote", "reliable")
 func shrine_done(nw: String) -> void:
 	if is_host:
 		return
 	game.weather = str(nw) # the offering lands; state_sync would catch up anyway
-	game.add_item("lumenite", -3) # the bag pays only on host acceptance
+	pay_settle("shrine", false) # the lumenite left the bag at request time
 	game.log_msg("The altar drinks your lumenite — the sky shifts")
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -817,15 +884,19 @@ func egg_req(egg_id: String) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "egg")
 		return
-	if game.egg_req_remote(pid, str(egg_id)) and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "egg_done", str(egg_id))
+	if game.egg_req_remote(pid, str(egg_id)):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "egg_done", str(egg_id))
+	else:
+		_pay_rej(pid, "egg")
 
 @rpc("authority", "call_remote", "reliable")
 func egg_done(egg_id: String) -> void:
 	if is_host:
 		return
-	game.add_item(str(egg_id), -1) # the bag pays its egg only on host acceptance
+	pay_settle("egg", false) # the egg left the bag at request time
 	game.log_msg("Egg in the incubator — 90s to hatch")
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -834,16 +905,21 @@ func infuse_req(uid: float) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "infuse")
 		return
 	var cost := game.infuse_req_remote(pid, int(uid))
-	if cost > 0 and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "infuse_done", cost)
+	if cost > 0:
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "infuse_done", cost)
+	else:
+		_pay_rej(pid, "infuse")
 
 @rpc("authority", "call_remote", "reliable")
 func infuse_done(cost: int) -> void:
 	if is_host:
 		return
-	game.add_item("sprigmelt_effigy", -int(cost)) # effigies burn only on host acceptance
+	pay_settle("infuse", true) # refund the optimistic burn…
+	game.add_item("sprigmelt_effigy", -int(cost)) # …then charge the host's truth
 	game.log_msg("The offering burns — a soul burns brighter")
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -852,15 +928,19 @@ func fruit_req(item_id: String) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "fruit")
 		return
-	if game.fruit_req_remote(pid, str(item_id)) and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "fruit_done", str(item_id))
+	if game.fruit_req_remote(pid, str(item_id)):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "fruit_done", str(item_id))
+	else:
+		_pay_rej(pid, "fruit")
 
 @rpc("authority", "call_remote", "reliable")
 func fruit_done(item_id: String) -> void:
 	if is_host:
 		return
-	game.add_item(str(item_id), -1) # the bag pays its fruit only on host acceptance
+	pay_settle("fruit", false) # the fruit left the bag at request time
 
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
@@ -978,9 +1058,13 @@ func buy_req(idx: float) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "buy")
 		return
 	var res := game.buy_remote(pid, int(idx))
-	if not res.is_empty() and multiplayer.get_peers().has(pid):
+	if res.is_empty():
+		_pay_rej(pid, "buy")
+		return
+	if multiplayer.get_peers().has(pid):
 		rpc_id(pid, "bought", res)
 		rpc("stock_sync", game.merchant_stock) # every watcher sees the shelf thin
 
@@ -988,7 +1072,8 @@ func buy_req(idx: float) -> void:
 func bought(res: Dictionary) -> void:
 	if is_host:
 		return
-	game.add_item("gold_coin", -int(res.get("price", 0))) # the bag pays on host acceptance
+	pay_settle("buy", true) # refund the mirrored price…
+	game.add_item("gold_coin", -int(res.get("price", 0))) # …then pay the host's truth
 	game.log_msg("Bought %s (%dg)" % ["a kin" if res.has("kin") else "goods",
 		int(res.get("price", 0))])
 

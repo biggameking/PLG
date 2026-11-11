@@ -4635,14 +4635,30 @@ func run() -> void:
 	for row in hudn.pause_rows():
 		if row[1] == "m_chat": chat_rows += 1
 	check("no chat row without a peer", chat_rows == 0)
-	var tmp_peer := ENetMultiplayerPeer.new() # a live peer flips the row on
+	var tmp_peer := ENetMultiplayerPeer.new() # a half-open dial is not a session
 	tmp_peer.create_client("127.0.0.1", 1)
 	game.net.multiplayer.multiplayer_peer = tmp_peer
 	chat_rows = 0
 	for row in hudn.pause_rows():
 		if row[1] == "m_chat": chat_rows += 1
-	check("chat row when peered", chat_rows == 1)
+	check("no chat row on a half-open dial", chat_rows == 0)
 	tmp_peer.close()
+	# a real CONNECTED peer earns the row — synchronous loopback handshake
+	var tmp_srv := ENetMultiplayerPeer.new()
+	tmp_srv.create_server(17891, 2)
+	var tmp_cli := ENetMultiplayerPeer.new()
+	tmp_cli.create_client("127.0.0.1", 17891)
+	var v9_t0 := Time.get_ticks_msec()
+	while tmp_cli.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED \
+			and Time.get_ticks_msec() - v9_t0 < 2000:
+		tmp_srv.poll(); tmp_cli.poll()
+		OS.delay_msec(10)
+	game.net.multiplayer.multiplayer_peer = tmp_cli
+	chat_rows = 0
+	for row in hudn.pause_rows():
+		if row[1] == "m_chat": chat_rows += 1
+	check("chat row when peered", chat_rows == 1)
+	tmp_srv.close(); tmp_cli.close()
 	game.net.multiplayer.multiplayer_peer = peer_bak
 	hudn.run_click({"act": "m_join", "arg": null}) # the REAL click path, not the helper
 	hudn._process(0.016)
@@ -6263,6 +6279,40 @@ func run() -> void:
 	else:
 		var sv2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 		sv2.store_buffer(save_backup); sv2.close()
+
+	# join-path determinism: regenerate(world.seed) is what a joining guest
+	# runs — two seeded regens must land the same grotto/markers/structures.
+	# Boot↔join parity itself is by construction: _ready and regenerate share
+	# place_pois() under the same world.seed-derived reseed (verified in a
+	# clean-boot probe: identical grotto/room2/40 structures/42 pals)
+	var v9_seed := game.world.seed
+	game.regenerate(v9_seed)
+	var v9_grotto := game.grotto_pos
+	var v9_room2 := game.grotto_room2
+	var v9_cells := game.structures.keys()
+	v9_cells.sort()
+	game.regenerate(v9_seed)
+	check("regen replays the same grotto", game.grotto_pos == v9_grotto,
+		"r1=%s r2=%s" % [v9_grotto, game.grotto_pos])
+	check("regen replays the same room2", game.grotto_room2 == v9_room2,
+		"r1=%s r2=%s" % [v9_room2, game.grotto_room2])
+	var v9_cells2 := game.structures.keys()
+	v9_cells2.sort()
+	check("regen is internally deterministic", v9_cells2 == v9_cells,
+		"%d vs %d cells" % [v9_cells2.size(), v9_cells.size()])
+
+	# pay-first ledger: the bag debits when the request flies; a refusal
+	# refunds, a success keeps the spend — no echo, no mint
+	game.add_item("gold_coin", 50) # the ledger test needs spendable truth
+	var v9_gold0 := game.item_count("gold_coin")
+	game.net.pay("t_verb", {"gold_coin": 5})
+	check("pay debits at request time", game.item_count("gold_coin") == v9_gold0 - 5)
+	game.net.pay_settle("t_verb", true)
+	check("a refusal refunds the hold", game.item_count("gold_coin") == v9_gold0)
+	game.net.pay("t_verb", {"gold_coin": 7})
+	game.net.pay_settle("t_verb", false)
+	check("an accept keeps the spend", game.item_count("gold_coin") == v9_gold0 - 7)
+	game.add_item("gold_coin", 7)
 
 	# net host (no client join in same proc) — close the socket too: a bound
 	# :7777 outlives the suite and breaks the next run on a busy machine

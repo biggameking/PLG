@@ -595,3 +595,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   com.kinbound.game v0.9.0, minSdk 24, targetSdk 36, 706 assets inside.
   Release export needs a release keystore (owner decision; debug lane is
   green for device sideload via adb install).
+
+## S46 — ninth-audit landing: boot-lane determinism + pay-first protocol (2H/3M/5L)
+  H1 worldgen: _ready now shares regenerate()'s place_pois() lane under the
+    world.seed reseed — guests of a fresh-boot host no longer get phantom
+    walls (clean-boot probe: identical grotto/structures/pals).
+  H2 pay-first ledger (net.pending_pays): bag debits at request time, every
+    host refusal path sends pay_rej, echoes settle — disconnect window went
+    from mint to payer-loss across chest_dep/egg/buy/infuse/fruit/shrine/fert.
+  M: MAX_PEERS 8, POS_PPS packet-rate cap, host-packet bucket exemption.
+  L: state_sync raze-and-replace structures, net_live requires CONNECTED,
+    chest_ref cleared on drop.
+  Smoke 711/0 x4 green. Rules 77-79.

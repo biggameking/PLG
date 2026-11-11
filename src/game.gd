@@ -262,10 +262,13 @@ func _ready() -> void:
 	for id in ["kin_orb", "kin_orb", "kin_orb", "torch"]:
 		add_item(id, 1)
 	log_msg(tr("Welcome to Kinbound. Press H for help."))
-	spawn_wild()
-	spawn_lairs()
-	spawn_camps()
-	spawn_fossils()
+	# POIs roll off the world seed even at boot — the same lane regenerate()
+	# uses, or a guest of a fresh-boot host gets phantom walls where the host
+	# sees floor (the join path replays placement from world.seed)
+	var rsav := rng.s
+	rng.s = (world.seed ^ 0x9E3779B9) & 0xFFFFFFFF
+	place_pois()
+	rng.s = rsav # gameplay rolls resume from the session stream
 
 func saddle_for(p: Kin) -> String:
 	# the island gear rule: every mount wants its own tack — flyers, swimmers
@@ -2005,9 +2008,10 @@ func bind_gamepad() -> void:
 	_pad_axis("zoom_out", JOY_AXIS_RIGHT_Y, 1.0)
 
 func net_live() -> bool:
-	# presence is not liveness — a dropped/failed peer must not hold the sim open
+	# presence is not liveness — a half-open dial isn't a session either; only a
+	# connected peer keeps the sim's online behavior armed
 	var p = null if net == null else net.multiplayer.multiplayer_peer
-	return p != null and p.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED
+	return p != null and p.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
 
 # ---- contextual hints: condition-driven, self-retiring nudges ----
 # Each entry: condition lambda -> text. A hint shows while its condition is
@@ -5641,11 +5645,17 @@ func regenerate(s: int) -> void:
 	# spires/lairs/decor as the host instead of phantom walls it can't see
 	var rsav := rng.s
 	rng.s = (s ^ 0x9E3779B9) & 0xFFFFFFFF
+	place_pois()
+	rng.s = rsav # gameplay rolls resume from the session stream
+
+# POI placement lane — boot (_ready) and join/regen (regenerate) share this so
+# every peer derives the same spires/lairs/decor from world.seed. Order is
+# contract: the seeded rng stream assigns each roll in sequence.
+func place_pois() -> void:
 	spawn_lairs()
 	spawn_camps() # Iron Pact poacher camps — guards spawn locally like lair bosses
 	spawn_fossils() # old bones re-spawned with the world
 	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
-	rng.s = rsav # gameplay rolls resume from the session stream
 
 # ---------- effigy statues ----------
 const PERK_COST := 2

@@ -434,9 +434,12 @@ func run_click(cr: Dictionary) -> void:
 		"use_item":
 			use_item(cr["arg"])
 		"buy":
-			# the stock is the island's — guests ask, hosts decrement, the
-			# bag pays on the bought echo (mirror stock is read-only)
+			# the stock is the island's — guests ask, hosts decrement; the bag
+			# pays the mirrored price up front and bought settles the truth
 			if game.net != null and game.net.is_client():
+				var rw: Dictionary = game.merchant_stock[int(cr["arg"])] \
+					if int(cr["arg"]) >= 0 and int(cr["arg"]) < game.merchant_stock.size() else {}
+				game.net.pay("buy", {"gold_coin": int(rw.get("price", 0))})
 				game.net.rpc("buy_req", float(cr["arg"]))
 			else:
 				game.buy_from_merchant(cr["arg"])
@@ -512,7 +515,13 @@ func run_click(cr: Dictionary) -> void:
 				if game.item_count("sprigmelt_effigy") < 1:
 					game.log_msg("No effigy to burn")
 				else:
-					game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth, bag pays on echo
+					var sb := 0 # replica rows carry soul_boost — the panel cost is 1+boost
+					for q in game.pals:
+						if q.uid == int(cr["arg"]):
+							sb = q.soul_boost
+							break
+					game.net.pay("infuse", {"sprigmelt_effigy": 1 + sb})
+					game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth
 			else:
 				game.soul_infuse(cr["arg"])
 		# ---- shell menu acts (title / pause / settings) ----
@@ -607,6 +616,7 @@ func chest_bulk(act: String) -> void:
 			if payload.is_empty():
 				game.log_msg(tr("Nothing stows here"))
 				return
+			game.net.pay("chest_dep", payload) # goods leave the bag on the click
 			game.net.rpc("chest_req", "dep", float(cc.x), float(cc.y), payload)
 		else:
 			if st.get("store", {}).is_empty():
@@ -701,6 +711,7 @@ func interact() -> void:
 			"weather_shrine":
 				if game.net != null and game.net.is_client():
 					if game.item_count("lumenite") >= 3:
+						game.net.pay("shrine", {"lumenite": 3})
 						game.net.rpc("shrine_req")
 					else:
 						game.log_msg("The shrine wants 3 lumenite")
@@ -745,6 +756,7 @@ func interact() -> void:
 				elif game.item_count("kin_egg") > 0 or game.item_count("huge_kin_egg") > 0:
 					if game.net != null and game.net.is_client():
 						var eg := "huge_kin_egg" if game.item_count("huge_kin_egg") > 0 else "kin_egg"
+						game.net.pay("egg", {eg: 1})
 						game.net.rpc("egg_req", eg)
 					else:
 						game.deposit_egg()
@@ -1959,7 +1971,8 @@ func use_item(k: String) -> void:
 				game.add_item(k, -1)
 		"kin_egg", "huge_kin_egg":
 			if game.net != null and game.net.is_client():
-				game.net.rpc("egg_req", k) # the clicked egg goes, the host finds it a slot
+				game.net.pay("egg", {k: 1}) # the egg leaves the bag on the click
+				game.net.rpc("egg_req", k)
 			else:
 				game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
 		"fishing_rod":
@@ -1975,9 +1988,9 @@ func use_item(k: String) -> void:
 			elif game.respec():
 				game.add_item(k, -1)
 		"fertilizer":
-			# guests: host validates a farm near the ghost, then fert_done
-			# pays the bag — never up front
+			# guests: the bag pays at request time — a refusal refunds it
 			if game.net != null and game.net.is_client():
+				game.net.pay("fert", {"fertilizer": 1})
 				game.net.rpc("fert_req")
 			else:
 				game.fertilize()
@@ -1988,7 +2001,8 @@ func use_item(k: String) -> void:
 		_:
 			if k.begins_with("skill_fruit_"):
 				if game.net != null and game.net.is_client():
-					game.net.rpc("fruit_req", k) # host teaches the lead, bag pays on echo
+					game.net.pay("fruit", {k: 1}) # bag pays now; a refusal refunds
+					game.net.rpc("fruit_req", k)
 				else:
 					game.teach_skill_fruit(k)
 				return

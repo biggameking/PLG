@@ -392,3 +392,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     only truth), and the host's own avatar (pid 1) can't spoof itself.
     Applying the gate to authority packets strands the host invisible
     past spawn+12.
+77. **Same-shape fixes must enumerate every site.** Determinism lanes, reach
+    gates, mirrors, pay-first — when a pattern lands on one site, list its
+    siblings first. The phantom-wall class resurfaced a third time because
+    the earlier sweep patched `regenerate` and left `_ready` on the same bug.
+    Sweep sibling sites at write time; don't defer discovery to the audit.
+78. **Cost verbs pay first; every refusal refunds.** Effects are host truth,
+    the bag is client truth — effect-before-echo turns a dropped wire into a
+    mint. New spend verbs default to `pay → req → done/rej`; an echo settles
+    the ledger, it never debits.
+79. **Snapshots sharing a field's truth must replace wholesale.** `state_sync`
+    only placed rows — a same-cell local structure blocked `place_free` and
+    left a phantom. Join-time application is raze-and-replace, not merge.
