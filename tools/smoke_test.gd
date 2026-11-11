@@ -4826,6 +4826,56 @@ func run() -> void:
 	hudn.run_click({"act": "x_close", "arg": null})
 	check("x_close bails the panel", game.panel == "")
 	check("dex ids cached", hudn._dex_ids().size() > 0 and hudn._dex_key != "")
+	# guest container ops: the host validates, the wire carries the truth
+	var ch_ok := false; var ch_k := Vector2i.ZERO
+	for rad in range(3, 10):
+		for ang9 in range(16):
+			var ck4 := Vector2i(int(p.pos.x + cos(ang9 * TAU / 16.0) * rad),
+				int(p.pos.y + sin(ang9 * TAU / 16.0) * rad))
+			if game.can_place("chest", ck4.x, ck4.y):
+				game.place_free("chest", ck4.x, ck4.y); ch_k = ck4; ch_ok = true; break
+		if ch_ok: break
+	if ch_ok:
+		var ch_st: Dictionary = game.structures[ch_k]
+		ch_st["store"] = {"gold_coin": 7}
+		if not game.net.ghosts.has(99):
+			game.net.spawn_ghost(99)
+		game.net.ghosts[99].net_pos = Vector3(ch_k.x, ch_k.y, 0)
+		var acc := game.chest_req_remote(99, ch_k, "dep",
+			{"wood": 4, "stone": 2, "gold_coin": 9, "fake_id_x": 5})
+		check("guest deposit whitelists", int(acc.get("wood", 0)) == 4
+			and int(acc.get("stone", 0)) == 2 and not acc.has("gold_coin")
+			and not acc.has("fake_id_x"), "acc=%s" % acc)
+		check("deposit reached the store", int(ch_st["store"].get("wood", 0)) == 4
+			and int(ch_st["store"].get("gold_coin", 0)) == 7)
+		game.net.ghosts[99].net_pos = Vector3(ch_k.x + 40, ch_k.y, 0)
+		check("far ghost can't reach the box", game.chest_req_remote(99, ch_k, "dep",
+			{"wood": 1}).is_empty() and int(ch_st["store"].get("wood", 0)) == 4)
+		game.net.ghosts[99].net_pos = Vector3(ch_k.x, ch_k.y, 0)
+		var tk := game.chest_req_remote(99, ch_k, "wd", {})
+		check("guest withdraw takes host truth", int(tk.get("wood", 0)) == 4
+			and int(tk.get("gold_coin", 0)) == 7 and ch_st["store"].is_empty(), "tk=%s" % tk)
+		check("non-container refused", game.chest_req_remote(99,
+			ch_k + Vector2i(9, 9), "wd", {}).is_empty())
+		game.net_remove_structure(ch_st)
+		# the feed box keeps its food-only rule for guests too
+		var fbx_k := Vector2i(-1, -1)
+		for rad in range(3, 10):
+			for ang9 in range(16):
+				var ck6 := Vector2i(int(p.pos.x + cos(ang9 * TAU / 16.0) * rad),
+					int(p.pos.y + sin(ang9 * TAU / 16.0) * rad))
+				if game.can_place("feed_box", ck6.x, ck6.y):
+					game.place_free("feed_box", ck6.x, ck6.y); fbx_k = ck6; break
+			if fbx_k.x >= 0: break
+		if fbx_k.x >= 0:
+			var fbx_st: Dictionary = game.structures[fbx_k]
+			game.net.ghosts[99].net_pos = Vector3(fbx_k.x, fbx_k.y, 0)
+			var acc_fb := game.chest_req_remote(99, fbx_k, "dep", {"wood": 3, "baked_berries": 2})
+			check("feed box keeps the food rule", int(acc_fb.get("baked_berries", 0)) == 2
+				and not acc_fb.has("wood"), "acc=%s" % acc_fb)
+			game.net_remove_structure(fbx_st)
+	else:
+		check("guest deposit whitelists", false, "no chest spot seeded")
 	game.touch_ui = tui3
 	hudn.touch_verb("more")
 	check("··· collapses the row", not hudn.touch_more)

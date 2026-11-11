@@ -545,6 +545,51 @@ func demolish_req(tx: int, ty: int) -> void:
 		return # razing is deliberate — a sweep script gets one refusal per beat
 	game.net_demolish(int(tx), int(ty), pid)
 
+@rpc("any_peer", "call_remote", "reliable")
+func chest_req(op: String, tx: float, ty: float, payload: Dictionary = {}) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "chest_bkt", 1.0, 1.0):
+		return # a bulk-macro gets one container op per beat
+	var cell := Vector2i(int(tx), int(ty))
+	var res := game.chest_req_remote(pid, cell, str(op), payload)
+	if res.is_empty():
+		return # refused — nothing moved, nothing to echo
+	if multiplayer.get_peers().has(pid):
+		rpc_id(pid, "chest_grant" if str(op) == "wd" else "chest_took",
+			int(tx), int(ty), res)
+	elif str(op) == "wd": # the keeper vanished mid-reach — goods go back, not to the void
+		var st2 = game.structures.get(cell)
+		if st2 != null:
+			for id in res:
+				st2["store"][id] = int(st2["store"].get(id, 0)) + int(res[id])
+	# dep: goods already reached the shared store — a vanished keeper just
+	# never hears the ack, which is fine: the truth moved, the echo is a nicety
+
+@rpc("authority", "call_remote", "reliable")
+func chest_grant(_tx: int, _ty: int, items: Dictionary) -> void:
+	if is_host:
+		return
+	var n := 0
+	for id in items:
+		var c := int(items[id])
+		game.add_item(str(id), c)
+		n += c
+	game.log_msg("Took %d items" % n)
+
+@rpc("authority", "call_remote", "reliable")
+func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
+	if is_host:
+		return
+	var n := 0
+	for id in items:
+		var c := mini(int(items[id]), game.item_count(str(id)))
+		if c > 0:
+			game.add_item(str(id), -c)
+			n += c
+	game.log_msg("Stored %d items" % n)
+
 # Shared box: the host's kinbox is the one real roster. Clients get a
 # lightweight mirror (uid/species/level/vitals, no Kin nodes) and their
 # kinbox clicks travel back as box_req ops the host validates + runs.

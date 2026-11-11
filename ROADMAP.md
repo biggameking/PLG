@@ -364,3 +364,14 @@ S33 (6th context-free audit — S31..S32 batch, 3H/8M/5L):
   last-anchor refuse, outpost raze, residue refuse, mirror purge,
   client intersect, deny refund, tech-row gate, facing shot, tap
   zones, pinch, x_close, dex cache, wire store. Smoke 631-633/0 x3.
+S34 (guest container protocol): chest/feed_box buttons were dead for
+  clients — client_locked() swallowed every bulk op. chest_req RPC:
+  throttle + witnessed-ghost range (same 6.0 rule as demolition) +
+  container whitelist + mimic refuse. wd grants only host-truth items
+  (zero fabrication surface); dep whitelists the claimed payload
+  through ItemData + stack cap + feed-box food gate, client pays out
+  only what chest_took echoes. Vanish mid-op: wd goods roll back into
+  the box, dep goods stay shared (the echo is a nicety, the move is
+  the truth). Coverage: deposit whitelist (coin/junk refused), store
+  arrival, far-ghost refuse, withdraw empties, non-container refuse,
+  feed-box food rule. Smoke 637/0 x2.

@@ -1221,6 +1221,42 @@ func chest_withdraw_all(st) -> int:
 	st["store"] = {}
 	return n
 
+# host-side validated container ops for guests. The ghost must be witnessed
+# next to the box (same rule as demolition); deposits are whitelisted through
+# ItemData + the stack cap + the food gate — whatever fails validation simply
+# never reaches the store. Returns the accepted payload, {} when refused.
+func chest_req_remote(pid: int, cell: Vector2i, op: String, payload: Dictionary) -> Dictionary:
+	var st = structures.get(cell)
+	if st == null or st["id"] not in ["chest", "feed_box"]:
+		return {}
+	if str(st.get("mimic", "")) != "":
+		return {} # the grin doesn't trade
+	var gp = net.ghosts.get(pid) if net != null else null
+	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(
+			Vector2(cell.x + 0.5, cell.y + 0.5)) > 6.0:
+		return {}
+	if op == "wd":
+		var taken := {}
+		for iid in st.get("store", {}).keys():
+			taken[iid] = int(st["store"][iid])
+		st["store"] = {}
+		return taken
+	if op == "dep":
+		var accepted := {}
+		for id in payload.keys():
+			var iid := str(id)
+			if not ItemData.ITEMS.has(iid) or iid == "gold_coin":
+				continue # unknown ids and coin don't ride into shared storage
+			var c := clampi(int(payload[id]), 0, 999)
+			if c <= 0 or not chest_can_take(st, iid):
+				continue # stack cap reached or garbage count
+			if st["id"] == "feed_box" and int(ItemData.ITEMS.get(iid, {}).get("food", 0)) <= 0:
+				continue # the feed box only takes food — same rule as the local path
+			st["store"][iid] = int(st["store"].get(iid, 0)) + c
+			accepted[iid] = int(accepted.get(iid, 0)) + c
+		return accepted
+	return {}
+
 var death_marks: Array[Vector2] = [] # map tombstones where you dropped your pack (session-only)
 func respawn_player() -> void:
 	# the island rule: your pack spills where you fell; walk back to reclaim.
