@@ -1699,6 +1699,19 @@ func run() -> void:
 	game.dex_claimed = cl0
 	game.pals.erase(dxp); dxp.free()
 
+	# S67: roster portraits — rows carry sid and the tex cache bounds misses too
+	var hud67: Control = main.get_node("UILayer/HUD")
+	check("kin_tex loads a species sprite", hud67.kin_tex("fenjelly") is Texture2D)
+	var miss67: int = hud67._kin_tex.size()
+	check("kin_tex caches a miss once", hud67.kin_tex("__nope__") == null
+		and hud67.kin_tex("__nope__") == null and hud67._kin_tex.size() == miss67 + 1)
+	var p67: Kin = game.gen_pal("fenjelly", 5, p.pos)
+	p67.mode = "partner"; game.pals.append(p67); game.party.append(p67.uid)
+	var rows67: Array = hud67.party_rows()
+	check("party rows carry sid for portraits", rows67.size() > 0
+		and rows67[rows67.size() - 1]["sid"] == "fenjelly", "rows=%s" % str(rows67))
+	game.party.erase(p67.uid); game.pals.erase(p67); p67.free()
+
 	# skills + statuses
 	var sp_pal: Kin = game.pals[0]
 	sp_pal.statuses["burn"] = game.t + 3
