@@ -5536,6 +5536,49 @@ func run() -> void:
 	for v43_n2 in v43_pad:
 		game.pals.erase(v43_n2); v43_n2.queue_free()
 	game.merchant_wanted = v43_wanted
+	# ── S44: the crown's payoff — apex gauntlet wave, legendary egg guard ──
+	var v44_kin0: Array = game.hatch_pool()
+	var v44_leg_ok := true
+	for s44 in v44_kin0:
+		if s44 in game.LEGENDARY_DEN or SpeciesData.species_of(str(s44)).get("boss", false):
+			v44_leg_ok = false
+	check("hatch pool holds no legendaries or bosses", v44_leg_ok)
+	if game.kinbox_pos.x < 0: # a tower needs a kinbox — plant one off-player
+		for v44_d in [Vector2i(4, 4), Vector2i(-4, 4), Vector2i(4, -4), Vector2i(-4, -4)]:
+			var v44_c: Vector2i = Vector2i(game.player.pos) + v44_d
+			if game.can_place("kinbox", v44_c.x, v44_c.y) and game.place_free("kinbox", v44_c.x, v44_c.y):
+				break
+	var v44_cr: bool = game.crowned
+	var v44_run := func() -> Dictionary:
+		var v44_sig0: int = game.item_count("gauntlet_sigil")
+		var v44_lo0: int = game.item_count("legendary_orb")
+		var v44_ap0: int = game.item_count("ancient_part")
+		game.gauntlet = {}
+		var v44_ok: bool = game.start_gauntlet()
+		var v44_wmax := 0
+		var v44_gd := 0
+		while not game.gauntlet.is_empty() and v44_gd < 12:
+			v44_gd += 1
+			v44_wmax = maxi(v44_wmax, int(game.gauntlet.get("wave", 0)))
+			for v44_q in game.pals.duplicate():
+				if v44_q.has_meta("gauntlet"):
+					game.pals.erase(v44_q); v44_q.queue_free()
+			game.gauntlet["left"] = 0
+			game.tick_gauntlet()
+		return {"ok": v44_ok, "wmax": v44_wmax,
+			"sig": game.item_count("gauntlet_sigil") - v44_sig0,
+			"lo": game.item_count("legendary_orb") - v44_lo0,
+			"ap": game.item_count("ancient_part") - v44_ap0}
+	var v44_r1: Dictionary = v44_run.call() # uncrowned: 3 waves, standard purse
+	check("gauntlet clears at wave 3 for an uncrowned keeper",
+		v44_r1["ok"] and v44_r1["wmax"] == 3 and v44_r1["sig"] == 1 and v44_r1["lo"] == 2)
+	game.crowned = true
+	var v44_r2: Dictionary = v44_run.call() # crowned: the apex wave answers
+	check("the crown draws a fourth apex wave",
+		v44_r2["wmax"] == 4 and v44_r2["sig"] == 2 and v44_r2["lo"] == 4
+		and v44_r2["ap"] == 6 and game.mission_flags.has("gauntlet_ex"))
+	game.mission_flags.erase("gauntlet_ex")
+	game.crowned = v44_cr
 	# pause shell hosts the panel verbs for every input device
 	var peer_bak2 = game.net.multiplayer.multiplayer_peer
 	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer

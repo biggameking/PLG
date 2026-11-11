@@ -830,7 +830,7 @@ const ITEMS = {
  "gauntlet_sigil": {
   "id": "gauntlet_sigil",
   "name": "Gauntlet Sigil",
-  "desc": "Starts a 3-wave trial at your kinbox. Tower rules: only the strong walk out.",
+  "desc": "Starts a 3-wave trial at your kinbox. A crowned keeper faces a fourth, apex wave.",
   "usable": true,
   "stack": 3,
   "price": 0

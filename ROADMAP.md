@@ -566,3 +566,19 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
     tested instead); multi-sleeper day-skip asymmetry noted as design;
     hello tag-switch desync is self-inflicted; guest-hit sfx is cosmetic.
   Smoke 700-704/0 x9, 0 ERROR, skip counter live.
+
+## S44 — the crown's payoff: apex gauntlet
+  crowned was a flag + a one-time loot dump — the campaign ended in a log
+  line. Now tick_gauntlet asks a fourth question when the keeper is crowned:
+  wave 4 spawns 3× zone-3 elites (lv46-54) + a true boss (lv56-60, phase-2
+  slam). EX clear pays legendary_orb×4, effigy×5, gold×500, ancient_part×6,
+  huge_kin_egg×2, gauntlet_sigil×2 (self-sustaining); uncrowned keeps the
+  3-wave/standard-purse contract untouched.
+  Verified the user's two named fears are already structurally safe:
+  hatch_pool() excludes LEGENDARY_DEN + boss + non-acquirable species
+  (eggs can't mint legendaries — now asserted in-suite), and every boss
+  runs a real phase-2 (pack summon + element shock ring at half hp).
+  gauntlet_sigil desc now advertises the apex wave; mission flag
+  gauntlet_ex persists through mflags.
+  Sim: capture grid/raid curve/species spread all sane (SIM 0 failures).
+  Smoke 705/0.

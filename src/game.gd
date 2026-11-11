@@ -978,8 +978,11 @@ func gauntlet_next_wave() -> void:
 	match w:
 		1: groups = [[acq_pool(SpeciesGen.zone_pool(2)), 2, [20, 26], false]]
 		2: groups = [[acq_pool(SpeciesGen.zone_pool(2) + SpeciesGen.zone_pool(3)), 2, [30, 36], false]]
-		_: groups = [[acq_pool(SpeciesGen.zone_pool(3)), 2, [38, 42], false],
+		3: groups = [[acq_pool(SpeciesGen.zone_pool(3)), 2, [38, 42], false],
 			[acq_pool(SpeciesGen.zone_pool(3)), 1, [48, 50], true]]
+		_: # crowned EX — the tower's last question, heavier than anything it asks below
+			groups = [[acq_pool(SpeciesGen.zone_pool(3)), 3, [46, 54], false],
+				[acq_pool(SpeciesGen.zone_pool(3)), 1, [56, 60], true]]
 	for grp in groups:
 		var pool: Array = grp[0]
 		for i in int(grp[1]):
@@ -1009,17 +1012,26 @@ func tick_gauntlet() -> void:
 		return # the trial is a host event — its raiders arrive as replicas
 	if gauntlet.is_empty() or gauntlet["left"] > 0:
 		return
-	if gauntlet["wave"] < 3:
+	var apex: int = 4 if crowned else 3 # a crowned keeper gets one more question
+	if gauntlet["wave"] < apex:
 		gauntlet_next_wave()
 		return
+	var ex: bool = gauntlet["wave"] >= 4
 	gauntlet = {}
-	add_item("legendary_orb", 2)
+	add_item("legendary_orb", 4 if ex else 2)
 	add_item("sprigmelt_effigy", 5)
-	add_item("gold_coin", 150)
-	add_item("gauntlet_sigil", 1) # it pays for the next run — if you survive
-	log_msg("GAUNTLET CLEARED! Legendary orbs + effigies + gold")
-	floater(player.pos, "GAUNTLET CLEARED!", "#ffd76e")
+	add_item("gold_coin", 500 if ex else 150)
+	add_item("gauntlet_sigil", 2 if ex else 1) # it pays for the next run — if you survive
+	if ex:
+		add_item("ancient_part", 6)
+		add_item("huge_kin_egg", 2)
+		log_msg("APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper")
+	else:
+		log_msg("GAUNTLET CLEARED! Legendary orbs + effigies + gold")
+	floater(player.pos, "APEX CLEARED!" if ex else "GAUNTLET CLEARED!", "#ffd76e")
 	mission_flags["gauntlet"] = true
+	if ex:
+		mission_flags["gauntlet_ex"] = true
 
 # ---------- base missions ----------
 # guide rope: an ordered checklist of base milestones that pays
