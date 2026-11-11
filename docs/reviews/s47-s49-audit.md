@@ -313,3 +313,56 @@ dict+raid 旗按模式擦洗+伪造 captive 清空+pair 归一 null。
 
 ### 验证
 smoke 749/0、747/0 零 ERROR。
+
+## 第十七轮外审处置（S56）— S55 修复面复核
+
+外审快照 `76184d4`：**4C/3H/2M/3L**。S55 的数值强转层全部成立，但
+"非数值 abort" 还有第二类——typed 参数传递 / 迭代 / 键类型——四类
+全部 post-teardown，同属"半重建世界覆写档"杀伤链。
+
+### C（4/4 全落）
+- `world.generate(d["seed"])` raw Variant → typed `int` param。seed 加
+  入类型检查链：非数值**拒绝载入**（pre-teardown，世界不动），调用点
+  `int(d["seed"])`。夹具新增拒绝路断言：seed="abc" → 返回 false 且
+  live 世界 pals 存活。
+- `ks.split(",")` on non-String dict keys — `store_var` 保留 int/
+  Vector2 键，`ks is not String → continue`。
+- `species_of(pd.get("sp"))` raw Variant → `id: String` — 包 `str()`，
+  与同函数其余调用点一致。
+- `for pi in d["party_idx"]` — `has()` 不挡 null/scalar，`is Array` 闸。
+
+### H（3/3 全落）
+- migrate.gd 四循环（drops/crafts/kin/respawns）跑在 load 守卫**之前**
+  ——`is Array` 闸；game.gd 同名字段循环同样补闸（post-teardown 更致命）。
+- `boss_respawns` 条目 `duplicate()` 保留敌意尾——`lv:{}`/`alpha:{}`
+  会在 tick 时 `int()`/`bool()` abort 且 `add_child` 先于 `setup` →
+  树内幽灵节点 + 每帧 ERROR。改为**重建白名单 dict**（sid/pos/lv/
+  alpha/boss/at 全强转，sid 过物种白名单）。
+- `pending_jobs` 在容量路由**之前**入队——溢出 lane `np.free()` 后
+  引用悬垂，job 应用循环 abort 跳过 `_reset_shell_state()`。移到
+  `loaded.append(np)` 之后（三个成功 lane 的公共点）。
+
+### M（2/2 全落）
+- `_norm_pair()` 共享归一器：entry 必须 `[String,String,num,num]` 头
+  ——`["a","b",{},{}]` 通过旧 `size>=4`+头检却在 `int(pair[2])` 炸。
+  三处全替：存档 inc.pair、线级 inc.pair、`egg_parents` 过滤（连
+  `_claim_egg_parent` 的默认 `[0]` 车道一并封死）。
+- `int(u)`→`_i(u)`（wk 循环）；`spawn_net_pal` 全部线级强转
+  （lv/lucky/nid/boss/alpha/mount）**前置**到 `gen_pal` 调用之前——
+  `int(d[6])` 原在 gen_pal 之后跑，abort 即树内幽灵 kin。
+
+### L（3/3 全落）
+- bench 上限 32 → `MAX_BENCH = 5 + MAX_REMOTE_TAGS*5`（165）——
+  联机存档的真 orb 曾被静默 free。
+- `pr["node"].queue_free()` 补 `is_instance_valid` 对称守卫。
+- 两处"box pals aren't in the scene tree"过时注释更正（box_holder
+  在树内；`free()` 在树内节点合法且立即）。
+
+### 夹具扩展
+敌意存档新增：seed="abc"（拒绝路断言）、`sp:5`、int 结构键、
+`party_idx:null`、`drops:null`/`crafts:5`、敌意 respawns 尾、
+`pair:["a","b",{},{}]`、`egg:[[5,6,7,8]]`；线级新增 dict lv/nid
+`spawn_net_pal` 强转断言。
+
+### 验证
+smoke 752/0、749/0 零 ERROR ×2。

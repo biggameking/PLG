@@ -1990,6 +1990,11 @@ func run() -> void:
 	check("net kin spawns", game.pals.size() == np0 + 1)
 	var npal: Kin = game.pals[game.pals.size() - 1]
 	check("net kin lucky", npal.lucky and "lucky" in npal.passives)
+	# hostile wire tails coerce before gen_pal — a dict lv/nid can't abort or ghost (audit-17 M9)
+	game.spawn_net_pal(["puffmite", p.pos.x + 4, p.pos.y + 3, {}, "wild", {}, {}, {}, {}])
+	var npal2: Kin = game.pals[game.pals.size() - 1]
+	check("hostile wire kin coerced", game.pals.size() == np0 + 2
+		and npal2.level == 1, "lv=%d" % npal2.level)
 	# the island trait slots: 1-4 passives, and the lucky signature always survives
 	var max_ps := 0; var over2_ps := 0
 	for i in 40:
@@ -2007,6 +2012,9 @@ func run() -> void:
 	game.pals.erase(npal)
 	if npal.get_parent(): npal.get_parent().remove_child(npal)
 	npal.free()
+	game.pals.erase(npal2)
+	if npal2.get_parent(): npal2.get_parent().remove_child(npal2)
+	npal2.free()
 	game.spawn_net_pal(["no_such_species", 0, 0, 1, "wild"])
 	game.spawn_net_pal("garbage")
 	check("net kin rejected", game.pals.size() == np0)
@@ -4003,9 +4011,13 @@ func run() -> void:
 		"treasure": ["a", "b"], "grotto": [1, {}], "perks": [1, 2],
 		"catches": {"fenjelly": [2], 9: 1},
 		"kin": [{"sp": "fenjelly", "lv": {}, "hp": [], "pos": [game.player.pos.x + 1, game.player.pos.y],
-				"talent": [], "sb": {}, "bnt": [], "raid": true, "mode": "partner"}],
-		"structures": {"5,5": {"id": "kin_cage", "cap": {"sp": "no_such_species", "lv": 5}},
-			"9,9": {"id": "incubator", "inc": {"pair": 5, "left": []}}}})
+				"talent": [], "sb": {}, "bnt": [], "raid": true, "mode": "partner"},
+			{"sp": 5, "lv": 3, "pos": [game.player.pos.x, game.player.pos.y]}], # non-String sp — species_of would abort on the raw Variant
+		"party_idx": null, "drops": null, "crafts": 5, # iterating a scalar/null field aborts the loop itself
+		"respawns": [{"pos": [game.player.pos.x, game.player.pos.y], "lv": {}, "alpha": {}, "boss": [], "at": 9999.0, "sid": "fenjelly"}],
+		"structures": {5: {"id": "chest"}, "5,5": {"id": "kin_cage", "cap": {"sp": "no_such_species", "lv": 5}},
+			"9,9": {"id": "incubator", "inc": {"pair": ["a", "b", {}, {}], "left": []},
+				"egg": [[5, 6, 7, 8]]}}}) # foreign tails + short entries both fail _norm_pair → wild genetics
 	hf.close()
 	var hload: bool = game.load_game()
 	var hkin_ok := false
@@ -4017,6 +4029,10 @@ func run() -> void:
 		if hk is not String: hkeys_ok = false
 	var hcap = game.structures.get(Vector2i(5, 5))
 	var hinc = game.structures.get(Vector2i(9, 9))
+	var hr_ok := true
+	for br in game.boss_respawns: # hostile tails are rebuilt to known-good fields — no abort at tick time
+		if not (br.get("lv") is int and br.get("alpha") is bool and br.get("boss") is bool):
+			hr_ok = false
 	check("hostile-variant save loads whole", hload == true and hkin_ok and hkeys_ok
 		and game.day == 1 and game.player.meal_buff is Dictionary
 		and game.player.capture_level <= 6
@@ -4024,7 +4040,16 @@ func run() -> void:
 		and game.treasure.is_empty()
 		and (hcap == null or not hcap.has("captive"))
 		and (hinc == null or hinc.get("egg_inc", {}).get("pair", "x") == null)
+		and (hinc == null or hinc.get("egg_parents", [1]).is_empty())
+		and hr_ok
 		and game.items.get("wood", 0) == 0, "wood=%s" % str(game.items.get("wood")))
+	# a non-numeric seed refuses BEFORE teardown — the live world must survive (audit-17 C1)
+	var hf2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	hf2.store_var({"seed": "abc", "v": 2, "day": 1, "tod": 8.0, "tech_points": 0,
+		"unlocked": [], "items": {}, "party": [], "player": {}, "kin": [], "structures": {}})
+	hf2.close()
+	var sload: bool = game.load_game()
+	check("bad seed refused world intact", sload == false and game.pals.size() > 0, "pals=%d" % game.pals.size())
 	for hst in [hcap, hinc]: # hostile fixtures leave no structures behind — a lingering incubator eats the next deposit test
 		if hst != null:
 			game.net_remove_structure(hst)

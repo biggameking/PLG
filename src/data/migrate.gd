@@ -146,10 +146,10 @@ static func rid(x) -> Variant:
 static func save_dict(d: Dictionary) -> Dictionary:
 	if not d.has("kin") and d.has("pals"):
 		d["kin"] = d["pals"]
-	for dd in d.get("drops", []):
+	for dd in (d["drops"] if d.get("drops") is Array else []): # a scalar/null field aborts the loop itself — migrate runs before load's guards
 		if dd is Dictionary and dd.has("id"):
 			dd["id"] = rid(dd["id"])
-	for rc in d.get("crafts", []):
+	for rc in (d["crafts"] if d.get("crafts") is Array else []):
 		if rc is Dictionary:
 			rc["out"] = rid(rc.get("out", ""))
 	if d.get("items") is Dictionary:
@@ -175,7 +175,7 @@ static func save_dict(d: Dictionary) -> Dictionary:
 	if seq is Dictionary:
 		for s in seq:
 			seq[s] = rid(seq[s])
-	for pd in d.get("kin", []):
+	for pd in (d["kin"] if d.get("kin") is Array else []):
 		if pd is Dictionary:
 			pd["sp"] = rid(pd.get("sp", ""))
 			if pd.get("carry") is Dictionary: # a hauler's load is an item id too
@@ -205,7 +205,7 @@ static func save_dict(d: Dictionary) -> Dictionary:
 					ip[i] = rid(ip[i])
 			if sv.get("mimic") is String:
 				sv["mimic"] = rid(sv["mimic"])
-	for rb in d.get("respawns", []):
+	for rb in (d["respawns"] if d.get("respawns") is Array else []):
 		if rb is Dictionary:
 			rb["sid"] = rid(rb.get("sid", ""))
 	return d

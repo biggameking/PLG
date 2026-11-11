@@ -33,6 +33,7 @@ var net_residue := false     # this world came down the wire — never write it 
 var net_unlocked := []       # host's tech list mirror; empty = not a client / no constraint
 var remote_parties := {}     # multiplayer: owner_tag -> [pal uids] — each guest's own party strip
 const MAX_REMOTE_TAGS := 32  # a roster row per keeper — enough guests for any sane co-op night
+const MAX_BENCH := 5 + MAX_REMOTE_TAGS * 5  # own strip plus every guest's — co-op saves legitimately reach ~165 orbs
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
 var next_drop_id := 1        # host: wire key for drop_sync (never reused)
 var dirty_decor := {}        # decor cell idx -> value; host ships deltas to clients
@@ -99,6 +100,16 @@ static func _f(v, dflt: float = 0.0) -> float:
 	if v is String:
 		return float(v)
 	return dflt
+
+# a parentage row is [sp, sp, talent, talent, ...] — hatch reads pair[0]/[1]
+# into a typed String and pair[2]/[3] through int(), so an entry with foreign
+# heads or non-numeric tails is a per-frame abort waiting for the egg to
+# finish. Anything malformed normalizes to null = wild genetics, never lost.
+static func _norm_pair(p) -> Variant:
+	if p is Array and p.size() >= 4 and p[0] is String and p[1] is String \
+			and (p[2] is float or p[2] is int) and (p[3] is float or p[3] is int):
+		return p
+	return null
 
 # Signature breeding pairs (the island combos): "a+b" -> offspring species.
 # Checked both directions at hatch time; unlisted pairs inherit a parent.
@@ -813,20 +824,27 @@ func spawn_net_pal(d) -> void:
 		return # foreign species id — drop the entry
 	if not (d[1] is float or d[1] is int) or not (d[2] is float or d[2] is int):
 		return
-	var np := gen_pal(sp_id, clampi(int(d[3]), 1, 60),
-		nearest_free(float(d[1]), float(d[2])), bool(d[5]) if d.size() > 5 else false)
+	# every wire cast lands before gen_pal — an abort after add_child would leak
+	# an in-tree kin that never ran setup and no roster can ever reach
+	var nlv := clampi(_i(d[3]), 1, 60)
+	var nlucky: bool = d.size() > 5 and d[5] is bool and d[5]
+	var nnid := _i(d[6]) if d.size() > 6 else 0
+	var nboss: bool = d.size() > 7 and d[7] is bool and d[7]
+	var nalpha: bool = d.size() > 8 and d[8] is bool and d[8]
+	var nmount := _i(d[10]) if d.size() > 10 else 0
+	var np := gen_pal(sp_id, nlv, nearest_free(float(d[1]), float(d[2])), nlucky)
 	np.mode = str(d[4]) if str(d[4]) in ["base", "partner", "wild"] else "wild"
-	np.net_id = int(d[6]) if d.size() > 6 else 0 # host uid — replicas track by this
+	np.net_id = nnid # host uid — replicas track by this
 	if np.net_id > 0:
 		np.uid = -np.net_id # replicas live in negative-uid space: local uids are
 			# always positive, so find_pal's dual-space lookup can never alias
 			# a real kin with a wire shadow that shares its number
-	np.boss = bool(d[7]) if d.size() > 7 else false # den/grotto bosses keep their orb immunity on clients too
-	np.alpha = bool(d[8]) if d.size() > 8 else false
+	np.boss = nboss # den/grotto bosses keep their orb immunity on clients too
+	np.alpha = nalpha
 	var nstag := str(d[9]) if d.size() > 9 else ""
 	if spire_tag_ok(nstag):
 		np.spire_tag = nstag # same whitelist the save path uses
-	np.mounted_by = int(d[10]) if d.size() > 10 else 0
+	np.mounted_by = nmount
 	np.visible = np.mounted_by == 0 # a ridden mount hides under its rider
 	pals.append(np)
 
@@ -1931,7 +1949,7 @@ func condense_active() -> void:
 	for i in need:
 		var fp: Kin = fodder[i]
 		box.erase(fp)
-		fp.free() # box pals aren't in the scene tree — free() not queue_free()
+		fp.free() # already erased — free() on the in-tree node is legal and immediate
 	ap.condense()
 	log_msg("%s condensed to star %d!" % [ap.spec["name"], ap.star])
 
@@ -3947,9 +3965,10 @@ func load_game() -> bool:
 			log_msg("Save missing field '%s' - starting fresh" % req)
 			return false # below this point every field is assumed present
 	if d["player"] is not Dictionary or d["kin"] is not Array or d["structures"] is not Dictionary \
-			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array:
+			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array \
+			or not (d["seed"] is float or d["seed"] is int):
 		log_msg("Save has wrong field types - starting fresh")
-		return false
+		return false # seed reaches a typed int parameter — refusing here beats a mid-load abort
 	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
 	despawn_merchant() # the trader's stock and node don't cross a load
 	for p in pals:
@@ -3974,7 +3993,8 @@ func load_game() -> bool:
 	last_merchant_day = -1 # the trader's daily visit re-arms on the loaded day
 	dirty_decor.clear() # stale deltas must not broadcast a prior world's cells
 	for pr in projectiles:
-		pr["node"].queue_free()
+		if is_instance_valid(pr["node"]):
+			pr["node"].queue_free() # same guard every sibling sweep carries
 	projectiles.clear()
 	for sp0 in spheres_flying: # orb sprites + stale targets must not cross a load
 		if is_instance_valid(sp0["node"]):
@@ -3990,7 +4010,7 @@ func load_game() -> bool:
 		structures[k]["node"].queue_free()
 	structures.clear()
 	world.structures.clear()
-	world.generate(d["seed"])
+	world.generate(int(d["seed"])) # numeric-verified above — the typed parameter would abort on anything else
 	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
 			and d.get("hp_map") is PackedByteArray and d["hp_map"].size() == world.hp.size():
 		world.decor = d["decor"]
@@ -4000,21 +4020,27 @@ func load_game() -> bool:
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
 	day = maxi(_i(d["day"]), 1); tod = clampf(_f(d["tod"]), 0.0, 24.0) # typed vars — a foreign string would throw on assignment; tod>24 would fast-forward a day per frame until under 24
 	raid_t = _f(d.get("raid_t", raid_t))
-	for dd0 in d.get("drops", []):
+	for dd0 in (d["drops"] if d.get("drops") is Array else []): # a scalar/null drops field aborts the loop itself — guard at the door
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
 				and ItemData.ITEMS.has(str(dd0["id"])) \
 				and (dd0["x"] is float or dd0["x"] is int) and (dd0["y"] is float or dd0["y"] is int):
 			spawn_drop(str(dd0["id"]), maxi(_i(dd0.get("n", 1)), 0), Vector2(float(dd0["x"]), float(dd0["y"]))) # negative n would corrupt the item ledger
 	boss_respawns.clear()
-	for rb in d.get("respawns", []):
+	for rb in (d["respawns"] if d.get("respawns") is Array else []):
 		var rp = rb.get("pos") if rb is Dictionary else null
 		if rp is Array and rp.size() >= 2 and (rp[0] is float or rp[0] is int) \
 				and (rp[1] is float or rp[1] is int) and boss_respawns.size() < MAX_RESPAWNS:
-			var rr: Dictionary = rb.duplicate()
-			rr["at"] = t + maxf(0.0, _f(rb.get("at", DAY_LEN))) # saved as remaining → back to absolute
+			var rrsid := str(rb.get("sid", ""))
+			if SpeciesData.species_of(rrsid).is_empty():
+				continue # a removed species' den stays dead — no phantom timer
+			var rr: Dictionary = {"sid": rrsid, "pos": [float(rp[0]), float(rp[1])],
+				"lv": clampi(_i(rb.get("lv", 30)), 1, 60), # hostile tails never reach gen_pal or a typed read at tick time
+				"alpha": rb.get("alpha") is bool and rb["alpha"],
+				"boss": rb.get("boss") is bool and rb["boss"],
+				"at": t + maxf(0.0, _f(rb.get("at", DAY_LEN)))} # saved as remaining → back to absolute
 			boss_respawns.append(rr)
 	craft_queue.clear()
-	for rc in d.get("crafts", []):
+	for rc in (d["crafts"] if d.get("crafts") is Array else []):
 		if rc is Dictionary and ItemData.ITEMS.has(str(rc.get("out", ""))) \
 				and craft_queue.size() < MAX_CRAFT_QUEUE:
 			craft_queue.append({"out": str(rc["out"]), "n": maxi(_i(rc.get("n", 1)), 0),
@@ -4123,7 +4149,7 @@ func load_game() -> bool:
 	for pd in d["kin"]:
 		if pd is not Dictionary:
 			continue # corrupt entry — keep loading the rest
-		if SpeciesData.species_of(pd.get("sp", "")).is_empty():
+		if SpeciesData.species_of(str(pd.get("sp", ""))).is_empty():
 			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
 			continue # corrupt entry — don't crash on spec lookups
 		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
@@ -4196,8 +4222,6 @@ func load_game() -> bool:
 		var rvs = pd.get("revive", 0.0)
 		np.revive_t = t + float(rvs) if (rvs is float or rvs is int) and float(rvs) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
-		if pd.get("job") is String:
-			pending_jobs.append([np, pd["job"]])
 		if np.mode == "box":
 			if box.size() < MAX_BOX + 32: # same overflow lane the KO path uses
 				box.append(np)
@@ -4206,7 +4230,7 @@ func load_game() -> bool:
 				np.free() # over-cap baggage dies here — it never entered the tree
 				continue
 		elif np.mode == "bench":
-			if bench.size() < 32: # orbs are few by design — a forged file can't grow a phantom stable
+			if bench.size() < MAX_BENCH: # a co-op save's orbs are 5 own + 32×5 guest — 32 was freeing real kin
 				bench.append(np)
 				box_pal(np) # orbs rest in the same cold store
 			else:
@@ -4219,7 +4243,9 @@ func load_game() -> bool:
 			np.free() # past the AI/cap guard — rule 1 applies to saves too
 			continue
 		loaded.append(np) # unified load order — party_idx indexes pals+box+bench alike
-	if d.has("party_idx"):
+		if pd.get("job") is String:
+			pending_jobs.append([np, pd["job"]]) # queued after placement — an over-cap kin's freed node can never dangle here
+	if d.get("party_idx") is Array: # has() alone isn't enough — iterating null/a scalar aborts mid-load
 		party.clear()
 		for pi in d["party_idx"]:
 			if pi is int and pi >= 0 and pi < loaded.size():
@@ -4249,6 +4275,8 @@ func load_game() -> bool:
 	for ks in d["structures"]:
 		if st_built >= MAX_STRUCTURES:
 			break # the build cap is a rule-1 bound, not a suggestion — saves obey it too
+		if ks is not String:
+			continue # store_var preserves foreign key types — split() on an int key aborts mid-rebuild
 		var parts: PackedStringArray = ks.split(",")
 		if parts.size() < 2:
 			continue # malformed cell key — skip rather than abort the load
@@ -4296,7 +4324,7 @@ func load_game() -> bool:
 						st["store"][str(sk2)] = maxi(int(cv), 0) # negative stock would make chest math lie
 			st["timer"] = maxf(_f(sv.get("timer", 0.0)), 0.0) # negative timer fires production instantly; st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg") is Array: # tick_ranch size()/pop_fronts this — anything else errors per frame
-				st["egg_parents"] = sv["egg"].filter(func(e2): return e2 is Array)
+				st["egg_parents"] = sv["egg"].filter(func(e2): return _norm_pair(e2) is Array) # the head shape hatch actually needs
 			if sv.get("exp") is Dictionary and sid == "expedition_post":
 				var exp_d: Dictionary = sv["exp"]
 				var left: float = _f(exp_d.get("left", 0.0))
@@ -4307,10 +4335,7 @@ func load_game() -> bool:
 				st["fert"] = t + clampf(float(sv["fert"]), 0.0, 300.0) # remaining seconds
 			if sv.get("inc") is Dictionary and sid == "incubator":
 				var inc_d: Dictionary = sv["inc"]
-				var inc_pair = inc_d.get("pair")
-				if not (inc_pair is Array) or (inc_pair.size() >= 4
-						and (not (inc_pair[0] is String) or not (inc_pair[1] is String))):
-					inc_pair = null # malformed parentage normalizes to wild genetics — the egg is still owed
+				var inc_pair = _norm_pair(inc_d.get("pair")) # heads + numeric tails both checked — see _norm_pair
 				st["egg_inc"] = {"pair": inc_pair, "huge": inc_d.get("huge") is bool and inc_d["huge"],
 					"ready_t": t + maxf(_f(inc_d.get("left", 30.0)), 1.0),
 					"own_tag": str(inc_d.get("own", ""))} # pids are session-scoped — the tag is what survives a save
@@ -5297,7 +5322,7 @@ func condense_remote(pid: int) -> bool:
 	for i in need:
 		var fp: Kin = fodder[i]
 		box.erase(fp)
-		fp.free() # box pals aren't in the scene tree — free() not queue_free()
+		fp.free() # already erased — free() on the in-tree node is legal and immediate
 	ap.condense()
 	note_remote(pid, "%s condensed to star %d!" % [ap.spec["name"], ap.star])
 	return true
@@ -6288,10 +6313,7 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 	if sv.has("inc"):
 		if sv["inc"] is Dictionary:
 			var inc: Dictionary = sv["inc"]
-			var inc_pair = inc.get("pair")
-			if not (inc_pair is Array) or (inc_pair.size() >= 4
-					and (not (inc_pair[0] is String) or not (inc_pair[1] is String))):
-				inc_pair = null # malformed parentage normalizes to wild genetics — the egg is still owed
+			var inc_pair = _norm_pair(inc.get("pair")) # same normalizer the save path runs — heads + numeric tails
 			st["egg_inc"] = {"pair": inc_pair, "huge": inc.get("huge") is bool and inc["huge"],
 				"ready_t": t + clampf(_f(inc.get("left", 0.0)), 0.0, 900.0),
 				"own_tag": str(inc.get("own", ""))}
@@ -6318,7 +6340,7 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 	if sv.has("wk") and sv["wk"] is Array: # uids resolve to live replicas —
 		var wl := [] # a missing one self-heals on the next tick
 		for u in sv["wk"]:
-			var r := find_net_pal(int(u))
+			var r := find_net_pal(_i(u)) # a foreign worker uid can't abort the client's struct_sync
 			if r != null:
 				wl.append(r)
 		st["workers"] = wl
