@@ -291,3 +291,14 @@ build-tools/apksigner).
   peer, send/cancel routes, vkbd drop). Suite 563/0.
   Android blocker narrowed: Homebrew openjdk@21 is present and runnable —
   only the SDK itself is absent (install declined: 6.1GB free disk).
+- S28 touch verb coverage + panel trap — DONE: every panel was a one-way
+  door on a slab — touch gates hid the verb cluster when a panel was open,
+  including the exit (open Inv → never close without Esc). ☰ now becomes
+  ✕ while a panel is up (touch_down routes it, draw_touch keeps it
+  visible); a ··· row adds the missing world verbs ASG/STN/KSK/RDE/DML/MAP
+  (demolish targets the nearest structure within 4.5 tiles — no cursor on
+  glass); pause shell gains HOST SESSION (no-peer) and TECH TREE/KINDEX/
+  STATUES/GUIDE rows so panels are reachable on pad+touch too, with a
+  two-column fallback over 7 rows. zh.csv += 5 rows. Smoke +12 (trap
+  close, stray-tap rejection, row zones, verb toggles, demolish fixture,
+  pause rows, m_tech route). Suite 575–578 checks, 0 failures ×3.

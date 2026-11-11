@@ -4656,6 +4656,52 @@ func run() -> void:
 	hudn._process(0.016)
 	check("vkbd drops with panel", not hudn._vkbd_open)
 	game.state = "play"
+	# panel trap: ☰ stays up as ✕ — the only way out of a panel on a slab
+	game.panel = "inv"
+	hudn.touch_down(lay_t["btns"]["menu"], 3)
+	check("X tap closes the panel", game.panel == "")
+	hudn.touch_down(lay_t["joy"], 4) # a stray tap inside the panel must NOT move
+	check("panel still owns other taps", p.touch_vec == Vector2.ZERO)
+	# more-row: ··· toggles, verbs ride the real helpers
+	hudn.touch_verb("more")
+	check("··· expands the verb row", hudn.touch_more)
+	check("row zones eat taps", hudn.touch_zone_hit(lay_t["more_row"]["dml"]))
+	hudn.touch_verb("map")
+	check("map verb toggles minimap", hudn.map_show)
+	hudn.touch_verb("map")
+	check("map verb toggles back", not hudn.map_show)
+	var dm_placed := false
+	var dm_k := Vector2i.ZERO
+	if "campfire" not in game.unlocked: game.unlocked.append("campfire")
+	for rad in range(1, 4):
+		for ang9 in range(16):
+			var ck := Vector2i(int(p.pos.x + cos(ang9 * TAU / 16.0) * rad),
+				int(p.pos.y + sin(ang9 * TAU / 16.0) * rad))
+			if Vector2(ck.x + 0.5 - p.pos.x, ck.y + 0.5 - p.pos.y).length() > 4.0:
+				continue # _touch_demolish only reaches ~4.5 tiles out
+			if game.can_place("campfire", ck.x, ck.y):
+				game.place_free("campfire", ck.x, ck.y); dm_k = ck; dm_placed = true; break
+		if dm_placed: break
+	if dm_placed:
+		hudn.touch_verb("dml")
+		check("dml razes the nearest structure", not game.structures.has(dm_k))
+	else:
+		check("dml razes the nearest structure", false, "no campfire spot seeded")
+	hudn.touch_verb("more")
+	check("··· collapses the row", not hudn.touch_more)
+	# pause shell hosts the panel verbs for every input device
+	var peer_bak2 = game.net.multiplayer.multiplayer_peer
+	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer
+	var want_rows := ["m_host", "m_tech", "m_dex", "m_statues", "m_guide"]
+	for wr in want_rows:
+		var got := 0
+		for row in hudn.pause_rows():
+			if row[1] == wr: got += 1
+		check("pause row %s" % wr, got == 1)
+	game.net.multiplayer.multiplayer_peer = peer_bak2
+	hudn.run_click({"act": "m_tech", "arg": null})
+	check("tech row opens the panel", game.panel == "tech")
+	game.panel = ""
 
 	# ---- S7: bosses phase, spires crown ----
 	var sb := game.gen_pal("fenjelly", 40, Vector2(game.player.pos.x + 2, game.player.pos.y))

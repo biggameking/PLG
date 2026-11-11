@@ -272,3 +272,14 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     stores raw text — two zh.csv rows sat dead because callers passed
     literals. Every log/note/message string that reaches a user goes through
     tr() where it's emitted, with a zh row in the same commit.
+55. **Every modal needs a same-class exit.** Touch gates hid the whole verb
+    cluster when `game.panel != ""` — including the only way to close it.
+    Panels became one-way doors on a slab (Inv opened, Esc-less devices
+    could never leave). Any input-mode gate that swaps the control set must
+    keep a visible escape affordance in the NEW set (☰→✕ here), and smoke
+    must exercise "open then close" through the real event path.
+56. **Menu rows are a bounded collection too.** Pause rows grew past the
+    648px floor: 11 rows × 40px can't stack under a title. Row collections
+    that vary by state need a fit rule — the pause shell falls back to two
+    columns over 7 rows. New rows must be counted against the worst-case
+    viewport, not the dev screen.

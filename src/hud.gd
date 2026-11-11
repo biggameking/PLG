@@ -89,6 +89,8 @@ func _process(dt: float) -> void:
 				nav_hold = 0.33
 	else:
 		nav_hold = 0.0
+	if game != null and game.panel != "" and touch_more:
+		touch_more = false # panels own the taps — collapse the verb row out of the way
 	# text panels on touch need the OS keyboard — it never appears on its own
 	var texty := game != null and game.panel in ["join", "chat"]
 	if texty != _vkbd_open:
@@ -258,22 +260,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("party_toggle"):
 		if game.panel != "":
 			return # assigning crew while reading the roster is a misclick
-		if game.net != null and game.net.is_client():
-			game.net.rpc("assign_req", game.player.pos.x, game.player.pos.y)
-		else:
-			game.assign_worker()
+		_assign_verb()
 		return
 	if event.is_action_pressed("pal_stance"):
 		if game.panel != "":
 			return
-		# the island kin command: cycle the field kin's standing order
-		if game.net != null and game.net.is_client():
-			for d in game.net_party:
-				if d.get("out", false):
-					game.net.rpc("box_req", "cycle_stance", int(d["uid"]))
-					break
-		elif game.party_pal() != null:
-			game.cycle_stance(game.party_pal().uid)
+		_stance_verb()
 		return
 	if event.is_action_pressed("demolish"):
 		if game.panel != "":
@@ -281,9 +273,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.demolish_at(mouse_tile())
 		return
 	if event.is_action_pressed("map"):
-		map_show = not map_show
-		if map_show:
-			bake_minimap() # rebake every open — terrain/decor change and load_game swaps the world
+		_map_toggle()
 		return
 	if event.is_action_pressed("interact"):
 		if game.panel != "":
@@ -424,7 +414,8 @@ func run_click(cr: Dictionary) -> void:
 			elif cr["act"] == "chest_dep" or cr["act"] == "chest_wd":
 				chest_bulk(cr["act"])
 
-const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_chat", "set_back", "resume",
+const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_host", "m_chat",
+	"m_tech", "m_dex", "m_statues", "m_guide", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
 	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
 
@@ -440,8 +431,19 @@ func shell_act(act: String) -> void:
 			game.panel = "settings"
 		"m_join":
 			game.panel = "join"; join_buf = ""
+		"m_host":
+			if game.net != null and multiplayer.multiplayer_peer == null:
+				game.net.host()
 		"m_chat":
 			game.panel = "chat"; chat_buf = ""
+		"m_tech":
+			game.panel = "tech"
+		"m_dex":
+			game.panel = "dex"; dex_scroll = 0
+		"m_statues":
+			game.panel = "statues"
+		"m_guide":
+			game.panel = "guide"; guide_page = 0
 		"set_back":
 			game.panel = ""
 		"resume":
@@ -864,8 +866,16 @@ func touch_layout(r: Vector2) -> Dictionary: # cached — draw_touch asks every 
 		"orb": Vector2(r.x - 226, r.y - 92),
 		"inv": Vector2(r.x - 226, r.y - 170),
 		"bld": Vector2(r.x - 296, r.y - 116),
+		"more": Vector2(r.x - 354, r.y - 56),
 		"menu": Vector2(r.x - 38, 224)}} # under the minimap, not inside it
+	var row := {}
+	for i in range(MORE_VERBS.size()):
+		row[MORE_VERBS[i]] = Vector2(r.x - 40 - i * 56, r.y - 252)
+	_lay_cache["more_row"] = row
 	return _lay_cache
+
+const MORE_VERBS := ["asg", "stn", "ksk", "rde", "dml", "map"]
+var touch_more := false
 
 func joy_grab_r() -> float: return JOY_R * 1.7 # one radius table — touch_down AND zone gate share it
 
@@ -878,10 +888,18 @@ func touch_zone_hit(p: Vector2) -> bool: # does this point land on a virtual con
 	for b in lay["btns"]:
 		if p.distance_to(lay["btns"][b]) <= btn_r(b):
 			return true
+	if touch_more:
+		for b in lay["more_row"]:
+			if p.distance_to(lay["more_row"][b]) <= btn_r(b):
+				return true
 	return false
 
 func touch_down(p: Vector2, idx: int) -> void:
-	if game.panel != "": # panels own taps — they arrive as emulated LMB too
+	var lay0 := touch_layout(get_viewport_rect().size)
+	if game.panel != "":
+		# panels own taps — except ☰, which becomes the only way out on a slab
+		if p.distance_to(lay0["btns"]["menu"]) <= btn_r("menu"):
+			game.panel = ""
 		return
 	var lay := touch_layout(get_viewport_rect().size)
 	if joy_idx < 0 and p.distance_to(lay["joy"]) <= joy_grab_r():
@@ -892,6 +910,11 @@ func touch_down(p: Vector2, idx: int) -> void:
 		if p.distance_to(lay["btns"][b]) <= btn_r(b):
 			touch_verb(b)
 			return
+	if touch_more:
+		for b in lay["more_row"]:
+			if p.distance_to(lay["more_row"][b]) <= btn_r(b):
+				touch_verb(b)
+				return
 
 func touch_move(p: Vector2, idx: int) -> void:
 	if idx == joy_idx:
@@ -909,11 +932,58 @@ func touch_steer(p: Vector2) -> void:
 	game.player.touch_sprint = v.length() >= 0.9 # rim-push = sprint
 	game.player.touch_vec = v.limit_length(1.0)
 
+func _assign_verb() -> void:
+	if game.net != null and game.net.is_client():
+		game.net.rpc("assign_req", game.player.pos.x, game.player.pos.y)
+	else:
+		game.assign_worker()
+
+func _stance_verb() -> void:
+	# the island kin command: cycle the field kin's standing order
+	if game.net != null and game.net.is_client():
+		for d in game.net_party:
+			if d.get("out", false):
+				game.net.rpc("box_req", "cycle_stance", int(d["uid"]))
+				break
+	elif game.party_pal() != null:
+		game.cycle_stance(game.party_pal().uid)
+
+func _map_toggle() -> void:
+	map_show = not map_show
+	if map_show:
+		bake_minimap() # rebake every open — terrain/decor change and load_game swaps the world
+
+func _touch_demolish() -> void: # no cursor on a slab — raze the nearest structure
+	var pt := game.player.pos
+	var bt := Vector2i.ZERO; var bd := 4.5
+	for k in game.structures:
+		var dd: float = pt.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
+		if dd < bd:
+			bd = dd; bt = k
+	if bd < 4.5:
+		game.demolish_at(bt)
+	else:
+		game.log_msg("Nothing close enough to demolish")
+
 func touch_verb(b: String) -> void:
 	var pl := game.player
 	match b:
 		"menu":
 			game.state = "paused"
+		"more":
+			touch_more = not touch_more
+		"asg":
+			_assign_verb()
+		"stn":
+			_stance_verb()
+		"ksk":
+			game.partner_skill()
+		"rde":
+			pl.try_mount()
+		"dml":
+			_touch_demolish()
+		"map":
+			_map_toggle()
 		"aim":
 			pl.aiming = not pl.aiming
 		"orb":
@@ -937,16 +1007,25 @@ func touch_verb(b: String) -> void:
 				pl.melee()
 
 func draw_touch(r: Vector2) -> void:
-	if not game.touch_ui or game.state != "play" or game.panel != "":
+	if not game.touch_ui or game.state != "play":
 		return
 	var lay := touch_layout(r)
+	if game.panel != "":
+		# panels own the taps — but ☰ stays up as ✕, the slab's only way out
+		var c: Vector2 = lay["btns"]["menu"]
+		draw_circle(c, BTN_R, Color(0.9, 0.5, 0.5, 0.14))
+		draw_arc(c, BTN_R, 0, TAU, 24, Color(0.95, 0.6, 0.6, 0.45), 1.5)
+		draw_string(font, c - Vector2(font.get_string_size("X", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), "X",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.8, 0.8, 0.8))
+		return
 	var jc: Vector2 = lay["joy"]
 	draw_circle(jc, JOY_R, Color(0.9, 0.95, 1.0, 0.10))
 	draw_arc(jc, JOY_R, 0, TAU, 24, Color(0.9, 0.95, 1.0, 0.30), 1.5)
 	var knob := jc + game.player.touch_vec * (JOY_R * 0.55)
 	draw_circle(knob, 20, Color(0.3, 0.82, 0.88, 0.55))
 	var labels := {"atk": "ATK", "aim": "AIM", "roll": "ROLL", "e": "E", "orb": "ORB",
-		"inv": "INV", "bld": "BLD", "menu": "≡"}
+		"inv": "INV", "bld": "BLD", "more": "···", "menu": "≡",
+		"asg": "ASG", "stn": "STN", "ksk": "KSK", "rde": "RDE", "dml": "DML", "map": "MAP"}
 	for b in lay["btns"]:
 		var c: Vector2 = lay["btns"][b]
 		var rad := 36.0 if b == "atk" else BTN_R
@@ -955,6 +1034,14 @@ func draw_touch(r: Vector2) -> void:
 		var tl: String = labels[b]
 		draw_string(font, c - Vector2(font.get_string_size(tl, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x / 2, -5), tl,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.75))
+	if touch_more:
+		for b in lay["more_row"]:
+			var c2: Vector2 = lay["more_row"][b]
+			draw_circle(c2, BTN_R - 8, Color(0.85, 0.8, 0.6, 0.14))
+			draw_arc(c2, BTN_R - 8, 0, TAU, 24, Color(0.95, 0.9, 0.6, 0.4), 1.5)
+			var tl2: String = labels[b]
+			draw_string(font, c2 - Vector2(font.get_string_size(tl2, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x / 2, -4), tl2,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 0.98, 0.85, 0.8))
 
 func menu_row(cx: float, y: float, w: float, label: String, act: String, col: Color = Color.WHITE) -> float:
 	var rr := Rect2(cx - w / 2, y, w, 30)
@@ -1072,16 +1159,29 @@ func draw_pause(r: Vector2) -> void:
 	draw_string(font, Vector2(cx - pw / 2, r.y * 0.3), ptxt,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color("#e8d44d"))
 	draw_rect(Rect2(cx - pw / 2, r.y * 0.3 + 6, pw, 2), Color(0.91, 0.83, 0.30, 0.4)) # gold rule under the header
-	var y := r.y * 0.42
-	for row in pause_rows():
-		y = menu_row(cx, y, 220, row[0], row[1], row[2] if row.size() > 2 else Color.WHITE)
+	var rows := pause_rows()
+	if rows.size() <= 7:
+		var y := r.y * 0.42
+		for row in rows:
+			y = menu_row(cx, y, 220, row[0], row[1], row[2] if row.size() > 2 else Color.WHITE)
+	else: # two columns — a tall stack clips the floor on small screens
+		var half := int(ceil(rows.size() / 2.0))
+		for i in range(rows.size()):
+			var cxx := cx - 125 if i < half else cx + 125
+			var yy := r.y * 0.36 + (i if i < half else i - half) * 40
+			menu_row(cxx, yy, 220, rows[i][0], rows[i][1], rows[i][2] if rows[i].size() > 2 else Color.WHITE)
 
 func pause_rows() -> Array:
 	var rows := [["RESUME", "resume"], ["SAVE GAME", "m_save"], ["SETTINGS", "m_settings"]]
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join"])
+		rows.append(["HOST SESSION", "m_host"])
 	if multiplayer.multiplayer_peer != null:
 		rows.append(["CHAT", "m_chat"])
+	rows.append(["TECH TREE", "m_tech"])
+	rows.append(["KINDEX", "m_dex"])
+	rows.append(["STATUES", "m_statues"])
+	rows.append(["GUIDE", "m_guide"])
 	rows.append(["SAVE & QUIT TO TITLE", "to_title"])
 	rows.append(["SAVE & QUIT GAME", "quit", Color(0.85, 0.6, 0.6)])
 	return rows
