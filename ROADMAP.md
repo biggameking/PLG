@@ -430,3 +430,8 @@ S38 (panel-act sweep): the run_click act table had a second, worse class
 S38b (sleep reach): sleep_req_remote had no bed check — a guest could nap
   remotely for a party-wide heal. _nearest_struct("straw_bed") gate added;
   smoke covers both the no-bed refusal and the honest clock turn.
+S38c (board two-phase + reach): claim-and-dip burned everyone's daily
+  posting; remote claims needed no board. board_action_remote now holds a
+  15s pending slot + notice_board reach gate; board_done pays goods then
+  asserts via board_paid; gold+xp arrive on board_pay after settlement.
+  Smoke 667/0.

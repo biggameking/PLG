@@ -717,14 +717,32 @@ func board_done(res: Dictionary) -> void:
 		return
 	var qid := str(res.get("id", ""))
 	var qn := int(res.get("n", 0))
-	# the bag pays its goods first — no payment, no gold, quest already spent
+	# the bag pays its goods first, then asserts it — gold arrives via
+	# board_paid once the host sees the settlement claim
 	if game.item_count(qid) < qn:
 		game.log_msg("Notice board: the goods weren't in your pack")
 		return
 	game.add_item(qid, -qn)
-	game.add_item("gold_coin", int(res.get("gold", 0)))
-	game.gain_xp(qn * 3)
-	game.log_msg("Board request filled: %d %s → +%d gold" % [qn, qid, int(res.get("gold", 0))])
+	rpc_id(1, "board_paid", qid) # tell the host the goods left our pack
+
+@rpc("any_peer", "call_remote", "reliable")
+func board_paid(qid: String) -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		return
+	var gold := game.board_paid_remote(pid, str(qid))
+	if gold > 0 and multiplayer.get_peers().has(pid):
+		rpc_id(pid, "board_pay", gold)
+
+@rpc("authority", "call_remote", "reliable")
+func board_pay(gold: int) -> void:
+	if is_host:
+		return
+	game.add_item("gold_coin", int(gold))
+	game.gain_xp(int(gold))
+	game.log_msg("Board request filled — +%d gold" % int(gold))
 
 @rpc("any_peer", "call_remote", "reliable")
 func cond_req() -> void:

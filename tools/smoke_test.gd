@@ -5030,11 +5030,31 @@ func run() -> void:
 			var v6_fr: Kin = game.box.pop_back()
 			game.box_holder.remove_child(v6_fr)
 			v6_fr.free()
-		game.board_quest = {"kind": "supply", "id": "wood", "n": 2, "day": game.day}
-		var v6_bres := game.board_action_remote(99)
-		check("guest board claim returns the bill", int(v6_bres.get("n", 0)) == 2
-			and str(v6_bres.get("id", "")) == "wood" and int(v6_bres.get("gold", 0)) > 0
-			and str(game.board_quest.get("id", "?")) == "")
+		var v7_nb := Vector2i(-1, -1)
+		for v7_r10 in range(3, 12):
+			for v7_a18 in range(16):
+				var v7_c15 := Vector2i(int(p.pos.x + cos(v7_a18 * TAU / 16.0) * v7_r10),
+					int(p.pos.y + sin(v7_a18 * TAU / 16.0) * v7_r10))
+				if game.can_place("notice_board", v7_c15.x, v7_c15.y):
+					game.place_free("notice_board", v7_c15.x, v7_c15.y); v7_nb = v7_c15; break
+			if v7_nb.x >= 0: break
+		if v7_nb.x >= 0:
+			game.board_quest = {"kind": "supply", "id": "wood", "n": 2, "day": game.day}
+			game.net.ghosts[99].net_pos = Vector3(v7_nb.x, v7_nb.y, 0)
+			var v6_bres := game.board_action_remote(99)
+			check("guest board claim returns the bill", int(v6_bres.get("n", 0)) == 2
+				and str(v6_bres.get("id", "")) == "wood" and int(v6_bres.get("gold", 0)) > 0
+				and str(game.board_quest.get("id", "?")) == "wood"
+				and int(game.board_quest.get("pending", {}).get("pid", 0)) == 99)
+			if not game.net.ghosts.has(7):
+				game.net.spawn_ghost(7)
+			game.net.ghosts[7].net_pos = Vector3(v7_nb.x, v7_nb.y, 0)
+			check("another keeper can't steal the hold",
+				game.board_action_remote(7).is_empty())
+			check("settlement fills the posting", game.board_paid_remote(99, "wood") > 0
+				and str(game.board_quest.get("id", "?")) == ""
+				and not game.board_quest.has("pending"))
+			game.net_remove_structure(game.structures[v7_nb])
 		game.board_quest = {"kind": "hunt", "sp": "fenjelly", "n": 2, "got": 0, "day": game.day}
 		check("hunt posting is read-only", game.board_action_remote(99).is_empty())
 		var v6_lead: Kin = game.gen_pal("fenjelly", 10, p.pos)

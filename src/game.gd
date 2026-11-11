@@ -4956,6 +4956,9 @@ func cage_req_remote(pid: int, cell: Vector2i) -> bool:
 # the board is one shared posting — guests see it via env_sync, claim it
 # here, and pay their own goods on the board_done echo
 func board_action_remote(pid: int) -> Dictionary:
+	var bpos := _ghost_at(pid)
+	if bpos.x < -1e8 or _nearest_struct("notice_board", bpos, 6.0).x < 0:
+		return {} # the posting is read AT the board — remote claiming is forgery
 	if int(board_quest.get("day", -1)) != day:
 		if rng.chance(0.5): # half the mornings want goods, half want thinning
 			var pick: Array = BOARD_POOL[rng.int_range(0, BOARD_POOL.size() - 1)]
@@ -4973,10 +4976,28 @@ func board_action_remote(pid: int) -> Dictionary:
 	if qid == "":
 		note_remote(pid, "Notice board: today's request is filled — come back at dawn")
 		return {}
+	# a claim is a 15s hold, not a burn — the goods only settle on board_paid,
+	# so a guest who never pays can't torch the day's posting for everyone
+	var pend = board_quest.get("pending")
+	if pend is Dictionary and float(pend.get("t", 0.0)) + 15.0 > t \
+			and int(pend.get("pid", -1)) != pid:
+		note_remote(pid, "Notice board: someone's filling it — give it a moment")
+		return {}
 	var qn: int = int(board_quest["n"])
 	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
-	board_quest["id"] = "" # claimed — whoever echoes first fills it for all
+	board_quest["pending"] = {"pid": pid, "t": t, "id": qid}
 	return {"id": qid, "n": qn, "gold": gold}
+
+func board_paid_remote(pid: int, qid: String) -> int:
+	var pend = board_quest.get("pending")
+	if not (pend is Dictionary) or int(pend.get("pid", -1)) != pid \
+			or str(pend.get("id", "")) != qid:
+		return -1
+	var qn: int = int(board_quest["n"])
+	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
+	board_quest["id"] = "" # paid — the board stays quiet until tomorrow
+	board_quest.erase("pending")
+	return gold
 
 # remote condense: same fodder rule, filtered to the asker's own slice —
 # heart-locked and other keepers' kin are never fuel
