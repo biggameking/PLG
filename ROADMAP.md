@@ -831,3 +831,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   without a platform tag. main.gd now skips instantiating the net
   layer on web (every consumer already null-guards game.net);
   page copy reads "Multiplayer (Windows/Android)". Suite 761/0.
+
+## S61 — zh coverage: full UI chrome
+  locale/zh.csv grew 54 → 122 rows covering every tr()-routed
+  literal: all menu/tab rows (title, pause, settings, kinbox ops,
+  party verbs), hints, toasts, day/clock, catch %, incubator/effigy
+  strings, guest-refusal lines. Verified: python csv parse shows
+  zero missing UI keys; suite 762/0. Remaining surface (S62):
+  data-name display (species/items/structures ~268 names render
+  raw — names are display-only, never logic keys, so a tr() wrap
+  at render sites is safe).
