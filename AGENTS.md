@@ -469,3 +469,20 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     has already spent the kin's state. Capacity checks that can
     refuse go first in the function; the strip-row erase rides the
     same transaction so a failed lane can't orphan a uid.
+91. **Release artifacts are rebuilt, never updated.** `zip` refreshes
+    members in place — files deleted between exports survive inside
+    the shipped bundle. Delete the target archive first, and let the
+    shell expand the file list so the member set is real.
+92. **The PCK ships every .gd under the project — tools included.**
+    `export_filter="all_resources"` compiles test fixtures and dev
+    scripts into the release binary (legacy-ID strings and all).
+    Presets must exclude `tools/*`; IP scanning then skips tools/ by
+    design — so any fixture that DOES ship must live outside tools/.
+93. **IP sweep scope covers every shipped surface, incl. CJK.**
+    Locale files and store copy are user-facing bytes; a romanized
+    community name (e.g. 帕鲁) is the same leak as an English id.
+    check_ip.sh scans src/+locale/+store/ with CJK terms in the pattern.
+94. **Platform-dead features are hidden, not shipped broken.** A
+    button that cannot work on the target (quit on web, ENet co-op in
+    a browser) gets gated at the surface — `OS.has_feature("web")` —
+    and marketing copy carries the same platform qualifier.
