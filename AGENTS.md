@@ -358,3 +358,20 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     solely from host-guarded handlers, and the smoke drill steps the real
     merchant aside before applying. If a helper can clobber host truth
     when invoked off-lane, gate it or quarantine it in the test.
+71. **No honest path to a free mutation.** Goods minted host-side before
+    payment lands are a mint exploit the moment ANY resale route exists
+    (`bought` subtracted from an empty stack and the goods stayed —
+    buy→sell printed gold). The honest client's UI must gate on
+    affordability BEFORE the request flies (`board_done`/`buy`/`infuse`
+    pattern); the echo then pays best-effort. Forged clients remain the
+    documented bound — the gate is for honest hands.
+72. **Ownership rides the claim, not the live pid.** `egg_parents` and
+    `egg_inc` entries carry their owners' ids/tag because a stored pid
+    rots the moment its session ends — resolve a dead pid to
+    orphan-plus-tag (hello rebinds), never to a ghost owner that locks
+    the kin out of every roster. Same for `placed_tag` on structures:
+    tags outlive pids.
+73. **Shared caps are per-owner slices.** A cap that protects balance
+    (`max_base_pals`) must count the actor's own slice
+    (`base_pals_of(pid)`), not the shared pool — otherwise a guest's pile
+    silently starves the keeper's workforce with no eviction path.

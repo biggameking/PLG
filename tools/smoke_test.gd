@@ -5267,6 +5267,168 @@ func run() -> void:
 			return e.size() == 11 and e[0] == v41_wit.uid and int(e[4]) == 7))
 	game.pals.erase(v41_wit)
 	v41_wit.queue_free()
+	# S42 eighth-audit batch: honest-path economy + ownership edge cases
+	# (a) incubator bound speaks in tiles — the squared compare ate the arm
+	var v42_occ := []
+	var v42_qbak := {}
+	for v42_k in game.structures:
+		var v42_os: Dictionary = game.structures[v42_k]
+		if v42_os["id"] == "incubator" and not v42_os.has("egg_inc"):
+			v42_os["egg_inc"] = {"_plug": 1}
+			v42_occ.append(v42_os)
+		if v42_os.has("egg_parents"):
+			v42_qbak[v42_k] = v42_os["egg_parents"]
+			v42_os.erase("egg_parents")
+	var v42_fx := -1
+	var v42_fy := -1
+	for r in range(4, 30):
+		for d in [Vector2i(r, 0), Vector2i(0, r), Vector2i(r, r)]:
+			var c := Vector2i(int(p.pos.x) + d.x, int(p.pos.y) + d.y)
+			var free22 := true
+			for dy0 in 2:
+				for dx0 in 2:
+					if game.structures.has(c + Vector2i(dx0, dy0)):
+						free22 = false
+			if free22:
+				v42_fx = c.x; v42_fy = c.y; break
+		if v42_fx >= 0:
+			break
+	var v42_st: Dictionary = {}
+	if v42_fx >= 0:
+		game.place_free("incubator", v42_fx, v42_fy, {})
+		v42_st = game.structures[Vector2i(v42_fx, v42_fy)]
+		var want_d := 1e9
+		for k2 in game.structures:
+			if game.structures[k2] == v42_st:
+				want_d = minf(want_d, Vector2(k2.x + 0.5, k2.y + 0.5).distance_to(p.pos))
+		var got_site := game._free_incubator(p.pos, 6.0)
+		check("incubator bound counts tiles, not squared ghosts",
+			(got_site.x >= 0 and game.structures.get(got_site) == v42_st) == (want_d <= 6.0))
+	else:
+		check("incubator bound counts tiles, not squared ghosts", false, "no free cell seeded")
+	# (b) parentage is claimed by bloodline owner — a guest's egg can't
+	#     quietly inherit the host's ranch genetics
+	if not v42_st.is_empty():
+		v42_st["egg_parents"] = [
+			["host_a", "host_b", 50, 50, [], [], [], []],
+			["g_a", "g_b", 99, 99, [], [], [], [], [99]]]
+		var v42_pair = game._claim_egg_parent(99)
+		check("a guest claims only their own pairing",
+			v42_pair != null and v42_pair[0] == "g_a"
+			and v42_st["egg_parents"].size() == 1)
+		var v42_h0 = game._claim_egg_parent(0)
+		check("the keeper claims legacy untagged rows",
+			v42_h0 != null and v42_h0[0] == "host_a")
+		# (c) a dead depositor's egg orphans — the tag survives for rebind
+		v42_st["egg_inc"] = {"pair": null, "ready_t": game.t - 1.0,
+			"own_pid": 88, "own_tag": "gone_42"}
+		var v42_u0 := {}
+		for v42_q in game.pals + game.box:
+			v42_u0[v42_q.uid] = true
+		game.hatch_incubated(Vector2i(v42_fx, v42_fy), v42_st)
+		var v42_np: Kin = null
+		for v42_q in game.pals + game.box:
+			if not v42_u0.has(v42_q.uid):
+				v42_np = v42_q
+		check("a dead pid's egg orphans with its tag",
+			v42_np != null and v42_np.owner_id == -1
+			and v42_np.owner_tag == "gone_42")
+		if v42_np != null:
+			game.pals.erase(v42_np); game.box.erase(v42_np); v42_np.queue_free()
+		v42_st.erase("egg_parents")
+		game.net_remove_structure(v42_st)
+	for v42_os in v42_occ:
+		v42_os.erase("egg_inc")
+	for v42_k in v42_qbak:
+		if game.structures.has(v42_k):
+			game.structures[v42_k]["egg_parents"] = v42_qbak[v42_k]
+	# (d) workforce caps are per-owner — a guest's pile can't starve the keeper
+	var v42_lv0: int = p.level
+	var v42_bl0: int = game.base_level
+	var v42_kb0: Vector2i = game.kinbox_pos
+	p.level = 1
+	game.base_level = 1
+	game.kinbox_pos = Vector2i(9, 9)
+	var v42_spawned := []
+	for i in game.max_base_pals():
+		var v42_q: Kin = game.gen_pal("fenjelly", 2, p.pos)
+		v42_q.owner_id = 99
+		v42_q.mode = "base"
+		game.pals.append(v42_q)
+		v42_spawned.append(v42_q)
+	var v42_extra: Kin = game.gen_pal("fenjelly", 2, p.pos)
+	v42_extra.owner_id = 99
+	game.pals.append(v42_extra)
+	game.deploy_to_base(v42_extra)
+	check("a capped guest can't pack the base further", v42_extra.mode != "base")
+	var v42_host: Kin = game.gen_pal("fenjelly", 2, p.pos)
+	game.pals.append(v42_host)
+	game.deploy_to_base(v42_host)
+	check("the keeper's slice is theirs alone",
+		v42_host.mode == "base" or game.base_pals_of(0).size() >= game.max_base_pals())
+	game.pals.erase(v42_extra); v42_extra.queue_free()
+	game.pals.erase(v42_host); v42_host.queue_free()
+	for v42_q in v42_spawned:
+		game.pals.erase(v42_q); v42_q.queue_free()
+	p.level = v42_lv0
+	game.base_level = v42_bl0
+	game.kinbox_pos = v42_kb0
+	# (e) guests raze their own BACKUP kinbox — never the live anchor
+	game.net.spawn_ghost(99)
+	game.net.peer_tags[99] = "g42t"
+	var v42_bx := -1
+	var v42_by := -1
+	for r in range(3, 30):
+		var c := Vector2i(int(p.pos.x) + r, int(p.pos.y))
+		var free22 := true
+		for dy0 in 2:
+			for dx0 in 2:
+				if game.structures.has(c + Vector2i(dx0, dy0)):
+					free22 = false
+		if free22:
+			v42_bx = c.x; v42_by = c.y; break
+	if v42_bx >= 0 and game.place_free("kinbox", v42_bx, v42_by, {}):
+		var v42_bst: Dictionary = game.structures[Vector2i(v42_bx, v42_by)]
+		v42_bst["placed_tag"] = "g42t"
+		game.net.ghosts[99].net_pos = Vector3(v42_bx, v42_by, 0)
+		game.net_demolish(v42_bx, v42_by, 99)
+		check("a guest razes their own backup kinbox",
+			not game.structures.has(Vector2i(v42_bx, v42_by)))
+		var v42_mpos := Vector2i(v42_bx, v42_by)
+		game.place_free("kinbox", v42_mpos.x, v42_mpos.y, {})
+		if game.structures.has(v42_mpos):
+			var v42_mst: Dictionary = game.structures[v42_mpos]
+			v42_mst["placed_tag"] = "g42t"
+			game.kinbox_pos = v42_mpos
+			game.net_demolish(v42_mpos.x, v42_mpos.y, 99)
+			check("the live anchor is nobody's to raze",
+				game.structures.has(v42_mpos))
+			game.net_remove_structure(v42_mst)
+		else:
+			check("the live anchor is nobody's to raze", false, "anchor spot lost")
+		game.kinbox_pos = v42_kb0
+	else:
+		check("a guest razes their own backup kinbox", false, "no free cell seeded")
+	game.net.peer_tags.erase(99)
+	# (f) a guest's bag overflow stays theirs — spawn_drop can't mint on a client
+	var v42_ih: bool = game.net.is_host
+	var v42_pp = game.net.multiplayer.multiplayer_peer
+	game.net.is_host = false
+	var v42_ep := ENetMultiplayerPeer.new()
+	v42_ep.create_client("127.0.0.1", 43210) # connecting = assignable, no handshake lands
+	game.net.multiplayer.multiplayer_peer = v42_ep
+	game.items.erase("wood")
+	var v42_d0: int = game.drops.size()
+	var v42_cap: int = ItemData.ITEMS.get("wood", {}).get("stack", 999)
+	game.add_item("wood", v42_cap + 7)
+	check("a guest's overflow stays in their own bag",
+		game.item_count("wood") == v42_cap + 7 and game.drops.size() == v42_d0)
+	game.items.erase("wood")
+	while game.drops.size() > v42_d0: # belt: a spill here would litter the world
+		game.drops.pop_back()
+	v42_ep.close()
+	game.net.multiplayer.multiplayer_peer = v42_pp
+	game.net.is_host = v42_ih
 	# pause shell hosts the panel verbs for every input device
 	var peer_bak2 = game.net.multiplayer.multiplayer_peer
 	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer

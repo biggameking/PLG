@@ -300,14 +300,18 @@ func add_item(id: String, n: int) -> void:
 		# stack cap: overflow spills to the ground instead of vanishing
 		var cap: int = ItemData.ITEMS.get(id, {}).get("stack", 999)
 		if items[id] > cap:
-			var spill: int = items[id] - cap
-			items[id] = cap
-			if player != null:
-				spawn_drop(id, spill, player.pos)
-				drops.back()["cool"] = 3.0 # don't vacuum it straight back up
-				log_msg("Bag full - %s x%d dropped" % [ItemData.ITEMS.get(id, {}).get("name", id), spill])
+			if net != null and net.is_client():
+				pass # a guest's bag is their own truth — no shared ground to spill on
 			else:
-				items[id] += spill # pre-player init: keep the overflow
+				var spill: int = items[id] - cap
+				items[id] = cap
+				if player != null:
+					spawn_drop(id, spill, player.pos)
+					if not drops.is_empty():
+						drops.back()["cool"] = 3.0 # don't vacuum it straight back up
+					log_msg("Bag full - %s x%d dropped" % [ItemData.ITEMS.get(id, {}).get("name", id), spill])
+				else:
+					items[id] += spill # pre-player init: keep the overflow
 	if items[id] <= 0:
 		items.erase(id)
 	unequip_if_gone(id)
@@ -2558,7 +2562,9 @@ func craft(recipe_id: String) -> void:
 		if not near:
 			log_msg("Need to be at a %s" % stn)
 			return
-	if r.get("tech", "") != "" and r["tech"] not in unlocked:
+	var techs: Array = net_unlocked if (net != null and net.is_client()
+		and not net_unlocked.is_empty()) else unlocked
+	if r.get("tech", "") != "" and r["tech"] not in techs:
 		log_msg("Unlock %s in the tech tree first" % r["tech"])
 		return
 	var req: String = r.get("req", "")
@@ -3026,6 +3032,9 @@ func nearest_heat(at: Vector2) -> float:
 func base_pals() -> Array:
 	return pals.filter(func(p): return p.mode == "base")
 
+func base_pals_of(pid: int) -> Array:
+	return pals.filter(func(p): return p.mode == "base" and p.owner_id == pid)
+
 func nearest_bed_cell(at: Vector2) -> Vector2i:
 	# where a sleepy kin should pad off to — the closest kin bed or spring
 	var bd := 1e9
@@ -3273,7 +3282,7 @@ func deploy_to_base(p: Kin) -> void:
 	if kinbox_pos.x < 0:
 		log_msg("Need a kinbox to deploy kin")
 		return
-	if base_pals().size() >= max_base_pals() and p.mode != "base":
+	if base_pals_of(p.owner_id).size() >= max_base_pals() and p.mode != "base":
 		log_msg("Base is full (%d kin — level up for more slots)" % max_base_pals())
 		return
 	player.dismount_if(p)
@@ -4481,9 +4490,13 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 		st["egg_parents"].pop_front() # eggs get sold/eaten/destroyed — oldest parentage is expendable
 	# parentage carries species, talent, passives AND the move pool
 	# (the island: offspring can hatch knowing a parent's skill)
+	var owners := []
+	for o in [a.owner_id, b.owner_id]:
+		if o not in owners:
+			owners.append(o)
 	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent,
 		a.passives.duplicate(), b.passives.duplicate(),
-		a.learned_skills(), b.learned_skills()])
+		a.learned_skills(), b.learned_skills(), owners])
 	st["store"]["kin_egg"] = st["store"].get("kin_egg", 0) + 1 # lays AT the ranch; haulers collect
 	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
 	log_msg("%s + %s produced an egg!" % [a.spec["name"], b.spec["name"]])
@@ -4590,12 +4603,7 @@ func deposit_egg() -> void:
 		log_msg("Need a free incubator nearby")
 		return
 	add_item(egg_id, -1)
-	var pair = null
-	for k2 in structures:
-		var q = structures[k2].get("egg_parents")
-		if q is Array and q.size() > 0:
-			pair = q.pop_front() # oldest egg's parentage
-			break
+	var pair = _claim_egg_parent(0)
 	var warm_hint := false
 	for k3 in structures:
 		if structures[k3]["id"] == "campfire" \
@@ -4610,11 +4618,27 @@ func deposit_egg() -> void:
 			"" if warm_hint else " (a campfire would hurry it)",
 			" — " + hint if hint != "" else ""])
 
+# parentage is claimed by bloodline owner: entry[8] carries the parents'
+# owner ids; legacy untagged entries answer the keeper (pid 0) only. A
+# guest's wild egg can't quietly inherit the host's ranch genetics.
+func _claim_egg_parent(pid: int):
+	for k2 in structures:
+		var q = structures[k2].get("egg_parents")
+		if not (q is Array):
+			continue
+		for i2 in q.size():
+			var e9 = q[i2]
+			var owners: Array = e9[8] if (e9 is Array and e9.size() > 8
+				and e9[8] is Array) else [0]
+			if owners.has(pid):
+				return q.pop_at(i2) # oldest matching claim wins
+	return null
+
 func _free_incubator(at: Vector2, bound := 20.0) -> Vector2i:
 	# bound is the caller's arm: the keeper's own E stretches across the yard,
 	# a witnessed ghost only reaches the usual six tiles
 	var site := Vector2i(-1, -1)
-	var bd := bound
+	var bd := bound * bound # callers speak in tiles; the compare is squared
 	for k in structures:
 		var st: Dictionary = structures[k]
 		if st["id"] != "incubator" or st.has("egg_inc"):
@@ -4636,12 +4660,7 @@ func egg_req_remote(pid: int, egg_id: String) -> bool:
 	if site.x < 0:
 		note_remote(pid, "Need a free incubator nearby")
 		return false
-	var pair = null
-	for k2 in structures:
-		var q = structures[k2].get("egg_parents")
-		if q is Array and q.size() > 0:
-			pair = q.pop_front() # oldest egg's parentage
-			break
+	var pair = _claim_egg_parent(pid)
 	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
 		"huge": egg_id == "huge_kin_egg", "own_pid": pid,
 		"own_tag": str(net.peer_tags.get(pid, "")) if net != null else ""}
@@ -4735,10 +4754,14 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		np.sprite.position.y = -48.0
 	var opid := int(inc.get("own_pid", 0)) if inc is Dictionary else 0
 	var otag := str(inc.get("own_tag", "")) if inc is Dictionary else ""
-	if opid <= 0 and otag != "" and net != null: # a saved egg's pid died with the session — find the live one by tag
-		for cand in net.peer_tags:
-			if str(net.peer_tags[cand]) == otag:
-				opid = int(cand); break
+	if net != null:
+		var live: Array = multiplayer.get_peers() if multiplayer.multiplayer_peer != null else []
+		if opid > 0 and not live.has(opid):
+			opid = 0 # the depositor left mid-incubation — the tag below finds them on rejoin
+		if opid <= 0 and otag != "":
+			for cand in net.peer_tags:
+				if str(net.peer_tags[cand]) == otag and live.has(int(cand)):
+					opid = int(cand); break
 	if opid > 0 or otag != "": # a guest's deposit hatches into their slice — tagged orphans rebind on hello
 		np.owner_id = opid if opid > 0 else -1
 		np.owner_tag = otag if otag != "" else (str(net.peer_tags.get(opid, "")) if net != null else "")
@@ -5965,13 +5988,14 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 	var st = structures.get(Vector2i(tx, ty))
 	if st == null:
 		return
-	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false):
-		note_remote(pid, tr("The kinbox anchors the base — nobody razes it"))
-		return # the kinbox holds every stored pal — nobody razes the anchor
 	var t := str(net.peer_tags.get(pid, ""))
 	if t == "" or str(st.get("placed_tag", "")) != t:
 		note_remote(pid, tr("That's not your build — guests raze only what they placed"))
 		return # guests raze only what THEY built — tags outlive pids
+	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false) \
+			and st.get("pos", Vector2i(tx, ty)) == kinbox_pos:
+		note_remote(pid, tr("The kinbox anchors the base — nobody razes it"))
+		return # the LIVE anchor holds every stored pal — a self-built backup is yours to raze
 	var gp = net.ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
 		return # fail closed: razing needs a witnessed ghost in range

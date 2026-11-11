@@ -509,7 +509,10 @@ func run_click(cr: Dictionary) -> void:
 				game.upgrade_base()
 		"infuse":
 			if game.net != null and game.net.is_client():
-				game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth, bag pays on echo
+				if game.item_count("sprigmelt_effigy") < 1:
+					game.log_msg("No effigy to burn")
+				else:
+					game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth, bag pays on echo
 			else:
 				game.soul_infuse(cr["arg"])
 		# ---- shell menu acts (title / pause / settings) ----
@@ -1855,9 +1858,10 @@ func draw_shop(r: Vector2) -> void:
 		else:
 			nm = ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])
 		var rect := Rect2(rr.position.x + 16, y - 12, 270, 16)
-		if it["n"] > 0:
+		var afford := game.item_count("gold_coin") >= int(it.get("price", 0))
+		if it["n"] > 0 and afford:
 			click_rects.append({"rect": rect, "act": "buy", "arg": i})
-		var col := Ink.INK if it["n"] > 0 else Ink.INK_SOFT
+		var col := Ink.INK if (it["n"] > 0 and afford) else Ink.INK_SOFT # the till can't comp what the bag can't cover
 		draw_string(font, Vector2(rect.position.x, y), "%s x%d  %dg" % [nm.left(16), it["n"], it["price"]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 		y += 17
@@ -1943,7 +1947,10 @@ func use_item(k: String) -> void:
 			elif game.start_gauntlet():
 				game.add_item(k, -1)
 		"kin_egg", "huge_kin_egg":
-			game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
+			if game.net != null and game.net.is_client():
+				game.net.rpc("egg_req", k) # the clicked egg goes, the host finds it a slot
+			else:
+				game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
 		"fishing_rod":
 			# reusable — the rod never leaves the pack; guests ask the host
 			# to roll at their ghost's shore
@@ -1952,7 +1959,9 @@ func use_item(k: String) -> void:
 			else:
 				game.cast_line()
 		"memory_wipe":
-			if game.respec():
+			if game.net != null and game.net.is_client():
+				game.log_msg("The statue only answers the island's keeper")
+			elif game.respec():
 				game.add_item(k, -1)
 		"fertilizer":
 			# guests: host validates a farm near the ghost, then fert_done

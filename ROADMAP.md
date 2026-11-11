@@ -490,3 +490,40 @@ S41 (trader mirror — the last invisible NPC):
   every 2Hz broadcast would have aborted mid-call. Fixed + harness now
   invokes both packs directly (rule 69).
   Smoke 682-686/0 x6, no ERRORs, no leaks.
+
+S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
+  H1 free-buy mint: merchant rows had no affordability gate — a guest
+    with 0 gold bought, the bought echo subtracted from an empty stack,
+    goods stayed, and sell_pal/r_sell converted them to real coin.
+    Buy rows now gate on item_count(gold)>=price (unaffordable renders
+    soft + unclickable); infuse gates on >=1 effigy. Forged-client
+    underpay remains the documented bag-trust bound.
+  M1 add_item spill crashed on clients (spawn_drop early-returns ->
+    drops.back() nil) and silently destroyed the overflow — a guest's
+    over-cap stack now stays in their own bag.
+  M2 craft read unlocked not net_unlocked — guests can now craft
+    host-tech recipes at replica stations (build menu already did).
+  M3 base workforce cap was shared — a guest's pile starved the keeper
+    with no eviction. base_pals_of(pid) makes caps per-owner slices.
+  M4 dead-pid egg hatch locked the kin forever (opid>0 skipped the
+    tag resolve -> owner_id=dead session). Now: dead pid -> 0 ->
+    tag resolves to a LIVE peer or the kin orphans+keeps tag.
+  M5 hello was the only unthrottled any_peer verb (O(roster)+fan-out
+    per call) — dedicated hello_bkt (1/s, burst 4), ghost-scoped so
+    headless/offline calls don't eat a false closed.
+  L1 _free_incubator compared distance_squared to a linear bound —
+    bound now squared (remote arm is the documented six tiles).
+  L2 egg_parents pop stole any queue's oldest parentage — entries now
+    carry the parents' owner ids; claims are owner-scoped
+    (_claim_egg_parent), legacy rows answer the keeper.
+  L3 guests couldn't raze their own BACKUP kinbox — anchor refusal now
+    scopes to st.pos == kinbox_pos after the placed_tag check.
+  L5 memory_wipe respec was a dead-end verb for guests (perks wiped,
+    stat_pts unspendable) — gated like upgrade_perk.
+  L6 bag-row kin_egg was client_locked dead — routes egg_req like
+    the incubator interact.
+  L7 work_req flipped shared work_mode with no rebroadcast — wmode
+    rides env_sync; all mirrors converge in a tick.
+  Skipped as bound-consistent/negligible: chest_took RTT over-credit,
+    pal_hit sleep floor, forged shrine/work flaps (echo-verified).
+  Smoke 692-695/0 x4.

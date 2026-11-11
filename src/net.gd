@@ -104,6 +104,8 @@ func hello(tag: String) -> void:
 	if not is_host:
 		return
 	var pid := multiplayer.get_remote_sender_id()
+	if ghosts.has(pid) and not _throttle(pid, "hello_bkt", 1.0, 4.0):
+		return # a re-hello is one breath, a script is not — its own slow bucket
 	var tag_s := str(tag).substr(0, 24)
 	for other in peer_tags:
 		if other != pid and peer_tags[other] == tag_s:
@@ -249,7 +251,7 @@ func pal_sync(arr: Array) -> void:
 
 @rpc("authority", "call_remote", "unreliable")
 func env_sync(tod: float, day: int, weather: String, danger: bool = false,
-		bq: Dictionary = {}, merch: Dictionary = {}) -> void:
+		bq: Dictionary = {}, merch: Dictionary = {}, wmode: int = -1) -> void:
 	if is_host:
 		return
 	game.tod = float(tod) # the host's clock owns the sky — a client's own tick just guesses
@@ -267,6 +269,8 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 	# briefcase travels stock_sync, the till stays host-side
 	game.net_merchant_apply(bool(merch.get("on", false)),
 		float(merch.get("x", 0.0)), float(merch.get("y", 0.0)))
+	if wmode >= 0: # work-mode flips belong to the island, not the caller
+		game.work_mode = clampi(int(wmode), 0, game.WORK_MODES.size() - 1)
 
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
@@ -1044,7 +1048,7 @@ func _process(dt: float) -> void:
 			if game.merchant != null and is_instance_valid(game.merchant):
 				mp2 = {"on": true, "x": game.merchant.pos.x, "y": game.merchant.pos.y}
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
-				game.board_quest, mp2) # clock + sky + threat + posting + trader are host truth
+				game.board_quest, mp2, game.work_mode) # clock + sky + threat + posting + trader + crew orders are host truth
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
