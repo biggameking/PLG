@@ -6310,7 +6310,7 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 	if sv.has("timer"):
 		st["timer"] = clampf(_f(sv["timer"]), -3600.0, 3600.0)
 	if sv.has("hp"):
-		st["hp"] = maxi(_i(sv["hp"]), 0)
+		st["hp"] = clampi(_i(sv["hp"]), 0, 99999) # same ceiling the save loader enforces — a forged pack can't mint an unbreakable wall
 	if sv.has("by"):
 		st["placed_tag"] = str(sv["by"])
 	elif st.has("placed_tag"):

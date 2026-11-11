@@ -706,3 +706,16 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   board_release lost its bucket too — a starved release squats the ask.
   _close_peer wipes chest_ref; loopback fixture now restores hunger, the
   connect-hook ghost, and plg_net.cfg (rule 30). Smoke 746/0.
+
+## S55 — audit-16: hostile-variant saves can't abort mid-load
+  Sixteenth context-free audit, first on the save/migration surface
+  (1H/6M/13L): int()/float()/"x"==true abort on non-numeric Variants —
+  a forged save kills load_game between world-teardown and rebuild, and
+  the next save clobbers the real file. Game._i/_f coerce every numeric
+  read (~35 sites) and bools use `is bool` two-stage. Loaded structures
+  regain pos+turret (kinbox anchor + tower fire were dead post-load);
+  every load list honors its runtime MAX_*; captive/inc/egg shapes
+  validate; session leftovers (dirty_decor, statuses, catch_streak,
+  mission_t, last_merchant_day) reset on load like regenerate; wire
+  hp clamps to the save's ceiling. New hostile-Variant fixture feeds
+  Array/Dict payloads through the whole path. Smoke 749/0, 747/0.
