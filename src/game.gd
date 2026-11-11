@@ -3258,6 +3258,7 @@ func retract_out() -> void:
 	if cur == null:
 		return
 	player.dismount_if(cur)
+	_unbind_mount(cur)
 	pals.erase(cur)
 	cur.mode = "bench"
 	bench.append(cur)
@@ -3372,6 +3373,7 @@ func _deploy_note(p: Kin, msg: String) -> void:
 
 func base_to_box(p: Kin) -> void:
 	# recall a worker into cold storage — job and cargo are dropped first
+	_unbind_mount(p)
 	if p.job_site:
 		if p in p.job_site["workers"]:
 			p.job_site["workers"].erase(p)
@@ -3392,6 +3394,7 @@ func party_to_box(uid: int) -> void:
 	if p == null:
 		return
 	player.dismount_if(p)
+	_unbind_mount(p)
 	party.erase(uid)
 	pals.erase(p)
 	bench.erase(p)
