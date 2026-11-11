@@ -16,6 +16,9 @@ func _shot(name: String) -> void:
 
 func _boot() -> void:
 	var sid := "fenjelly"
+	for a in OS.get_cmdline_user_args():
+		if SpeciesData.SPECIES.has(a) or SpeciesGen.SPECIES.has(a):
+			sid = a
 	var ps = load("res://scenes/main.tscn")
 	main = ps.instantiate()
 	root.add_child(main)
