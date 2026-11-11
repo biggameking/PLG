@@ -78,6 +78,7 @@ const MAX_DROPS := 400        # ground loot; oldest decays first anyway
 const MAX_PROJECTILES := 200  # raid volleys can spike these hard
 const MAX_FLOATERS := 80      # cosmetic text — cheap insurance
 const MAX_PALS := 220         # wild + owned + raid; AI tick cost scales with this
+const DEMOLISH_REACH := 4.5   # razing needs a hand on the structure — all input paths share this
 const MAX_BOX := 400          # stored pals are out-of-tree nodes — real bytes
 const MAX_EGG_QUEUE := 32     # ranch parentage queue (eggs can also be sold/eaten)
 const MAX_MERCH_STOCK := 64   # merchant inventory refresh

@@ -284,7 +284,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("demolish"):
 		if game.panel != "":
 			return # razing a real structure while browsing lists is grief
-		game.demolish_at(mouse_tile())
+		_demolish_verb(mouse_tile())
 		return
 	if event.is_action_pressed("map"):
 		_map_toggle()
@@ -1019,14 +1019,20 @@ func _map_toggle() -> void:
 	if map_show:
 		bake_minimap() # rebake every open — terrain/decor change and load_game swaps the world
 
+func _demolish_verb(tw: Vector2) -> void: # one reach contract for cursor AND slab
+	if game.player.pos.distance_to(tw + Vector2(0.5, 0.5)) > game.DEMOLISH_REACH:
+		game.log_msg("Too far to demolish")
+		return
+	game.demolish_at(tw)
+
 func _touch_demolish() -> void: # no cursor on a slab — raze the nearest structure
 	var pt := game.player.pos
-	var bt := Vector2i.ZERO; var bd := 4.5
+	var bt := Vector2i.ZERO; var bd := game.DEMOLISH_REACH
 	for k in game.structures:
 		var dd: float = pt.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
 		if dd < bd:
 			bd = dd; bt = k
-	if bd < 4.5:
+	if bd < game.DEMOLISH_REACH:
 		game.demolish_at(bt)
 	else:
 		game.log_msg("Nothing close enough to demolish")

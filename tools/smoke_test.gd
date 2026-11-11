@@ -4687,6 +4687,31 @@ func run() -> void:
 		check("dml razes the nearest structure", not game.structures.has(dm_k))
 	else:
 		check("dml razes the nearest structure", false, "no campfire spot seeded")
+	# one reach contract for every raze path — X key used to snipe across the map
+	var dm2 := Vector2i.ZERO; var dm2_ok := false
+	for rad in range(6, 9):
+		for ang9 in range(16):
+			var ck2 := Vector2i(int(p.pos.x + cos(ang9 * TAU / 16.0) * rad),
+				int(p.pos.y + sin(ang9 * TAU / 16.0) * rad))
+			if game.can_place("campfire", ck2.x, ck2.y):
+				game.place_free("campfire", ck2.x, ck2.y); dm2 = ck2; dm2_ok = true; break
+		if dm2_ok: break
+	if dm2_ok:
+		hudn._demolish_verb(Vector2(dm2.x, dm2.y)) # out of reach — must refuse
+		check("far structure survives the verb", game.structures.has(dm2)
+			and game.messages.back() == "Too far to demolish", "msg=%s" % game.messages.back())
+		var mpos := p.pos
+		p.pos = Vector2(dm2.x + 1.5, dm2.y + 0.5) # step inside reach, raze for real
+		hudn._demolish_verb(Vector2(dm2.x, dm2.y))
+		check("in-reach structure razes", not game.structures.has(dm2))
+		p.pos = mpos
+	else:
+		check("far structure survives the verb", false, "no far spot seeded")
+	var act_ev := InputEventAction.new() # the REAL key route must hit the same gate
+	act_ev.action = "demolish"; act_ev.pressed = true
+	hudn._unhandled_input(act_ev)
+	check("key route respects reach", game.messages.back() in
+		["Too far to demolish", "Nothing to demolish"], "msg=%s" % game.messages.back())
 	hudn.touch_verb("more")
 	check("··· collapses the row", not hudn.touch_more)
 	# pause shell hosts the panel verbs for every input device
