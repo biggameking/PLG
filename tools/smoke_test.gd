@@ -5377,6 +5377,20 @@ func run() -> void:
 		var snap_rows: Array = game.net.state_snapshot().get("kin", [])
 		check("snapshot kin rows carry the full pack", snap_rows.size() > 0
 			and snap_rows[0].size() == 12)
+		# the host's own saddle: ghosts[1].net_pos is never fed — the pack row
+		# must read player.pos, not the sentinel (-1,-1)
+		var unb6: Kin = game.gen_pal("scalfang", 6, Vector2(5, 5))
+		game.pals.append(unb6)
+		unb6.mode = "partner"
+		unb6.mounted_by = 1
+		var pack_row: Array = []
+		for pr6 in game.net.pal_state_pack():
+			if int(pr6[0]) == unb6.uid:
+				pack_row = pr6
+		check("host mount packs the rider's pos", not pack_row.is_empty()
+			and float(pack_row[2]) == p.pos.x and float(pack_row[3]) == p.pos.y)
+		unb6.mounted_by = 0
+		game.pals.erase(unb6); unb6.queue_free()
 		game.net.ghosts[99].net_pos = mt_ghost
 		game.net.peer_tags.erase(99)
 	else:

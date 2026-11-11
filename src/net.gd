@@ -271,7 +271,11 @@ func pal_state_pack() -> Array:
 	var arr := []
 	for p in game.pals:
 		if p.mode in ["wild", "base", "partner"] and p.hp > 0:
-			if p.mounted_by > 0 and ghosts.has(p.mounted_by):
+			if p.mounted_by == 1:
+				# the host's own rider: ghosts[1].net_pos is never fed —
+				# player.pos is the honest source (peer_pos_of's own fallback)
+				p.pos = game.player.pos
+			elif p.mounted_by > 0 and ghosts.has(p.mounted_by):
 				# a bound mount lives where its rider is — the ghost's validated
 				# pos is the only honest source, and every watcher needs it
 				var rg = ghosts[p.mounted_by]

@@ -49,7 +49,10 @@ var lucky := false          # rare "Lucky" variant: big, strong, golden drops
 var net_id := 0             # >0: host-authoritative replica on a client (keyed by host uid)
 var net_target := Vector2.INF # last host-reported world pos (INF = none yet)
 var owner_id := 0           # multiplayer owner: 0 = the keeper (host/local), >0 = a client's peer id
-var mounted_by := 0         # peer id of the rider — a bound mount follows its rider, never wanders
+var mounted_by := 0         # peer id of the rider — a bound mount follows its rider, never wanders.
+	# transient by design: rides pal_state_pack (wire field 11) but not the
+	# save — a kin saved mid-ride reloads as a free, visible partner; the
+	# rider's mount ref dies with player.mount=null on load anyway
 var owner_tag := ""         # keeper's stable install token — survives save/load across sessions
 
 func setup(g: Game, sp_id: String, lv: int, at: Vector2) -> void:
