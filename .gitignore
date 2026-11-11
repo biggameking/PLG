@@ -18,3 +18,6 @@ tools/smoke_out.txt
 tools/dbg.txt
 net_host_state.txt
 net_join_out.txt
+
+# python cache
+tools/art/__pycache__/
