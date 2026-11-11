@@ -185,3 +185,77 @@ respawn armed 断言（`multiplayer.poll()` 同步泵 API 注册）。
 
 ### 验证
 smoke 746/0 零 ERROR。
+
+## 第十五轮外审处置（S54）
+
+外审快照 `3508a74`：**1M/6L**。S53 改动面全部复核通过；抓到一个协议级真 M 与一个存量真 bug。
+
+### M1 board_paid_out 会话级楔死
+旗标仅 `board_pay` 回执可清——`board_paid_remote` 返回 `{}` 时主机静默
+（持有失效三路：过期被他人顶替 / `board_quest` 因日期/重生换 dict /
+peer 中途消失），客户端已扣货+旗标永真，同 qid 后续 `board_done` 全吞，
+且重claim蹲占共享板子 15s。
+修法：`board_paid` 失败分支回 `board_rej(qid)`（peer 在播才发）；
+客户端新处理器仅匹配 `board_paid_out` 时清旗。货物损失按先付协议归
+payer 自担（与账本案一致），旗标不再楔死。
+
+### L2 server_relay 存量 bug（本批最重要的隐藏发现）
+`ENetMultiplayerPeer` 上无此属性——relay 开关在 `SceneMultiplayer`
+（`is_server_relay_supported` 探明）。默认 true 下：客户端广播经主机
+转发给全体客人 → 3+ 人聊天双打印（原始包+主机中继包各一份），"叶子
+唯一远端"注释为假。
+修法：`host()` 置 `multiplayer.server_relay=false`。回归面核实：
+客人互见走主机 `peer_pos` 中继、`peer_joined` 广播名册、`sync_pos`
+的 `id!=1` 守卫变纵深防御。聊天处理器无需改动。
+
+### L3-L6
+- L3/L4 mount_done 门与 place_structure 返回语义复核通过，不动。
+- L5 `_close_peer` 补 `chest_ref` 清 + 注记 ghost/镜像归属场景层。
+- L6 回环夹具补齐：`hunger` 还原、connect-hook 生成的 `ghosts[1]`
+  按 had 旗标回收、`user://plg_net.cfg` 备份还原（规则 30）。
+- `_on_connection_failed` 补 `unbind_retry_t`。
+
+### Nits（留档）
+`board_done` 信任权威 qn（模型内主机即权威）；`board_quest.pending`
+存而不载（设计内）；`unbind_retry_t` 缺 connection_failed 清——已补。
+
+### 验证
+smoke 745/0 ×2 零 ERROR（首次误设 `peer.server_relay` 即时脚本探明
+真名 `SceneMultiplayer.server_relay`——API 名未经验证的教训）。
+
+## 第十五轮外审处置（S54）
+
+外审快照 `3508a74`：**1M/6L**。S53 改动面全部复核通过；抓到一个协议级真 M 与一个存量真 bug。
+
+### M1 board_paid_out 会话级楔死
+旗标仅 `board_pay` 回执可清——`board_paid_remote` 返回 `{}` 时主机静默
+（持有失效三路：过期被他人顶替 / `board_quest` 因日期/重生换 dict /
+peer 中途消失），客户端已扣货+旗标永真，同 qid 后续 `board_done` 全吞，
+且重 claim 蹲占共享板子 15s。
+修法：`board_paid` 失败分支回 `board_rej(qid)`（peer 在播才发）；
+客户端新处理器仅匹配 `board_paid_out` 时清旗。货物损失按先付协议归
+payer 自担（与账本案一致），旗标不再楔死。
+
+### L2 server_relay 存量 bug（本批最重要的隐藏发现）
+`ENetMultiplayerPeer` 上无此属性——relay 开关在 `SceneMultiplayer`
+（`is_server_relay_supported` 探明）。默认 true 下：客户端广播经主机
+转发给全体客人 → 3+ 人聊天双打印（原始包+主机中继包各一份），"叶子
+唯一远端"注释为假。
+修法：`host()` 置 `multiplayer.server_relay=false`。回归面核实：
+客人互见走主机 `peer_pos` 中继、`peer_joined` 广播名册、`sync_pos`
+的 `id!=1` 守卫变纵深防御。聊天处理器无需改动。
+
+### L3-L6
+- L3/L4 mount_done 门与 place_structure 返回语义复核通过，不动。
+- L5 `_close_peer` 补 `chest_ref` 清 + 注记 ghost/镜像归属场景层。
+- L6 回环夹具补齐：`hunger` 还原、connect-hook 生成的 `ghosts[1]`
+  按 had 旗标回收、`user://plg_net.cfg` 备份还原（规则 30）。
+- `_on_connection_failed` 补 `unbind_retry_t`。
+
+### Nits（留档）
+`board_done` 信任权威 qn（模型内主机即权威）；`board_quest.pending`
+存而不载（设计内）。
+
+### 验证
+smoke 745/0 ×2 零 ERROR（首次误设 `peer.server_relay` 即时脚本探明
+真名 `SceneMultiplayer.server_relay`——API 名未经验证的教训）。

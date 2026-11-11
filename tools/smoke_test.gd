@@ -5458,6 +5458,9 @@ func run() -> void:
 			OS.delay_msec(10)
 		var peer_bak2 = game.net.multiplayer.multiplayer_peer
 		game.net.multiplayer.multiplayer_peer = ra_cli
+		var g1_had: bool = game.net.ghosts.has(1) # connected_to_server may spawn it
+		var tag_had: bool = FileAccess.file_exists("user://plg_net.cfg")
+		var tag_keep := FileAccess.get_file_as_string("user://plg_net.cfg") if tag_had else ""
 		for _api_tick in 4: # the API learns the remote synchronously — no frame to await
 			game.net.multiplayer.poll()
 		var items_ra := game.items.duplicate() # the whole bag — board + respawn both touch it
@@ -5476,6 +5479,7 @@ func run() -> void:
 		var pos_ra := p.pos
 		var hp_ra := p.hp
 		var stat_ra := p.statuses.duplicate()
+		var hunger_ra := p.hunger
 		game.items.clear() # no pack, no spill — keep the bag math out of it
 		game.respawn_player()
 		check("a dying client arms the release", game.net.mount_pending
@@ -5486,8 +5490,17 @@ func run() -> void:
 		p.pos = pos_ra
 		p.hp = hp_ra
 		p.statuses = stat_ra
+		p.hunger = hunger_ra
 		game.pals.erase(ra1); ra1.queue_free()
 		game.net.multiplayer.multiplayer_peer = peer_bak2
+		if not g1_had and game.net.ghosts.has(1): # the connect hook's ghost goes home with the session
+			game.net.ghosts[1].queue_free()
+			game.net.ghosts.erase(1)
+		if tag_had:
+			var tag_f := FileAccess.open("user://plg_net.cfg", FileAccess.WRITE)
+			tag_f.store_string(tag_keep)
+		elif FileAccess.file_exists("user://plg_net.cfg"):
+			DirAccess.remove_absolute("user://plg_net.cfg") # hello wrote a fresh token — suite leaves no files
 		ra_srv.close(); ra_cli.close()
 		if had5:
 			game.items["wood"] = wood5

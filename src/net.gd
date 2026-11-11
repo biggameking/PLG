@@ -76,6 +76,9 @@ func setup(g: Game, layer: Node2D) -> void:
 
 func host() -> void:
 	var peer := ENetMultiplayerPeer.new()
+	multiplayer.server_relay = false # leaf guests must not hear each other —
+	# the host relays what they need (peer_pos/peer_joined/chat), and a guest's
+	# broadcast reaching other guests prints every chat line twice in a trio
 	if peer.create_server(PORT, MAX_PEERS) != OK:
 		game.log_msg("Host failed: port %d busy" % PORT)
 		return
@@ -101,12 +104,16 @@ func _close_peer() -> void:
 	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = null
-	# peer-swap is the choke — no hold or handshake may leak into the next dial
+	# peer-swap is the choke — no hold or handshake may leak into the next dial.
+	# (ghosts/net_party/mirrors are owned by _on_server_disconnected or the
+	# scene reload — every caller here either has no live session or is
+	# to_title, which razes the whole tree a line later)
 	pending_pays.clear()
 	mount_pending = false
 	mount_pending_uid = -1
 	unbind_retry_t = 0.0
 	board_paid_out = ""
+	game.chest_ref = null
 
 func is_client() -> bool:
 	# "not host" alone is also true offline — and a headless/offline run
@@ -404,6 +411,7 @@ func _on_connection_failed() -> void:
 	game.chest_ref = null # no chest was ever reached — the ref would mislead the next session
 	mount_pending = false # the mount handshake died with the dial too
 	mount_pending_uid = -1
+	unbind_retry_t = 0.0
 	board_paid_out = ""
 	game.log_msg("No host answered — check the address")
 
@@ -965,8 +973,19 @@ func board_paid(qid: String) -> void:
 	# the live hold, and the first success erases it) — a starved settle would
 	# eat goods the keeper already shipped. Spam buys a dict lookup, nothing else
 	var res := game.board_paid_remote(pid, str(qid))
-	if not res.is_empty() and multiplayer.get_peers().has(pid):
-		rpc_id(pid, "board_pay", int(res["gold"]), int(res["xp"]))
+	if not res.is_empty():
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "board_pay", int(res["gold"]), int(res["xp"]))
+	elif multiplayer.get_peers().has(pid):
+		rpc_id(pid, "board_rej", str(qid)) # the hold died — free the client's assert flag
+
+@rpc("authority", "call_remote", "reliable")
+func board_rej(qid: String) -> void:
+	if is_host:
+		return
+	if str(qid) == board_paid_out:
+		board_paid_out = "" # the hold died host-side — the ask may claim it fresh
+		game.log_msg("Notice board: the posting was already gone")
 
 @rpc("authority", "call_remote", "reliable")
 func board_pay(gold: int, xp: int) -> void:
