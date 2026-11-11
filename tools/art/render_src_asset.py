@@ -22,10 +22,14 @@ CFG = {
     "fenjelly": {
         "wool_mat_idx": 0,          # Quaternius 'White'
         "mats": [(0.93, 0.88, 0.78), (0.80, 0.66, 0.53)],
-        "subd_wool": 3, "subd_skin": 2,
-        "displace": {"scale": 0.22, "strength": 0.045, "detail": 4.0},
+        "subd_wool": 4, "subd_skin": 2,
+        "displace": {"scale": 0.14, "strength": 0.075, "detail": 4.0},
+        "rot_z": 55.0,              # turn the rig until it faces the camera
         "action": "Idle", "frames": (10, 85),
-        "eyes": [(-0.10, -0.36, 1.02), (0.10, -0.36, 1.02)], "eye_r": 0.045,
+        "eye_r": 0.04, "eye_gap": 0.065, "eye_fwd": -0.03, "eye_up": 0.17,
+        # puff shell over the wool bbox — real fleece clumps on real anatomy
+        "puffs": {"n": 30, "r": 0.16, "sq": 0.78, "shell": (0.9, 1.1),
+                  "z_lo": 0.45, "seed": 5, "bone": "Body"},
         "target_h": 1.45,
     },
 }
@@ -107,17 +111,82 @@ def normalize(objs, target_h):
     return k
 
 
-def add_eyes(arm, bone_name, offsets, r, m):
-    for i, off in enumerate(offsets):
+def bone_attach(arm, bone_name, ob, world_m):
+    """Parent `ob` to a bone so it lands at `world_m` right now and rides the
+    bone afterward. Bone-parent children resolve against the bone TAIL in
+    pose space — invert that chain or the offset gets applied twice."""
+    pb = arm.pose.bones[bone_name]
+    tail = mathutils.Matrix.Translation((0, -arm.data.bones[bone_name].length, 0))
+    base = arm.matrix_world @ pb.matrix @ tail
+    ob.parent = arm
+    ob.parent_type = 'BONE'
+    ob.parent_bone = bone_name
+    ob.matrix_basis = base.inverted() @ world_m
+
+
+def add_eyes(arm, bone_name, cfg, m):
+    """Ink beads auto-placed from the head bone: muzzle dir (head→tail) +
+    lateral cross gives both eye sockets — works on any quadruped rig.
+    All targets use POSE-space coords (pb.head/tail) so they match the
+    pose the file saved — never mix rest locals with pose matrices."""
+    pb = arm.pose.bones[bone_name]
+    h = arm.matrix_world @ pb.head
+    t = arm.matrix_world @ pb.tail
+    fwd = (t - h)
+    fwd.z = 0
+    if fwd.length < 1e-6:
+        fwd = t - h
+    fwd = fwd.normalized()
+    lat = mathutils.Vector((-fwd.y, fwd.x, 0.0))
+    center = t + fwd * cfg["eye_fwd"] + mathutils.Vector((0, 0, cfg["eye_up"]))
+    for sgn in (-1, 1):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12,
+                                             radius=cfg["eye_r"])
+        e = bpy.context.active_object
+        e.data.materials.append(m)
+        p = center + lat * (cfg["eye_gap"] * sgn)
+        bone_attach(arm, bone_name, e, mathutils.Matrix.Translation(p))
+        bpy.ops.object.shade_smooth()
+    print("EYES at", tuple(round(c, 3) for c in center))
+
+
+def fluff_shell(arm, wool, cfg, m):
+    """Scatter squashed puff spheres on the wool's ellipsoid hull — the
+    cauliflower fleece silhouette. Parented to the torso bone so they ride
+    the animation."""
+    import random
+    bb = [wool.matrix_world @ mathutils.Vector(v) for v in wool.bound_box]
+    lo = mathutils.Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb)))
+    hi = mathutils.Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))
+    c = (lo + hi) / 2
+    ext = (hi - lo) / 2
+    z_min = lo.z + (hi.z - lo.z) * cfg["z_lo"]
+    bone = cfg["bone"] if cfg["bone"] in arm.data.bones else arm.data.bones[0].name
+    rng = random.Random(cfg["seed"])
+    placed = 0
+    tries = 0
+    while placed < cfg["n"] and tries < cfg["n"] * 30:
+        tries += 1
+        d = mathutils.Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.2, 1)))
+        if d.length < 1e-4:
+            continue
+        d.normalize()
+        # point on the ellipsoid in direction d, jittered into the shell band
+        denom = math.sqrt((d.x / ext.x) ** 2 + (d.y / ext.y) ** 2 + (d.z / ext.z) ** 2)
+        band = rng.uniform(*cfg["shell"])
+        p = c + mathutils.Vector((d.x / denom * band, d.y / denom * band, d.z / denom * band))
+        if p.z < z_min or p.z > hi.z + 0.05:
+            continue
+        r = cfg["r"] * rng.uniform(0.75, 1.3)
         bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12, radius=r)
         e = bpy.context.active_object
         e.data.materials.append(m)
-        e.parent = arm
-        e.parent_type = 'BONE'
-        e.parent_bone = bone_name
-        # matrix_parent_inverse trick: set world position, let parenting keep it
-        e.matrix_world = mathutils.Matrix.Translation(mathutils.Vector(off))
+        world_m = mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
+            (1, 1, cfg["sq"], 1))
+        bone_attach(arm, bone, e, world_m)
         bpy.ops.object.shade_smooth()
+        placed += 1
+    print("PUFFS placed", placed)
 
 
 def light_rig():
@@ -179,11 +248,9 @@ def main():
     for o in bpy.data.objects:
         o.hide_render = False
 
-    # report head-bone position for eye tuning
-    hb = arm.data.bones.get("Head")
-    if hb:
-        wh = arm.matrix_world @ hb.head_local
-        print("HEAD_BONE world", tuple(round(c, 3) for c in wh))
+    # face the camera before anything else — eyes normalize against this pose
+    arm.rotation_euler.z = math.radians(cfg.get("rot_z", 0.0))
+    bpy.context.view_layer.update()
 
     # split wool/skin, upgrade surfaces
     wool_idx = cfg["wool_mat_idx"]
@@ -210,9 +277,19 @@ def main():
     print("scale k=%.4f faces: wool=%d skin=%d (pre-subd)" %
           (k, len(wool.data.polygons), len(skin.data.polygons)))
 
+    # report head-bone world position POST-normalize — tune eye params off it
+    hb = arm.pose.bones.get("Head")
+    if hb:
+        wh = arm.matrix_world @ hb.head
+        wt = arm.matrix_world @ hb.tail
+        print("HEAD_BONE world head=%s tail=%s" %
+              (tuple(round(c, 3) for c in wh), tuple(round(c, 3) for c in wt)))
+
     em = mat(INK, "ink")
     if hb:
-        add_eyes(arm, "Head", cfg["eyes"], cfg["eye_r"], em)
+        add_eyes(arm, "Head", cfg, em)
+    if cfg.get("puffs"):
+        fluff_shell(arm, wool, cfg["puffs"], wm)
 
     # drive the source rig's own action
     if not arm.animation_data:
