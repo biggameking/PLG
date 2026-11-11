@@ -1527,6 +1527,7 @@ func run() -> void:
 	var tg_p = game.gen_pal("fenjelly", 5, Vector2(p.pos.x + 1, p.pos.y))
 	game.pals.append(tg_p)
 	tg_p.mode = "wild"
+	game.projectiles.clear() # stray shots from earlier steps would re-wake it — any hit erases sleep
 	game.fire_player_shot(Vector2(p.pos.x + 1, p.pos.y), tg_wd)
 	for i16 in range(12):
 		game.update_projectiles(0.1)

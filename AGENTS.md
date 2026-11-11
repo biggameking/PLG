@@ -328,3 +328,10 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     while `multiplayer_peer == null` emits an engine ERROR — every
     `give_remote`/`note_remote` on an offline rig or test harness was
     dirtying output. Guard the peer handle before asking for the list.
+66. **Deterministic assertions need a drained world, not just parked
+    actors.** The tranq test parked the herd but left stray projectiles in
+    flight — every `fire_player_shot` departs from `player.pos` and one
+    stray hit erases `sleep` per kin.gd's any-hit-wakes rule. Drain
+    transient collections (projectiles/drops/floaters) before
+    timing-sensitive checks; `projectiles.clear()` before the shot is the
+    contract, same as the clears at steps elsewhere.
