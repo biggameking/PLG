@@ -801,3 +801,12 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   wire party strips dedup uids and share the 5-slot bound (L1/L2);
   stock_sync item rows whitelist ITEMS (L4); decor snapshot
   clamps a duplicate, not the caller's dict. Smoke 760-761/0.
+
+## S60 — release-candidate gate: packaging integrity
+  Found + fixed a real ship-blocker in tools/package.sh: zip ran in
+  update mode, so entries deleted between exports (an old
+  index.144x144.png.import artifact) survived inside the shipped
+  bundle. Zips are now deleted before repacking and index.* is
+  shell-expanded. Rebuilt 0.9.0 windows+web candidates from the
+  post-S59 tree — 15-file clean web bundle, single-exe windows
+  (embedded pck), zero warnings in export logs.
