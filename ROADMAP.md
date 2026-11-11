@@ -607,3 +607,11 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   L: state_sync raze-and-replace structures, net_live requires CONNECTED,
     chest_ref cleared on drop.
   Smoke 711/0 x4 green. Rules 77-79.
+
+## S47 — store-page truth pass + all-platform export verified
+  Windows+Web release exports now produce real artifacts end-to-end:
+  dist/kinbound-0.9.0-windows.zip (117MB exe) + kinbound-0.9.0-web.zip
+  (38MB wasm + pck + workers). Store copy updated: Android line went from
+  "unsigned/unverified" to signed-debug-APK; "five biomes" replaced with
+  honest terrain description (4 spawn bands + meadows/stonefields/shore).
+  IP check CLEAN (tools/check_ip.sh).

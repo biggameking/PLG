@@ -16,8 +16,9 @@ your transport, and your army.
   overreach and the ball just breaks.
 - **Build** — kinbox, beds, feed boxes, workbenches, farms, walls,
   towers. Assigned kin work the base while you explore.
-- **Explore** — five biomes, day/night spawns, weather that changes
-  what bites, expeditions that run while you're away.
+- **Explore** — meadows to stone fields to the far shore; day/night
+  spawns, weather that changes what bites, expeditions that run
+  while you're away.
 - **Crown the spires** — five element spires gate the endgame; raids
   escalate as you claim them; the gauntlet waits at the shore.
 - **Condense** — feed spare kin to your favorites. Stars raise stats.
@@ -35,7 +36,7 @@ disconnect orphans your kin safely and rejoining reclaims them.
 
 ## Honest limitations
 - Save file carries the whole island: roster, structures, tech, time.
-- Windows + Web builds ship today; Android preset exists but the build
-  is unsigned/unverified.
+- Windows + Web builds ship today. Android exports a signed debug APK
+  (sideload-ready); Play-signing awaits a release keystore.
 - Audio is fully procedural (pads, arps, cries, UI) — no licensed tracks.
 - 中文界面可用（设置里切换语言）。
