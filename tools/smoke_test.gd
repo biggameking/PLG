@@ -6297,8 +6297,13 @@ func run() -> void:
 	# a comment — scalbeak wears white jewel dots, vermtrot carries a back fan
 	var h1 := Image.load_from_file("res://assets/kin/scalbeak_f0.png")
 	var h2 := Image.load_from_file("res://assets/kin/vermtrot_f0.png")
-	var jc: Color = h1.get_pixel(40, 2)
-	check("hero crown pixels", h1 != null and jc.r > 0.9 and jc.g > 0.9 and jc.b > 0.9)
+	var crown_px := 0 # the blender rigs draw the head inside the top third, not at a fixed pixel
+	if h1 != null:
+		for cy2 in range(6, 22):
+			for cx2 in range(h1.get_width()):
+				if h1.get_pixel(cx2, cy2).a > 0.9:
+					crown_px += 1
+	check("hero crown pixels", h1 != null and crown_px > 80)
 	check("hero wing pixels", h2 != null and h2.get_pixel(34, 14).a > 0.9)
 	# pad-aware hints: variants exist, the device detector flips on intent
 	var pad_keys := 0

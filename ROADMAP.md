@@ -884,3 +884,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   debug-signed APK today: dist/kinbound-0.9.0-debug.apk (33M),
   checksummed into SHA256SUMS; package.sh gained an `android`
   lane so all three artifacts come from one command.
+
+## S65 — kin art: every species now renders a real creature
+  Parametric rig generator (tools/art/rig_auto.py) derives a Blender
+  rig per species from its own data — 13 body archetypes (blob/
+  quadruped/bird/ghost/human/serpent/cow/deer/kitty/mouse/monkey/
+  boar/hedgehog), palette + parts seeded by id. render_kin.py merges
+  rigs_gen.py (authored fenjelly rig keeps priority). All 115
+  non-fenjelly species re-rendered through the posterize/ink/halftone
+  post chain — flat procedural squares are gone; every kin has a
+  silhouette, a face, and its species color. Smoke 761/0 (the crown
+  assertion now checks the head zone's opaque pixels, not one magic
+  coordinate from the placeholder era).

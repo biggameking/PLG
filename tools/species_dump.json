@@ -1,0 +1,1063 @@
+[
+  {
+    "body": "",
+    "color": "#ede0c8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "fenjelly",
+    "name": "Fenjelly"
+  },
+  {
+    "body": "",
+    "color": "#f2a0b5",
+    "elements": [
+      "neutral"
+    ],
+    "id": "puffmite",
+    "name": "Puffmite"
+  },
+  {
+    "body": "",
+    "color": "#e8f0f2",
+    "elements": [
+      "neutral"
+    ],
+    "id": "fenlump",
+    "name": "Fenlump"
+  },
+  {
+    "body": "",
+    "color": "#e8963c",
+    "elements": [
+      "fire"
+    ],
+    "id": "cindlump",
+    "name": "Cindlump"
+  },
+  {
+    "body": "",
+    "color": "#4d9de0",
+    "elements": [
+      "water",
+      "ice"
+    ],
+    "id": "corlmite",
+    "name": "Corlmite"
+  },
+  {
+    "body": "",
+    "color": "#d4b96e",
+    "elements": [
+      "neutral"
+    ],
+    "id": "dozantler",
+    "name": "Dozantler"
+  },
+  {
+    "body": "",
+    "color": "#4caf50",
+    "elements": [
+      "grass"
+    ],
+    "id": "sprigmelt",
+    "name": "Sprigmelt"
+  },
+  {
+    "body": "",
+    "color": "#9acd32",
+    "elements": [
+      "grass"
+    ],
+    "id": "briargoo",
+    "name": "Briargoo"
+  },
+  {
+    "body": "",
+    "color": "#e8d44d",
+    "elements": [
+      "electric"
+    ],
+    "id": "voltgoo",
+    "name": "Voltgoo"
+  },
+  {
+    "body": "",
+    "color": "#e8e05c",
+    "elements": [
+      "electric"
+    ],
+    "id": "faradlump",
+    "name": "Faradlump"
+  },
+  {
+    "body": "",
+    "color": "#b8935f",
+    "elements": [
+      "ground"
+    ],
+    "id": "loammelt",
+    "name": "Loammelt"
+  },
+  {
+    "body": "",
+    "color": "#6fa8d1",
+    "elements": [
+      "dark"
+    ],
+    "id": "shademite",
+    "name": "Shademite"
+  },
+  {
+    "body": "",
+    "color": "#c678dd",
+    "elements": [
+      "dark"
+    ],
+    "id": "shadelump",
+    "name": "Shadelump"
+  },
+  {
+    "body": "",
+    "color": "#a8b5c4",
+    "elements": [
+      "dark"
+    ],
+    "id": "shademelt",
+    "name": "Shademelt"
+  },
+  {
+    "body": "",
+    "color": "#d1813c",
+    "elements": [
+      "ground"
+    ],
+    "id": "loampuff",
+    "name": "Loampuff"
+  },
+  {
+    "body": "",
+    "color": "#f5eee0",
+    "elements": [
+      "neutral"
+    ],
+    "id": "nibjelly",
+    "name": "Nibjelly"
+  },
+  {
+    "body": "",
+    "color": "#ede0c8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "piplump",
+    "name": "Piplump"
+  },
+  {
+    "body": "",
+    "color": "#4d9de0",
+    "elements": [
+      "water",
+      "ice"
+    ],
+    "id": "marlump",
+    "name": "Marlump"
+  },
+  {
+    "body": "",
+    "color": "#4dd0e1",
+    "elements": [
+      "water"
+    ],
+    "id": "quackbill",
+    "name": "Quackbill"
+  },
+  {
+    "body": "",
+    "color": "#3a3a4a",
+    "elements": [
+      "dark"
+    ],
+    "id": "ironpact_grunt",
+    "name": "Ironpact Grunt"
+  },
+  {
+    "body": "",
+    "color": "#5a2e4a",
+    "elements": [
+      "dark"
+    ],
+    "id": "ironpact_sweeper",
+    "name": "Ironpact Sweeper"
+  },
+  {
+    "body": "blob",
+    "color": "#e8734a",
+    "elements": [
+      "fire"
+    ],
+    "id": "pyrejelly",
+    "name": "Pyrejelly"
+  },
+  {
+    "body": "kitty",
+    "color": "#c93a4d",
+    "elements": [
+      "fire"
+    ],
+    "id": "branpurr",
+    "name": "Branpurr"
+  },
+  {
+    "body": "quadruped",
+    "color": "#d1813c",
+    "elements": [
+      "fire"
+    ],
+    "id": "scalfang",
+    "name": "Scalfang"
+  },
+  {
+    "body": "human",
+    "color": "#8a3d5c",
+    "elements": [
+      "fire",
+      "dark"
+    ],
+    "id": "pyresmith",
+    "name": "Pyresmith"
+  },
+  {
+    "body": "quadruped",
+    "color": "#c9552f",
+    "elements": [
+      "fire"
+    ],
+    "id": "cindpaw",
+    "name": "Cindpaw"
+  },
+  {
+    "body": "human",
+    "color": "#a83232",
+    "elements": [
+      "fire"
+    ],
+    "id": "branling",
+    "name": "Branling"
+  },
+  {
+    "body": "bird",
+    "color": "#e8734a",
+    "elements": [
+      "fire"
+    ],
+    "id": "pyreplume",
+    "name": "Pyreplume"
+  },
+  {
+    "body": "bird",
+    "color": "#e8452f",
+    "elements": [
+      "fire"
+    ],
+    "id": "flarbeak",
+    "name": "Flarbeak"
+  },
+  {
+    "body": "cow",
+    "color": "#8a4a4a",
+    "elements": [
+      "fire"
+    ],
+    "id": "cindchew",
+    "name": "Cindchew"
+  },
+  {
+    "body": "serpent",
+    "color": "#5ab8d1",
+    "elements": [
+      "water"
+    ],
+    "id": "bubwrith",
+    "name": "Bubwrith"
+  },
+  {
+    "body": "quadruped",
+    "color": "#8fd1e8",
+    "elements": [
+      "ice",
+      "dragon"
+    ],
+    "id": "frostfang",
+    "name": "Frostfang"
+  },
+  {
+    "body": "ghost",
+    "color": "#7ec8e3",
+    "elements": [
+      "water"
+    ],
+    "id": "bringloom",
+    "name": "Bringloom"
+  },
+  {
+    "body": "blob",
+    "color": "#a8d8c8",
+    "elements": [
+      "water"
+    ],
+    "id": "lazpuff",
+    "name": "Lazpuff"
+  },
+  {
+    "body": "cow",
+    "color": "#6d9dc5",
+    "elements": [
+      "water",
+      "dragon"
+    ],
+    "id": "ripbell",
+    "name": "Ripbell"
+  },
+  {
+    "body": "serpent",
+    "color": "#4d7db8",
+    "elements": [
+      "water",
+      "dragon"
+    ],
+    "id": "ripwrith",
+    "name": "Ripwrith"
+  },
+  {
+    "body": "serpent",
+    "color": "#3a5a8a",
+    "elements": [
+      "water",
+      "dragon"
+    ],
+    "id": "tidscale",
+    "name": "Tidscale"
+  },
+  {
+    "body": "blob",
+    "color": "#5a8db0",
+    "elements": [
+      "water"
+    ],
+    "id": "bubgoo",
+    "name": "Bubgoo"
+  },
+  {
+    "body": "quadruped",
+    "color": "#e8c46a",
+    "elements": [
+      "water"
+    ],
+    "id": "dewmane",
+    "name": "Dewmane"
+  },
+  {
+    "body": "mouse",
+    "color": "#f2b8d1",
+    "elements": [
+      "neutral"
+    ],
+    "id": "hushnib",
+    "name": "Hushnib"
+  },
+  {
+    "body": "blob",
+    "color": "#b8d77c",
+    "elements": [
+      "grass"
+    ],
+    "id": "thornmelt",
+    "name": "Thornmelt"
+  },
+  {
+    "body": "blob",
+    "color": "#e8d44d",
+    "elements": [
+      "grass"
+    ],
+    "id": "mossjelly",
+    "name": "Mossjelly"
+  },
+  {
+    "body": "human",
+    "color": "#e8d44d",
+    "elements": [
+      "grass"
+    ],
+    "id": "wortling",
+    "name": "Wortling"
+  },
+  {
+    "body": "quadruped",
+    "color": "#7cb86a",
+    "elements": [
+      "grass"
+    ],
+    "id": "thornhoof",
+    "name": "Thornhoof"
+  },
+  {
+    "body": "deer",
+    "color": "#a8c97a",
+    "elements": [
+      "grass"
+    ],
+    "id": "petalantler",
+    "name": "Petalantler"
+  },
+  {
+    "body": "quadruped",
+    "color": "#c9b8d1",
+    "elements": [
+      "grass"
+    ],
+    "id": "leaftrot",
+    "name": "Leaftrot"
+  },
+  {
+    "body": "quadruped",
+    "color": "#8fc46a",
+    "elements": [
+      "grass",
+      "dragon"
+    ],
+    "id": "briarmaw",
+    "name": "Briarmaw"
+  },
+  {
+    "body": "monkey",
+    "color": "#6dc48a",
+    "elements": [
+      "grass"
+    ],
+    "id": "briarchim",
+    "name": "Briarchim"
+  },
+  {
+    "body": "monkey",
+    "color": "#7cb86a",
+    "elements": [
+      "grass"
+    ],
+    "id": "fernchim",
+    "name": "Fernchim"
+  },
+  {
+    "body": "kitty",
+    "color": "#e8b8d1",
+    "elements": [
+      "neutral"
+    ],
+    "id": "tawtail",
+    "name": "Tawtail"
+  },
+  {
+    "body": "ghost",
+    "color": "#e8d44d",
+    "elements": [
+      "grass"
+    ],
+    "id": "mossveil",
+    "name": "Mossveil"
+  },
+  {
+    "body": "ghost",
+    "color": "#c9a8e8",
+    "elements": [
+      "grass"
+    ],
+    "id": "ivyveil",
+    "name": "Ivyveil"
+  },
+  {
+    "body": "ghost",
+    "color": "#e8c98a",
+    "elements": [
+      "grass"
+    ],
+    "id": "mosswisp",
+    "name": "Mosswisp"
+  },
+  {
+    "body": "ghost",
+    "color": "#d8c8e8",
+    "elements": [
+      "grass"
+    ],
+    "id": "fernveil",
+    "name": "Fernveil"
+  },
+  {
+    "body": "ghost",
+    "color": "#f2b8d1",
+    "elements": [
+      "grass"
+    ],
+    "id": "floraling",
+    "name": "Floraling"
+  },
+  {
+    "body": "deer",
+    "color": "#e8d44d",
+    "elements": [
+      "electric"
+    ],
+    "id": "statstride",
+    "name": "Statstride"
+  },
+  {
+    "body": "bird",
+    "color": "#e8d44d",
+    "elements": [
+      "electric"
+    ],
+    "id": "zapplume",
+    "name": "Zapplume"
+  },
+  {
+    "body": "quadruped",
+    "color": "#7ac9e8",
+    "elements": [
+      "electric"
+    ],
+    "id": "zaptrot",
+    "name": "Zaptrot"
+  },
+  {
+    "body": "mouse",
+    "color": "#e8e0a8",
+    "elements": [
+      "electric"
+    ],
+    "id": "sparkwhisk",
+    "name": "Sparkwhisk"
+  },
+  {
+    "body": "bird",
+    "color": "#e8a83c",
+    "elements": [
+      "neutral"
+    ],
+    "id": "tambeak",
+    "name": "Tambeak"
+  },
+  {
+    "body": "cow",
+    "color": "#8a7a5a",
+    "elements": [
+      "electric"
+    ],
+    "id": "statchew",
+    "name": "Statchew"
+  },
+  {
+    "body": "quadruped",
+    "color": "#b8d8e8",
+    "elements": [
+      "ice"
+    ],
+    "id": "rimemane",
+    "name": "Rimemane"
+  },
+  {
+    "body": "blob",
+    "color": "#c8e8f5",
+    "elements": [
+      "ice"
+    ],
+    "id": "glaclump",
+    "name": "Glaclump"
+  },
+  {
+    "body": "cow",
+    "color": "#a8b8c9",
+    "elements": [
+      "ice"
+    ],
+    "id": "snovmool",
+    "name": "Snovmool"
+  },
+  {
+    "body": "quadruped",
+    "color": "#d8d8e8",
+    "elements": [
+      "ice"
+    ],
+    "id": "glacmane",
+    "name": "Glacmane"
+  },
+  {
+    "body": "deer",
+    "color": "#a8c9e8",
+    "elements": [
+      "ice"
+    ],
+    "id": "snovfawn",
+    "name": "Snovfawn"
+  },
+  {
+    "body": "deer",
+    "color": "#8fc9e8",
+    "elements": [
+      "ice"
+    ],
+    "id": "snovstride",
+    "name": "Snovstride"
+  },
+  {
+    "body": "kitty",
+    "color": "#a8d8e8",
+    "elements": [
+      "ice"
+    ],
+    "id": "snowtail",
+    "name": "Snowtail"
+  },
+  {
+    "body": "ghost",
+    "color": "#8fb8a8",
+    "elements": [
+      "ice"
+    ],
+    "id": "chilgloom",
+    "name": "Chilgloom"
+  },
+  {
+    "body": "mouse",
+    "color": "#8a7a6a",
+    "elements": [
+      "ground"
+    ],
+    "id": "terrnib",
+    "name": "Terrnib"
+  },
+  {
+    "body": "hedgehog",
+    "color": "#a8885a",
+    "elements": [
+      "ground"
+    ],
+    "id": "loamquill",
+    "name": "Loamquill"
+  },
+  {
+    "body": "human",
+    "color": "#5a5a8a",
+    "elements": [
+      "ground"
+    ],
+    "id": "terrkin",
+    "name": "Terrkin"
+  },
+  {
+    "body": "quadruped",
+    "color": "#8a6d5a",
+    "elements": [
+      "ground",
+      "fire"
+    ],
+    "id": "grithoof",
+    "name": "Grithoof"
+  },
+  {
+    "body": "quadruped",
+    "color": "#8a8a9a",
+    "elements": [
+      "neutral"
+    ],
+    "id": "tammane",
+    "name": "Tammane"
+  },
+  {
+    "body": "bird",
+    "color": "#7a9db8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "bramplume",
+    "name": "Bramplume"
+  },
+  {
+    "body": "bird",
+    "color": "#5a5a6a",
+    "elements": [
+      "dark"
+    ],
+    "id": "murkwing",
+    "name": "Murkwing"
+  },
+  {
+    "body": "human",
+    "color": "#7ab86a",
+    "elements": [
+      "grass"
+    ],
+    "id": "worthand",
+    "name": "Worthand"
+  },
+  {
+    "body": "monkey",
+    "color": "#7a6a5a",
+    "elements": [
+      "neutral"
+    ],
+    "id": "puffchim",
+    "name": "Puffchim"
+  },
+  {
+    "body": "hedgehog",
+    "color": "#f5d8e8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "mimspike",
+    "name": "Mimspike"
+  },
+  {
+    "body": "quadruped",
+    "color": "#e8b8c9",
+    "elements": [
+      "neutral"
+    ],
+    "id": "mimtrot",
+    "name": "Mimtrot"
+  },
+  {
+    "body": "kitty",
+    "color": "#e8c9a8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "doztail",
+    "name": "Doztail"
+  },
+  {
+    "body": "human",
+    "color": "#d88aa8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "hushsmith",
+    "name": "Hushsmith"
+  },
+  {
+    "body": "quadruped",
+    "color": "#5a5a7a",
+    "elements": [
+      "dark"
+    ],
+    "id": "noctmane",
+    "name": "Noctmane"
+  },
+  {
+    "body": "human",
+    "color": "#7a6a8a",
+    "elements": [
+      "dark"
+    ],
+    "id": "shadehand",
+    "name": "Shadehand"
+  },
+  {
+    "body": "ghost",
+    "color": "#8a7ad1",
+    "elements": [
+      "dark"
+    ],
+    "id": "noctgloom",
+    "name": "Noctgloom"
+  },
+  {
+    "body": "human",
+    "color": "#8aa8d1",
+    "elements": [
+      "dark"
+    ],
+    "id": "grimling",
+    "name": "Grimling"
+  },
+  {
+    "body": "ghost",
+    "color": "#8a6a9a",
+    "elements": [
+      "dark"
+    ],
+    "id": "shadegloom",
+    "name": "Shadegloom"
+  },
+  {
+    "body": "ghost",
+    "color": "#6a8a7a",
+    "elements": [
+      "dark"
+    ],
+    "id": "shadewisp",
+    "name": "Shadewisp"
+  },
+  {
+    "body": "kitty",
+    "color": "#9a7ab8",
+    "elements": [
+      "dark"
+    ],
+    "id": "duskpurr",
+    "name": "Duskpurr"
+  },
+  {
+    "body": "human",
+    "color": "#b87a9a",
+    "elements": [
+      "dark"
+    ],
+    "id": "veilkin",
+    "name": "Veilkin"
+  },
+  {
+    "body": "human",
+    "color": "#4a3a5a",
+    "elements": [
+      "dark",
+      "ground"
+    ],
+    "id": "shadesmith",
+    "name": "Shadesmith"
+  },
+  {
+    "body": "bird",
+    "color": "#5a4a7a",
+    "elements": [
+      "dark"
+    ],
+    "id": "veilplume",
+    "name": "Veilplume"
+  },
+  {
+    "body": "human",
+    "color": "#6a5a7a",
+    "elements": [
+      "dark"
+    ],
+    "id": "shadekin",
+    "name": "Shadekin"
+  },
+  {
+    "body": "bird",
+    "color": "#6a5a8a",
+    "elements": [
+      "dark",
+      "electric"
+    ],
+    "id": "noctplume",
+    "name": "Noctplume"
+  },
+  {
+    "body": "blob",
+    "color": "#8a7a9a",
+    "elements": [
+      "dark"
+    ],
+    "id": "duskwing",
+    "name": "Duskwing"
+  },
+  {
+    "body": "bird",
+    "color": "#5a8ad1",
+    "elements": [
+      "dragon"
+    ],
+    "id": "scalbeak",
+    "name": "Scalbeak"
+  },
+  {
+    "body": "human",
+    "color": "#d8d8e8",
+    "elements": [
+      "neutral"
+    ],
+    "id": "nibhand",
+    "name": "Nibhand"
+  },
+  {
+    "body": "bird",
+    "color": "#8a9ad1",
+    "elements": [
+      "dragon"
+    ],
+    "id": "scalcrest",
+    "name": "Scalcrest"
+  },
+  {
+    "body": "quadruped",
+    "color": "#4a4a6a",
+    "elements": [
+      "dragon",
+      "dark"
+    ],
+    "id": "wyrmhoof",
+    "name": "Wyrmhoof"
+  },
+  {
+    "body": "quadruped",
+    "color": "#a8c9e8",
+    "elements": [
+      "dragon"
+    ],
+    "id": "vermtrot",
+    "name": "Vermtrot"
+  },
+  {
+    "body": "hedgehog",
+    "color": "#e88a4a",
+    "elements": [
+      "fire"
+    ],
+    "id": "embquill",
+    "name": "Embquill"
+  },
+  {
+    "body": "blob",
+    "color": "#5ac9d1",
+    "elements": [
+      "water"
+    ],
+    "id": "dewpuff",
+    "name": "Dewpuff"
+  },
+  {
+    "body": "ghost",
+    "color": "#8ad1e8",
+    "elements": [
+      "electric"
+    ],
+    "id": "faradwisp",
+    "name": "Faradwisp"
+  },
+  {
+    "body": "bird",
+    "color": "#e8a85a",
+    "elements": [
+      "fire"
+    ],
+    "id": "soltalon",
+    "name": "Soltalon"
+  },
+  {
+    "body": "hedgehog",
+    "color": "#6a8a5a",
+    "elements": [
+      "water",
+      "ground"
+    ],
+    "id": "lazburr",
+    "name": "Lazburr"
+  },
+  {
+    "body": "mouse",
+    "color": "#c9e8f5",
+    "elements": [
+      "ice"
+    ],
+    "id": "rimewhisk",
+    "name": "Rimewhisk"
+  },
+  {
+    "body": "hedgehog",
+    "color": "#7a8a6a",
+    "elements": [
+      "grass",
+      "ground"
+    ],
+    "id": "wortquill",
+    "name": "Wortquill"
+  },
+  {
+    "body": "serpent",
+    "color": "#5a4a6a",
+    "elements": [
+      "dark",
+      "dragon"
+    ],
+    "id": "noctfang",
+    "name": "Noctfang"
+  },
+  {
+    "body": "ghost",
+    "color": "#c9d8a8",
+    "elements": [
+      "grass"
+    ],
+    "id": "sprigveil",
+    "name": "Sprigveil"
+  },
+  {
+    "body": "boar",
+    "color": "#8a7a6a",
+    "elements": [
+      "ground"
+    ],
+    "id": "digsnout",
+    "name": "Digsnout"
+  },
+  {
+    "body": "ghost",
+    "color": "#a8e8d8",
+    "elements": [
+      "water"
+    ],
+    "id": "bubgloom",
+    "name": "Bubgloom"
+  },
+  {
+    "body": "bird",
+    "color": "#9a6a4a",
+    "elements": [
+      "fire",
+      "neutral"
+    ],
+    "id": "brancrest",
+    "name": "Brancrest"
+  },
+  {
+    "body": "quadruped",
+    "color": "#e8734a",
+    "elements": [
+      "fire"
+    ],
+    "id": "embpaw",
+    "name": "Embpaw"
+  },
+  {
+    "body": "hedgehog",
+    "color": "#a89468",
+    "elements": [
+      "ground"
+    ],
+    "id": "gritmite",
+    "name": "Gritmite"
+  },
+  {
+    "body": "serpent",
+    "color": "#3a7a9a",
+    "elements": [
+      "water"
+    ],
+    "id": "corlfang",
+    "name": "Corlfang"
+  },
+  {
+    "body": "ghost",
+    "color": "#5a5ae8",
+    "elements": [
+      "electric",
+      "dark"
+    ],
+    "id": "sparkhaunt",
+    "name": "Sparkhaunt"
+  }
+]

@@ -10,6 +10,12 @@ ground plane around origin, ~1.5-2.0 units tall.
 """
 import bpy, math, random, sys, os
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from rigs_gen import RIGS_GEN
+except ImportError:
+    RIGS_GEN = {}
+
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "render")
 
 # ---------------------------------------------------------------- rigs
@@ -100,7 +106,7 @@ def fluff(c, r, n, sq, seed, jitter, m):
 
 
 def build(sid, frame):
-    rig = RIGS[sid]
+    rig = RIGS.get(sid) or RIGS_GEN[sid]
     mats = [mat(c) for c in rig["mats"]]
     f1 = rig.get("f1", {}) if frame == 1 else {}
     fluff_dy = f1.get("fluff_dy", 0.0)
