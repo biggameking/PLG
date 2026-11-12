@@ -78,5 +78,95 @@ func _init() -> void:
 	gate("raid curve saturates", Combat.raid_day_bonus(30) == 25) # cap holds the ceiling
 	gate("wave size saturates", Combat.raid_wave_bonus(30) == 4)
 
+	print("\n== catch-cost pacing: expected orbs to bag at @25% hp ==")
+	var orb_p := {}
+	for o2 in orbs:
+		orb_p[o2[0]] = o2[1]
+	var paces := [ # label, target lv, orb id, species capturePower, max orbs allowed
+		["early", 8, "kin_orb", 40, 4],
+		["mid", 30, "giga_orb", 50, 6],
+		["deep", 50, "ultra_orb", 55, 7],
+		["legend", 50, "legendary_orb", 65, 4],
+	]
+	for pc in paces:
+		var ch: float = Combat.catch_chance(0.25, cap_pow(pc[3], pc[1]),
+			orb_p[pc[2]], false, false, 1)
+		var want := 1.0 / maxf(ch, 0.001)
+		print("%-8s lv%-3d %s: %2.0f%% -> ~%.1f orbs" % [pc[0], pc[1], pc[2], ch * 100.0, want])
+		gate("%s catch costs sane orbs" % pc[0], want <= float(pc[4]),
+			"~%.1f orbs" % want)
+
+	print("\n== roster power curve: turns-to-kill through real Combat.damage ==")
+	var rng2 := Rng.new(0x5EED)
+	var bases := []
+	for s2 in SpeciesData.SPECIES.values() + SpeciesGen.SPECIES.values():
+		bases.append(float(s2.get("atk", 60)))
+	bases.sort()
+	var med_atk: float = bases[bases.size() / 2]
+	var med_def: float = bases[bases.size() / 2]
+	var powers := []
+	for sk in SkillData.SKILLS.values():
+		powers.append(float(sk.get("power", 10)))
+	powers.sort()
+	var mid_power: float = powers[powers.size() / 2] # the roster's median hit, not a wish
+	var ttk := func(atk_lv: int, def_lv: int) -> float:
+		var hits := 0
+		var hp := Combat.stat_at(70.0, def_lv) # median hp base
+		while hp > 0.0 and hits < 90:
+			hp -= Combat.damage(Combat.stat_at(med_atk, atk_lv), mid_power,
+				Combat.stat_at(med_def, def_lv), 1.0, rng2)
+			hits += 1
+		return float(hits)
+	var par: float = ttk.call(20, 20)
+	var und: float = ttk.call(20, 35)
+	var over: float = ttk.call(35, 20)
+	print("median skill power %.0f | parity lv20v20 ~%.0f hits | under -15 ~%.0f | over +15 ~%.0f" % [mid_power, par, und, over])
+	# invariants, not taste: parity must resolve in a sane window, an underdog
+	# must still be able to fight, and levels must matter at all. The soft
+	# damage ratio (atk/(atk+2def) saturates) means +15 is a grind, not a
+	# stomp — a deliberate curve property worth watching, not a bug
+	gate("parity duel resolves", par >= 4.0 and par <= 16.0, "%.0f hits" % par)
+	gate("underdog -15 isn't hopeless", und >= par and und <= 40.0, "%.0f hits" % und)
+	gate("levels still matter", over < par, "%.0f vs %.0f" % [over, par])
+	gate("stat curve inflation bounded",
+		Combat.stat_at(60.0, 60) / Combat.stat_at(60.0, 1) <= 6.5,
+		"%.1fx" % (Combat.stat_at(60.0, 60) / Combat.stat_at(60.0, 1)))
+
+	print("\n== skill kit pacing: no dead hatchlings, signatures at 20 ==")
+	var kit_dead := 0
+	var kit_nosig := 0
+	var kit_dangle := 0
+	var all_species := SpeciesData.SPECIES.values() + SpeciesGen.SPECIES.values()
+	for s3 in all_species:
+		var learns: Array = s3.get("skills", [])
+		if learns.is_empty() or int(learns[0][0]) > 5:
+			kit_dead += 1
+		var has_sig := false
+		for le in learns:
+			if int(le[0]) == 20:
+				has_sig = true
+			if not SkillData.SKILLS.has(str(le[1])):
+				kit_dangle += 1
+		if not has_sig:
+			kit_nosig += 1
+	gate("every species fights by lv5", kit_dead == 0, "%d dead kits" % kit_dead)
+	gate("every species has a lv20 signature", kit_nosig == 0, "%d missing" % kit_nosig)
+	gate("no dangling skill ids", kit_dangle == 0, "%d bad refs" % kit_dangle)
+
+	print("\n== element chart: rock-paper coverage ==")
+	var elems: Array = ElementData.CHART.keys()
+	var uncovered := []
+	for de in elems:
+		var counters := 0
+		for ae in elems:
+			if Combat.effectiveness(ae, [de]) >= 1.9:
+				counters += 1
+		if counters == 0:
+			uncovered.append(de)
+		var neut := Combat.effectiveness("neutral", [de])
+		print("def %-8s counters=%d  neutral-vs=%.1f" % [de, counters, neut])
+	gate("every element has a counter", uncovered.is_empty(), "uncovered: %s" % [uncovered])
+	gate("neutral is honest 1x", Combat.effectiveness("neutral", ["dragon"]) == 1.0)
+
 	print("\n==== SIM: %d failures ====" % fails)
 	quit(1 if fails > 0 else 0)
