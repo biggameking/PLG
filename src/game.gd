@@ -898,7 +898,10 @@ func acquirable(sid: String) -> bool:
 # gates answer to. Legends stay out of spawn/breed/raid pools, but a den
 # legend that roams again is earned the hard way: fight it, then catch it.
 func ownable(sid: String) -> bool:
-	return SpeciesData.body_of(sid) != "human"
+	# legend heirs are the den's whole promise — a knight-shaped legend is
+	# still a legend: human body can't bar a den heir from the roster, or
+	# the Accord's tenth name can never be earned (audit-33)
+	return SpeciesData.body_of(sid) != "human" or sid in LEGENDARY_DEN
 
 func acq_pool(pool: Array) -> Array:
 	var out := []
@@ -2785,7 +2788,7 @@ func demolish_at(at: Vector2) -> bool:
 		xp1.pos = Vector2(cells[0].x + 0.5, cells[0].y + 0.5)
 	for it in st.get("store", {}).keys():
 		add_item(it, st["store"][it])
-	var inc_dm: Dictionary = st.get("egg_inc", {}) # razing a loaded incubator refunds the egg — its claimed bloodline comes home too
+	var inc_dm: Dictionary = st.get("egg_inc", {}) # razing a loaded incubator refunds the egg — the item survives; its claimed bloodline dies with the box's records
 	if not inc_dm.is_empty():
 		add_item("huge_kin_egg" if inc_dm.get("huge", false) else ("bred_kin_egg" if inc_dm.get("pair") != null else "kin_egg"), 1)
 	st["store"] = {} # refunded — an open chest panel must not re-withdraw these
@@ -2872,7 +2875,7 @@ func raze_structure(st) -> void:
 	for it in st.get("store", {}).keys(): # contents spill as loot — no vanishing stock
 		if not cells.is_empty():
 			spawn_drop(it, st["store"][it], Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
-	var inc_rz: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — razing the box can't eat the bloodline
+	var inc_rz: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — the shell survives; the pedigree records burn with the box
 	if not inc_rz.is_empty() and not cells.is_empty():
 		spawn_drop("huge_kin_egg" if inc_rz.get("huge", false) else ("bred_kin_egg" if inc_rz.get("pair") != null else "kin_egg"),
 			1, Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
@@ -6715,7 +6718,7 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 	# no bag refund — the builder isn't here to catch it
 	for it in st.get("store", {}).keys():
 		spawn_drop(str(it), int(st["store"][it]), Vector2(tx + 0.5, ty + 0.5))
-	var inc_gd: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — the bloodline rides the ground, not the void
+	var inc_gd: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — the shell rides the ground; the pedigree burns with the box
 	if not inc_gd.is_empty():
 		spawn_drop("huge_kin_egg" if inc_gd.get("huge", false) else ("bred_kin_egg" if inc_gd.get("pair") != null else "kin_egg"),
 			1, Vector2(tx + 0.5, ty + 0.5))

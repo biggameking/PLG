@@ -1058,3 +1058,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   hygiene: real-writer round-trip + snapshot/restore (rules 117).
   Smoke 860/0 (1 known worldgen skip). Sim 0 failures.
 
+
+### S77 — endgame earnability (audit-33) — SHIPPED
+- Critical: `ownable()` now exempts `LEGENDARY_DEN` — knight-bodied heirs
+  (nibhand/shadekin) catchable as alpha re-dens, Accord seals at 10/10,
+  sixth slot earnable. acquirable/spire_pick/warden-immunity unchanged.
+- Incubator demolition refunds the egg; comments honest about parentage
+  loss (pedigree dies with the box — deferred full-lineage refund).
+- Guide Vol IX gains a post-Accord paragraph (en+zh): re-dens, apex
+  trials, catalog/stars/statues as the remaining score.
+- Smoke 868/0/0. Rules +118 (curated rosters satisfy their gates).

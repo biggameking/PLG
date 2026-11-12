@@ -7932,6 +7932,35 @@ func run() -> void:
 	game.spire_pos = spos_a32
 	game.mission_flags = mf_a32
 
+	# ---------- audit-33: the Accord must be earnable — every heir catchable
+	# nibhand/shadekin are knight-shaped legends (body "human") — before the
+	# DEN exception in ownable(), no force on the island could catch them and
+	# den_caught() capped at 8/10 forever
+	var ac_kin: Kin = game.gen_pal("nibhand", 40, Vector2.ZERO)
+	ac_kin.alpha = true; ac_kin.boss = false # a re-den'd heir, not the warden
+	check("knight heir is catchable as alpha", game.catchable(ac_kin))
+	ac_kin.alpha = false
+	check("same species non-alpha stays immune", not game.catchable(ac_kin))
+	if ac_kin.get_parent(): ac_kin.get_parent().remove_child(ac_kin)
+	ac_kin.free()
+	check("ownable counts legend heirs, not ironpact",
+		game.ownable("nibhand") and game.ownable("shadekin")
+		and not game.ownable("ironpact_grunt"))
+	# the full Accord chain: crown + EX flag + all ten heirs → seal + 6th slot
+	var cr_a33: bool = game.crowned
+	var acc_a33: bool = game.accord
+	var cc_a33: Dictionary = game.catch_counts.duplicate()
+	game.crowned = true
+	game.mission_flags["gauntlet_ex"] = true
+	for ls33 in game.LEGENDARY_DEN:
+		game.catch_counts[ls33] = 1
+	game.tick_accord()
+	check("ten heirs seal the Accord", game.accord and game.party_cap() == 6)
+	game.crowned = cr_a33
+	game.accord = acc_a33
+	game.catch_counts = cc_a33
+	game.mission_flags = mf_a32
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is

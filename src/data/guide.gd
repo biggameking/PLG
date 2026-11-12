@@ -258,7 +258,14 @@ wave — the tower's last question — and the Wildmere's
 final contract, the Accord, waits for the keeper who proves
 every seal: the crown, the apex trial, and every legend's
 heir caught from the deep dens. The Accord signs in gold
-and opens a sixth place in your party.""",
+and opens a sixth place in your party.
+
+And after the signature? The island keeps score: dens
+re-call their heirs in a day and a half — a crowned keeper
+may keep every legend for the roster. Apex trials pay out
+whenever you can sound a sigil, the catalog counts to its
+last page, stars condense, statues still teach. The
+Wildmere is yours; spend it.""",
 ]
 
 const PAGES_ZH: Array[String] = [
@@ -463,7 +470,12 @@ const PAGES_ZH: Array[String] = [
 鸣符印，将面对第四波巅峰战——高塔最后的一问——而
 荒原的终极契约"群野之约"，在等待集齐全部封印的守
 护者：王冠、巅峰试炼、以及深渊巢穴中每一只传说嫡
-裔。契约以金印签订，并为你的队伍开启第六个席位。""",
+裔。契约以金印签订，并为你的队伍开启第六个席位。
+
+签约之后呢？群岛仍在记账：巢穴一日半后重唤嫡裔——
+已加冕的守护者尽可将每只传说收入名册。只要还有符印
+可鸣，巅峰试炼就永远有账可结；图鉴数到最后一页，星
+级凝聚，石像犹有功课可授。荒原归你——好好享用。""",
 ]
 
 static func pages() -> Array[String]:

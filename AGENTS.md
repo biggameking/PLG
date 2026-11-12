@@ -642,3 +642,13 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     match-arm lists that mirror a data property (`job.produces` /
     `st["store"]` writers) should be derived from the data or audited
     against the full writer set, not curated by memory.
+118. **A curated roster must satisfy every gate it answers to.**
+     `LEGENDARY_DEN` picked `nibhand`/`shadekin` for flavor (paladin,
+     doom knight sprites) — both `body: "human"`, which `ownable()`
+     rejected, silently capping `den_caught()` at 8/10 and making the
+     Accord unearnable forever. When a hand-picked list feeds a
+     progression gate (den heirs, quest targets, unlock rosters), the
+     invariant is "every member can satisfy its purpose" — write the
+     smoke check against the LIST (all members pass the eligibility
+     predicate), not the predicate alone. Gates compose multiplicatively
+     and no single-site review saw the whole chain.
