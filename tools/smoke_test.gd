@@ -8506,6 +8506,99 @@ func run() -> void:
 	check("a negative rt0 can't pin a raider", rt_ok40)
 	check("the crown re-derives from the ruins", sload40 and game.crowned)
 
+	# --- audit-41: player lifecycle & survival hardening ---
+	# M1: soul_boost rides the wire — a replica prices the statue panel off it
+	var sb41: Kin = game.gen_pal("loampuff", 10, p.pos)
+	sb41.soul_boost = 5; sb41.mode = "wild"
+	game.pals.append(sb41)
+	var row41 := []
+	for r41 in game.net.pal_state_pack():
+		if int(r41[0]) == sb41.uid:
+			row41 = r41; break
+	check("soul_boost rides the wire", row41.size() >= 14 and int(row41[13]) == 5)
+	game.pals.erase(sb41); sb41.get_parent().remove_child(sb41); sb41.free()
+	var np41 := game.pals.size()
+	game.spawn_net_pal(["loampuff", p.pos.x + 2.0, p.pos.y,
+		10, "wild", false, 4242, false, false, "", 0, 0, 5])
+	var rep41: Kin = game.find_net_pal(4242)
+	check("the replica prices infusions honestly",
+		game.pals.size() == np41 + 1 and rep41 != null and rep41.soul_boost == 5)
+	if rep41 != null:
+		game.pals.erase(rep41)
+		if rep41.get_parent(): rep41.get_parent().remove_child(rep41)
+		rep41.free()
+
+	# M2: forged perks die at the door — the grant cap binds the load path too
+	var pf41 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	pf41.store_var({"seed": game.world.seed, "day": 1, "tod": 8.0,
+		"tech_points": 0, "unlocked": [], "items": {}, "party": [],
+		"player": {"hp": 0.0, "level": 1, "xp": 0, "cap_lv": 1},
+		"perks": {"hp": 9999, "atk": -50, "speed": 3},
+		"kin": [], "structures": {}})
+	pf41.close()
+	var pload41: bool = game.load_game()
+	check("forged perks clamp at the door", pload41
+		and game.perks["hp"] == 5 and game.perks["atk"] == 0
+		and game.perks["speed"] == 3)
+	check("a dead-man save can't walk in at zero", pload41 and p.hp >= 1.0)
+
+	# M3: unequip/re-equip is not a repair — wear banks by item id
+	game.add_item("wooden_club", 1)
+	game.equip("wooden_club")
+	p.weapon_wear = 7.0
+	game.equip("wooden_club") # off — the count parks under the id
+	game.equip("wooden_club") # on — it resumes, not the fresh dur
+	check("re-equipping is not a repair", absf(p.weapon_wear - 7.0) < 0.01,
+		"wear=%s" % p.weapon_wear)
+	p.equipment["weapon"] = ""
+	game.wear_by_id.erase("wooden_club")
+	game.items.erase("wooden_club")
+
+	# L4: a corpse bag is the owner's — the wire enforces it for guests
+	var host41: bool = game.net.is_host
+	game.net.is_host = true
+	game.net.spawn_ghost(0)
+	var mdpos41 := game.nearest_free(p.pos.x + 1.0, p.pos.y)
+	game.spawn_drop("wood", 5, mdpos41, true)
+	game.spawn_drop("stone", 5, mdpos41, false)
+	var md41: Dictionary = game.drops[game.drops.size() - 2]
+	var pd41: Dictionary = game.drops.back()
+	game.net.ghosts[0].net_pos = Vector3(mdpos41.x, mdpos41.y, 0)
+	game.net.ghosts[0].set_meta("act_bkt", 10.0) # fresh bucket per probe —
+	game.net.take_drop(int(md41["did"]))        # else the rate gate starves
+	check("a guest can't loot a corpse bag", game.drops.has(md41))
+	game.net.ghosts[0].set_meta("act_bkt", 10.0)
+	game.net.take_drop(int(pd41["did"]))
+	check("...but the plain bag pays out", not game.drops.has(pd41))
+	if game.drops.has(md41): # the witness bag goes home with the fixture
+		game.take_drop(md41)
+	game.net.is_host = host41
+
+	# L6/L7: corpse bags survive a full-mine flood; the anchor promotes through
+	# the shared helper on every removal path
+	var drops_sv41: Array = game.drops.duplicate()
+	game.drops.clear() # nodes stay parented — the flood owns the array only
+	var psv41: Vector2 = game.player.pos
+	game.player.pos = Vector2(-500, -500) # out of pickup reach — nothing auto-loots
+	for i41 in game.MAX_DROPS:
+		game.spawn_drop("wood", 1, Vector2(1 + (i41 % 9), 1 + (i41 / 9) % 9), true)
+	game.spawn_drop("stone", 1, Vector2(4, 4), false) # no plain bag to evict
+	check("a full-mine flood can't eat a grave", game.drops.size() == game.MAX_DROPS
+		and game.drops.all(func(dd): return dd.get("mine", false)))
+	for d41x in game.drops:
+		if is_instance_valid(d41x.get("node")):
+			d41x["node"].queue_free()
+	game.drops = drops_sv41 # the originals' nodes never left the tree
+	game.player.pos = psv41
+	var kb41 := game.kinbox_pos
+	var eb41: Array = game.extra_boxes.duplicate()
+	game.kinbox_pos = Vector2i(50, 50); game.extra_boxes = [Vector2i(60, 60)]
+	game._kinbox_anchor_gone([Vector2i(50, 50)])
+	check("a razed anchor promotes its outpost", game.kinbox_pos == Vector2i(60, 60))
+	game._kinbox_anchor_gone([Vector2i(60, 60)])
+	check("...and the last box leaves no anchor", game.kinbox_pos.x < 0)
+	game.kinbox_pos = kb41; game.extra_boxes = eb41
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is

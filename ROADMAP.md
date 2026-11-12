@@ -1197,3 +1197,19 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   phase-2 adds carry raid/raid_t0 so the sweep retires them.
 - 11 new assertions + sweep fixture updated to the live-trial contract.
   922/0/0; SIM 0. Audit doc: docs/reviews/audit-40-boss-endgame.md.
+
+### S88 — player lifecycle & survival lens (audit-41) — SHIPPED
+- MED: soul_boost now rides pal_state_pack[13] → spawn[12]; guest statue
+  panels quote off the real investment (receipt-cap had frozen the stale
+  under-charge permanently).
+- MED: perks clamp 0-5 on load — the grant cap binds the second consumer.
+- MED: wear_by_id banks durability per item id across unequips — the
+  re-equip free-repair loop is dead; serialized "wearmap" with whitelist.
+- LOW: take_drop refuses mine bags on the wire (guests can't loot corpse
+  packs); corpse scatter routes through nearest_free (no wall-stranded
+  tombstones); the MAX_DROPS backstop refuses at full-mine saturation
+  instead of eating a grave; kinbox anchor promotion unified into
+  _kinbox_anchor_gone for all three removal paths.
+- INFO: player hp floor 1 on load; hunger polarity hazard documented.
+- 10 new assertions; 932/0/2skip(seed-conditional). Audit doc:
+  docs/reviews/audit-41-player-lifecycle.md.

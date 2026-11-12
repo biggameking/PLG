@@ -960,6 +960,9 @@ func spawn_net_pal(d) -> void:
 	np.mounted_by = nmount
 	np.owner_id = maxi(_i(d[11]), 0) if d.size() > 11 else 0 # whose kin this
 		# shadow is — the kinbox [recall]/[mv] verbs key off it for guests
+	np.soul_boost = clampi(_i(d[12]), 0, 10) if d.size() > 12 else 0 # the
+		# statue panel prices off the replica — a stale 0 under-charged guests
+		# for every infusion until the row rode the wire (audit-41)
 	np.visible = np.mounted_by == 0 # a ridden mount hides under its rider
 	pals.append(np)
 
@@ -1614,6 +1617,9 @@ func chest_req_remote(pid: int, cell: Vector2i, op: String, payload: Dictionary)
 	return {}
 
 var death_marks: Array[Vector2] = [] # map tombstones where you dropped your pack (session-only)
+var wear_by_id := {} # item_id -> remaining durability while unequipped — the
+	# repair economy only survives if the count follows the ITEM, not the slot
+	# (audit-41). Serialized "wearmap"; bounded by the ITEMS table.
 func respawn_player() -> void:
 	# the island rule: your pack spills where you fell; walk back to reclaim.
 	# Guests skip the spill — spawn_drop is host-authoritative, so a client
@@ -1625,7 +1631,10 @@ func respawn_player() -> void:
 				var a := rng.next() * TAU
 				# corpse bags are mine-flagged: the 600s decay can't eat the
 				# gear you died for — only you (or a hauler) takes it back
-				spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8), true)
+				var bx := player.pos.x + cos(a) * (0.4 + rng.next() * 0.8)
+				var by := player.pos.y + sin(a) * (0.4 + rng.next() * 0.8)
+				spawn_drop(id, items[id], nearest_free(bx, by), true) # never
+				# inside a wall: an unreachable tombstone is loot lost forever
 				dropped += items[id]
 				items.erase(id) # don't leave ghost "x0" rows in the bag
 				unequip_if_gone(id)
@@ -2143,11 +2152,13 @@ func spawn_drop(id: String, n: int, at: Vector2, mine := false) -> void:
 		# pay twice: once on walk-over, once through the take_drop RPC
 	# tiny tinted bag icon; drops persist until picked up (player or hauler kin)
 	if drops.size() >= MAX_DROPS:
-		var ev: Dictionary = drops.front() # flood backstop: oldest bag evaporates —
-		for dd2 in drops: # but never a corpse bag; those wait for the walk back
-			if not dd2.get("mine", false):
-				ev = dd2
+		var ev: Dictionary = {} # flood backstop: evaporate the oldest plain bag —
+		for dd2 in drops: # a corpse bag is NEVER the backstop's victim; at
+			if not dd2.get("mine", false): # full-mine saturation the new drop
+				ev = dd2 #               simply can't land (audit-41)
 				break
+		if ev.is_empty():
+			return
 		take_drop(ev)
 	drops.append({"id": id, "n": n, "pos": at, "node": drop_sprite(id, at),
 		"cool": 0.0, "age": 0.0, "did": next_drop_id, "mine": mine})
@@ -2902,19 +2913,26 @@ func demolish_at(at: Vector2) -> bool:
 	st["node"].queue_free()
 	if chest_ref == st:
 		chest_ref = null # the panel's container just died — stop referencing it
-	if sid == "kinbox":
-		var origin: Vector2i = cells[0]
-		for cc in cells:
-			if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
-				origin = cc
-		if origin == kinbox_pos:
-			kinbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
-			if kinbox_pos.x >= 0:
-				log_msg(tr("Outpost promoted to primary base"))
-		else:
-			extra_boxes.erase(origin)
+	if sid == "kinbox" and not cells.is_empty():
+		_kinbox_anchor_gone(cells)
 	log_msg(tr("Demolished %s (50%% refund)") % StructureData.STRUCTURES[sid]["name"])
 	return true
+
+func _kinbox_anchor_gone(cells: Array) -> void:
+	# one rule for every kinbox-removal path: demolish, net teardown, raid
+	# raze. The anchor ORIGIN promotes the next outpost; any other cell just
+	# leaves the outpost list (audit-41 — raze_structure used to hard-reset
+	# kinbox_pos and orphan a surviving outpost's promotion)
+	var origin: Vector2i = cells[0]
+	for cc in cells:
+		if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
+			origin = cc
+	if origin == kinbox_pos:
+		kinbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
+		if kinbox_pos.x >= 0:
+			log_msg(tr("Outpost promoted to primary base"))
+	else:
+		extra_boxes.erase(origin)
 
 # raiders chew on the base itself (the island): structures carry hp and drop
 # their contents when razed. The kinbox is hardened — losing the anchor
@@ -2991,8 +3009,8 @@ func raze_structure(st) -> void:
 		st["node"].queue_free()
 	if chest_ref == st:
 		chest_ref = null
-	if sid == "kinbox":
-		kinbox_pos = Vector2i(-1, -1)
+	if sid == "kinbox" and not cells.is_empty():
+		_kinbox_anchor_gone(cells) # an outpost survives → it becomes the anchor
 	log_msg(tr("%s was destroyed in the raid!") % tr(str(StructureData.STRUCTURES.get(sid, {}).get("name", sid))))
 
 func tech_node(sid: String) -> Dictionary:
@@ -4405,6 +4423,7 @@ func save_game() -> void:
 				return pals.size() + i
 			return pals.size() + box.size() + bench.find(pp)),
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
+		"wearmap": wear_by_id, # durability follows the item id across unequips
 		"wear": player.weapon_wear, "awear": player.armor_wear,
 		"v": SAVE_VER, "kin": pals_data, "structures": structs, "catches": catch_counts,
 		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y,
@@ -4559,7 +4578,14 @@ func load_game() -> bool:
 	stat_pts = maxi(_i(d.get("stat_pts", 0)), 0)
 	var saved_perks: Dictionary = d["perks"] if d.get("perks") is Dictionary else {}
 	for pk in perks: # merge over defaults — a save missing a newer perk would poison every perks[k] read
-		perks[pk] = _i(saved_perks.get(pk, perks[pk]))
+		perks[pk] = clampi(_i(saved_perks.get(pk, perks[pk])), 0, 5) # the grant
+		# site caps at 5 — the load path was a second, cap-free consumer
+		# (audit-41): forged "hp":9999 meant 120k max_hp, 800x melee
+	wear_by_id.clear()
+	if d.get("wearmap") is Dictionary:
+		for wk in d["wearmap"]: # durability rows: real item ids, finite non-negative wear
+			if ItemData.ITEMS.has(str(wk)) and _fin(d["wearmap"][wk]):
+				wear_by_id[str(wk)] = maxf(float(d["wearmap"][wk]), 0.0)
 	catch_counts.clear()
 	if d.get("catches") is Dictionary:
 		for ck in d["catches"]:
@@ -4678,7 +4704,7 @@ func load_game() -> bool:
 				if fm > 0.0:
 					player.meal_buff[mk] = fm
 	player.max_hp = 100 + (player.level - 1) * 10 + perks.get("hp", 0) * 12 # never saved — derive it
-	player.hp = clampf(player.hp, 0.0, player.max_hp) # forged saves can't make you immortal or limbo-dead
+	player.hp = clampf(player.hp, 1.0, player.max_hp) # forged saves can't make you immortal or limbo-dead — floor 1: respawn always restores >0
 	var pending_jobs := []
 	var loaded := []
 	for pd in d["kin"]:
@@ -6943,14 +6969,7 @@ func net_remove_structure(st: Dictionary) -> void:
 	if chest_ref == st:
 		chest_ref = null
 	if st["id"] == "kinbox" and not cells.is_empty():
-		var origin: Vector2i = cells[0]
-		for cc in cells:
-			if cc.x < origin.x or (cc.x == origin.x and cc.y < origin.y):
-				origin = cc
-		if origin == kinbox_pos:
-			kinbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
-		else:
-			extra_boxes.erase(origin)
+		_kinbox_anchor_gone(cells)
 
 # client: reconcile structure replicas against the host's wire truth
 # guest-visible structure state — the compact "remaining-time" convention the
@@ -7136,16 +7155,18 @@ func equip(k: String) -> void:
 	if player.equipment[slot] == k:
 		player.equipment[slot] = ""
 		if slot == "weapon":
-			player.weapon_wear = -1.0
-		elif slot == "armor":
+			wear_by_id[k] = player.weapon_wear # the slot's wear follows the
+			player.weapon_wear = -1.0          # item id — unequip/re-equip is
+		elif slot == "armor":                  # not a free repair (audit-41)
+			wear_by_id[k] = player.armor_wear
 			player.armor_wear = -1.0
 		log_msg(tr("Unequipped ") + it["name"])
 	else:
 		player.equipment[slot] = k
 		if slot == "weapon":
-			player.weapon_wear = float(it["weapon"].get("dur", -1)) # fresh tool, fresh count
+			player.weapon_wear = float(wear_by_id.get(k, it["weapon"].get("dur", -1)))
 		elif slot == "armor":
-			player.armor_wear = float(it["armor"].get("dur", -1)) # fresh plate, fresh count
+			player.armor_wear = float(wear_by_id.get(k, it["armor"].get("dur", -1)))
 		log_msg(tr("Equipped ") + it["name"])
 
 func break_weapon(id: String) -> void:
@@ -7153,6 +7174,7 @@ func break_weapon(id: String) -> void:
 	sfx_play("break")
 	floater(player.pos, tr("BROKE!"), "#e64533")
 	player.weapon_wear = -1.0
+	wear_by_id.erase(id) # the counter dies with the item it measured
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func break_armor(id: String) -> void:
@@ -7160,6 +7182,7 @@ func break_armor(id: String) -> void:
 	sfx_play("break")
 	floater(player.pos, tr("ARMOR BROKE!"), "#e64533")
 	player.armor_wear = -1.0
+	wear_by_id.erase(id)
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func teach_skill_fruit(item_id: String) -> void:

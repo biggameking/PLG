@@ -5,7 +5,9 @@ class_name Player
 
 var game: Game
 var hp := 100.0
-var hunger := 80.0          # 0-100; drains ~100 over ~22 min
+var hunger := 80.0          # 0-100 SATIETY: drains 100→0 = starving — OPPOSITE
+	# polarity from Kin.hunger (0→100 = starved). Same name, flipped axis:
+	# touching one means checking the other (audit-41)
 var stamina := 100.0        # the island stamina: sprint/swim/dodge burn it
 var stam_wait := 0.0        # regen delay after a drain
 var cold_t := 0.0           # night-chill accumulator — resets by the fire

@@ -346,7 +346,9 @@ func state_sync(d: Dictionary) -> void:
 			e[9] if e.size() > 9 else false,
 			e[10] if e.size() > 10 else "",
 			e[11] if e.size() > 11 else 0,
-			e[12] if e.size() > 12 else 0]) # join-spawned replicas keep their keeper too
+			e[12] if e.size() > 12 else 0, # join-spawned replicas keep their keeper too
+			e[13] if e.size() > 13 else 0]) # and their soul investments — the
+			# statue panel quotes off this number (audit-41)
 		np += 1 if game.pals.size() > n0 else 0
 	var md: Dictionary = d.get("merch", {}) if d.get("merch") is Dictionary else {}
 	game.net_merchant_apply(md.get("on") == true,
@@ -373,7 +375,7 @@ func pal_state_pack() -> Array:
 				var rg = ghosts[p.mounted_by]
 				p.pos = Vector2(rg.net_pos.x, rg.net_pos.y)
 			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.hp, p.lucky, p.boss,
-				p.alpha, p.spire_tag, p.mounted_by, p.owner_id])
+				p.alpha, p.spire_tag, p.mounted_by, p.owner_id, p.soul_boost])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -391,14 +393,15 @@ func pal_sync(arr: Array) -> void:
 		var p := game.find_net_pal(nid)
 		if p == null:
 			# [species, x, y, lv, mode, lucky, net_id, boss, alpha, spire_tag,
-			#  mounted_by, owner_id] — spawn_net_pal's wire shape
+			#  mounted_by, owner_id, soul_boost] — spawn_net_pal's wire shape
 			game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
 				e[7] if e.size() > 7 else false, nid,
 				e[8] if e.size() > 8 else false,
 				e[9] if e.size() > 9 else false,
 				e[10] if e.size() > 10 else "",
 				e[11] if e.size() > 11 else 0,
-				e[12] if e.size() > 12 else 0])
+				e[12] if e.size() > 12 else 0,
+				e[13] if e.size() > 13 else 0])
 		else:
 			p.net_target = Vector2(Game._f(e[2]), Game._f(e[3]))
 			p.hp = maxf(0.0, Game._f(e[6])) if e.size() > 6 else p.hp
@@ -407,6 +410,8 @@ func pal_sync(arr: Array) -> void:
 			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
 				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
 			p.owner_id = maxi(Game._i(e[12]), 0) if e.size() > 12 else p.owner_id # claims ride along too
+			p.soul_boost = clampi(Game._i(e[13]), 0, 10) if e.size() > 13 else p.soul_boost # the
+			# statue panel prices off the replica — drift-heals every sync tick (audit-41)
 			p.mounted_by = maxi(Game._i(e[11]), 0) if e.size() > 11 else 0 # negative ids hide the replica's rider state
 			var myid := 0 # no peer → 0; the mounted_by==0 lane below needs no uid
 			if multiplayer.multiplayer_peer != null:
@@ -728,11 +733,14 @@ func take_drop(did: int) -> void:
 	for d in game.drops:
 		if d.get("did", -1) != int(did):
 			continue
+		if d.get("mine", false):
+			return # a corpse bag answers to its owner and the haulers only —
+			# "only you takes it back" has to be true on the wire too (audit-41)
 		if Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(d["pos"]) > 2.5:
 			return # fail closed: loot needs a witnessed ghost within arm's reach
 		var id := String(d["id"]); var n := int(d["n"])
 		game.take_drop(d)
-		if multiplayer.get_peers().has(pid):
+		if multiplayer.multiplayer_peer != null and multiplayer.get_peers().has(pid):
 			rpc_id(pid, "got_loot", id, n)
 		return
 
