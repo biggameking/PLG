@@ -581,7 +581,7 @@ func r_send_out(uid: int, pid: int) -> void:
 	pals.append(bp)
 	bp.mode = "partner"
 	var anchor := peer_pos_of(pid)
-	bp.pos = nearest_free(anchor.x + 1.2, anchor.y)
+	bp.pos = nearest_free(anchor.x + 1.2, anchor.y, anchor)
 	unbox_pal(bp)
 	cry_for(bp.species_id)
 	note_remote(pid, "%s sent out!", [bp.spec["name"]])
@@ -1761,6 +1761,51 @@ func summon_raid() -> bool:
 var assist_t := 0.0
 var prod_t := 0.0
 
+func tick_spheres(dt: float) -> void:
+	# orbs in flight — a tick_* function so the suite can drive the same wall
+	# contract the frame loop pays (audit-43)
+	for sp in spheres_flying.duplicate():
+		sp["t"] += dt
+		var tg: Kin = sp["target"]
+		if is_instance_valid(tg):
+			var f: float = minf(1.0, sp["t"] / 0.45)
+			var tp: Vector2 = tg.pos
+			var fp: Vector2 = sp["from"]
+			var cur: Vector2 = fp + (tp - fp) * f
+			var arc: float = sin(f * PI) * 24.0 # lobbed arc — cosmetic; the orb
+			# itself is a projectile: it dies on the same walls a bolt does.
+			# Lobbing over a sealed ring to poke (or bag) what the ring locks
+			# in was free cheese (audit-43)
+			var ci43 := Vector2i(int(cur.x), int(cur.y))
+			if not world.in_bounds(ci43.x, ci43.y) \
+					or world.decor_at(ci43.x, ci43.y) != World.Decor.NONE \
+					or world.solid_structure(world.idx(ci43.x, ci43.y)) \
+					or world.elev_at(ci43.x, ci43.y) > world.elev_at(int(fp.x), int(fp.y)):
+				if is_instance_valid(sp["node"]):
+					sp["node"].queue_free()
+				spheres_flying.erase(sp)
+				floater(cur, tr("clink!"), "#cfd6dd")
+				continue # the wall caught it — no roll, no refund (it left your hand)
+			var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
+			sp["node"].position = Vector2(pp.x, pp.y - 14 - arc)
+		if sp["t"] > 0.45:
+			# the island wobble theatre: the ball lands and rocks a beat before
+			# the verdict — 3 shakes of tension, then resolve
+			if not sp.has("wt"):
+				sp["wt"] = 0.0
+			sp["wt"] += dt
+			if is_instance_valid(tg) and is_instance_valid(sp["node"]):
+				var rock: float = sin(sp["wt"] * 18.0) * (6.0 if sp["wt"] < 0.9 else 3.0)
+				var wpp := Iso.to_screen(tg.pos.x, tg.pos.y,
+					world.elev_at(int(tg.pos.x), int(tg.pos.y)))
+				sp["node"].position = Vector2(wpp.x + rock, wpp.y - 14)
+			if sp["wt"] < 1.35:
+				continue
+			if is_instance_valid(sp["node"]):
+				sp["node"].queue_free()
+			resolve_sphere(sp)
+			spheres_flying.erase(sp)
+
 func tick_shadelump() -> void:
 	# Shadelump's Dream Chaser (weirdest trick): a shadelump riding
 	# BENCHED in your party still takes pot-shots at whatever you're fighting.
@@ -1776,10 +1821,13 @@ func tick_shadelump() -> void:
 	if d == null:
 		return
 	var tgt: Kin = null
-	if is_instance_valid(focus_target) and focus_target.hp > 0 and t < focus_t:
+	if is_instance_valid(focus_target) and focus_target.hp > 0 and t < focus_t \
+			and world.los_clear(lead.pos, focus_target.pos):
 		tgt = focus_target # it chases YOUR mark first — it's in the name
 	else:
 		tgt = nearest_wild(lead.pos, 10.0)
+		if tgt != null and not world.los_clear(lead.pos, tgt.pos):
+			tgt = null # a benched dream can't shoot through rock either (audit-43)
 	if tgt == null or tgt.mode != "wild":
 		return
 	var datk := Combat.stat_at(d.spec["atk"], d.level, d.talent)
@@ -1817,6 +1865,9 @@ func dig_check() -> void: # called on the frame tick — standing on the X digs
 		return
 	if player.pos.distance_to(treasure["pos"]) > 1.4:
 		return
+	if world.elev_at(int(player.pos.x), int(player.pos.y)) \
+			!= world.elev_at(int(treasure["pos"].x), int(treasure["pos"].y)):
+		return # a shovel can't reach up a cliff face (audit-43)
 	treasure = {}
 	var coin := rng.int_range(15, 40)
 	add_item("gold_coin", coin)
@@ -2043,6 +2094,8 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 	var gp = net.ghosts.get(pid) if net != null else null
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(target.pos) > 9.0:
 		return # fail closed: an orb can't land nine tiles from the thrower
+	if not world.los_clear(Vector2(gp.net_pos.x, gp.net_pos.y), target.pos):
+		return # ...or through a wall — same rule the host's flight pays (audit-43)
 	var sp_pow: float = float(ItemData.ITEMS.get(sid, {}).get("spherePower", 0.0))
 	if sp_pow <= 0.0:
 		return # forged item ids don't get free rolls
@@ -2537,35 +2590,7 @@ func _process(dt: float) -> void:
 			tod -= 24.0
 			day += 1
 
-	# orbs
-	for sp in spheres_flying.duplicate():
-		sp["t"] += dt
-		var tg: Kin = sp["target"]
-		if is_instance_valid(tg):
-			var f: float = minf(1.0, sp["t"] / 0.45)
-			var tp: Vector2 = tg.pos
-			var fp: Vector2 = sp["from"]
-			var cur: Vector2 = fp + (tp - fp) * f
-			var arc: float = sin(f * PI) * 24.0 # lobbed arc
-			var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
-			sp["node"].position = Vector2(pp.x, pp.y - 14 - arc)
-		if sp["t"] > 0.45:
-			# the island wobble theatre: the ball lands and rocks a beat before
-			# the verdict — 3 shakes of tension, then resolve
-			if not sp.has("wt"):
-				sp["wt"] = 0.0
-			sp["wt"] += dt
-			if is_instance_valid(tg) and is_instance_valid(sp["node"]):
-				var rock: float = sin(sp["wt"] * 18.0) * (6.0 if sp["wt"] < 0.9 else 3.0)
-				var wpp := Iso.to_screen(tg.pos.x, tg.pos.y,
-					world.elev_at(int(tg.pos.x), int(tg.pos.y)))
-				sp["node"].position = Vector2(wpp.x + rock, wpp.y - 14)
-			if sp["wt"] < 1.35:
-				continue
-			if is_instance_valid(sp["node"]):
-				sp["node"].queue_free()
-			resolve_sphere(sp)
-			spheres_flying.erase(sp)
+	tick_spheres(dt)
 	prod_t += dt # production math is linear in dt — batching to ~4Hz drops the
 	if prod_t >= 0.25: # per-frame structure sweeps (consume_ready/banner/well) to a quarter
 		tick_production(prod_t)
@@ -3501,18 +3526,29 @@ func consume_ready(cons: Array) -> bool:
 			return false
 	return true
 
-func nearest_free(x: float, y: float) -> Vector2:
-	# spiral out from a desired spot until a walkable cell turns up
+func nearest_free(x: float, y: float, from_pos := Vector2(-1, -1)) -> Vector2:
+	# spiral out from a desired spot until a walkable cell turns up. When
+	# from_pos is given the cell must also be sight-connected — a deploy
+	# can't materialize inside a sealed ring one wall over (audit-43)
+	var need_los := from_pos.x >= 0.0
 	var c := Vector2i(int(x), int(y))
-	if not world.blocked(c.x, c.y):
+	if not world.blocked(c.x, c.y) and (not need_los \
+			or world.los_clear(from_pos, Vector2(c) + Vector2(0.5, 0.5))):
 		return Vector2(c.x + 0.5, c.y + 0.5)
 	for r in range(1, 8):
 		for dy in range(-r, r + 1):
 			for dx in range(-r, r + 1):
 				if maxi(absi(dx), absi(dy)) != r:
 					continue # ring cells only
-				if not world.blocked(c.x + dx, c.y + dy):
-					return Vector2(c.x + dx + 0.5, c.y + dy + 0.5)
+				var cc := Vector2i(c.x + dx, c.y + dy)
+				if world.blocked(cc.x, cc.y):
+					continue
+				if need_los and not world.los_clear(from_pos,
+						Vector2(cc) + Vector2(0.5, 0.5)):
+					continue
+				return Vector2(cc.x + 0.5, cc.y + 0.5)
+	if need_los:
+		return from_pos # give up at the deployer's feet — never inside the wall
 	return Vector2(x, y) # give up: original spot
 
 func structure_at(tw: Vector2):
@@ -3750,7 +3786,7 @@ func send_out(uid: int) -> void:
 	bench.erase(bp)
 	pals.append(bp)
 	bp.mode = "partner"
-	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y)
+	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y, player.pos)
 	unbox_pal(bp)
 	cry_for(bp.species_id)
 	log_msg(tr("%s sent out!") % tr(str(bp.spec["name"])))
@@ -4041,18 +4077,23 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 			# pass caster pos so elevation is actually checked — 2-arg blocked skips it
 			if not world.blocked(int(land.x), int(land.y), caster.pos.x, caster.pos.y):
 				caster.pos = land
-			skill_hit(caster, target_ent, sk)
+			if world.los_clear(caster.pos, tpos): # a refused dash can't land the
+				skill_hit(caster, target_ent, sk) # hit through the wall (audit-43)
 		"burst":
 			var radius: float = sk.get("range", 4)
 			if caster.mode == "wild":
-				if caster.pos.distance_to(player.pos) <= radius:
-					skill_hit(caster, player, sk)
+				if caster.pos.distance_to(player.pos) <= radius \
+						and world.los_clear(caster.pos, player.pos): # the ring
+					skill_hit(caster, player, sk) # walls the nova (audit-43)
 				for p in pals.duplicate():
-					if p.mode in ["partner", "base"] and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
+					if p.mode in ["partner", "base"] and p.hp > 0 \
+							and caster.pos.distance_to(p.pos) <= radius \
+							and world.los_clear(caster.pos, p.pos):
 						skill_hit(caster, p, sk)
 			else:
 				for p in pals.duplicate():
-					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
+					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius \
+							and world.los_clear(caster.pos, p.pos):
 						skill_hit(caster, p, sk)
 			floater(caster.pos, sk["name"] + tr("!"), "#ffd76e")
 		"multi": # a fan of shots — pack-clearing signature
@@ -4169,23 +4210,32 @@ func update_projectiles(dt: float) -> void:
 	var pal_snap := pals.duplicate() # one snapshot per tick — raid volleys were allocating per projectile per frame
 	for pr in projectiles.duplicate():
 		pr["ttl"] -= dt
+		var old_pp: Vector2 = pr["pos"]
 		pr["pos"] += pr["dir"] * pr["speed"] * dt
 		var pp: Vector2 = pr["pos"]
 		var n: Sprite2D = pr["node"]
 		n.position = Iso.to_screen(pp.x, pp.y, world.elev_at(int(pp.x), int(pp.y))) - Vector2(0, 20)
 		var dead: bool = pr["ttl"] <= 0
-		# terrain hit: cliff faces above launch height, trees/rocks/buildings
+		# terrain hit: cliff faces above launch height, trees/rocks/buildings.
+		# March the travelled segment — a fast bolt on a slow frame used to hop
+		# a 1-cell wall between ticks (audit-43), and walkable structures
+		# (spike floors) must not eat shots the way a rock does
 		if not dead:
-			var cx: int = int(pp.x); var cy: int = int(pp.y)
-			if not world.in_bounds(cx, cy):
-				dead = true
-			else:
-				var ci: int = world.idx(cx, cy)
-				var wall: bool = world.elev_at(cx, cy) > pr.get("elev", 0)
-				if not wall:
-					wall = world.decor[ci] != World.Decor.NONE or world.structures.has(ci)
-				if wall:
-					dead = true
+			var march := int(ceil(pr["speed"] * dt * 4.0)) + 1
+			var pc43 := Vector2i(-9999, -9999)
+			for mi in range(march + 1):
+				var mp: Vector2 = old_pp.lerp(pp, float(mi) / float(march))
+				var c43 := Vector2i(int(mp.x), int(mp.y))
+				if c43 == pc43:
+					continue
+				pc43 = c43
+				if not world.in_bounds(c43.x, c43.y):
+					dead = true; break
+				var ci: int = world.idx(c43.x, c43.y)
+				if world.elev_at(c43.x, c43.y) > pr.get("elev", 0) \
+						or world.decor[ci] != World.Decor.NONE \
+						or world.solid_structure(ci):
+					dead = true; break
 		if pr["from"] is String and pr["from"] == "player":
 			if not dead:
 				for p in pal_snap:
@@ -6020,7 +6070,11 @@ func poi_reach() -> Dictionary:
 			var n: Vector2i = c + d4
 			if _reach_set.has(n):
 				continue
-			if world.blocked(n.x, n.y, float(c.x), float(c.y)):
+			# player reach = walk ∪ swim — can_enter lets a bare swimmer
+			# cross water, so a zone locked behind a strait is still in
+			# the campaign set (glider/grapple/mounts stay gear-gated)
+			if world.blocked(n.x, n.y, float(c.x), float(c.y)) \
+					and not world.swim_open(n.x, n.y):
 				continue
 			_reach_set[n] = true
 			q.append(n)
@@ -6048,7 +6102,7 @@ func spawn_lairs() -> void:
 			for dx in range(-2, 3):
 				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 					ok = false
-		if not _reach_set.has(Vector2i(tx, ty)):
+		if not poi_reach().has(Vector2i(tx, ty)):
 			ok = false # a boss arena on a sealed plateau walls the run (audit-42)
 		if not ok:
 			continue
@@ -6138,7 +6192,7 @@ var grotto_room2 := Vector2i(-1, -1) # second chamber center, if the terrain fit
 
 func spawn_grotto() -> void:
 	# the island dungeon flavour: a rock-sealed chamber in deep zone 3 — the only
-	# way in is to break the wall (or fly a bird over it). Boss + loot inside.
+	# way in is to break the wall — birds can't perch on rock either. Boss + loot inside.
 	var tries := 0
 	while tries < 6000:
 		tries += 1
@@ -6151,7 +6205,7 @@ func spawn_grotto() -> void:
 			for dx in range(-3, 4):
 				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 					ok = false
-		if not _reach_set.has(Vector2i(tx, ty)):
+		if not poi_reach().has(Vector2i(tx, ty)):
 			ok = false # the door cell must be walkable before the seal (audit-42)
 		if not ok:
 			continue
@@ -6367,7 +6421,7 @@ func spawn_pact_spires() -> void:
 				if world.blocked(tx, ty + 2, tx + 0.5, ty + 1.5) \
 						or world.blocked(tx, ty + 3, tx + 0.5, ty + 2.5):
 					ok = false
-				if not _reach_set.has(Vector2i(tx, ty + 3)):
+				if not poi_reach().has(Vector2i(tx, ty + 3)):
 					ok = false # coherent door ≠ connected door — a spire on a
 					# sealed plateau can't be reached on foot (audit-42)
 				if not ok:
@@ -6396,7 +6450,7 @@ func spawn_pact_spires() -> void:
 			if world.blocked(tx2, ty2 + 2, tx2 + 0.5, ty2 + 1.5) \
 					or world.blocked(tx2, ty2 + 3, tx2 + 0.5, ty2 + 2.5):
 				continue
-			if not _reach_set.has(Vector2i(tx2, ty2 + 3)):
+			if not poi_reach().has(Vector2i(tx2, ty2 + 3)):
 				continue # even the last resort owes the campaign a real door —
 				# a cliff-locked spire is the same lie as a missing one
 			_place_spire(sd2, tx2, ty2, si)
@@ -6487,7 +6541,7 @@ func spawn_legendary_den() -> void:
 			for dx in range(-3, 4):
 				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 					ok = false
-		if not _reach_set.has(Vector2i(tx, ty)):
+		if not poi_reach().has(Vector2i(tx, ty)):
 			ok = false # the heir's arena must be walkable-in (audit-42)
 		if not ok:
 			continue
@@ -6811,13 +6865,21 @@ func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 	# spending the cooldown on, so the button can fall back to a log line
 	var reach: float = psk["range"]
 	var p_atk := Combat.stat_at(p.spec["atk"], p.level, p.talent) * p.atk_bonus * p.atk_mult()
+	# the pal's weapons aim at the click — but the mark must be somewhere the
+	# pal could actually shoot: inside its range AND on a clear line, or a
+	# sealed arena becomes a free kill-zone through unbroken rock (audit-43)
+	if p.species_id in ["cindlump", "sprigmelt", "briargoo", "corlmite"] \
+			and (p.pos.distance_to(tw) > reach or not world.los_clear(p.pos, tw)):
+		log_msg(tr("%s can't see a line to that mark") % tr(str(p.spec["name"])))
+		return false # no cast happened — same verdict an empty cone reports
 	match p.species_id:
 		"cindlump": # flamethrower: burn everything in the aim cone
 			var hit_any := false
 			for q in pals:
 				if q.mode != "wild" or q.hp <= 0 or q == p:
 					continue
-				if q.pos.distance_to(tw) <= reach * 0.5 + 0.6:
+				if q.pos.distance_to(tw) <= reach * 0.5 + 0.6 \
+						and world.los_clear(p.pos, q.pos): # cover still covers
 					q.hit(Combat.damage(p_atk, 45, Combat.stat_at(q.spec["def"],
 						q.level, q.talent) * q.def_bonus * q.def_mult(), 1.0, rng), 1.0, true)
 					if rng.chance(0.3):
@@ -6826,7 +6888,7 @@ func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 			return hit_any
 		"sprigmelt": # SMG burst: three quick hits on the nearest wild pal to the aim
 			var tgt := nearest_wild(tw, reach)
-			if tgt == null:
+			if tgt == null or not world.los_clear(p.pos, tgt.pos):
 				return false
 			var tdef := Combat.stat_at(tgt.spec["def"], tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult()
 			for i in 3:
@@ -6836,7 +6898,7 @@ func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 			return true
 		"briargoo": # rifle shot: one heavy hit
 			var tgt2 := nearest_wild(tw, reach)
-			if tgt2 == null:
+			if tgt2 == null or not world.los_clear(p.pos, tgt2.pos):
 				return false
 			tgt2.hit(Combat.damage(p_atk, 80, Combat.stat_at(tgt2.spec["def"],
 				tgt2.level, tgt2.talent) * tgt2.def_bonus * tgt2.def_mult(), 1.0, rng), 1.0, true)
@@ -6846,7 +6908,8 @@ func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 			for q in pals:
 				if q.mode != "wild" or q.hp <= 0 or q == p:
 					continue
-				if q.pos.distance_to(tw) <= 2.6:
+				if q.pos.distance_to(tw) <= 2.6 \
+						and world.los_clear(p.pos, q.pos):
 					q.hit(Combat.damage(p_atk, 55, Combat.stat_at(q.spec["def"],
 						q.level, q.talent) * q.def_bonus * q.def_mult(), 1.0, rng), 1.0, true)
 					if rng.chance(0.35):

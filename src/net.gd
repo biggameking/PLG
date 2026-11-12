@@ -567,6 +567,11 @@ func sync_pos(x: float, y: float, elev: float) -> void:
 		return # NaN/infinity coordinates are not a place anyone can stand
 	if nx < 0.0 or ny < 0.0 or nx >= World.WORLD_W or ny >= World.WORLD_H:
 		return # every proximity gate trusts this position — keep it inside the island
+	if game.world.blocked(int(nx), int(ny)) \
+			and game.world.tile_at(int(nx), int(ny)) != World.Tile.WATER:
+		return # and on a cell a body can occupy — a claimed anchor inside solid
+		# rock makes every proximity gate lie (audit-43). Keep the last fix.
+		# Water is exempt: a mounted swimmer's honest position sits on it.
 	if g.net_pos.x < 0:
 		# the first fix is where the join actually materializes — spawn, or a
 		# pad beside it. Anything else stays -1 and keeps failing every gate.
@@ -678,6 +683,9 @@ func pal_hit(nid: int, dmg: float, sleep_s: float = 0.0) -> void:
 	var gp = ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(p.pos) > 8.0:
 		return # fail closed: the swing has to come from somewhere real
+	if not game.world.los_clear(Vector2(gp.net_pos.x, gp.net_pos.y), p.pos):
+		return # and it can't come through rock — honest or forged, a guest
+		# claim respects the same wall the host's own swing does (audit-43)
 	if not is_finite(dmg) or not is_finite(sleep_s):
 		return # NaN slips past every comparison — clampf passes it and int(NaN) poisons hp
 	if float(dmg) <= 0.0 and float(sleep_s) <= 0.0:

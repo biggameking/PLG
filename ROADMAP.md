@@ -1233,3 +1233,26 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   net snapshot path's contract.
 - 9 new assertions incl. forged-decor and live-spire reachability sweeps;
   942/0/1skip. Audit doc: docs/reviews/audit-42-worldgen-poi.md.
+
+### S90 — combat spatial integrity lens (audit-43) — SHIPPED
+- HIGH: World.los_clear(a,b) — shared segment-march (~8 samples/cell):
+  OOB, decor, solid structures and unramped elevation steps break the
+  line; endpoint cells exempt (a wall is the between, not the bodies'
+  own cells). Every damaging verb now honours it: player melee (+merchant
+  swing), all five kin bite lanes, pact_slam per victim, burst/nova per
+  victim, lunge post-dash recheck, bespoke partner actives (mark reach +
+  pal-side LoS + per-victim LoS, blind marks return false), Dream Chaser.
+- HIGH: wire claims respect the same wall — pal_hit ghost→target segment,
+  net_catch orb claims, sync_pos refuses claims inside blocked() cells
+  (water exempt for swimmers); nearest_free gained a deployer anchor so
+  send_out/r_send_out/dig_check can't blind-drop into a sealed ring.
+- MED: tick_spheres(dt) — orbs die on decor/solid/OOB/uphill cells like
+  any projectile (no more lobbing over a sealed ring); update_projectiles
+  marches the travelled segment so fast bolts can't tunnel 1-cell walls;
+  walkable spike floors don't eat shots.
+- Regression repair lessons folded back: endpoint-exempt LoS semantics;
+  poi_reach() is walk ∪ swim_open (a barefoot swimmer crosses a strait —
+  gear-gated moves stay excluded); fixtures must prove the lane clear
+  BEFORE the rock and keep the target alive through the positive control.
+- 952-955 checks / 0 failures across four consecutive seeded runs.
+  Audit doc: docs/reviews/audit-43-combat-spatial-integrity.md.

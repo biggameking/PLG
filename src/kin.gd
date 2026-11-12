@@ -207,15 +207,17 @@ func pact_slam() -> int:
 		ail = {"fire": "burn", "water": "soak", "grass": "poison",
 			"dark": "sleep", "dragon": ""}.get(str(game.SPIRE_DEFS[si]["elem"]), "")
 	var pl = game.player
-	if pl != null and pos.distance_to(pl.pos) <= 2.6:
-		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self)
-		hits += 1
+	if pl != null and pos.distance_to(pl.pos) <= 2.6 \
+			and game.world.los_clear(pos, pl.pos): # the slam respects the same
+		game.hurt_player(spec.get("atk", 50) * 0.8 * rage_mult(), self) # wall
+		hits += 1                                     # the bolt dies on (audit-43)
 		if ail != "": # the ring carries the shrine's element — everyone in it
 			game.player_status(ail, 3.0)
 	if aggro_pid > 0 and game.net != null: # the ring is a zone — a guest inside it eats it too
 		var gp2 = game.net.ghosts.get(aggro_pid)
 		if gp2 != null and gp2.net_pos.x >= 0 \
-				and pos.distance_to(Vector2(gp2.net_pos.x, gp2.net_pos.y)) <= 2.6:
+				and pos.distance_to(Vector2(gp2.net_pos.x, gp2.net_pos.y)) <= 2.6 \
+				and game.world.los_clear(pos, Vector2(gp2.net_pos.x, gp2.net_pos.y)):
 			if game.net_live(): # a dead peer can't take the rpc — the count still stands
 				game.net.rpc_id(aggro_pid, "guest_skill_hit",
 					spec.get("atk", 50) * 0.8 * rage_mult(), ail, 3.0)
@@ -223,7 +225,8 @@ func pact_slam() -> int:
 	# hit→kill_pal erases pals — snapshot or the next victim walks free
 	for q in game.pals.duplicate():
 		if q != self and q.hp > 0 and q.mode == "partner" \
-				and pos.distance_to(q.pos) <= 2.6: # punish the pile-up, not parked farmhands
+				and pos.distance_to(q.pos) <= 2.6 \
+				and game.world.los_clear(pos, q.pos): # punish the pile-up, not parked farmhands
 			q.hit(maxi(2, int(spec.get("atk", 40) * 0.5 * rage_mult())), 1.0, false)
 			hits += 1
 			if ail != "":
@@ -325,7 +328,9 @@ func chew_adjacent_structure() -> bool:
 	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 		var k: Vector2i = c + d
 		var st = game.structures.get(k)
-		if st != null and not st.get("walkable", false):
+		if st != null and not st.get("walkable", false) and not st.get("loot", false):
+			# loot-flagged chests aren't walls — a phase-2 add pressing the ring
+			# would otherwise raze the arena's own prize (audit-43)
 			atk_cd = 1.1
 			game.hit_structure(k, maxi(3, int(spec.get("atk", 40) * 0.25)))
 			return true
@@ -354,8 +359,9 @@ func wild_ai(dt: float) -> void:
 				var dd := pos.distance_to(bp.pos)
 				if dd < bd:
 					bd = dd; bt = bp
-			if bt != null and bd <= 1.1 and atk_cd <= 0:
-				atk_cd = 1.1
+			if bt != null and bd <= 1.1 and atk_cd <= 0 \
+					and game.world.los_clear(pos, bt.pos): # a wall eats the bite
+				atk_cd = 1.1                                       # (audit-43)
 				bt.hit(maxi(2, int(spec.get("atk", 40) * 0.4 * rage_mult())), 1.0, false)
 				return
 			elif bt != null:
@@ -408,7 +414,9 @@ func wild_ai(dt: float) -> void:
 			if not shot:
 				if tdist > 1.1:
 					step_toward(tpos, dt)
-				elif atk_cd <= 0:
+				elif atk_cd <= 0 and game.world.los_clear(pos, tpos):
+					# teeth stop at the ring — a sealed boss paces, it doesn't
+					# reach through rock to the wall-hugging player (audit-43)
 					atk_cd = 1.1
 					if aggro_pid > 0:
 						if game.net_live(): # bite only ships while the peer can receive it
@@ -434,7 +442,7 @@ func wild_ai(dt: float) -> void:
 			if not cast_skills(tp, dt):
 				if pd > 1.1:
 					step_toward(tp.pos, dt)
-				elif atk_cd <= 0:
+				elif atk_cd <= 0 and game.world.los_clear(pos, tp.pos):
 					atk_cd = 1.1
 					tp.hit(maxi(2, int(spec.get("atk", 40) * 0.35 * rage_mult())), 1.0, false)
 			elif pd > spec.get("reach", 4.0):
@@ -573,7 +581,7 @@ func partner_ai(dt: float) -> void:
 		if not cast_skills(best, dt):
 			if bd > 1.0:
 				step_toward(best.pos, dt)
-			elif atk_cd <= 0:
+			elif atk_cd <= 0 and game.world.los_clear(pos, best.pos):
 				atk_cd = 1.0
 				var mult := Combat.effectiveness("neutral", best.elem())
 				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus * atk_mult(), 30,
@@ -657,7 +665,7 @@ func base_ai(dt: float) -> void:
 		if not cast_skills(foe, dt):
 			if pos.distance_to(foe.pos) > 1.1:
 				step_toward(foe.pos, dt)
-			elif atk_cd <= 0:
+			elif atk_cd <= 0 and game.world.los_clear(pos, foe.pos):
 				atk_cd = 1.0
 				var mult := Combat.effectiveness("neutral", foe.elem())
 				var d := Combat.damage(Combat.stat_at(spec["atk"], level, talent) * atk_bonus * atk_mult(), 25,

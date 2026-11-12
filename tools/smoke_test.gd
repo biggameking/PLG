@@ -166,7 +166,18 @@ func run() -> void:
 	game.add_item("kin_orb", 2)
 	var lw0: String = p.equipment["weapon"]
 	game.equip("orb_launcher")
-	var lp: Kin = game.gen_pal("fenjelly", 2, p.pos + p.facing.normalized() * 4.0)
+	# the lob needs a real flight path — a launcher aimed across a tree eats
+	# its own orb now (audit-43), so pick a sight-clear facing first
+	var lthrow := p.pos + p.facing.normalized() * 0.6
+	for f43 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
+		var lpos43: Vector2 = p.pos + f43 * 4.0
+		# the orb dies on its landing cell too — the target must stand on
+		# open walkable ground, not merely on a sight-clear line
+		if not game.world.blocked(int(lpos43.x), int(lpos43.y)) \
+				and game.world.los_clear(p.pos, lpos43):
+			p.facing = f43; lthrow = lpos43
+			break
+	var lp: Kin = game.gen_pal("fenjelly", 2, lthrow)
 	lp.mode = "wild"; lp.aggro = -1
 	game.pals.append(lp)
 	p.atk_cd = 0.0
@@ -441,7 +452,7 @@ func run() -> void:
 		# bespoke partner actives (the island signatures): cindlump cone / briargoo rifle
 		var fp: Kin = game.gen_pal("cindlump", 10, p.pos)
 		fp.mode = "partner"
-		var wt: Kin = game.gen_pal("fenlump", 3, Vector2(p.pos.x + 2, p.pos.y))
+		var wt: Kin = game.gen_pal("fenlump", 3, p.pos + Vector2(0.6, 0.0)) # a wall-free lane — audit-43's LoS gate refuses shots across decor cells
 		wt.mode = "wild"; wt.max_hp = 2000; wt.hp = 2000
 		game.pals.append(wt)
 		var wthp := wt.hp
@@ -6910,12 +6921,33 @@ func run() -> void:
 	check("bad blink target exists", bad != Vector2.ZERO)
 	game.net.sync_pos(bad.x, bad.y, 0.0)
 	check("sync_pos kills teleports", g0.net_pos == Vector3(150, 150, 0))
+	# audit-43: a claim inside solid rock dies too — every proximity gate
+	# measures from this anchor, so it must be a place a body can stand
+	var rockc43 := Vector2i.ZERO
+	for rc43 in [Vector2i(160, 160), Vector2i(170, 170), Vector2i(180, 180),
+			Vector2i(190, 190), Vector2i(150, 160)]:
+		if game.world.blocked(rc43.x, rc43.y) \
+				and game.world.tile_at(rc43.x, rc43.y) != World.Tile.WATER:
+			rockc43 = rc43
+			break
+	if rockc43 != Vector2i.ZERO:
+		game.net.sync_pos(rockc43.x + 0.5, rockc43.y + 0.5, 0.0)
+		check("sync_pos kills a rock-embedded claim",
+			g0.net_pos == Vector3(150, 150, 0))
 	game.net.sync_pos(NAN, 50.0, 0.0)
 	check("sync_pos kills NaN", g0.net_pos == Vector3(150, 150, 0))
 	game.net.sync_pos(-5.0, 50.0, 0.0)
 	check("sync_pos kills out-of-bounds", g0.net_pos == Vector3(150, 150, 0))
-	game.net.sync_pos(152.0, 150.0, 0.0) # a normal step still lands
-	check("sync_pos accepts steps", g0.net_pos == Vector3(152, 150, 0))
+	# the audit-43 gate refuses claims into solid cells — the "normal step"
+	# fixture must land somewhere provably walkable, not a lucky coordinate
+	var step43 := Vector2(152.0, 150.0)
+	for sc43 in [Vector2(152.0, 150.0), Vector2(151.0, 150.0), Vector2(153.0, 150.0),
+			Vector2(152.0, 151.0), Vector2(151.0, 151.0), Vector2(152.0, 149.0),
+			Vector2(150.0, 151.0), Vector2(154.0, 150.0), Vector2(153.0, 151.0)]:
+		if not game.world.blocked(int(sc43.x), int(sc43.y)):
+			step43 = sc43; break
+	game.net.sync_pos(step43.x, step43.y, 0.0) # a normal step still lands
+	check("sync_pos accepts steps", g0.net_pos == Vector3(step43.x, step43.y, 0))
 	# legit blinks land: respawns wake at a kinbox, waypoint hops go
 	# node-to-node — a waypoint destination from open ground is still a spoof.
 	# The save-coercion tests leave the world structure-less: plant fixtures.
@@ -6972,11 +7004,11 @@ func run() -> void:
 	# elevation is validated too — guests can't float above the skybox
 	g0.net_pos = Vector3(151, 150, 0) # a hop-length step away, no blink needed
 	g0.set_meta("pos_allow", 6.0) # earlier blinks drained the bucket
-	game.net.sync_pos(152.0, 150.0, 99.0)
-	check("sync_pos clamps elevation", g0.net_pos == Vector3(152, 150, 8))
+	game.net.sync_pos(step43.x, step43.y, 99.0)
+	check("sync_pos clamps elevation", g0.net_pos == Vector3(step43.x, step43.y, 8))
 	g0.set_meta("pos_allow", 6.0)
-	game.net.sync_pos(152.0, 150.0, NAN)
-	check("sync_pos kills NaN elev", g0.net_pos == Vector3(152, 150, 8))
+	game.net.sync_pos(step43.x, step43.y, NAN)
+	check("sync_pos kills NaN elev", g0.net_pos == Vector3(step43.x, step43.y, 8))
 	g0.queue_free(); game.net.ghosts.erase(0)
 	# pal_hit bounds the claim by the formula's own ceiling vs THIS target —
 	# the wire says 99999, the kin feels the model's max (~a couple hundred)
@@ -8652,6 +8684,142 @@ func run() -> void:
 	game._kinbox_anchor_gone([Vector2i(60, 60)])
 	check("...and the last box leaves no anchor", game.kinbox_pos.x < 0)
 	game.kinbox_pos = kb41; game.extra_boxes = eb41
+
+	# --- audit-43: combat spatial integrity — the wall now walls the verbs ---
+	# the shared march: open ground keeps the line (probe four directions —
+	# the player could legitimately hug terrain on one side)
+	var open43 := false
+	for d43 in [Vector2(2.0, 0.0), Vector2(-2.0, 0.0), Vector2(0.0, 2.0), Vector2(0.0, -2.0)]:
+		if game.world.los_clear(p.pos, p.pos + d43):
+			open43 = true
+			break
+	check("open ground keeps the line", open43)
+	# the wall fixture: one rock cell between the keeper and everything after.
+	# The lane must be provably clear BEFORE the rock drops in — a decor
+	# swap that still crosses a solid structure or a sheer face makes the
+	# "wall falls, hit lands" control meaningless. Scan the neighbourhood
+	# for a two-cell sight-line, then plant the rock in it (audit-43)
+	var hpos43 := p.pos
+	var wc43 := Vector2i(-1, -1)
+	var widx43 := -1
+	var old_d43 := 0
+	var old_h43 := 0
+	var bpos43 := Vector2.ZERO
+	var pcell43 := Vector2i(int(p.pos.x), int(p.pos.y))
+	for ry in range(-6, 7):
+		if wc43.x >= 0:
+			break
+		for rx in range(-6, 7):
+			if wc43.x >= 0:
+				break
+			var base := pcell43 + Vector2i(rx, ry)
+			for d43 in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var w2: Vector2i = base + d43
+				var far2: Vector2i = base + d43 * 2
+				if not game.world.in_bounds(w2.x, w2.y) \
+						or not game.world.in_bounds(far2.x, far2.y):
+					continue
+				var wi2 := game.world.idx(w2.x, w2.y)
+				var od2: int = game.world.decor[wi2]
+				game.world.decor[wi2] = World.Decor.NONE
+				var tp43 := Vector2(base.x + 0.5, base.y + 0.5) + Vector2(d43) * 0.45
+				var tb43 := Vector2(far2.x + 0.5, far2.y + 0.5) - Vector2(d43) * 0.5
+				var ok43 := game.world.los_clear(tp43, tb43)
+				game.world.decor[wi2] = od2
+				if ok43:
+					wc43 = w2; widx43 = wi2
+					old_d43 = od2; old_h43 = game.world.hp[wi2]
+					p.pos = tp43; bpos43 = tb43
+					break
+	check("wall fixture lane found", wc43.x >= 0)
+	if wc43.x < 0:
+		# no clear lane — flag every contract check as unverified rather
+		# than letting them pass on degenerate geometry
+		check("audit-43 wall gates", false, "no clear lane in ±6 cells")
+	else:
+		game.world.decor[widx43] = World.Decor.ROCK
+		game.world.hp[widx43] = 60
+		var boss43: Kin = game.gen_pal("loampuff", 30, bpos43)
+		boss43.mode = "wild"; boss43.boss = true
+		game.pals.append(boss43)
+		check("a rock cell breaks the line", not game.world.los_clear(p.pos, boss43.pos))
+		# H1: a sealed nova stays sealed — and lands the instant the wall drops.
+		# Top up FIRST: a 1-hp fixture player would die+respawn to a kinbox —
+		# the "still sealed" read becomes vacuous and the teleport drags every
+		# later gate away from the wall
+		p.hp = p.max_hp
+		var php43 := p.hp
+		game.cast_skill(boss43, p.pos, SkillData.SKILLS["blizzard"])
+		check("a sealed nova stays sealed", p.hp == php43)
+		game.world.decor[widx43] = World.Decor.NONE
+		game.cast_skill(boss43, p.pos, SkillData.SKILLS["blizzard"])
+		check("...and lands once the wall drops", p.hp < php43)
+		p.hp = p.max_hp
+		game.world.decor[widx43] = World.Decor.ROCK # rebuild for the next gates
+		# M6: a refused dash can't land the hit either — pass the player
+		# entity, not a bare Vector2: skill_hit fails closed on Vector2 and
+		# the check would measure nothing (audit-43)
+		var php43b := p.hp
+		game.cast_skill(boss43, p, SkillData.SKILLS["tackle"])
+		check("a refused dash can't hit through the wall", p.hp == php43b)
+		# M4: the swing stops at the rock
+		var bhp43 := boss43.hp
+		p.atk_cd = 0.0
+		p.melee()
+		check("steel stops at the ring", boss43.hp == bhp43)
+		# M5: teeth too — a wall-hugged boss paces, doesn't bite
+		boss43.aggro = 0; boss43.atk_cd = 0.0
+		for sid43 in boss43.learned_skills():
+			boss43.skill_cd[sid43] = game.t + 99.0 # force the bite lane
+		var php43c := p.hp
+		boss43.wild_ai(0.1)
+		check("a sealed bite stays a pace", p.hp == php43c)
+		# M7: the orb is a projectile — the ring eats it before the roll
+		game.sphere_fly("mega_orb", boss43)
+		for i43 in 14:
+			game.tick_spheres(0.05)
+		check("the wall eats the orb", game.spheres_flying.is_empty()
+			and boss43.mode == "wild")
+		# M10: a deploy can't blind-drop into a ring it can't see into
+		var dp43 := game.nearest_free(bpos43.x, bpos43.y, p.pos)
+		check("a deploy stays on the visible side", game.world.los_clear(p.pos, dp43))
+		# H2: partner actives refuse a mark they can't see
+		var cpal43: Kin = game.gen_pal("cindlump", 20, p.pos)
+		cpal43.mode = "partner"
+		game.pals.append(cpal43)
+		var bhp43c := boss43.hp
+		game.run_partner_skill(cpal43, boss43.pos, Game.PARTNER_SKILLS["cindlump"])
+		check("the pal refuses a blind mark", boss43.hp == bhp43c)
+		# M8: the wire claims respect the same wall — pal_hit and net_catch
+		var host43: bool = game.net.is_host
+		game.net.is_host = true
+		var had_g43: bool = game.net.ghosts.has(0)
+		if not had_g43:
+			game.net.spawn_ghost(0)
+		game.net.ghosts[0].net_pos = Vector3(p.pos.x, p.pos.y, 0)
+		game.net.pal_hit(boss43.uid, 40.0, 0.0)
+		check("a guest swing through rock lands nothing", boss43.hp == bhp43c)
+		var wild43: Kin = game.gen_pal("fenlump", 3, boss43.pos)
+		wild43.mode = "wild"; wild43.hp = 1
+		game.pals.append(wild43)
+		game.net.spawn_ghost(43)
+		game.net.ghosts[43].net_pos = Vector3(p.pos.x, p.pos.y, 0)
+		game.net_catch(wild43.uid, "kin_orb", false, 5, 43)
+		check("a guest orb through rock never rolls", wild43.mode == "wild")
+		# cleanup: fixture kin out of the roster, wall and ghost home
+		for x43 in [boss43, wild43, cpal43]:
+			game.pals.erase(x43)
+			if x43.get_parent():
+				x43.get_parent().remove_child(x43)
+			x43.free()
+		if game.net.ghosts.has(43):
+			game.net.ghosts[43].queue_free(); game.net.ghosts.erase(43)
+		if not had_g43 and game.net.ghosts.has(0):
+			game.net.ghosts[0].queue_free(); game.net.ghosts.erase(0)
+		game.net.is_host = host43
+		game.world.decor[widx43] = old_d43
+		game.world.hp[widx43] = old_h43
+	p.pos = hpos43
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

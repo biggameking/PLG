@@ -115,6 +115,9 @@ func melee() -> void:
 			continue
 		if pos.distance_to(p.pos) > reach:
 			continue
+		if not game.world.los_clear(pos, p.pos):
+			continue # steel stops at the ring — no chipping a sealed
+			# guardian through the rock that walls it (audit-43)
 		var mult := Combat.effectiveness("neutral", p.elem())
 		var d := Combat.damage(atk, 34, Combat.stat_at(p.spec["def"], p.level, p.talent) * p.def_bonus * p.def_mult(), mult, game.rng)
 		d = mercy_dmg(d, p)
@@ -126,7 +129,8 @@ func melee() -> void:
 		hit_any = true
 	# the island crime: a swung weapon can also strike the trader — expect consequences
 	if game.merchant != null and is_instance_valid(game.merchant) \
-			and game.merchant_hp > 0 and pos.distance_to(game.merchant.pos) <= reach:
+			and game.merchant_hp > 0 and pos.distance_to(game.merchant.pos) <= reach \
+			and game.world.los_clear(pos, game.merchant.pos): # ...and not through a wall
 		game.hit_merchant(atk)
 		hit_any = true
 	if hit_any:
@@ -195,9 +199,9 @@ func throw_sphere(use_facing := false) -> void:
 			if p.mode != "wild" or p.hp <= 0:
 				continue
 			var d := p.pos.distance_to(tw)
-			if d < bd:
-				bd = d
-				best = p
+			if d < bd and pos.distance_to(p.pos) <= 9.0: # a throw is a throw —
+				bd = d                             # click-sniping across the
+				best = p                           # map was never an arm (audit-43)
 	if not best:
 		return
 	game.add_item(sid, -1)

@@ -68,6 +68,36 @@ func swim_open(x: int, y: int) -> bool:
 	var i := idx(x, y)
 	return tiles[i] == Tile.WATER and decor[i] == Decor.NONE and not solid_structure(i)
 
+func los_clear(a: Vector2, b: Vector2) -> bool:
+	# sight-open cells only: no decor, no solid structure, no unramped
+	# elevation step — the same wall set blocked() enforces. Combat verbs
+	# (melee, bites, novas, orbs, partner actives) must not reach through a
+	# sealed ring; detection scans stay distance-only by design (audit-43)
+	var span := a.distance_to(b)
+	var steps := maxi(1, int(ceil(span * 8.0)))
+	var pc := Vector2i(-9999, -9999)
+	var pe := -9999
+	# the bodies' own cells aren't BETWEEN them — a wall is what separates;
+	# teleported/tested entities can sit on cells they couldn't walk into
+	var first_c := Vector2i(int(floor(a.x)), int(floor(a.y)))
+	var last_c := Vector2i(int(floor(b.x)), int(floor(b.y)))
+	for i2 in range(steps + 1):
+		var p := a.lerp(b, float(i2) / float(steps))
+		var c := Vector2i(int(floor(p.x)), int(floor(p.y)))
+		if c == pc:
+			continue
+		if not in_bounds(c.x, c.y):
+			return false
+		var i := idx(c.x, c.y)
+		if c != first_c and c != last_c \
+				and (decor[i] != Decor.NONE or solid_structure(i)):
+			return false
+		if pe != -9999 and elev[i] != pe and not ramp[i] and not ramp[idx(pc.x, pc.y)]:
+			return false # a sheer face is a wall even to a nova
+		pc = c
+		pe = elev[i]
+	return true
+
 func blocked_swim(x: int, y: int, from_x: float, from_y: float) -> bool:
 	# aquatic kin: water is open, everything else still blocks
 	if not in_bounds(x, y):
