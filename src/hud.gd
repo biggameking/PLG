@@ -28,6 +28,7 @@ var map_tex: ImageTexture = null # cached — was rebuilt every frame the map wa
 var fog_img: Image = null        # the island fog of war — dark where unexplored
 var fog_tex: ImageTexture = null
 var fog_t := 0.0                 # rebake throttle while the map is open
+var _fog_seen := -1              # explored_n at last bake — a clean fog isn't re-stamped
 var map_show := false
 
 # roster portraits: one lazily-loaded species sprite per row list — the cache
@@ -77,6 +78,7 @@ func bake_fog() -> void:
 				fog_img.set_pixel(x, y, Color(0, 0, 0, 0))
 			i += 1
 	fog_tex = ImageTexture.create_from_image(fog_img)
+	_fog_seen = game.explored_n # remember which fog this texture carries
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -298,7 +300,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("demolish"):
 		if game.panel != "":
 			return # razing a real structure while browsing lists is grief
-		_demolish_verb(mouse_tile())
+		if event is InputEventJoypadButton:
+			_touch_demolish() # a stick has no cursor — raze the nearest, like the slab
+		else:
+			_demolish_verb(mouse_tile())
+		return
+	if event.is_action_pressed("pad_next_pal"):
+		if game.panel != "":
+			return
+		game.cycle_field_pal() # R3 — the pad's party hotbar
 		return
 	if event.is_action_pressed("map"):
 		_map_toggle()
@@ -312,14 +322,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.save_game()
 		return
 	if event.is_action_pressed("load_save"):
-		# same overwrite class as NEW GAME — one stray F8 can't vaporize a
+		# same overwrite class as NEW GAME — one stray F4 can't vaporize a
 		# session. First tap arms and says so; the second within 4s loads.
 		if game.load_arm > game.t:
 			game.load_arm = -1.0
 			game.load_game()
 		else:
 			game.load_arm = game.t + 4.0
-			game.log_msg(tr("Press F8 again to reload the last save — progress since is lost"))
+			game.log_msg(tr("Press F4 again to reload the last save — progress since is lost"))
 		return
 	if event.is_action_pressed("host_net"):
 		if game.net and game.net.multiplayer.multiplayer_peer == null:
@@ -591,6 +601,8 @@ func shell_act(act: String) -> void:
 			game.panel = "chat"; chat_buf = ""
 		"m_tech":
 			game.panel = "tech"
+		"m_inv":
+			game.panel = "inv"; inv_scroll = 0
 		"m_dex":
 			game.panel = "dex"; dex_scroll = 0
 		"m_statues":
@@ -1101,10 +1113,12 @@ func _draw() -> void:
 			tr("MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter"),
 			tr("1-%d sends that party kin out (press again to recall) — one ball on the field") % game.party_cap(),
 			tr("v cycles the field kin's orders: auto / aggressive / passive"),
-			tr("HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)"),
+			tr("HOST j   JOIN k (type host IP, enter)  MERCHANT e   F1 save / F4 reload(armed)"),
 			tr("GUIDE n — the field manual"),
 			tr("GLIDER descends cliffs. Sick kin need medicine."),
 		]
+		if game.using_pad:
+			lines.append(tr("PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin"))
 		Ink.card(self, Rect2(10, r.y - 30 - lines.size() * 17, 580, lines.size() * 17 + 22))
 		for i in range(lines.size()):
 			draw_string(font, Vector2(20, r.y - 18 - (lines.size() - i) * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
@@ -1118,10 +1132,11 @@ func _draw() -> void:
 		Ink.tag(self, mr.grow(2))
 		if map_tex != null:
 			draw_texture_rect(map_tex, mr, false)
-		fog_t -= 0.016 # draw runs per-frame; rebake the fog ~2x a second
+		fog_t -= 0.016 # draw runs per-frame; poll ~2x a second, bake only on new reveals
 		if fog_t <= 0.0:
 			fog_t = 0.5
-			bake_fog()
+			if game.explored_n != _fog_seen:
+				bake_fog() # 48k set_pixel + a GPU upload is real work on a phone — only when the fog changed
 		if fog_tex != null:
 			draw_texture_rect(fog_tex, mr, false)
 		var plp := game.player.pos
@@ -1529,7 +1544,8 @@ func draw_pause(r: Vector2) -> void:
 			menu_row(cxx, yy, 220, rows[i][0], rows[i][1], rows[i][2] if rows[i].size() > 2 else Color.WHITE)
 
 func pause_rows() -> Array:
-	var rows := [["RESUME", "resume"], ["SAVE GAME", "m_save"], ["SETTINGS", "m_settings"]]
+	var rows := [["RESUME", "resume"], ["SAVE GAME", "m_save"], ["SETTINGS", "m_settings"],
+		["INVENTORY", "m_inv"]] # pad/touch reach the bag through the pause shell too
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join"])
 		rows.append(["HOST SESSION", "m_host"])

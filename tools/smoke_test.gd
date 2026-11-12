@@ -8023,6 +8023,79 @@ func run() -> void:
 	game.catch_counts = cc2_a33
 	game.boss_respawns = brs_a33
 
+	# ---------- audit-34: a pad-only keeper can actually play
+	# the dpad/stick binds must exist on the keyboard-only verbs — a pad
+	# player who can't open the bag can't eat, heal or equip, ever
+	var pad_ok := true
+	var pad_miss := ""
+	for act34 in ["inv", "ride", "partner_skill", "map", "demolish", "pad_next_pal"]:
+		var found34 := false
+		for ev34 in InputMap.action_get_events(act34):
+			if ev34 is InputEventJoypadButton:
+				found34 = true; break
+		if not found34:
+			pad_ok = false; pad_miss = act34; break
+	check("every pad verb is actually bound", pad_ok, "missing=%s" % pad_miss)
+	var hud34: Node = main.get_node("UILayer/HUD")
+	var has_inv34 := false
+	for rw34 in hud34.pause_rows():
+		if rw34.size() > 1 and rw34[1] == "m_inv":
+			has_inv34 = true
+	check("pause shell offers the bag", has_inv34)
+	# R3 rotates the field kin — deployed steps to the next standing member
+	var pa34: Kin = game.gen_pal("fenlump", 5, game.player.pos)
+	var pb34: Kin = game.gen_pal("sprigmelt", 5, game.player.pos)
+	var party34: Array = game.party.duplicate()
+	var bench34: Array = game.bench.duplicate()
+	pa34.mode = "partner"; game.pals.append(pa34)
+	pb34.mode = "bench"; game.bench.append(pb34)
+	game.party.append(pa34.uid); game.party.append(pb34.uid)
+	game.cycle_field_pal()
+	check("R3 rotates the field kin", game.party_pal() == pb34
+		and pa34.mode == "bench")
+	game.cycle_field_pal()
+	check("a second tap swaps back", game.party_pal() == pa34)
+	# teardown: retract + restore rosters, then free both fixtures
+	game.party = party34; game.bench = bench34
+	game.pals.erase(pa34); game.pals.erase(pb34)
+	for c34 in [pa34, pb34]:
+		if c34.get_parent(): c34.get_parent().remove_child(c34)
+		c34.free()
+	# a joypad demolish press razes the NEAREST structure — no cursor exists.
+	# find a cell with no structure within 8 tiles so the campfire is alone;
+	# a stray kinbox nearer to the player would be razed instead (ambient trap)
+	var c34k := Vector2i(-1, -1)
+	var ppos34: Vector2 = game.player.pos
+	for y34 in range(10, 210, 7):
+		for x34 in range(10, 210, 7):
+			var clear34 := true
+			for k34 in game.structures:
+				if Vector2(k34.x - x34, k34.y - y34).length() < 8.0:
+					clear34 = false; break
+			if clear34 and game.place_free("campfire", x34, y34):
+				c34k = Vector2i(x34, y34); break
+		if c34k.x >= 0: break
+	var jev34 := InputEventJoypadButton.new()
+	jev34.button_index = JOY_BUTTON_LEFT_STICK
+	jev34.pressed = true
+	game.player.pos = Vector2(c34k.x + 0.5, c34k.y + 0.5) if c34k.x >= 0 else ppos34
+	hud34._unhandled_input(jev34)
+	check("L3 razes the nearest structure", c34k.x < 0
+		or not game.structures.has(c34k), "cell=%s" % c34k)
+	game.player.pos = ppos34
+	for dx35 in range(2): # teardown whatever the verb left standing
+		for dy35 in range(2):
+			var cd35 := c34k + Vector2i(dx35, dy35)
+			game.structures.erase(cd35)
+			game.world.structures.erase(game.world.idx(cd35.x, cd35.y))
+	# the fog bake's dirty key tracks real reveals, not a guessed bitcount
+	var en34: int = game.explored_n
+	game.reveal_at(game.player.pos, 3.0)
+	check("explored_n counts fresh reveals", game.explored_n >= en34)
+	var en35: int = game.explored_n
+	game.reveal_at(game.player.pos, 3.0)
+	check("re-revealing isn't dirty", game.explored_n == en35)
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is

@@ -652,3 +652,12 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
      smoke check against the LIST (all members pass the eligibility
      predicate), not the predicate alone. Gates compose multiplicatively
      and no single-site review saw the whole chain.
+119. **Input verbs ship on every device layer at once.** `inv` had a key
+     and a touch verb but no pad path for a year of pad support — a
+     pad-only keeper couldn't eat, heal, or equip. Every new gameplay
+     action gets: keyboard binding + pad binding (`bind_gamepad` dpad/
+     stick budget is documented) + touch verb or pause row, or a written
+     exception — in the same change. The smoke check enumerates each
+     verb's bindings per layer (`InputMap.action_get_events`), so an
+     action added without a pad/touch route fails the suite, not a
+     store review.

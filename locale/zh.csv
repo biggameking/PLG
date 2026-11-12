@@ -812,7 +812,7 @@ MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab,MELEE/CHOP lmb  AIM q  THROW lmb  BAL
 MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter,MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter,地图 m  拆除 x（光标下）骑乘 r  兽技 g  雕像 u  图鉴 p  聊天 enter
 1-%d sends that party kin out (press again to recall) — one ball on the field,1-%d sends that party kin out (press again to recall) — one ball on the field,1-%d 派出对应精灵（再按收回）——场上只能放一球
 v cycles the field kin's orders: auto / aggressive / passive,v cycles the field kin's orders: auto / aggressive / passive,v 切换场上精灵的指令：自动 / 激进 / 被动
-"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)","HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",开房 j  加入 k（输入房主 IP 后回车）商人 e（到访时）
+"HOST j   JOIN k (type host IP, enter)  MERCHANT e   F1 save / F4 reload(armed)","HOST j   JOIN k (type host IP, enter)  MERCHANT e   F1 save / F4 reload(armed)",开房 j  加入 k（输入房主 IP 后回车）商人 e  F1 存档 / F4 读档（需二次确认）
  MAX, MAX, 满级
 %d %s,%d %s,%d %s
 %s  %d%%,%s  %d%%,%s  %d%%
@@ -929,7 +929,7 @@ BUILD  placing: %s — %s,BUILD  placing: %s — %s,建造  放置：%s — %s
 OVERWRITE the save?,OVERWRITE the save?,确认覆盖存档？
 GUIDE n — the field manual,GUIDE n — the field manual,GUIDE n——野外手册
 GLIDER descends cliffs. Sick kin need medicine.,GLIDER descends cliffs. Sick kin need medicine.,滑翔翼能下悬崖。病了的精灵要喂药。
-Press F8 again to reload the last save — progress since is lost,Press F8 again to reload the last save — progress since is lost,再按一次 F8 重读上个存档——之后的进度将丢失
+Press F4 again to reload the last save — progress since is lost,Press F4 again to reload the last save — progress since is lost,再按一次 F4 重读上个存档——之后的进度将丢失
 enter = new game · click a row,enter = new game · click a row,回车 = 新游戏 · 点击选择
 A stray spire rose off its biomes — the pact doesn't read maps,A stray spire rose off its biomes — the pact doesn't read maps,一座流浪契约塔在系外荒地升起——铁契不看地图
 Only %d pact spires stand — the island is broken; tell the dev,Only %d pact spires stand — the island is broken; tell the dev,只有 %d 座契约塔矗立——岛屿残缺；请反馈给开发者
@@ -942,3 +942,4 @@ Huge egg,Huge egg,巨蛋
  (a campfire would hurry it), (a campfire would hurry it),（生堆篝火会孵得更快）
 %s — only the keeper can use that,%s — only the keeper can use that,%s——只有守护者能使用它
 "The den calls, but the island is too crowded to answer","The den calls, but the island is too crowded to answer",巢穴在呼唤，可群岛实在挤不下回应者
+PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin,PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin,手柄  十字键：上=背包 右=骑乘 左=精灵技 下=地图  L3 拆除  R3 换人

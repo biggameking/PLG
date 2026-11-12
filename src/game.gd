@@ -72,7 +72,7 @@ var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
-var load_arm := -1.0 # F8 quick-load confirmation arm — a stray tap can't vaporize a session
+var load_arm := -1.0 # F4 quick-load confirmation arm — a stray tap can't vaporize a session
 const DAY_LEN := 240.0     # seconds per game day
 const SAVE_VER := 2        # 1 = pre-rename ids (Migrate handles); 2 = kinbound ids
 
@@ -1288,6 +1288,7 @@ var weather := "clear"  # "clear" | "rain" | "storm" | "drought" — rolls every
 var weather_t := 0.0
 var pray_cd := 0.0            # absolute t — shrine prayer cooldown
 var explored := PackedByteArray() # fog of war — one byte per world cell
+var explored_n := 0 # monotone reveal count — the fog bake's dirty key (transient, derived from explored on load)
 var lure := {}                   # thrown bait {pos, till} — one pile at a time
 var treasure := {}               # treasure-map dig spot {pos} — one chart at a time
 var reveal_t := 0.0               # throttle: sight updates twice a second
@@ -1379,7 +1380,10 @@ func reveal_at(c: Vector2, r: float) -> void:
 	for y in range(maxi(0, cy - ri), mini(world.WORLD_H - 1, cy + ri) + 1):
 		for x in range(maxi(0, cx - ri), mini(world.WORLD_W - 1, cx + ri) + 1):
 			if Vector2(x - cx, y - cy).length() <= r:
-				explored[y * world.WORLD_W + x] = 1
+				var ei := y * world.WORLD_W + x
+				if explored[ei] == 0:
+					explored[ei] = 1
+					explored_n += 1
 
 func tick_weather(dt: float) -> void:
 	if net != null and net.is_client():
@@ -2334,6 +2338,16 @@ func bind_gamepad() -> void:
 	_pad_btn("pal_stance", JOY_BUTTON_LEFT_SHOULDER)
 	_pad_btn("build", JOY_BUTTON_BACK)
 	_pad_btn("ui_cancel", JOY_BUTTON_START) # erase also drops default B cancel
+	# the dpad is the pad's spare hand — a pad-only keeper must eat, ride,
+	# open the map and fire the partner skill, not just dodge (audit-34)
+	_pad_btn("inv", JOY_BUTTON_DPAD_UP)
+	_pad_btn("ride", JOY_BUTTON_DPAD_RIGHT)
+	_pad_btn("partner_skill", JOY_BUTTON_DPAD_LEFT)
+	_pad_btn("map", JOY_BUTTON_DPAD_DOWN)
+	_pad_btn("demolish", JOY_BUTTON_LEFT_STICK) # L3: nearest-structure raze
+	if not InputMap.has_action("pad_next_pal"):
+		InputMap.add_action("pad_next_pal") # R3: field-swap — the pad's 1-9
+	_pad_btn("pad_next_pal", JOY_BUTTON_RIGHT_STICK)
 	_pad_axis("zoom_in", JOY_AXIS_RIGHT_Y, -1.0)
 	_pad_axis("zoom_out", JOY_AXIS_RIGHT_Y, 1.0)
 
@@ -3625,6 +3639,23 @@ func send_out(uid: int) -> void:
 	cry_for(bp.species_id)
 	log_msg(tr("%s sent out!") % tr(str(bp.spec["name"])))
 
+func cycle_field_pal() -> void:
+	# the pad's 1-9: rotate which party member holds the field — deployed
+	# steps to the next standing kin; nothing out sends the lead. KO'd
+	# members are skipped; a lone out ball comes home (audit-34)
+	if party.is_empty():
+		return
+	var cur := party_pal()
+	var cur_i := party.find(cur.uid) if cur != null else -1
+	for step in range(1, party.size() + 1):
+		var ni := (cur_i + step) % party.size()
+		var bp := bench_pal_of(party[ni])
+		if bp != null and bp.hp > 0:
+			send_out(party[ni])
+			return
+	if cur != null:
+		retract_out() # nobody else can stand — the last ball comes home
+
 func box_to_party(bp: Kin) -> void:
 	if bp.hp <= 0 or bp.mode != "box": # the remote twin gates the same way — a field pal isn't box cargo
 		log_msg(tr("%s is KO'd - wait for it to recover") % tr(str(bp.spec["name"])) if bp.hp <= 0 else tr("%s isn't in the box") % tr(str(bp.spec["name"])))
@@ -4487,6 +4518,7 @@ func load_game() -> bool:
 		explored = ex
 	else:
 		explored.clear(); explored.resize(world.WORLD_W * world.WORLD_H)
+	explored_n = explored.count(1) # the dirty key recovers from the real bytes, forged or not
 	var tr = d.get("treasure", null) # a marked X rides the save too
 	treasure = {"pos": Vector2(_f(tr[0]), _f(tr[1]))} if tr is Array and tr.size() == 2 \
 		and _fin(tr[0]) and _fin(tr[1]) else {}
@@ -5271,7 +5303,7 @@ func _return_egg_parent(row, near: Vector2) -> void:
 		var q = structures[kr].get("egg_parents")
 		if not (q is Array) or q.size() >= MAX_EGG_QUEUE:
 			continue
-		var dd := Vector2(kr.x, kr.y).distance_squared_to(near)
+		var dd := Vector2(kr.x + 0.5, kr.y + 0.5).distance_squared_to(near) # cells are addressed by center — corner math skews "nearest"
 		if dd < bd:
 			bd = dd; best_q = q
 	if best_q != null:
@@ -6330,6 +6362,7 @@ func regenerate(s: int) -> void:
 	pray_cd = 0.0
 	explored.clear() # a fresh world is unexplored from edge to edge
 	explored.resize(world.WORLD_W * world.WORLD_H)
+	explored_n = 0
 	work_mode = 1
 	mission_t = 0.0
 	stat_pts = 0 # level bank restarts with a new character

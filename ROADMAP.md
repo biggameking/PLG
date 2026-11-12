@@ -1079,3 +1079,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - Legend den re-roll prefers species with no catch yet → the 10-heir
   quest is ≤10 cycles (~15 days) not ~29 (~44 days). Guide updated.
 - Smoke 870/0/0, sim 0 failures.
+
+### S78c — cross-platform credibility (audit-34) — SHIPPED
+- High closed: pad can open the bag — dpad inv/ride/kin-skill/map, L3
+  nearest-structure demolish, R3 field-swap (cycle_field_pal), plus an
+  INVENTORY pause row for pad/touch.
+- F8→F4 label truth, help overlay gains save/load keys + a pad-only
+  control line (using_pad-gated); zh synced.
+- Landscape lock (sensor) + PWA orientation, web mobile VRAM
+  compression on, fog bake gated on explored_n dirty key.
+- 7 new assertions; 878/0/0. Rules +119 (input verbs ship on all layers).
