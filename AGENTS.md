@@ -575,3 +575,30 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     exported build reads the imported binary or nothing. `zh.csv.import`
     is keep; verify with `--export-pack` + byte-probe the pck when adding
     another raw file read.
+109. **Identity secrets never ride broadcast state.** `struct_sync` shipped
+    `placed_tag`/`own_tag` to every guest while `hello()` treated tag
+    possession as proof — a public handle became an auth credential and
+    any peer could inherit a disconnected keeper's roster. Wire schemas
+    carry only what receivers consume; anything `hello`/ownership checks
+    trust must never leave the host. Adding a field to `*_wire_state`
+    means asking "does a stranger need this?" not "might it be useful".
+110. **Session identity binds first-write-wins.** `hello(pid, tag)` locks
+    the pid→tag mapping for the session's life; a second differing tag is
+    refused, an identical one is idempotent. Any claim-style verb that
+    rewrites identity is a session-escalation hole.
+111. **Echoes settle against the recorded hold, not the wire's number.**
+    The optimistic-debit ledger (`pending_pays`) is the client's truth —
+    a receipt may only bill up to `pay_hold(tag)`, and mirrored postings
+    (`board_quest`) cap quantities and whitelist ids. A forged echo can
+    then waste a packet, never mint goods.
+112. **World-clock verbs need semantic gates, not rate limits.** A bucket
+    slows abuse; a rule kills it — guest sleep requires `is_night()`, and
+    one sleep rolls dawn so the gate self-limits. Prefer the domain
+    predicate ("is it time for this?") before reaching for another bucket.
+113. **Fixtures plant full rows or erase by dict, never both.** A fake
+    `structures` row without `workers`/`node` crashed `net_remove_structure`
+    mid-call — the aborted cleanup left residue that poisoned every later
+    save/load pass (a 10-failure cascade from one bad fixture). Fake rows
+    leave via `structures.erase`; real teardown wants real shapes. And
+    snapshot EVERY ambient key a scan touches (`egg_parents` lives on any
+    structure — clear all of them before asserting claims).
