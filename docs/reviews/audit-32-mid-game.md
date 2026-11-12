@@ -75,3 +75,14 @@ nothing — rule 28/114 in practice).
 
 Verified: **860 checks, 0 failures, 1 skipped** (worldgen-conditional
 grotto chamber, pre-existing); balance sim 0 failures.
+
+### Post-recheck addition (self-audit while probing the endgame chain)
+
+Demolishing a loaded incubator destroyed the egg *and* its claimed
+bloodline row — `demolish_at`/`raze_structure`/`net_demolish` all
+refunded `store` but never `egg_inc`. All three removal paths now
+recover the egg (host demolish → bag refund; structure raze + guest
+demolish → ground drop), mapping `egg_inc` back to its item id
+(huge flag → `huge_kin_egg`, pair → `bred_kin_egg`, else `kin_egg`).
+Asserted: `razing an incubator refunds the egg`. 862 checks, 0
+failures.

@@ -2785,6 +2785,9 @@ func demolish_at(at: Vector2) -> bool:
 		xp1.pos = Vector2(cells[0].x + 0.5, cells[0].y + 0.5)
 	for it in st.get("store", {}).keys():
 		add_item(it, st["store"][it])
+	var inc_dm: Dictionary = st.get("egg_inc", {}) # razing a loaded incubator refunds the egg — its claimed bloodline comes home too
+	if not inc_dm.is_empty():
+		add_item("huge_kin_egg" if inc_dm.get("huge", false) else ("bred_kin_egg" if inc_dm.get("pair") != null else "kin_egg"), 1)
 	st["store"] = {} # refunded — an open chest panel must not re-withdraw these
 	for c in StructureData.STRUCTURES[sid].get("cost", []):
 		add_item(c[0], int(ceil(c[1] * 0.5)))
@@ -2869,6 +2872,10 @@ func raze_structure(st) -> void:
 	for it in st.get("store", {}).keys(): # contents spill as loot — no vanishing stock
 		if not cells.is_empty():
 			spawn_drop(it, st["store"][it], Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
+	var inc_rz: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — razing the box can't eat the bloodline
+	if not inc_rz.is_empty() and not cells.is_empty():
+		spawn_drop("huge_kin_egg" if inc_rz.get("huge", false) else ("bred_kin_egg" if inc_rz.get("pair") != null else "kin_egg"),
+			1, Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
 	st["store"] = {}
 	for k in cells:
 		structures.erase(k)
@@ -6708,6 +6715,10 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 	# no bag refund — the builder isn't here to catch it
 	for it in st.get("store", {}).keys():
 		spawn_drop(str(it), int(st["store"][it]), Vector2(tx + 0.5, ty + 0.5))
+	var inc_gd: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — the bloodline rides the ground, not the void
+	if not inc_gd.is_empty():
+		spawn_drop("huge_kin_egg" if inc_gd.get("huge", false) else ("bred_kin_egg" if inc_gd.get("pair") != null else "kin_egg"),
+			1, Vector2(tx + 0.5, ty + 0.5))
 	st["store"] = {}
 	net_remove_structure(st)
 	log_msg(tr("Player %d razed %s") % [pid, st["id"]])

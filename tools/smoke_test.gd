@@ -7815,6 +7815,11 @@ func run() -> void:
 		game.deposit_egg()
 		check("a bred egg claims its bloodline", inc_st32.get("egg_inc", {}).get("pair") != null
 			and inc_st32["egg_parents"].is_empty())
+		# razing a loaded incubator refunds the egg — claimed bloodline and all
+		game.demolish_at(Vector2(inc78.x + 0.5, inc78.y + 0.5))
+		check("razing an incubator refunds the egg",
+			game.item_count("bred_kin_egg") == 1 and not game.structures.has(inc78),
+			"egg=%d st=%s" % [game.item_count("bred_kin_egg"), game.structures.has(inc78)])
 		game.player.pos = ppos78
 		# teardown: the fixture's footprint leaves structures AND world.structures
 		for dx79 in range(2):
