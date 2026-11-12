@@ -305,6 +305,7 @@ func state_sync(d: Dictionary) -> void:
 			n0.queue_free()
 	game.structures.clear()
 	game.world.structures.clear()
+	game._struct_gen += 1 # a zero-structure snapshot still invalidates the heat memo
 	for e in (d["structures"] if d.get("structures") is Array else []): # a scalar/nil here aborts the whole rebuild — after the world was already razed
 		if e is Array and e.size() >= 3 and Game._fin(e[1]) and Game._fin(e[2]):
 			var st_store := {}
@@ -344,7 +345,8 @@ func state_sync(d: Dictionary) -> void:
 			e[8] if e.size() > 8 else false,
 			e[9] if e.size() > 9 else false,
 			e[10] if e.size() > 10 else "",
-			e[11] if e.size() > 11 else 0])
+			e[11] if e.size() > 11 else 0,
+			e[12] if e.size() > 12 else 0]) # join-spawned replicas keep their keeper too
 		np += 1 if game.pals.size() > n0 else 0
 	var md: Dictionary = d.get("merch", {}) if d.get("merch") is Dictionary else {}
 	game.net_merchant_apply(md.get("on") == true,
@@ -388,7 +390,8 @@ func pal_sync(arr: Array) -> void:
 		seen[nid] = true
 		var p := game.find_net_pal(nid)
 		if p == null:
-			# [species, x, y, lv, mode, lucky, net_id, boss, alpha, spire_tag] — spawn_net_pal's wire shape
+			# [species, x, y, lv, mode, lucky, net_id, boss, alpha, spire_tag,
+			#  mounted_by, owner_id] — spawn_net_pal's wire shape
 			game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
 				e[7] if e.size() > 7 else false, nid,
 				e[8] if e.size() > 8 else false,
@@ -403,6 +406,7 @@ func pal_sync(arr: Array) -> void:
 				p.level = clampi(Game._i(e[4]), 1, 60) # host-side xp growth must reach the replica
 			if e.size() > 5 and str(e[5]) in ["wild", "base", "partner"]:
 				p.mode = str(e[5]) # a replica's post can change mid-session — deploy rides the wire too
+			p.owner_id = maxi(Game._i(e[12]), 0) if e.size() > 12 else p.owner_id # claims ride along too
 			p.mounted_by = maxi(Game._i(e[11]), 0) if e.size() > 11 else 0 # negative ids hide the replica's rider state
 			var myid := 0 # no peer → 0; the mounted_by==0 lane below needs no uid
 			if multiplayer.multiplayer_peer != null:

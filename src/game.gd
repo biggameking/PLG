@@ -2024,7 +2024,8 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		# world ledger above (accord/dex track the island's whole catalog) —
 		# the guest's own ledger rides home so THEIR kindex/missions can tick
-		net.rpc_id(pid, "catch_credit", target.species_id)
+		if net.multiplayer.get_peers().has(pid):
+			net.rpc_id(pid, "catch_credit", target.species_id)
 		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
 			log_msg(tr("Kindex mastery: %s +10%%") % tr(str(target.spec["name"])))
 			for mp in pals:
@@ -2856,6 +2857,7 @@ func demolish_at(at: Vector2) -> bool:
 	for k in cells:
 		structures.erase(k)
 		world.structures.erase(world.idx(k.x, k.y))
+	_struct_gen += 1
 	st["node"].queue_free()
 	if chest_ref == st:
 		chest_ref = null # the panel's container just died — stop referencing it
@@ -2943,6 +2945,7 @@ func raze_structure(st) -> void:
 	for k in cells:
 		structures.erase(k)
 		world.structures.erase(world.idx(k.x, k.y))
+	_struct_gen += 1
 	if is_instance_valid(st.get("node")):
 		st["node"].queue_free()
 	if chest_ref == st:
@@ -6863,6 +6866,7 @@ func net_remove_structure(st: Dictionary) -> void:
 	for k in cells:
 		structures.erase(k)
 		world.structures.erase(world.idx(k.x, k.y))
+	_struct_gen += 1
 	if is_instance_valid(st["node"]):
 		st["node"].queue_free()
 	if chest_ref == st:

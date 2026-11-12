@@ -688,5 +688,16 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 124. **A memo needs an invalidation key, not just a TTL.** The heat
      cache was correct until a campfire appeared inside its 0.4s window.
      Cache keys must include the thing that can change the answer —
-     `structures.size()` for structural scans, a dirty counter for
-     derived data. TTL alone is a staleness bomb with a fuse.
+     and `size()` lies: a same-size raze+build swap nets zero. Use a
+     monotone generation counter bumped at every mutation site
+     (`_struct_gen`), and grep ALL write paths when wiring one —
+     erase sites, footprint inserts, clears, and load rebuilds. TTL
+     alone is a staleness bomb with a fuse.
+125. **Owner-slice every ledger write; trace the reshape, not the
+     pack.** Multiplayer credit that reads as "the world's record" must
+     name whose book it lands in — the island's catalog (accord/dex)
+     counts every catch, but a guest's kindex/missions need their OWN
+     ledger riding home (`catch_credit` → `credit_catch_local`). And
+     append-only wire fields only stay compatible if the reshape chain
+     forwards them: `pal_state_pack[12]` becomes `spawn_net_pal[11]` —
+     assert the field at the consumer's index, not the producer's.

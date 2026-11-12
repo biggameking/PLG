@@ -504,7 +504,9 @@ func run_click(cr: Dictionary) -> void:
 			game.panel = "skills"
 		"skill_tgl":
 			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "toggle_skill", int(cr["arg"]["p"].uid), str(cr["arg"]["sid"]))
+				var skp: Kin = cr["arg"]["p"]
+				game.net.rpc("box_req", "toggle_skill",
+					skp.net_id if skp.net_id > 0 else skp.uid, str(cr["arg"]["sid"]))
 			else:
 				game.toggle_skill(cr["arg"]["p"], cr["arg"]["sid"])
 		"travel":
@@ -938,14 +940,17 @@ func _draw() -> void:
 			var sid2: String = tiers2[clampi(pl.sphere_sel, 0, tiers2.size() - 1)]
 			var bp2: Kin = null
 			if game.touch_ui: # no hover under a thumb — preview the facing-line target
-				var bd2t := 5.0
+				var bd2t := 0.6 # mirror throw_sphere's pick: best dot, d in [0.4, 5]
 				var fv := pl.facing.normalized() if pl.facing.length() > 0.01 else Vector2.RIGHT
 				for q in game.pals:
 					if q.mode != "wild" or q.hp <= 0:
 						continue
 					var dq := q.pos.distance_to(pl.pos)
-					if dq < bd2t and (q.pos - pl.pos).normalized().dot(fv) > 0.3:
-						bd2t = dq
+					if dq > 5.0 or dq < 0.4:
+						continue
+					var dt2: float = (q.pos - pl.pos).normalized().dot(fv)
+					if dt2 > bd2t:
+						bd2t = dt2
 						bp2 = q
 			else:
 				var mp2 := get_global_mouse_position()

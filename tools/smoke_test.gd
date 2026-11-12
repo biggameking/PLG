@@ -8153,10 +8153,14 @@ func run() -> void:
 	# ---------- audit-36: guest parity — own ledger, own hands, own verbs
 	# the keeper's own catch ledger ticks independently of the world book
 	var cc0: int = int(game.catch_counts.get("puffmite", 0))
+	var cc_had: bool = game.catch_counts.has("puffmite")
 	game.credit_catch_local("puffmite")
 	check("a guest's own catch credits their own ledger",
 		int(game.catch_counts.get("puffmite", 0)) == cc0 + 1)
-	game.catch_counts["puffmite"] = cc0
+	if cc_had:
+		game.catch_counts["puffmite"] = cc0
+	else:
+		game.catch_counts.erase("puffmite") # no phantom key — dex tiers read size()
 	# the wire carries owner_id so a guest can tell their crew apart
 	var pack36: Array = game.net.pal_state_pack()
 	var pack_ok := not pack36.is_empty()
