@@ -42,6 +42,14 @@ func pay(tag: String, cost: Dictionary) -> bool:
 		return false
 	pending_pays.append({"tag": tag, "cost": debited})
 	return true
+func pay_hold(tag: String) -> Dictionary:
+	# peek the recorded hold — echoes reconcile against what the bag ACTUALLY
+	# gave, never against the number the wire asserts
+	for h in pending_pays:
+		if h["tag"] == tag:
+			return h["cost"]
+	return {}
+
 func pay_settle(tag: String, refund: bool) -> void:
 	for i in pending_pays.size():
 		if pending_pays[i]["tag"] == tag:
@@ -175,6 +183,10 @@ func hello(tag: String) -> void:
 	var tag_s := str(tag).substr(0, 24)
 	if tag_s == "" or tag_s.begins_with("_pid"):
 		tag_s = "_pid%d" % pid # the _pid namespace is reserved — a guest can't claim another peer's fallback row
+	if peer_tags.has(pid):
+		if peer_tags[pid] != tag_s:
+			rpc_id(pid, "net_note", "Keeper tag already bound for this session")
+		return # first hello wins — a bound pid can't slide onto a dead keeper's identity
 	for other in peer_tags:
 		if other != pid and peer_tags[other] == tag_s:
 			rpc_id(pid, "net_note", "That keeper tag is already claimed")
@@ -209,12 +221,16 @@ func net_floater(x: float, y: float, txt: String, col: String) -> void:
 func guest_hit(dmg: float) -> void:
 	if multiplayer.is_server() or not is_finite(dmg):
 		return # host wildlife only bites through the wire toward guests — NaN bites nothing
+	if not _throttle(1, "hurt_bkt", 10.0, 16.0):
+		return # a scripted packet storm can't out-DPS honest wildlife
 	game.hurt_player(clampf(float(dmg), 1.0, 500.0), null)
 
 @rpc("authority", "call_remote", "reliable")
 func guest_skill_hit(power: float, status_kind: String = "", status_dur: float = 0.0) -> void:
 	if multiplayer.is_server() or not is_finite(power) or not is_finite(status_dur):
 		return # a skill shot mirrors the same formula on the guest's own armor
+	if not _throttle(1, "hurt_bkt", 10.0, 16.0):
+		return
 	if status_kind != "" and status_kind not in ["burn", "soak", "freeze", "poison", "sleep"]:
 		status_kind = "" # kinds the player body actually supports — "shock" and
 		# kin-only ailments stay off the wire
@@ -683,16 +699,19 @@ func take_drop(did: int) -> void:
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	var gp = ghosts.get(pid)
-	if gp != null and not _throttle(pid, "act_bkt", 8.0, 10.0):
+	if gp == null:
+		return # a ghostless sender buys nothing — not even the drops loop
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		return # loot mashing is human; a per-frame vacuum is a script
 	for d in game.drops:
 		if d.get("did", -1) != int(did):
 			continue
-		if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(d["pos"]) > 2.5:
+		if Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(d["pos"]) > 2.5:
 			return # fail closed: loot needs a witnessed ghost within arm's reach
 		var id := String(d["id"]); var n := int(d["n"])
 		game.take_drop(d)
-		rpc_id(pid, "got_loot", id, n)
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "got_loot", id, n)
 		return
 
 @rpc("authority", "call_remote", "reliable")
@@ -778,6 +797,8 @@ func demolish_req(tx: int, ty: int) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func chest_req(op: String, tx: float, ty: float, payload: Dictionary = {}) -> void:
 	if not is_host:
+		return
+	if not is_finite(tx) or not is_finite(ty):
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "chest_bkt", 1.0, 1.0):
@@ -868,6 +889,8 @@ func fish_req() -> void:
 func mimic_req(tx: float, ty: float) -> void:
 	if not is_host:
 		return
+	if not is_finite(tx) or not is_finite(ty):
+		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "chest_bkt", 1.0, 1.0):
 		return
@@ -948,7 +971,9 @@ func sleep_req() -> void:
 		return
 	if not multiplayer.get_peers().has(pid):
 		return
-	if game.sleep_req_remote(pid):
+	if not game.is_night():
+		rpc_id(pid, "net_note", "Can't sleep — it's not night yet")
+	elif game.sleep_req_remote(pid):
 		rpc_id(pid, "sleep_done") # the shared day rolls on its own; the SLEEPER'S body is theirs to heal
 	else:
 		rpc_id(pid, "net_note", "Can't sleep — hostiles are after someone")
@@ -956,6 +981,8 @@ func sleep_req() -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func dig_req(tx: float, ty: float) -> void:
 	if not is_host:
+		return
+	if not is_finite(tx) or not is_finite(ty):
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
@@ -966,6 +993,8 @@ func dig_req(tx: float, ty: float) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func cage_req(tx: float, ty: float) -> void:
 	if not is_host:
+		return
+	if not is_finite(tx) or not is_finite(ty):
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
@@ -992,6 +1021,9 @@ func board_done(res: Dictionary) -> void:
 	var qn := maxi(Game._i(res.get("n", 0)), 0) # a negative ask would mint goods through add_item
 	if not ItemData.ITEMS.has(qid):
 		return # a forged ask can't deduct ids the board never posts
+	if qid != str(game.board_quest.get("id", "")):
+		return # the ask must match the mirrored posting — a crafted echo can't invent one
+	qn = mini(qn, int(game.board_quest.get("n", 0))) # and can't bill past it
 	# the bag pays its goods first, then asserts it — gold arrives via
 	# board_paid once the host sees the settlement claim
 	if qid == board_paid_out:
@@ -1062,6 +1094,8 @@ func sleep_done() -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func mount_req(uid: float) -> void:
 	if not is_host:
+		return
+	if not is_finite(uid):
 		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
@@ -1143,6 +1177,8 @@ func egg_done(egg_id: String) -> void:
 func infuse_req(uid: float) -> void:
 	if not is_host:
 		return
+	if not is_finite(uid):
+		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		_pay_rej(pid, "infuse")
@@ -1158,8 +1194,12 @@ func infuse_req(uid: float) -> void:
 func infuse_done(uid: float, cost: int) -> void:
 	if is_host:
 		return
+	var held := pay_hold("infuse") # settle against the recorded burn, not the wire's number
 	pay_settle("infuse", true) # refund the optimistic burn…
-	game.add_item("sprigmelt_effigy", -maxi(cost, 0)) # …then charge the host's truth — a negative cost mints effigies
+	var true_cost := maxi(cost, 0)
+	if held.has("sprigmelt_effigy"):
+		true_cost = mini(true_cost, int(held["sprigmelt_effigy"]))
+	game.add_item("sprigmelt_effigy", -true_cost) # …then charge the host's truth — a negative cost mints effigies
 	var p: Kin = game.find_net_pal(int(uid))
 	if p != null:
 		p.soul_boost = mini(p.soul_boost + 1, 10) # the mirror learns what the wire doesn't carry — capped like the real verb
@@ -1299,6 +1339,8 @@ func box_req(op: String, uid: int, extra := "") -> void:
 func buy_req(idx: float) -> void:
 	if not is_host:
 		return
+	if not is_finite(idx):
+		return # int(NaN) is 0 — an index claim must be a real number first
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		_pay_rej(pid, "buy")
@@ -1315,8 +1357,12 @@ func buy_req(idx: float) -> void:
 func bought(res: Dictionary) -> void:
 	if is_host:
 		return
+	var held := pay_hold("buy") # the ledger remembers what we actually burned
 	pay_settle("buy", true) # refund the mirrored price…
-	game.add_item("gold_coin", -maxi(Game._i(res.get("price", 0)), 0)) # …then pay the host's truth — a negative price would mint gold
+	var price := maxi(Game._i(res.get("price", 0)), 0)
+	if held.has("gold_coin"):
+		price = mini(price, int(held["gold_coin"])) # an echo can't bill past the recorded hold
+	game.add_item("gold_coin", -price) # …then pay the host's truth — a negative price would mint gold
 	game.log_msg(tr("Bought %s (%dg)") % ["a kin" if res.has("kin") else "goods",
 		Game._i(res.get("price", 0))])
 
@@ -1346,11 +1392,11 @@ func stock_sync(stock: Array) -> void:
 func merch_hit(dmg: float) -> void:
 	if not is_host:
 		return
+	if not is_finite(dmg):
+		return
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "hit_bkt", 3.0, 6.0):
 		return
-	if not is_finite(dmg):
-		return # NaN lands the same poison as pal_hit — clampf never stops it
 	if game.merchant == null or not game._ghost_reaches(pid, game.merchant.pos, 2.5):
 		return # melee reach — a rifle-length beating is a forged swing
 	game.hit_merchant(clampf(float(dmg), 0.0, 80.0), pid)
@@ -1359,6 +1405,8 @@ func merch_hit(dmg: float) -> void:
 func assign_req(x: float, y: float) -> void:
 	if not is_host:
 		return
+	if not is_finite(x) or not is_finite(y):
+		return # NaN slips every distance check — the gate is the first line
 	var pid := multiplayer.get_remote_sender_id()
 	if not _throttle(pid, "act_bkt", 8.0, 10.0):
 		return

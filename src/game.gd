@@ -258,6 +258,12 @@ func _ready() -> void:
 		"hit": SfxLib.noise(0.07, 0.3, 14.0),
 		"lucky": SfxLib.arp([880, 1174, 1568, 2093], 0.07, 0.35),
 		"click": SfxLib.tone(880, 0.05, 0.28),
+		"quest": SfxLib.arp([659, 784, 988], 0.09, 0.4),
+		"craft": SfxLib.arp([392, 523, 659], 0.1, 0.35),
+		"hatch": SfxLib.arp([784, 988, 1319], 0.08, 0.4),
+		"coin": SfxLib.tone(1174, 0.09, 0.3, 1.3),
+		"eat": SfxLib.noise(0.09, 0.3, 9.0),
+		"drop": SfxLib.tone(180, 0.09, 0.35, 0.5),
 	}
 	# audio buses: Master owns Music + SFX; settings.cfg holds the mix
 	if AudioServer.get_bus_index("Music") == -1:
@@ -1339,6 +1345,7 @@ func tick_missions(dt: float) -> void:
 		tech_points += int(m["tp"])
 		log_msg(tr("MISSION: %s — done! +%dg +%d tech") % [tr(str(m["text"])), int(m["gold"]), int(m["tp"])])
 		floater(player.pos, tr("MISSION DONE"), "#8ef0ff")
+		sfx_play("quest")
 
 var shake := 0.0 # camera kick — decays to nothing, main.gd turns it into a pixel offset
 func screen_shake(amt: float) -> void:
@@ -1737,6 +1744,8 @@ func throw_bait_remote(pid: int) -> bool:
 	var at := _ghost_at(pid)
 	if at.x < -1e8:
 		return false # no ghost, no pile — the caller owes the ledger a refund
+	if lure and t < float(lure.get("till", 0.0)):
+		return false # a live pile is the island's single lure — can't be stomped
 	lure = {"pos": at + Vector2(2.0, 0.0), "till": t + 25.0}
 	note_remote(pid, "Bait tossed — something hungry will smell it")
 	return true
@@ -2867,6 +2876,7 @@ func craft(recipe_id: String) -> void:
 	add_item(r["out"][0], r["out"][1])
 	note_crafted(r["out"][0])
 	log_msg(tr("Crafted %s x%d") % [tr(str(ItemData.ITEMS[r["out"][0]]["name"])), r["out"][1]])
+	sfx_play("craft")
 
 func repair_quote() -> Dictionary:
 	return repair_quote_for("weapon")
@@ -2946,6 +2956,7 @@ func tick_crafts(dt: float) -> void:
 			add_item(cq["out"], cq["n"])
 			note_crafted(cq["out"])
 			log_msg(tr("Crafted %s x%d") % [tr(str(ItemData.ITEMS[cq["out"]]["name"])), cq["n"]])
+			sfx_play("craft")
 			craft_queue.remove_at(i)
 
 func pal_gain_xp(q: Kin, n: int) -> void:
@@ -4935,8 +4946,8 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	# parentage carries species, talent, passives AND the move pool
 	# (the island: offspring can hatch knowing a parent's skill)
 	var owners := []
-	for o in [a.owner_id, b.owner_id]:
-		if o not in owners:
+	for o in [a.owner_tag, b.owner_tag]: # tags, not pids — a recycled peer id
+		if o not in owners:                # can't inherit someone else's genetics
 			owners.append(o)
 	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent,
 		a.passives.duplicate(), b.passives.duplicate(),
@@ -5066,6 +5077,7 @@ func deposit_egg() -> void:
 # owner ids; legacy untagged entries answer the keeper (pid 0) only. A
 # guest's wild egg can't quietly inherit the host's ranch genetics.
 func _claim_egg_parent(pid: int):
+	var tag := str(net.peer_tags.get(pid, "")) if pid > 0 and net != null else ""
 	for k2 in structures:
 		var q = structures[k2].get("egg_parents")
 		if not (q is Array):
@@ -5074,7 +5086,10 @@ func _claim_egg_parent(pid: int):
 			var e9 = q[i2]
 			var owners: Array = e9[8] if (e9 is Array and e9.size() > 8
 				and e9[8] is Array) else [0]
-			if owners.has(pid):
+			if pid == 0:
+				if owners.has("") or owners.has(0): # tagged or legacy keeper row
+					return q.pop_at(i2)
+			elif tag != "" and owners.has(tag):
 				return q.pop_at(i2) # oldest matching claim wins
 	return null
 
@@ -5224,6 +5239,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	floater(at, tr("* hatched! *"), "#4dd0e1")
 	log_msg(tr("Egg hatched: %s%s (talent %d)!") % ["LUCKY " if huge else "",
 		tr(str(np.spec["name"])), talent_v])
+	sfx_play("hatch")
 
 func spawn_camps() -> void:
 	# Iron Pact poacher camps (the island POI): a caged kin under armed guard.
@@ -5417,6 +5433,8 @@ func sleep_req_remote(pid: int) -> bool:
 	var at := _ghost_at(pid)
 	if at.x < -1e8 or _nearest_struct("straw_bed", at, 6.0).x < 0:
 		return false
+	if not is_night(): # a guest nap skips only the dangerous hours — the
+		return false    # self-limiting gate: one sleep rolls dawn to 6am
 	for q in pals:
 		if q.hp > 0 and (q.raid or (q.mode == "wild" and q.aggro >= 0)):
 			return false
@@ -6558,8 +6576,7 @@ func struct_wire_state(st: Dictionary) -> Dictionary:
 	if st["id"] == "incubator":
 		var inc = st.get("egg_inc")
 		sv["inc"] = ({"pair": inc.get("pair"), "huge": inc.get("huge", false),
-			"left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t),
-			"own": str(inc.get("own_tag", ""))} if inc is Dictionary else null)
+			"left": maxf(0.0, float(inc.get("ready_t", 0.0)) - t)} if inc is Dictionary else null)
 	if st["id"] == "expedition_post":
 		sv["exp"] = {"left": maxf(0.0, float(st.get("exp_end", 0.0)) - t),
 			"cd": maxf(0.0, float(st.get("exp_cd", 0.0)) - t)}
@@ -6573,8 +6590,8 @@ func struct_wire_state(st: Dictionary) -> Dictionary:
 	sv["timer"] = float(st.get("timer", 0.0)) # always — a finished timer is truth too
 	if st.get("hp") != null:
 		sv["hp"] = st["hp"]
-	if str(st.get("placed_tag", "")) != "":
-		sv["by"] = str(st["placed_tag"])
+	# identity tags (placed_tag, incubator own_tag) never ride the wire — a
+	# broadcast tag is a public handle, and hello treats possession as proof
 	var wu := []
 	for w in st.get("workers", []):
 		if w is Kin:
@@ -6598,8 +6615,7 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 			var inc: Dictionary = sv["inc"]
 			var inc_pair = _norm_pair(inc.get("pair")) # same normalizer the save path runs — heads + numeric tails
 			st["egg_inc"] = {"pair": inc_pair, "huge": inc.get("huge") is bool and inc["huge"],
-				"ready_t": t + clampf(_f(inc.get("left", 0.0)), 0.0, 900.0),
-				"own_tag": str(inc.get("own", ""))}
+				"ready_t": t + clampf(_f(inc.get("left", 0.0)), 0.0, 900.0)}
 		else:
 			st.erase("egg_inc")
 	if sv.has("exp") and sv["exp"] is Dictionary:
@@ -6616,10 +6632,9 @@ func _struct_wire_apply(st: Dictionary, sv: Dictionary) -> void:
 		st["timer"] = clampf(_f(sv["timer"]), -3600.0, 3600.0)
 	if sv.has("hp"):
 		st["hp"] = clampi(_i(sv["hp"]), 0, 99999) # same ceiling the save loader enforces — a forged pack can't mint an unbreakable wall
-	if sv.has("by"):
-		st["placed_tag"] = str(sv["by"]).left(24) # same bound the save loader runs — a wire tag can't grow past it
-	elif st.has("placed_tag"):
-		st.erase("placed_tag")
+	# no placed_tag write — the wire stopped carrying keeper tags (audit-29:
+	# a broadcast tag let any guest hello-claim a disconnected keeper's
+	# roster and raze rights)
 	if sv.has("wk") and sv["wk"] is Array: # uids resolve to live replicas —
 		var wl := [] # a missing one self-heals on the next tick
 		for u in sv["wk"]:
@@ -7044,11 +7059,13 @@ func buy_from_merchant(idx: int) -> void:
 		add_item("gold_coin", -it["price"])
 		it["n"] -= 1
 		log_msg(tr("Bought a Lv%d %s! (%dg)") % [np.level, tr(str(np.spec["name"])), it["price"]])
+		sfx_play("coin")
 		return
 	add_item("gold_coin", -it["price"])
 	add_item(it["id"], 1)
 	it["n"] -= 1
 	log_msg(tr("Bought %s (%dg)") % [tr(str(ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]))), it["price"]])
+	sfx_play("coin")
 
 # host-side guest buy: the stock is the island's — decrementing a mirror
 # would just resync and never run out. Items land via give_remote; a kin
@@ -7100,6 +7117,7 @@ func sell_pal_to_merchant(uid: int) -> void:
 			bp.free() # box pals live under box_holder — free() is the teardown path
 			add_item("gold_coin", gain)
 			log_msg(tr("Sold %s for %dg") % [nm, gain])
+			sfx_play("coin")
 			return
 
 func toggle_fav(uid: int) -> void:

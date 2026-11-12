@@ -5429,8 +5429,11 @@ func run() -> void:
 			if bd_k.x >= 0: break
 		if bd_k.x >= 0:
 			game.net.ghosts[99].net_pos = Vector3(bd_k.x, bd_k.y, 0)
+			var tod_sv6: float = game.tod # audit-29: guest sleep is night-gated now
+			game.tod = 23.0
 			check("guest sleep turns the clock", game.sleep_req_remote(99)
 				and game.day == v6_day + 1)
+			game.tod = tod_sv6
 			var bd_st2: Dictionary = game.structures[bd_k]
 			for bdk in game.structures.keys():
 				if game.structures[bdk] == bd_st2:
@@ -5883,12 +5886,15 @@ func run() -> void:
 		var items_ra := game.items.duplicate() # the whole bag — board + respawn both touch it
 		game.items["wood"] = 10
 		game.net.board_paid_out = ""
+		var bq_ra: Dictionary = game.board_quest.duplicate()
+		game.board_quest = {"id": "wood", "n": 3} # the ask must match the mirrored posting
 		game.net.board_done({"id": "wood", "n": 3})
 		check("the board takes its goods once", game.item_count("wood") == 7
 			and game.net.board_paid_out == "wood")
 		game.net.board_done({"id": "wood", "n": 3}) # the ask re-shown mid-flight
 		check("a re-shown ask deducts nothing", game.item_count("wood") == 7)
 		game.net.board_paid_out = ""
+		game.board_quest = bq_ra
 		var ra1: Kin = game.gen_pal("scalfang", 6, p.pos)
 		ra1.net_id = 424246
 		game.pals.append(ra1)
@@ -6060,11 +6066,13 @@ func run() -> void:
 	if not v42_st.is_empty():
 		v42_st["egg_parents"] = [
 			["host_a", "host_b", 50, 50, [], [], [], []],
-			["g_a", "g_b", 99, 99, [], [], [], [], [99]]]
+			["g_a", "g_b", 99, 99, [], [], [], [], ["tk_g42"]]]
+		game.net.peer_tags[99] = "tk_g42" # parentage keys on the tag, not the pid
 		var v42_pair = game._claim_egg_parent(99)
 		check("a guest claims only their own pairing",
 			v42_pair != null and v42_pair[0] == "g_a"
 			and v42_st["egg_parents"].size() == 1)
+		game.net.peer_tags.erase(99)
 		var v42_h0 = game._claim_egg_parent(0)
 		check("the keeper claims legacy untagged rows",
 			v42_h0 != null and v42_h0[0] == "host_a")
@@ -6240,6 +6248,7 @@ func run() -> void:
 		v43_st["workers"] = [v43_wk0]
 		v43_ist["egg_inc"] = {"pair": [v43_sid, v43_sid], "huge": false,
 			"ready_t": game.t + 120.0, "own_tag": "keeper"}
+		v43_st["placed_tag"] = "tk_leak" # audit-29 H1: identity never rides
 		var v43_pack: Array = game.net.struct_state_pack()
 		var v43_ent = null; var v43_ient = null
 		for e in v43_pack:
@@ -6252,6 +6261,9 @@ func run() -> void:
 			and v43_ent[4].get("cap", {}).get("sp", "") == v43_sid
 			and float(v43_ient[4].get("inc", {}).get("left", -1.0)) > 100.0
 			and (v43_ent[4].get("wk", []) as Array).size() == 1)
+		check("wire carries no keeper tags",
+			not v43_ent[4].has("by")
+			and not v43_ient[4].get("inc", {}).has("own"))
 		v43_st.erase("captive"); v43_st["workers"] = []; v43_ist.erase("egg_inc")
 		game.struct_sync(v43_pack) # the whole world rides — a subset pack razes it
 		check("wire state re-anchors timers and crew",
@@ -6779,6 +6791,22 @@ func run() -> void:
 	game.settings["lang"] = prev_lang; game.apply_settings()
 	check("tr en", tr("SETTINGS") == "SETTINGS")
 
+	# every sfx_play literal must name a real SFX key — a typo plays silence
+	var sfx_re := RegEx.create_from_string("sfx_play\\(\"([^\"]+)\"\\)")
+	var sfx_bad := []
+	for sf in ["res://src/game.gd", "res://src/hud.gd", "res://src/kin.gd",
+			"res://src/net.gd", "res://src/player.gd"]:
+		var src_f := FileAccess.open(sf, FileAccess.READ)
+		if src_f == null:
+			continue
+		while not src_f.eof_reached():
+			var ln := src_f.get_line()
+			for sm in sfx_re.search_all(ln):
+				if not game.SFX.has(sm.get_string(1)):
+					sfx_bad.append("%s:%s" % [sf, sm.get_string(1)])
+		src_f.close()
+	check("sfx keys all resolve", sfx_bad.is_empty(), "bad=%s" % str(sfx_bad))
+
 	# hero accessories: the crown jewels and back wings are real pixels, not
 	# a comment — scalbeak wears white jewel dots, vermtrot carries a back fan
 	var h1 := Image.load_from_file("res://assets/kin/scalbeak_f0.png")
@@ -7147,8 +7175,93 @@ func run() -> void:
 	check("stolen tag refused", not game.net.peer_tags.has(0))
 	game.net.hello("tok_b") # pid 0 headless — a fresh identity registers
 	check("hello registers tag", game.net.peer_tags.get(0, "") == "tok_b")
+	game.net.hello("tok_c") # audit-29 H1: a bound session can't slide onto another tag
+	check("re-hello can't rebind", game.net.peer_tags.get(0, "") == "tok_b")
+	game.net.hello("tok_b") # identical re-hello is idempotent — reconnect noise is fine
+	check("identical re-hello ok", game.net.peer_tags.get(0, "") == "tok_b")
 	game.net.peer_tags.erase(0)
 	game.net.peer_tags.erase(5)
+	# audit-29 M1: a guest nap can't mint shared days — the night gate
+	# self-limits (one sleep rolls dawn to 6am, the next isn't night)
+	var slp_cell := Vector2i(int(game.player.pos.x), int(game.player.pos.y))
+	while game.structures.has(slp_cell): # plant on a provably-empty cell — never shadow a real build
+		slp_cell.x += 1
+	game.net.spawn_ghost(44)
+	game.net.ghosts[44].net_pos = Vector3(slp_cell.x + 0.5, slp_cell.y + 0.5, 0)
+	game.structures[slp_cell] = {"id": "straw_bed", "pos": slp_cell, "timer": 0.0, "hp": 200}
+	var tod_sv: float = game.tod; var day_sv: int = game.day
+	var hp_sv: float = game.player.hp
+	var aggro_sv := []
+	for q in game.pals: # pin the world calm — the night gate is the variable, not the wilds
+		aggro_sv.append([q, q.aggro, q.raid, q.hp, q.san, q.hunger])
+		q.aggro = -1; q.raid = false
+	var bn_rows := []
+	for qb3 in game.bench:
+		bn_rows.append([qb3, qb3.hp, qb3.san, qb3.hunger])
+	game.tod = 12.0
+	check("daytime guest sleep refused", not game.sleep_req_remote(44) and game.day == day_sv)
+	game.tod = 23.0
+	check("night guest sleep allowed", game.sleep_req_remote(44)
+		and game.day == day_sv + 1 and game.tod == 6.0)
+	game.tod = 12.0
+	check("post-sleep isn't night — no day chain", not game.sleep_req_remote(44)
+		and game.day == day_sv + 1)
+	for q2 in aggro_sv:
+		q2[0].aggro = q2[1]; q2[0].raid = q2[2]
+		q2[0].hp = q2[3]; q2[0].san = q2[4]; q2[0].hunger = q2[5]
+	for qb4 in bn_rows:
+		qb4[0].hp = qb4[1]; qb4[0].san = qb4[2]; qb4[0].hunger = qb4[3]
+	game.player.hp = hp_sv
+	game.day = day_sv; game.tod = tod_sv
+	game.structures.erase(slp_cell) # fake row — net_remove_structure wants workers/node keys
+	game.net.ghosts[44].queue_free(); game.net.ghosts.erase(44)
+	# audit-29 M2: bloodline claims ride tags — a recycled pid inherits nothing
+	var egg_cell := slp_cell
+	while game.structures.has(egg_cell):
+		egg_cell.y += 1
+	var ep_sv := {}
+	for k9 in game.structures: # clear ambient parentage — claims scan every structure
+		if game.structures[k9].has("egg_parents"):
+			ep_sv[k9] = game.structures[k9]["egg_parents"]
+			game.structures[k9].erase("egg_parents")
+	game.structures[egg_cell] = {"id": "ranch", "pos": egg_cell, "timer": 0.0, "hp": 200,
+		"egg_parents": [["fenjelly", "fenjelly", 50, 60, [], [], ["tackle"], ["tackle"], ["tk_mom"]]]}
+	game.net.peer_tags[44] = "tk_dad" # a stranger's tag claims nothing
+	check("egg claim wrong tag refuses", game._claim_egg_parent(44) == null)
+	game.net.peer_tags[44] = "tk_mom"
+	var eg_claim = game._claim_egg_parent(44)
+	check("egg claim tag match", eg_claim is Array and eg_claim[0] == "fenjelly")
+	game.net.peer_tags.erase(44)
+	game.structures[egg_cell]["egg_parents"] = [["fenjelly", "fenjelly", 50, 60, [], [], [], [], [44]]]
+	check("legacy pid row dies", game._claim_egg_parent(44) == null)
+	game.structures[egg_cell]["egg_parents"] = [["fenjelly", "fenjelly", 50, 60, [], [], [], [], [0]]]
+	check("legacy keeper row claims host", game._claim_egg_parent(0) is Array)
+	game.structures.erase(egg_cell)
+	for k10 in ep_sv: # put every ambient row back where it lived
+		game.structures[k10]["egg_parents"] = ep_sv[k10]
+	# audit-29 M3: echoes settle against the recorded hold, not the wire's number
+	game.net.is_host = false
+	game.add_item("gold_coin", 100)
+	var gold_a := game.item_count("gold_coin")
+	game.net.pay("buy", {"gold_coin": 30}) # the real debit path — the hold mirrors the bag
+	game.net.bought({"price": 9999, "id": "wood"})
+	check("bought echo capped by hold", game.item_count("gold_coin") == gold_a - 30,
+		"gold=%d want=%d" % [game.item_count("gold_coin"), gold_a - 30])
+	var bq_sv: Dictionary = game.board_quest.duplicate()
+	game.board_quest = {"id": "wood", "n": 4}
+	var wood_a := game.item_count("wood")
+	if wood_a < 4:
+		game.add_item("wood", 4 - wood_a)
+		wood_a = game.item_count("wood")
+	var gold_b := game.item_count("gold_coin")
+	game.net.board_done({"id": "gold_coin", "n": 5})
+	check("forged board ask refuses", game.item_count("gold_coin") == gold_b)
+	game.net.board_done({"id": "wood", "n": 99})
+	check("board ask capped by mirror", game.item_count("wood") == wood_a - 4,
+		"wood=%d want=%d" % [game.item_count("wood"), wood_a - 4])
+	game.board_quest = bq_sv
+	game.net.board_paid_out = ""
+	game.net.is_host = true
 	game.net.multiplayer.multiplayer_peer = fake_peer
 	srv.close()
 	game.net.is_host = false

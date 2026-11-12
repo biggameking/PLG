@@ -2083,6 +2083,7 @@ func use_item(k: String) -> void:
 				game.player.hunger = minf(100.0, game.player.hunger + it["food"])
 				game.add_item(k, -1)
 				game.log_msg(tr("+%d food") % it["food"])
+				game.sfx_play("eat")
 				var bf: Dictionary = it.get("buff", {})
 				if not bf.is_empty(): # the island meal bonus: one timed buff at a time
 					game.player.eat_buff(bf)
