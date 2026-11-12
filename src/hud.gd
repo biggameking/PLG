@@ -642,7 +642,7 @@ func shell_act(act: String) -> void:
 
 func chest_bulk(act: String) -> void:
 	var st = game.chest_ref
-	var cc: Vector2i = game.cell_of(st) if st != null else Vector2i(-1, -1)
+	var cc: Vector2i = st.get("pos", Vector2i(-1, -1)) if st != null else Vector2i(-1, -1)
 	if cc.x < 0 or game.player.pos.distance_to(Vector2(cc.x + 0.5, cc.y + 0.5)) > 5.0:
 		game.chest_ref = null
 		game.panel = "" # walked too far — the container is out of reach
@@ -754,7 +754,7 @@ func interact() -> void:
 					game.open_mimic(st)
 					return
 				if game.net != null and game.net.is_client():
-					var mcc: Vector2i = game.cell_of(st)
+					var mcc: Vector2i = st.get("pos", Vector2i(-1, -1))
 					game.net.rpc("mimic_req", float(mcc.x), float(mcc.y))
 					# the trap isn't on the wire — ask the host; if it was
 					# a mouth the structure dies and the answer charges us
@@ -788,14 +788,14 @@ func interact() -> void:
 				return
 			"fossil_bed":
 				if game.net != null and game.net.is_client():
-					var dc: Vector2i = game.cell_of(st)
+					var dc: Vector2i = st.get("pos", Vector2i(-1, -1))
 					game.net.rpc("dig_req", float(dc.x), float(dc.y))
 				else:
 					game.dig_fossil(st)
 				return
 			"kin_cage":
 				if game.net != null and game.net.is_client():
-					var kc: Vector2i = game.cell_of(st)
+					var kc: Vector2i = st.get("pos", Vector2i(-1, -1))
 					game.net.rpc("cage_req", float(kc.x), float(kc.y))
 				else:
 					game.free_captive(st)

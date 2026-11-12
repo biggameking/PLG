@@ -8096,6 +8096,47 @@ func run() -> void:
 	game.reveal_at(game.player.pos, 3.0)
 	check("re-revealing isn't dirty", game.explored_n == en35)
 
+	# ---------- audit-35: perf scans stay honest + the starvation KO loop breaks
+	var anchor_ok := true
+	var seen36 := {}
+	for k35 in game.structures:
+		var st36: Dictionary = game.structures[k35]
+		if seen36.has(st36):
+			continue
+		seen36[st36] = true
+		var p36 = st36.get("pos")
+		if p36 == null or not game.structures.has(p36) or game.structures[p36] != st36:
+			anchor_ok = false
+	check("every structure's pos is its anchor cell", anchor_ok)
+	var box_n35: int = game.box.size()
+	var starved := Kin.new()
+	var sp35: String = game.pals.back().species_id if not game.pals.is_empty() else "flarbeak"
+	starved.setup(game, sp35, 5, game.player.pos)
+	starved.hunger = 100.0
+	starved.hp = 1
+	starved.mode = "base"
+	game.pals.append(starved)
+	game.entity_layer.add_child(starved)
+	game.kill_pal(starved, false)
+	check("a starved kin lands in the box", starved.mode == "box" and game.box.size() == box_n35 + 1)
+	var starve_logged := false
+	for m35 in game.messages:
+		if "starved" in str(m35):
+			starve_logged = true
+	check("a starvation KO says so", starve_logged)
+	starved.revive_t = game.t - 1.0
+	game.tick_box(0.1)
+	check("a revived kin isn't still starving", starved.hunger <= 50.0 and starved.hp > 0)
+	game.box.erase(starved)
+	game.unbox_pal(starved)
+	game.pals.erase(starved)
+	game.entity_layer.remove_child(starved)
+	starved.free()
+	# the heat memo answers consistently and fresh queries recompute
+	var h35a: float = game.nearest_heat(game.player.pos)
+	var h35b: float = game.nearest_heat(game.player.pos)
+	check("nearest_heat memo is self-consistent", h35a == h35b)
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is

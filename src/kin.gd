@@ -21,6 +21,9 @@ var train_t := 0.0            # sparring clock at a training dummy
 var bed_seek := 0.0           # seconds spent shuffling toward a bed at night
 var sleep_rested := false    # reached a real bed — a floor nap recovers less
 var carry = null             # {id,n} while hauling
+var haul_scan_t := 0.0       # rescan clock — keeps the O(cells) sweeps off the per-frame path
+var haul_cell := Vector2i(-1, -1) # cached chest cell while carrying
+var haul_dest := Vector2.ZERO     # last scanned walk target for the pickup leg
 var home := Vector2.ZERO     # spawn anchor; alphas tether to their lair
 var target := Vector2.ZERO
 var atk_cd := 0.0
@@ -662,11 +665,7 @@ func base_ai(dt: float) -> void:
 		bed_seek = 0.0
 		return
 	if job_site:
-		var site_cell: Vector2i = Vector2i(-1, -1)
-		for k in game.structures:
-			if game.structures[k] == job_site:
-				site_cell = k
-				break
+		var site_cell: Vector2i = job_site.get("pos", Vector2i(-1, -1)) # the anchor cell — no dict scan needed
 		if site_cell.x >= 0:
 			var sp2 := Vector2(site_cell.x + 0.5, site_cell.y + 0.5)
 			if job_site.get("id") == "expedition_post" and pos.distance_to(sp2) < 1.6 \
@@ -715,22 +714,32 @@ func base_ai(dt: float) -> void:
 			step_toward(target, dt)
 
 func haul_ai(dt: float) -> void:
+	haul_scan_t -= dt
 	if carry != null:
-		var cc := game.nearest_chest_cell(pos, carry["id"])
-		if cc.x < 0:
+		if haul_scan_t <= 0.0:
+			haul_scan_t = 0.4 # chests don't move — a short cache beats a per-frame dict sweep
+			haul_cell = game.nearest_chest_cell(pos, carry["id"])
+		if haul_cell.x < 0:
 			return  # no chest that can take it: hold the goods
-		var cp := Vector2(cc.x + 0.5, cc.y + 0.5)
+		var cp := Vector2(haul_cell.x + 0.5, haul_cell.y + 0.5)
 		if pos.distance_to(cp) > 1.8:
 			step_toward(cp, dt)
 		else:
-			if not game.structures.has(cc) or game.structures[cc]["id"] not in ["chest", "feed_box"]:
+			if not game.structures.has(haul_cell) or game.structures[haul_cell]["id"] not in ["chest", "feed_box"]:
+				haul_cell = Vector2i(-1, -1)
 				return # chest was demolished mid-walk — keep holding the goods
-			var st: Dictionary = game.structures[cc]
+			var st: Dictionary = game.structures[haul_cell]
 			if not game.chest_can_take(st, carry["id"]):
 				return # filled up since it was picked — retarget next frame instead of over-stacking
 			st["store"][carry["id"]] = st["store"].get(carry["id"], 0) + carry["n"]
 			carry = null
 		return
+	# between rescans just keep walking the last leg — targets outlive 0.4s easily
+	if haul_scan_t > 0.0:
+		if pos.distance_to(haul_dest) > 0.4:
+			step_toward(haul_dest, dt)
+		return
+	haul_scan_t = 0.4
 	# first: production sites holding goods -> move one stack to a chest
 	var bd := 24.0 * 24.0; var bd2 := bd
 	var site_pick = null; var site_id := ""
@@ -744,6 +753,7 @@ func haul_ai(dt: float) -> void:
 	if site_pick != null:
 		var sst: Dictionary = game.structures[site_pick]
 		var cp2 := Vector2(site_pick.x + 0.5, site_pick.y + 0.5)
+		haul_dest = cp2
 		if pos.distance_to(cp2) > 1.6:
 			step_toward(cp2, dt)
 		else:
@@ -752,6 +762,7 @@ func haul_ai(dt: float) -> void:
 			site_id = sst["store"].keys()[0]
 			carry = {"id": site_id, "n": sst["store"][site_id]}
 			sst["store"].erase(site_id)
+			haul_cell = Vector2i(-1, -1); haul_scan_t = 0.0 # fresh goods → rescan a chest next frame
 		return
 	bd2 = bd
 	var pick = null
@@ -765,9 +776,11 @@ func haul_ai(dt: float) -> void:
 			wander_t = 2.0 + game.rng.next() * 3.0
 			var a := game.rng.next() * TAU
 			target = pos + Vector2(cos(a), sin(a)) * 2.0
+		haul_dest = target
 		if pos.distance_to(target) > 0.4:
 			step_toward(target, dt)
 		return
+	haul_dest = pick["pos"]
 	if pos.distance_to(pick["pos"]) > 0.6:
 		step_toward(pick["pos"], dt)
 	else:
@@ -775,6 +788,7 @@ func haul_ai(dt: float) -> void:
 			return # a faster hauler already claimed it — no loot duplication
 		carry = {"id": pick["id"], "n": pick["n"]}
 		game.take_drop(pick)
+		haul_cell = Vector2i(-1, -1); haul_scan_t = 0.0
 
 func tick_needs(dt: float) -> void:
 	needs_t += dt

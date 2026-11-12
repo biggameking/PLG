@@ -944,3 +944,4 @@ Huge egg,Huge egg,巨蛋
 "The den calls, but the island is too crowded to answer","The den calls, but the island is too crowded to answer",巢穴在呼唤，可群岛实在挤不下回应者
 PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin,PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin,手柄  十字键：上=背包 右=骑乘 左=精灵技 下=地图  L3 拆除  R3 换人
 You're starving — eat berries or cooked food (dpad-up opens the bag),You're starving — eat berries or cooked food (dpad-up opens the bag),你快饿死了——吃点浆果或熟食（十字键上打开背包）
+%s starved out - it will recover in the box (build a feed box!),%s starved out - it will recover in the box (build a feed box!),%s 饿倒了——会在精灵箱里恢复（快建饲料箱！）

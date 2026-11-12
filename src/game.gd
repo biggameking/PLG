@@ -1065,7 +1065,10 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 			box.append(p)             # catch cap — losing a downed partner to an
 			box_pal(p)                # off-by-one box eviction is not a feature
 			sfx_play("ko")
-			log_msg(tr("%s is KO'd - it will recover in the box") % tr(str(p.spec["name"])))
+			if p.hunger >= 100.0:
+				log_msg(tr("%s starved out - it will recover in the box (build a feed box!)") % tr(str(p.spec["name"])))
+			else:
+				log_msg(tr("%s is KO'd - it will recover in the box") % tr(str(p.spec["name"])))
 		else: # even the overflow lane is full — the wild reclaims it, KO'd
 			p.mode = "wild"
 			p.owner_id = 0
@@ -1698,6 +1701,7 @@ func summon_raid() -> bool:
 	return true
 
 var assist_t := 0.0
+var prod_t := 0.0
 
 func tick_shadelump() -> void:
 	# Shadelump's Dream Chaser (weirdest trick): a shadelump riding
@@ -1836,7 +1840,7 @@ func fertilize() -> void:
 	var bd := 4.5
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if k != cell_of(st):
+		if k != st.get("pos"):
 			continue
 		if not StructureData.STRUCTURES.get(st["id"], {}).get("farmField", false):
 			continue
@@ -2488,7 +2492,10 @@ func _process(dt: float) -> void:
 				sp["node"].queue_free()
 			resolve_sphere(sp)
 			spheres_flying.erase(sp)
-	tick_production(dt)
+	prod_t += dt # production math is linear in dt — batching to ~4Hz drops the
+	if prod_t >= 0.25: # per-frame structure sweeps (consume_ready/banner/well) to a quarter
+		tick_production(prod_t)
+		prod_t = 0.0
 	dig_check()
 	tick_merchant(dt)
 	tick_boss_respawns()
@@ -3131,6 +3138,8 @@ func tick_box(dt: float) -> void: # the island kinbox is a clinic — wounds men
 			if t > bp.revive_t:
 				bp.revive_t = 0
 				bp.hp = int(bp.max_hp * 0.3)
+				bp.hunger = minf(bp.hunger, 50.0) # the box nurses it back from the
+				# brink too — reviving at hunger 100 just re-KOs it ~50s later
 				log_msg(tr("%s has recovered") % tr(str(bp.spec["name"])))
 		elif bp.hp < bp.max_hp:
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt)
@@ -3143,7 +3152,7 @@ func cooler_active() -> bool:
 	# larder from turning — same SAN/hunger/sleep gates as any work shift
 	for key in structures:
 		var st = structures[key]
-		if key != cell_of(st) or st["id"] != "cooler":
+		if key != st.get("pos") or st["id"] != "cooler":
 			continue
 		for w in st["workers"]:
 			if is_instance_valid(w) and w.mode == "base" \
@@ -3196,7 +3205,7 @@ func tick_production(dt: float) -> void:
 	cur_san_mult = float(WORK_MODES[work_mode]["san"]) if has_stand else 1.0
 	for key in structures:
 		var st = structures[key]
-		if key != cell_of(st):
+		if key != st.get("pos"):
 			continue # tick once per structure
 		var s: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
 		var job: Dictionary = s.get("job", {})
@@ -3407,12 +3416,6 @@ func nearest_free(x: float, y: float) -> Vector2:
 					return Vector2(c.x + dx + 0.5, c.y + dy + 0.5)
 	return Vector2(x, y) # give up: original spot
 
-func cell_of(st) -> Vector2i:
-	for k in structures:
-		if structures[k] == st:
-			return k
-	return Vector2i(-1, -1)
-
 func structure_at(tw: Vector2):
 	var st = structures.get(Vector2i(int(tw.x), int(tw.y)))
 	if st:
@@ -3432,9 +3435,18 @@ func has_structure(sid: String) -> bool:
 	return false
 
 const HEAT_IDS := ["campfire", "torch", "furnace", "hot_spring"]
+var _heat_at := Vector2.INF # nearest_heat memo: the query point it answers for
+var _heat_d := 1e9
+var _heat_t := -1.0
+
 func nearest_heat(at: Vector2) -> float:
 	# distance to the closest warmth source — the night chill threshold.
 	# the island: a fire kin at your side keeps you warm too.
+	# memoized for ~0.4s within a tile: the chill check runs per physics frame
+	# and the hint lambdas ask twice more — a structures-wide scan is wasted
+	# on a position that barely moved
+	if t - _heat_t < 0.4 and at.distance_squared_to(_heat_at) < 0.56:
+		return _heat_d
 	var bd := 1e9
 	for k in structures:
 		if structures[k]["id"] in HEAT_IDS:
@@ -3443,6 +3455,7 @@ func nearest_heat(at: Vector2) -> float:
 		if q.hp > 0 and q.mode in ["partner", "base"] \
 				and "fire" in q.spec.get("elements", []):
 			bd = minf(bd, at.distance_to(q.pos)) # only YOUR fire pal snuggles up
+	_heat_at = at; _heat_d = bd; _heat_t = t
 	return bd
 
 func base_pals() -> Array:
@@ -5535,7 +5548,7 @@ func spawn_fossils() -> void:
 func dig_fossil(st: Dictionary) -> void:
 	if client_locked():
 		return
-	var cell: Vector2i = cell_of(st)
+	var cell: Vector2i = st.get("pos", Vector2i(-1, -1))
 	var pos := Vector2(cell.x + 0.5, cell.y + 0.5)
 	net_remove_structure(st) # one dig and the bed is spent
 	var n := rng.int_range(2, 4)
@@ -5555,7 +5568,7 @@ func open_mimic(st: Dictionary, opener_pid := 0) -> void:
 	var sp: String = str(st.get("mimic", ""))
 	if sp == "" or SpeciesData.species_of(sp).is_empty():
 		return
-	var cell: Vector2i = cell_of(st)
+	var cell: Vector2i = st.get("pos", Vector2i(-1, -1))
 	net_remove_structure(st) # the box was a mouth; deferred so nothing iterates a ghost
 	var m: Kin = gen_pal(sp, wild_lv(world.zone_at(cell.x, cell.y)) + 4,
 		Vector2(cell.x + 0.5, cell.y + 0.5))
@@ -5594,7 +5607,7 @@ func _nearest_struct(sid: String, at: Vector2, reach := 4.0) -> Vector2i:
 	var bd := reach
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st["id"] != sid or k != cell_of(st):
+		if st["id"] != sid or k != st.get("pos"):
 			continue
 		var d: float = at.distance_to(Vector2(k.x + 0.5, k.y + 0.5))
 		if d < bd:
@@ -5611,7 +5624,7 @@ func fert_req_remote(pid: int) -> bool:
 	var bd := 4.0
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if k != cell_of(st):
+		if k != st.get("pos"):
 			continue
 		if not StructureData.STRUCTURES.get(st["id"], {}).get("farmField", false):
 			continue
