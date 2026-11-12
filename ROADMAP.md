@@ -1298,3 +1298,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - LOW: dex habitat shows den/egg provenance for non-zoned species.
 - Verified-correct: all missions/hints/protocol/consistency/gauntlet/dex.
 - 962/0/0. Audit doc: docs/reviews/audit-46-residual.md.
+
+### S94 — shipped-artifact truth — SHIPPED
+- Web export was unbuildable: vram_texture_compression variants failed
+  validation with an empty error list; disabled (right for pixel art too),
+  16M→12M. tools/art/src/.gdignore ends Blender-scan noise; PWA COI
+  contradiction resolved, PWA off.
+- Rebuilt windows+web at HEAD (prior dist was 7 commits stale); verified
+  PCK exclusion (0 docs/tools hits), booted the web build in a live
+  browser preview.
+- Doc: docs/reviews/audit-47-artifact-truth.md.
