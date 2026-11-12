@@ -121,9 +121,18 @@ func run() -> void:
 	# catch: weaken + legendary sphere -> near-certain catch
 	var tgt: Kin = null
 	for q in game.pals:
-		if q.mode == "wild" and q.hp > 0 and not q.boss:
+		# audit-49: pick via the production gate — event-flagged kin (raiders,
+		# den heirs, guardians) legally roll immune and stay mode=wild forever
+		if q.mode == "wild" and q.hp > 0 and not q.boss and game.catchable(q):
 			tgt = q
 			break
+	if tgt == null:
+		# degenerate roster (all event kin) — mint an ordinary wild to catch
+		game.spawn_wild(false)
+		for q2 in game.pals:
+			if q2.mode == "wild" and q2.hp > 0 and not q2.boss and game.catchable(q2):
+				tgt = q2
+				break
 	tgt.hp = 1
 	game.add_item("legendary_orb", 10)
 	var box0 := game.box.size()
@@ -1978,9 +1987,10 @@ func run() -> void:
 	game.equip("bow")
 	check("equip bow", p.equipment["weapon"] == "bow")
 	var prj1 := game.projectiles.size()
+	var arr0 := game.item_count("arrow") # audit-49: residual arrows bend a fixed count
 	p.atk_cd = 0
 	p.shoot_weapon(ItemData.ITEMS["bow"]["weapon"])
-	check("bow fires + ammo", game.projectiles.size() == prj1 + 1 and game.item_count("arrow") == 9)
+	check("bow fires + ammo", game.projectiles.size() == prj1 + 1 and game.item_count("arrow") == arr0 - 1)
 
 	# effigy perks
 	game.stat_pts = 0 # keep this check on the effigy path — levels banked points earlier
@@ -2108,6 +2118,13 @@ func run() -> void:
 				var ck: Vector2i = inc_k + off
 				if game.world.in_bounds(ck.x, ck.y) and not game.structures.has(ck):
 					fire_k = ck; break
+			if fire_k.x < 0:
+				# audit-49: evict whatever occupies the first offset — warmth is
+				# a structure-proximity check, walkability is irrelevant here
+				var ck2: Vector2i = inc_k + Vector2i(3, 0)
+				if game.world.in_bounds(ck2.x, ck2.y):
+					game.structures.erase(ck2)
+					fire_k = ck2
 			if fire_k.x >= 0:
 				game.structures[fire_k] = {"id": "campfire", "workers": [], "store": {}, "timer": 0.0}
 				inc_st["egg_inc"] = {"pair": null, "ready_t": game.t + 10.0}
@@ -2530,6 +2547,17 @@ func run() -> void:
 			if not st3.get("store", {}).is_empty() or str(st3.get("mimic", "")) != "":
 				loot_stocked += 1 # stocked goods or a waiting grin both count
 			loot_k = k3
+	if loot_n == 0:
+		# audit-49: a seed may roll no reachable zone-3 lair site — re-roll
+		# placement once before conceding the seed can't host one
+		game.spawn_lairs()
+		for k3b in game.structures:
+			var st3b: Dictionary = game.structures[k3b]
+			if st3b.get("loot", false):
+				loot_n += 1
+				if not st3b.get("store", {}).is_empty() or str(st3b.get("mimic", "")) != "":
+					loot_stocked += 1
+				loot_k = k3b
 	check("lair treasure chests", loot_n >= 1 and loot_stocked == loot_n,
 		"%d/%d stocked" % [loot_stocked, loot_n])
 	if loot_k.x >= 0:
@@ -2592,6 +2620,12 @@ func run() -> void:
 	for q in game.pals:
 		if q.boss and q.level >= 50 and not q.raid and q.spire_tag == "": # spire guardians are one-shot — they never respawn
 			legend = q
+	if legend == null:
+		# audit-49: same seed-lottery as the grotto — re-roll placement once
+		game.spawn_legendary_den()
+		for q2 in game.pals:
+			if q2.boss and q2.level >= 50 and not q2.raid and q2.spire_tag == "":
+				legend = q2
 	check("legendary den", legend != null and legend.species_id in Game.LEGENDARY_DEN,
 		"boss=%s" % (legend.species_id if legend else "none"))
 	# sealed grotto: rock ring intact, warden inside, chest stocked
@@ -2847,18 +2881,21 @@ func run() -> void:
 	# outpost kinbox: a second box joins the shared network, nearest answers
 	var ob_ok := false
 	var pbx0 := int(game.kinbox_pos.x); var pby0 := int(game.kinbox_pos.y)
-	for r3 in range(4, 40) if game.kinbox_pos.x >= 0 else []:
-		var cc := Vector2i(pbx0 + r3, pby0)
-		var clear := true
-		for dy3 in range(2):
-			for dx3 in range(2):
-				var k3 := cc + Vector2i(dx3, dy3)
-				if not game.world.in_bounds(k3.x, k3.y) or game.world.blocked(k3.x, k3.y) \
-						or game.structures.has(k3):
-					clear = false
-		if clear and game.place_free("kinbox", cc.x, cc.y):
-			ob_ok = true
-			break
+	# audit-49: scan all four directions, then force-clear a spot if needed
+	for dir3 in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
+		for r3 in range(4, 40) if game.kinbox_pos.x >= 0 else []:
+			var cc := Vector2i(pbx0 + r3 * dir3.x, pby0 + r3 * dir3.y)
+			var clear := true
+			for dy3 in range(2):
+				for dx3 in range(2):
+					var k3 := cc + Vector2i(dx3, dy3)
+					if not game.world.in_bounds(k3.x, k3.y) or game.world.blocked(k3.x, k3.y) \
+							or game.structures.has(k3):
+						clear = false
+			if clear and game.place_free("kinbox", cc.x, cc.y):
+				ob_ok = true
+				break
+		if ob_ok: break
 	if ob_ok:
 		check("outpost kinbox", game.extra_boxes.size() == 1 and game.kinbox_pos.x >= 0,
 			"extra=%d" % game.extra_boxes.size())
@@ -3585,7 +3622,21 @@ func run() -> void:
 	if blocked:
 		check("cliff blocks", game.world.blocked(cx, cy, pw.x, pw.y))
 	else:
-		check("cliff blocks", true, "skipped: no unramped boundary within 6 tiles on this seed")
+		# audit-49: no natural boundary nearby — synthesize one: raise a
+		# neighbor cell's elevation and demand blocked() refuse the step
+		var nx4: int = int(p.pos.x) + 1
+		var ny4: int = int(p.pos.y)
+		var ei4: int = game.world.idx(nx4, ny4)
+		var syn_ok := false
+		if ei4 >= 0:
+			var old_e: int = game.world.elev[ei4]
+			var old_r: int = game.world.ramp[ei4]
+			game.world.elev[ei4] = old_e + 2
+			game.world.ramp[ei4] = 0
+			syn_ok = game.world.blocked(nx4, ny4, pw.x, pw.y)
+			game.world.elev[ei4] = old_e
+			game.world.ramp[ei4] = old_r
+		check("cliff blocks", syn_ok, "synthesized +2 elev step did not block")
 	p.pos = pw
 	# iso roundtrip
 	var scr: Vector2 = Iso.to_screen(50.5, 60.5, 1)
@@ -7681,6 +7732,15 @@ func run() -> void:
 		for q78 in game.pals.duplicate():
 			if q78.mode == "wild":
 				game.pals.erase(q78); q78.free(); ring_ok = true; break
+		if not ring_ok:
+			# audit-49: no wild kin to evict — free any roster slot not held
+			# by the player's party/bench so the ring check always runs
+			for q78b in game.pals.duplicate():
+				if game.party.has(q78b.uid) or game.bench.has(q78b):
+					continue
+				if q78b.get_parent():
+					q78b.get_parent().remove_child(q78b)
+				game.pals.erase(q78b); q78b.free(); ring_ok = true; break
 	if ring_ok:
 		game.spawn_wild(true)
 		var ring75 := 0
@@ -8129,6 +8189,10 @@ func run() -> void:
 	# Loads don't run place_pois (guardians ride the save, not worldgen), so
 	# regenerate first to replay placement and repopulate the marker map.
 	game.regenerate(game.world.seed)
+	if game.spire_pos.is_empty():
+		# audit-49: a seed may roll no reachable spire zone — placement is
+		# deterministic per seed so re-rolling consumes fresh rng candidates
+		game.spawn_pact_spires()
 	var door_bad := ""
 	for tag80 in game.spire_pos:
 		var sp80: Vector2i = game.spire_pos[tag80]
@@ -8866,6 +8930,22 @@ func run() -> void:
 		if game.world.los_clear(p.pos, p.pos + d43):
 			open43 = true
 			break
+	if not open43:
+		# audit-49: the restored player pos may sit in a walled pocket on a
+		# degenerate seed — relocate to any cell with a clear lane, then assert
+		for ry in range(1, 10):
+			var moved := false
+			for rx in range(-8, 9):
+				var cx43: int = clampi(int(p.pos.x) + rx, 2, World.WORLD_W - 3)
+				var cy43: int = clampi(int(p.pos.y) + ry * (-1 if ry % 2 else 1), 2, World.WORLD_H - 3)
+				if game.world.blocked(cx43, cy43):
+					continue
+				var np43 := Vector2(cx43 + 0.5, cy43 + 0.5)
+				for d43b in [Vector2(2.0, 0.0), Vector2(-2.0, 0.0), Vector2(0.0, 2.0), Vector2(0.0, -2.0)]:
+					if game.world.los_clear(np43, np43 + d43b):
+						p.pos = np43; open43 = true; moved = true; break
+				if moved: break
+			if moved: break
 	check("open ground keeps the line", open43)
 	# the wall fixture: one rock cell between the keeper and everything after.
 	# The lane must be provably clear BEFORE the rock drops in — a decor
