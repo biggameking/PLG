@@ -97,7 +97,7 @@ def gen(sid, body, col, rng):
         # stubby feet
         for sx in (-1, 1):
             P.append({"kind": "cyl", "c": (sx * r * 0.42, -0.1, 0.08), "r": 0.09, "depth": 0.16, "mat": 1})
-        P += eyes(r * 0.4, -r * 0.93, r * 1.12, 0.085, 2)
+        P += eyes(r * 0.4, -r * 0.93, r * 1.12, 0.115, 2)
         P.append({"kind": "sph", "c": (0, -r * 0.72, r * 0.55), "r": (r * 0.55, r * 0.5, r * 0.45), "mat": 3})
         P.append({"kind": "sph", "c": (0, -r * 0.98, r * 0.8), "r": (0.1, 0.04, 0.05), "mat": 2})
 
@@ -114,7 +114,7 @@ def gen(sid, body, col, rng):
             P.append({"kind": "sph", "c": (sx * 0.20, -bl - 0.06, hz + bh * 0.35),
                       "r": (ear_r, 0.07, ear_r + horn), "rot": (0, 0, sx * 0.45), "mat": 1})
         P.append({"kind": "sph", "c": (0, bl + 0.2, bz + bh * 0.3), "r": (0.07, 0.16, 0.07), "mat": 1})  # tail
-        P += eyes(0.12, -bl - 0.38, hz + bh * 0.14, 0.065, 2)
+        P += eyes(0.12, -bl - 0.38, hz + bh * 0.14, 0.088, 2)
 
     def bird():
         nonlocal P
@@ -128,7 +128,7 @@ def gen(sid, body, col, rng):
         P.append({"kind": "sph", "c": (0, r * 0.85, r * 1.35), "r": (0.12, 0.3, 0.1), "mat": 1})  # tail
         for sx in (-1, 1):
             P.append({"kind": "cyl", "c": (sx * 0.14, -0.05, 0.12), "r": 0.05, "depth": 0.24, "mat": 1})
-        P += eyes(0.18, -r * 1.44, r * 2.18, 0.07, 2)
+        P += eyes(0.18, -r * 1.44, r * 2.18, 0.095, 2)
 
     def ghost():
         nonlocal P
@@ -139,7 +139,7 @@ def gen(sid, body, col, rng):
                   "sq": 0.9, "seed": rng.randint(1, 999), "jitter": 0.1, "mat": 0})
         for sx in (-1, 1):  # stub arms
             P.append({"kind": "sph", "c": (sx * r * 1.0, -0.1, r * 1.2), "r": (0.16, 0.12, 0.2), "mat": 0})
-        P += eyes(0.21, -r * 0.94, r * 1.95, 0.08, 2)
+        P += eyes(0.21, -r * 0.94, r * 1.95, 0.105, 2)
 
     def human():
         nonlocal P
@@ -151,7 +151,7 @@ def gen(sid, body, col, rng):
             P.append({"kind": "cyl", "c": (sx * (t + 0.1), -0.05, 0.95 * s), "r": 0.09, "depth": 0.55 * s,
                       "mat": 1})
             P.append({"kind": "cyl", "c": (sx * 0.14, 0, 0.28 * s), "r": 0.1, "depth": 0.56 * s, "mat": 1})
-        P += eyes(0.1, -0.28, 1.58 * s, 0.06, 2)
+        P += eyes(0.1, -0.28, 1.58 * s, 0.085, 2)
 
     def serpent():
         nonlocal P
@@ -164,7 +164,7 @@ def gen(sid, body, col, rng):
                       "r": (r * (1 - k * 0.45),) * 3, "mat": 0 if i % 2 == 0 else 1})
         hx, hy, hz = 0.0, -r - 0.1, r * 1.2
         P.append({"kind": "sph", "c": (hx, hy, hz), "r": (r * 1.1, r * 1.15, r), "mat": 0})
-        P += eyes(0.15, hy - r * 1.18, hz + 0.08, 0.078, 2)
+        P += eyes(0.15, hy - r * 1.18, hz + 0.08, 0.105, 2)
 
     def small_quad(ear_big, tail_len):
         nonlocal P
@@ -177,7 +177,7 @@ def gen(sid, body, col, rng):
         P += legs(r * 0.55, r * 0.6, 0, r * 0.7, 0.06, 1)
         P.append({"kind": "cyl", "c": (0, r * 1.2, r + 0.2), "r": 0.04, "depth": tail_len, "mat": 1,
                   "rot": (0.7, 0, 0)})
-        P += eyes(0.16, -r * 1.8, r * 1.95, 0.065, 2)
+        P += eyes(0.16, -r * 1.8, r * 1.95, 0.09, 2)
 
     def hedgehog():
         nonlocal P
@@ -191,7 +191,7 @@ def gen(sid, body, col, rng):
         for sx in (-1, 1):
             P.append({"kind": "cyl", "c": (sx * r * 0.45, -r * 0.35, 0.08), "r": 0.07, "depth": 0.16, "mat": 1})
         P.append({"kind": "sph", "c": (0, -r * 1.62, r * 0.8), "r": (0.08, 0.05, 0.06), "mat": 2})  # nose
-        P += eyes(0.17, -r * 1.58, r * 1.0, 0.065, 2)
+        P += eyes(0.17, -r * 1.58, r * 1.0, 0.088, 2)
 
     def monkey():
         nonlocal P
@@ -203,7 +203,7 @@ def gen(sid, body, col, rng):
             P.append({"kind": "cyl", "c": (sx * (t + 0.12), -0.02, 0.75 * s), "r": 0.08, "depth": 0.7 * s, "mat": 1})
             P.append({"kind": "cyl", "c": (sx * 0.13, 0, 0.24 * s), "r": 0.09, "depth": 0.48 * s, "mat": 1})
         P.append({"kind": "sph", "c": (0, t * 1.6, 0.7 * s), "r": (0.06, 0.3, 0.06), "rot": (-0.6, 0, 0), "mat": 1})
-        P += eyes(0.11, -0.29, 1.5 * s, 0.06, 2)
+        P += eyes(0.11, -0.29, 1.5 * s, 0.085, 2)
 
     archetypes = {
         "blob": blob, "quadruped": quadruped, "bird": bird, "ghost": ghost,
@@ -229,7 +229,7 @@ def gen(sid, body, col, rng):
         }.get(body, (0, 0, 1.2 * s))
         P += accessory(acc, top)
     return {"mats": [m0, m1, m2, m3, m4], "parts": tuple(P),
-            "f1": {"fluff_dy": 0.06, "ear_drop": 0.3, "head_dy": 0.04}}
+            "f1": {"fluff_dy": 0.10, "ear_drop": 0.45, "head_dy": 0.08}}
 
 
 def fmt_col(c):

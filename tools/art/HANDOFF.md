@@ -53,5 +53,8 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
 ## 已知弱项（owner 观感 + audit-24 残余）
 
 - 全阵容椭球拼装感（本次返工主因）。
-- serpent/blob 系脸偏淡；human 系眼睛 80px 下偏小。
-- f1 帧差异现在有了，但幅度小；做真模型时顺手做更大的 idle 幅度。
+- ~~serpent/blob 系脸偏淡；human 系眼睛 80px 下偏小~~ — S97 已修：
+  eyes() 半径全体 +30~40%（human 0.06→0.085、serpent 0.078→0.105、
+  blob 0.085→0.115 等），player 同款，116 物种全量重渲过检。
+- ~~f1 帧差异幅度小~~ — S97 已修：head_dy 0.04→0.08、fluff_dy 0.06→0.10、
+  ear_drop 0.3→0.45。
