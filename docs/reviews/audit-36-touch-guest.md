@@ -60,3 +60,29 @@ is honest — the gaps were all in the guest's *own* assets being unreachable.
   `m_inv` routes, preview ungated, horn relay, assign answer.
 - Live-play: `==== S81 live-play: 0 failures ====`; guide + kinbox PNGs
   inspected — wrap, scroll indicator, and button columns all clean.
+
+## Verifier round (second context-free pass on 8ad8f4c)
+
+- **Medium — join-time owner_id loss:** `state_sync` built spawn rows ending
+  at `e[11]` (no `e[12]` forward) and `pal_sync`'s update path never
+  re-synced the field — replicas spawned at join held `owner_id = 0`
+  forever, silently neutering the new `mine` gate. Fixed at `net.gd:348`
+  + existing-replica path (`net.gd:408`).
+- **Medium — dead guest [mv]:** `skill_tgl` sent `cr["arg"]["p"].uid` raw;
+  replicas carry `uid = -net_id`, unresolvable by host `find_pal` — a
+  click that did nothing. Now sends `net_id` like `KINBOX_OPS` already
+  did (`hud.gd:507-509`).
+- **Low — _struct_gen coverage gap:** the scripted insert matched zero
+  erase sites while reporting 3 — bumps added after all three erase
+  loops + `state_sync`'s clear.
+- **Low — preview↔throw divergence:** touch preview selected nearest in
+  a `dot>0.3` cone while `throw_sphere` picks best `dot>0.6` in
+  `[0.4, 5]`; preview now mirrors the throw exactly.
+- Nits: `get_peers()` guard on the `catch_credit` send; smoke ledger
+  restore uses `erase` (no phantom zero-count key inflating dex tiers).
+
+Process note for the record: the verifier had no shell — it flagged that
+`git show` couldn't confirm the working tree matched the commit. The
+fixes above were verified against the live tree and re-tested.
+
+Suite: `==== 893 checks, 0 failures, 1 skipped ====` — 851f888.
