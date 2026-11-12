@@ -1159,3 +1159,12 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - Co-op storage lane audited and verified already-defended (reach +
   throttle + whitelist + caps + gap refund); documented, no change.
 - 903/0/0; SIM 0; SIM-ECO 0.
+
+### S85 — save integrity lens (audit-38) — VERIFIED CLEAN
+- Line-by-line walk of `load_game` + `Migrate.save_dict`: every field class
+  already carries door checks, whitelists, clamps, derived-flag re-derivation
+  and bounded collections. Zero must-fix findings — the S-series hardening
+  holds. Info notes: unbounded `items` counts and ledger forgery are solo
+  self-cheat, out of model.
+- Process lesson banked: background audit subagents truncate final reports —
+  foreground or file-output for audit lenses.
