@@ -1181,6 +1181,16 @@ var mission_t := 0.0
 var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
 var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
+var dex_full := false   # every ownable species caught — the cataloger's seal
+var _ownable_n := -1    # lazily counted: species tables are large consts
+
+func ownable_species_count() -> int:
+	if _ownable_n < 0:
+		_ownable_n = 0
+		for sid in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
+			if ownable(str(sid)):
+				_ownable_n += 1
+	return _ownable_n
 var accord := false     # the Wildmere Accord — crown + all ten legend heirs
 # + the EX gauntlet. Sealed once per save; the island fields a sixth slot.
 
@@ -1244,6 +1254,18 @@ func tick_dex(dt: float) -> void:
 		log_msg("KINDEX: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
 		floater(player.pos, "KINDEX MILESTONE", "#c08cff")
 		dex_claimed = tier
+	if not dex_full and catch_counts.size() >= ownable_species_count():
+		# the cataloger's seal — every catchable species on record. Pays the
+		# best balls in the game: a full ledger earns the tools, not a title
+		dex_full = true
+		add_item("legendary_orb", 3)
+		add_item("ancient_part", 2)
+		floater(player.pos, tr("KINDEX COMPLETE"), "#c08cff")
+		log_msg(tr("KINDEX COMPLETE — every kin on record. +3 legendary orbs"))
+		sfx_play("horn")
+		if net != null and multiplayer.multiplayer_peer != null:
+			net.rpc("net_floater", player.pos.x, player.pos.y,
+				tr("KINDEX COMPLETE"), "#c08cff")
 	tick_accord()
 
 func tick_accord() -> void:
@@ -4105,7 +4127,7 @@ func save_game() -> void:
 				return r),
 		"pbx": [kinbox_pos.x, kinbox_pos.y], # which kinbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
-		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
+		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed, "dex_full": dex_full,
 		"spires": spires_done.keys(), "crowned": crowned, "accord": accord,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
@@ -4255,6 +4277,10 @@ func load_game() -> bool:
 			if not SpeciesData.species_of(str(sid)).is_empty():
 				dex_seen[str(sid)] = true # unknown ids from other builds just don't get seen
 	dex_claimed = clampi(_i(d.get("dex_claimed", 0)), 0, 64)
+	# the cataloger's seal re-derives from the ledger — a bare flag with an
+	# empty catches dict is the same lie as a crowned flag with no spires
+	dex_full = d.get("dex_full") is bool and d["dex_full"] \
+		and catch_counts.size() >= ownable_species_count()
 	spires_done.clear()
 	var spv = d.get("spires", [])
 	if spv is Array: # only real spire tags — a foreign save can't forge a crown
@@ -6021,6 +6047,7 @@ func regenerate(s: int) -> void:
 	mission_flags.clear()
 	dex_seen.clear()
 	dex_claimed = 0 # a fresh world hasn't proven its ecology yet
+	dex_full = false
 	weather = "clear"
 	weather_t = 0.0
 	pray_cd = 0.0

@@ -6419,6 +6419,35 @@ func run() -> void:
 	game.accord = ac_acc
 	game.catch_counts = ac_cc
 	game.save_game() # leave a sane save for the rest of the run
+	# --- S73: the cataloger's seal — a full ledger pays the best tools ---
+	var kf_cc: Dictionary = game.catch_counts.duplicate()
+	var kf_df: bool = game.dex_full
+	var kf_dc: int = game.dex_claimed
+	var kf_lo0: int = game.item_count("legendary_orb")
+	var kf_sids := []
+	for kf_s in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
+		if game.ownable(str(kf_s)):
+			kf_sids.append(kf_s)
+	check("ownable roster is the ledger's whole", kf_sids.size() == game.ownable_species_count(),
+		"%d vs %d" % [kf_sids.size(), game.ownable_species_count()])
+	game.catch_counts.clear()
+	for kf_i in range(kf_sids.size() - 1): # one short of the full ledger
+		game.catch_counts[kf_sids[kf_i]] = 1
+	game.dex_full = false
+	game.dex_t = 1.0; game.tick_dex(0.1)
+	check("kindex waits for the full ledger", not game.dex_full)
+	game.catch_counts[kf_sids.back()] = 1
+	game.dex_t = 1.0; game.tick_dex(0.1)
+	check("the cataloger's seal lands + pays",
+		game.dex_full and game.item_count("legendary_orb") >= kf_lo0 + 3
+		and game.floaters.back()["t"] == tr("KINDEX COMPLETE"),
+		"orbs=%d want=%d" % [game.item_count("legendary_orb"), kf_lo0 + 3])
+	game.save_game(); game.dex_full = false; game.load_game()
+	check("kindex seal survives reload", game.dex_full)
+	game.dex_full = kf_df
+	game.dex_claimed = kf_dc
+	game.catch_counts = kf_cc
+	game.save_game() # sane file again
 	# pause shell hosts the panel verbs for every input device
 	var peer_bak2 = game.net.multiplayer.multiplayer_peer
 	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer
