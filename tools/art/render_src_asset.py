@@ -109,6 +109,16 @@ CFG = {
     },
 }
 
+# generated batch mapping (tools/art/mesh_map_gen.py → mesh_cfg_gen.py).
+# Hand-tuned entries in CFG always win.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from mesh_cfg_gen import CFG_EXT
+    for _k, _v in CFG_EXT.items():
+        CFG.setdefault(_k, _v)
+except ImportError:
+    pass
+
 INK = (0.11, 0.10, 0.18)
 
 
