@@ -7500,7 +7500,10 @@ func butcher_pal(uid: int) -> void:
 func sell_to_merchant(id: String) -> void:
 	if merchant == null or item_count(id) <= 0:
 		return
-	var unit: int = maxi(1, int(ItemData.ITEMS.get(id, {}).get("price", 0) * 0.5))
+	var price: int = int(ItemData.ITEMS.get(id, {}).get("price", 0))
+	if price <= 0:
+		return # unpriced goods never leave for gold — a 1g pity floor is farmable
+	var unit: int = maxi(1, int(price * 0.5))
 	add_item(id, -1)
 	add_item("gold_coin", unit)
 	log_msg(tr("Sold %s (+%dg)") % [tr(str(ItemData.ITEMS.get(id, {}).get("name", id))), unit])

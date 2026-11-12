@@ -4526,8 +4526,10 @@ func run() -> void:
 		game.buy_from_merchant(0)
 		check("merchant buy", game.item_count(it0["id"]) > 0 and game.item_count("gold_coin") < g0m)
 		var s0m := game.item_count("gold_coin")
-		game.sell_to_merchant("wood")
-		check("merchant sell", game.item_count("gold_coin") > s0m)
+		game.add_item("cake", 1) # priced goods still trade — the pity floor died
+		game.sell_to_merchant("cake")
+		check("merchant sell", game.item_count("gold_coin") > s0m,
+			"gold=%d was=%d" % [game.item_count("gold_coin"), s0m])
 		# black-market kin: buys a boxed kin, gold drops, node stays parented
 		var pi := -1
 		for i2 in game.merchant_stock.size():
@@ -8284,6 +8286,22 @@ func run() -> void:
 	game.structures.erase(gacha_site)
 	game._struct_gen += 1
 	game.net.ghosts.erase(88)
+
+	# the 1g pity floor is gone — unpriced goods refuse at the counter itself,
+	# so farming 63 sink items for loose change is dead at the function layer
+	var m36: Entity = game.merchant
+	game.net_merchant_apply(true, p.pos.x + 2.0, p.pos.y + 1.0)
+	game.add_item("sprigmelt_effigy", 1)
+	var gold36: int = game.item_count("gold_coin")
+	game.sell_to_merchant("sprigmelt_effigy")
+	check("unpriced goods refuse at the counter",
+		game.item_count("gold_coin") == gold36
+		and game.item_count("sprigmelt_effigy") == 1,
+		"gold=%d effigy=%d" % [game.item_count("gold_coin"),
+			game.item_count("sprigmelt_effigy")])
+	game.add_item("sprigmelt_effigy", -1)
+	game.net_merchant_apply(false, 0.0, 0.0)
+	game.merchant = m36
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

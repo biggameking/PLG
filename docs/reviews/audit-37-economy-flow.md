@@ -78,3 +78,31 @@ Suite after recheck: `903 checks, 0 failures, 0 skipped`. Balance sim still
 Coordinates note surfaced during fixture work: `structures` keys and
 `_ghost_at`/`player.pos` all live in *tile* space (world is 220² cells); the
 first fixture divided by 32 and missed reach. Cell-space is the contract.
+
+## Deferred findings — resolved (S84)
+
+- **Unpriced-item sell fallback (was: 1g pity floor).** `sell_to_merchant` now
+  refuses any item with `price <= 0` — 63 sink items (orbs, sigils, effigy,
+  quest goods, gatherables) can never leave for loose change. Smoke pins the
+  refusal; the old `wood` sell fixture now sells priced `cake` instead.
+- **Merchant pool composition re-evaluated — by enumeration, not taste.**
+  `tools/sim_economy.gd` walks every gold-in→transform→gold-out lane the data
+  tables describe: all 23 MERCH_POOL lines + 4 fixed lines resell under their
+  stickers, 3 egg hatch lanes lose, cake beats bred-egg exit, gacha EV (35.2)
+  stays under the 45 slot, **0 fully-priced recipes exist** (every recipe has
+  a gatherable ingredient — a market-only craft mint is structurally
+  impossible), merchant-kin buyback table loses at every z/lv, and every
+  BOARD_POOL good is gather-only. `43 checks, 0 failures`.
+- **Co-op storage lane — audited, already defended.** Ghost-reach 6.0, 1 op/s
+  bucket, item-id whitelist, per-call count caps, `chest_can_take` stack
+  limits, and the pay-ledger gap refund mean a forged deposit claim can only
+  launder what actually left the bag. No change needed; the audit's worry is
+  documented here as verified-safe.
+- **Economy-day income-rate sim — descoped deliberately.** The lane
+  enumerator answers the security question (no closed gold loop exists);
+  per-day income pacing is a balance question owned by sim_balance + the S83
+  decay/price work. Building a full world-day sim for pacing would duplicate
+  the smoke suite's world harness for marginal signal.
+
+Suite after this batch: `903 checks, 0 failures, 0 skipped`;
+SIM `0 failures`; SIM-ECO `43 checks, 0 failures`.

@@ -1144,3 +1144,18 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   gold→power conversion the island offers is real, not time-gated.
 - 7 new assertions; 902/0/1skip. Audit doc: docs/reviews/audit-37-economy-flow.md.
 - Deferred: client bag-trust chest mint (LAN co-op threat model).
+
+### S84 — economy closure pass (audit-37 deferred) — SHIPPED
+- `sell_to_merchant` refuses `price<=0` — the 1g pity floor across 63
+  unpriced items is gone (orbs/sigils/effigy/gatherables are pure sinks).
+- `tools/sim_economy.gd` — best-of-branch lane enumerator: every stock
+  line, egg hatch, cake mint, craft recipe, merchant-kin buyback and board
+  good audited against the data tables. 43 checks, 0 failures. Finding:
+  zero fully-priced recipes exist — market-only crafting can't mint.
+- Recheck fixes folded in: guest sell sticker mirrors base-20 formula
+  (lockstep assertion), kin_gacha wired through `net.pay` + `gacha_req`/
+  `gacha_done` with host-side reach+roll, `merchant_deaths` division
+  hardened.
+- Co-op storage lane audited and verified already-defended (reach +
+  throttle + whitelist + caps + gap refund); documented, no change.
+- 903/0/0; SIM 0; SIM-ECO 0.
