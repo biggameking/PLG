@@ -1068,3 +1068,6 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - Guide Vol IX gains a post-Accord paragraph (en+zh): re-dens, apex
   trials, catalog/stars/statues as the remaining score.
 - Smoke 868/0/0. Rules +118 (curated rosters satisfy their gates).
+- S77b verification sweep: full world defers den respawns instead of
+  dropping the heir; forged alpha:false legend records can't smuggle an
+  immune roamer. Smoke 869/0/0. Commit b79e95e.
