@@ -527,3 +527,12 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     accessory. When a pinned assertion fails after an asset swap,
     restore the feature the test described or move the pin to a real
     equivalent — do not widen it until anything passes.
+101. **A declared provenance is a write contract.** A header that says
+    "auto-generated from X — do not edit" makes X the merge target:
+    the S71 skills landed in `skills.gd` + `gen_species.py` but not in
+    `prototype/src/data/skills.ts`, so one regen would have reverted the
+    feature while the header kept lying. Patch the .ts (and its type
+    union) in the same commit, or retitle the header to hand-maintained.
+    Cousin defect: a second copy of a table with zero consumers
+    (`SPECIES_LIST`) drifts silently against the live one — dead tables
+    get deleted, never updated.
