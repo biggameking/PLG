@@ -5,6 +5,10 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 ```
 /Volumes/17333023680/Godot/Godot.app/Contents/MacOS/Godot --headless --path . -s tools/smoke_test.gd
 # tail of output: "==== N checks, 0 failures ====" must be 0 failures.
+
+# offline probes (run when touching their lane):
+#   tools/sim_balance.gd  — capture/raid/xp formulas: "SIM: 0 failures"
+#   tools/sim_economy.gd  — every gold→transform→gold lane audited: "SIM-ECO: 0 failures"
 ```
 
 ## Memory-safety contract (hard rules — the game must never crash or leak)
