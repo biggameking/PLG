@@ -7988,6 +7988,8 @@ func run() -> void:
 	game.tick_boss_respawns()
 	check("a full world defers the den heir, never drops it",
 		game.boss_respawns.size() == 1 and game.boss_respawns[0].get("at", 0.0) > 0.0)
+	check("the crowded den says so once", game.boss_respawns[0].get("warned") == true
+		and str(game.messages[game.messages.size() - 1]).contains("den calls"))
 	game.pals.resize(pad_from)
 	# and a forged non-alpha legend record still spawns the catchable heir
 	game.boss_respawns = [{"sid": "nibhand", "lv": 30, "pos": [1.0, 1.0],

@@ -1102,6 +1102,9 @@ func tick_boss_respawns() -> void:
 		if pals.size() >= MAX_PALS:
 			# a full world defers, never drops — a discarded legend respawn
 			# silences the den forever and strands the Accord (audit-33)
+			if sid in LEGENDARY_DEN and not br.get("warned", false):
+				br["warned"] = true # one voice per den — not a 60-second drum
+				log_msg(tr("The den calls, but the island is too crowded to answer"))
 			br["at"] = t + 60.0
 			continue
 		boss_respawns.remove_at(i)
