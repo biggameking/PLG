@@ -3438,6 +3438,7 @@ const HEAT_IDS := ["campfire", "torch", "furnace", "hot_spring"]
 var _heat_at := Vector2.INF # nearest_heat memo: the query point it answers for
 var _heat_d := 1e9
 var _heat_t := -1.0
+var _heat_n := -1 # structures.size() the memo answered for — place/raze invalidates
 
 func nearest_heat(at: Vector2) -> float:
 	# distance to the closest warmth source — the night chill threshold.
@@ -3445,7 +3446,8 @@ func nearest_heat(at: Vector2) -> float:
 	# memoized for ~0.4s within a tile: the chill check runs per physics frame
 	# and the hint lambdas ask twice more — a structures-wide scan is wasted
 	# on a position that barely moved
-	if t - _heat_t < 0.4 and at.distance_squared_to(_heat_at) < 0.56:
+	if t - _heat_t < 0.4 and _heat_n == structures.size() \
+			and at.distance_squared_to(_heat_at) < 0.56:
 		return _heat_d
 	var bd := 1e9
 	for k in structures:
@@ -3455,7 +3457,7 @@ func nearest_heat(at: Vector2) -> float:
 		if q.hp > 0 and q.mode in ["partner", "base"] \
 				and "fire" in q.spec.get("elements", []):
 			bd = minf(bd, at.distance_to(q.pos)) # only YOUR fire pal snuggles up
-	_heat_at = at; _heat_d = bd; _heat_t = t
+	_heat_at = at; _heat_d = bd; _heat_t = t; _heat_n = structures.size()
 	return bd
 
 func base_pals() -> Array:

@@ -986,13 +986,18 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.PAPER)
 	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
 		Ink.tag(self, Rect2(r.x - 220, 32, 208, 18))
-		draw_string(font, Vector2(r.x - 214, 45), tr("★ %s") % tr(str(game.MISSIONS[game.mission_idx]["text"])),
+		var mt: String = tr("★ %s") % tr(str(game.MISSIONS[game.mission_idx]["text"]))
+		while mt.length() > 4 and font.get_string_size(mt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > 202.0:
+			mt = mt.left(mt.length() - 2) # same column contract as the hints below
+		draw_string(font, Vector2(r.x - 214, 45), mt,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	var hy := 62.0
 	for h in game.active_hints(): # contextual nudges — retire themselves
 		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
-		var htxt: String = str(h.get("pad", h["text"])) if game.using_pad else str(h["text"])
-		draw_string(font, Vector2(r.x - 212, hy), tr("» ") + tr(htxt),
+		var htxt: String = tr("» ") + tr(str(h.get("pad", h["text"])) if game.using_pad else str(h["text"]))
+		while htxt.length() > 4 and font.get_string_size(htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > 200.0:
+			htxt = htxt.left(htxt.length() - 2) # clip to the column — unbounded text ran off the screen edge
+		draw_string(font, Vector2(r.x - 212, hy), htxt,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		hy += 17
 	var spire_n: int = game.net_spires if game.net != null and game.net.is_client() \
