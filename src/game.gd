@@ -3096,6 +3096,16 @@ func recipe(rid: String) -> Dictionary:
 			return r
 	return {}
 
+func recipe_tech(r: Dictionary) -> String:
+	# a recipe is tech-gated by its own "tech" field OR by the item it makes —
+	# the orb/gun/launcher ladder declares the gate on the ITEM row
+	# (audit-46: ten nodes charged points for recipes nothing gated)
+	var t46 := str(r.get("tech", ""))
+	if t46 == "":
+		var out46: Array = r.get("out", [""])
+		t46 = str(ItemData.ITEMS.get(out46[0] if out46.size() > 0 else "", {}).get("tech", ""))
+	return t46
+
 func craft(recipe_id: String) -> void:
 	var r := recipe(recipe_id)
 	if r.is_empty():
@@ -3113,10 +3123,11 @@ func craft(recipe_id: String) -> void:
 			return
 	var techs: Array = net_unlocked if (net != null and net.is_client()
 		and not net_unlocked.is_empty()) else unlocked
-	if r.get("tech", "") != "" and r["tech"] not in techs:
-		var tn44: String = r["tech"]
+	var need := recipe_tech(r)
+	if need != "" and need not in techs:
+		var tn44 := need
 		for t44 in StructureData.TECH:
-			if t44["id"] == r["tech"]:
+			if t44["id"] == need:
 				tn44 = tr(str(t44["name"]))
 				break
 		log_msg(tr("Unlock %s in the tech tree first") % tn44)

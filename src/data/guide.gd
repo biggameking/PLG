@@ -154,7 +154,7 @@ breed for the kin you want. Rare HUGE EGGS (nests, alphas,
 the odd grotto chest, the shadier merchants) always hatch a
 LUCKY variant: bigger, stronger, twice the drops, and coins
 to boot. You'll hear the chime when one spawns. Short on
-eggs? The brass kin gacha takes thirty gold a pull and
+eggs? The brass kin gacha takes 45 gold a pull and
 rattles one out — mostly plain, sometimes huge.
 
 Condense spare kin of the same species for star ranks;
@@ -389,7 +389,7 @@ const PAGES_ZH: Array[String] = [
 什么精灵就照着配。稀有的巨大蛋（巢里捡的、头目掉的、
 石窟箱里藏的、来路不明的商人卖的）孵出来必是幸运个体：
 更大、更强、双倍掉落，还自带金币。刷出一只你会听到
-那声脆响。蛋不够？黄铜扭蛋机三十金一抽，咔哒一声滚
+那声脆响。蛋不够？黄铜扭蛋机45金一抽，咔哒一声滚
 出一枚——多是普通蛋，偶尔出个大的。
 
 同种多余的精灵拿去凝缩攒星阶；雕像收走它们的魂。""",

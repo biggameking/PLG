@@ -1817,7 +1817,12 @@ func draw_craft(r: Vector2) -> void:
 	for rec in ItemData.RECIPES:
 		if rec.get("station") not in [game.craft_station, "hand"]:
 			continue
-		if rec.get("tech", "") != "" and rec["tech"] not in game.unlocked:
+		# same tech list craft() consults — a guest's gated recipes live in
+		# net_unlocked; filtering on the starter `unlocked` hid them (audit-46)
+		var techs46: Array = game.net_unlocked if (game.net != null and game.net.is_client() \
+				and not game.net_unlocked.is_empty()) else game.unlocked
+		var tgate := game.recipe_tech(rec)
+		if tgate != "" and tgate not in techs46:
 			continue
 		vis.append(rec)
 	craft_scroll = clampi(craft_scroll, 0, maxi(0, vis.size() - 20))
@@ -2326,8 +2331,11 @@ func draw_dex(r: Vector2) -> void:
 			draw_string(font, Vector2(rr.position.x + 40, y), str(tr(str(sp.get("name", sid)))).left(18),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 			var hz := SpeciesGen.habitat(sid) # Kindex habitat: where to hunt it
+			var hztxt := (tr(" z%d  ") % hz) if hz >= 0 \
+				else (tr(" den  ") if sid in Game.LEGENDARY_DEN else tr(" egg  "))
+			# non-zoned ids aren't habitat-less — dens and egg lines say where
 			draw_string(font, Vector2(rr.position.x + 310, y), tr("%s%s×%d") % [els.left(8),
-				(tr(" z%d  ") % hz) if hz >= 0 else "  ", cc],
+				hztxt, cc],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN)
 			# field guide: a caught species tells you what it drops
 			var dnames := []

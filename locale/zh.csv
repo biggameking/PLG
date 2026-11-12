@@ -965,3 +965,5 @@ You're starving — eat berries or cooked food (dpad-up opens the bag),You're st
 ", ",", ","，"
 "%d-%d / %d","%d-%d / %d","%d-%d / %d"
 "%s%s%s %s%s Lv%d T%d %s%d/%d","%s%s%s %s%s Lv%d T%d %s%d/%d","%s%s%s %s%s Lv%d T%d %s%d/%d"
+" den  "," den  "," 巢穴 "
+" egg  "," egg  "," 蛋孵 "

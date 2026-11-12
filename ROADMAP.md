@@ -1287,3 +1287,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   touch=on LMB→virtual-finger routing.
 - Verified-correct inventory covers renderer/input/caps/authority/audio.
 - 958-961/0. Audit doc: docs/reviews/audit-45-export-perf.md.
+
+### S93 — residual launch-blocker sweep (audit-46) — SHIPPED
+- HIGH: ten tech nodes were purchasable no-ops — orb/gun/launcher ladder
+  (incl. legendary_orb capstone) declared gates on dead item-row keys while
+  recipes ran un-gated; recipe_tech() resolves rec-or-item tech in craft()
+  + panel, with refuse/craft assertions at a real workbench.
+- MED: guest craft panel filtered starter unlocked → now uses net_unlocked
+  like craft(); gacha price aligned (desc/guide/code all 45g).
+- LOW: dex habitat shows den/egg provenance for non-zoned species.
+- Verified-correct: all missions/hints/protocol/consistency/gauntlet/dex.
+- 962/0/0. Audit doc: docs/reviews/audit-46-residual.md.

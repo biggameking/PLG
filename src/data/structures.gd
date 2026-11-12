@@ -569,7 +569,7 @@ const STRUCTURES = {
     4
    ]
   ],
-  "desc": "A brass capsule machine — feed it 20 gold and it rattles out an egg. Mostly ordinary; once in a while it coughs up something huge."
+  "desc": "A brass capsule machine — feed it 45 gold and it rattles out an egg. Mostly ordinary; once in a while it coughs up something huge."
  },
 "fossil_bed": {
   "id": "fossil_bed",

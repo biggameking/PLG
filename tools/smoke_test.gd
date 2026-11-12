@@ -575,6 +575,19 @@ func run() -> void:
 	var wood0 := game.item_count("wood")
 	game.craft("club")
 	check("craft club", game.item_count("wooden_club") == 1 and game.item_count("wood") == wood0 - 5)
+	# audit-46: the tech gate must bite — ten nodes charged tech points while
+	# their recipes sat un-gated (orb ladder/guns/launcher). Every recipe's
+	# resolved gate must name a real TECH node or a starter unlock.
+	var tech_ids := {}
+	for t46 in StructureData.TECH:
+		tech_ids[t46["id"]] = true
+	var bad_gate := []
+	for rec in ItemData.RECIPES:
+		var tg := game.recipe_tech(rec)
+		if tg != "" and not tech_ids.has(tg) and tg not in game.unlocked:
+			bad_gate.append(rec["id"])
+	check("every recipe gate names a real tech node", bad_gate.is_empty(),
+		"bad=%s" % bad_gate)
 	var free_xy = func(sid: String):
 		var bx := int(game.kinbox_pos.x); var by := int(game.kinbox_pos.y)
 		for r0 in range(2, 30):
@@ -611,9 +624,26 @@ func run() -> void:
 			check("timed crafting", false, "queue=%d" % game.craft_queue.size())
 		game.queue_crafts = false
 		game.craft_queue.clear()
+		# audit-46: the gate must bite at the bench — station check precedes
+		# the tech gate in craft(), so the refusal has to happen NEXT TO the
+		# workbench or it proves nothing
+		var lo0: int = game.item_count("legendary_orb")
+		for c46 in game.recipe("legendary_orb").get("cost", []):
+			game.add_item(c46[0], int(c46[1]) + 2) # materials can't mask the gate
+		game.craft("legendary_orb")
+		check("legendary_orb refuses without tech", game.item_count("legendary_orb") == lo0,
+			"the capstone orb was free-craftable on day 1 (audit-46)")
+		game.unlocked.append("legendary_orb")
+		game.craft("legendary_orb")
+		check("legendary_orb crafts once unlocked", game.item_count("legendary_orb") == lo0 + 1,
+			"unlock debit must yield the orb")
+		game.unlocked.erase("legendary_orb")
+		game.items.erase("legendary_orb")
 		p.pos = pos0
 	else:
 		check("timed crafting", false, "no workbench")
+		check("legendary_orb refuses without tech", false, "no workbench")
+		check("legendary_orb crafts once unlocked", false, "no workbench")
 
 	# worker + production
 	# caught kin leaves game.kin; make two explicit base kin (M+F) for worker/ranch tests
