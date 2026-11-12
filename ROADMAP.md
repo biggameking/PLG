@@ -1107,3 +1107,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   soul_infuse (55 effigies maxes one kin), not a lottery line.
 - Guide vol IX "after the signature" paragraph documents it (en+zh).
 - 2 assertions (pre-accord absence + post-accord presence); 884/0/1skip.
+
+### S81 — live-play evidence pass — SHIPPED
+- tools/play_s81.gd drives real verbs end-to-end and photographs each beat
+  (13 shots): shell new-game, real tree→wood drop, place_free workbench,
+  facing-throw sphere → "Caught Fenjelly Lv4!" → party 1/5, kinbox/guide/
+  dex/map/inv/pause panels, campfire night. 0 failures.
+- Screenshots caught + fixed: hint/mission text overflowing the right
+  screen edge (clipped to column), nearest_heat memo staleness on
+  place/raze (structures.size() invalidation).
+- Suite: 887/0/0.

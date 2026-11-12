@@ -679,3 +679,14 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
      4Hz is mathematically identical and drops every nested O(cells)
      helper to a quarter of the cost. AI that re-scans for a target
      which can't move (chests) should rescan on a clock, not per frame.
+
+123. **Run the game and look at it.** Static reviews missed two defects
+     that one screenshot caught in a second: text drawn past the screen
+     edge, and the hint column a player reads every minute. A real
+     playthrough harness (real verbs, real frames, PNG per beat) is a
+     first-class audit — write one per visual domain, keep the shots.
+124. **A memo needs an invalidation key, not just a TTL.** The heat
+     cache was correct until a campfire appeared inside its 0.4s window.
+     Cache keys must include the thing that can change the answer —
+     `structures.size()` for structural scans, a dirty counter for
+     derived data. TTL alone is a staleness bomb with a fuse.
