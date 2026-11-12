@@ -48,3 +48,33 @@ co-op trust hole. All fixed or documented below. Baseline: DAY_LEN 240s.
 - New asserts: lv1/lucky resell below sticker, gacha EV < slot, cake >
   bred-egg exits, sleep wakes hungry, mdeaths save round-trip, effigy 99.
 - `==== SIM: 0 failures ====`
+
+## Recheck (verifier pass) — closed
+
+The post-fix cold verifier confirmed all eight claims (sell baseline, gacha EV,
+cake/mega_orb pricing, sleep hunger, `merchant_deaths` save order, effigy 99,
+wanted-reset semantics, `_struct_gen` coverage) and flagged two real holes
+plus one fragility, now fixed:
+
+- **Guest sell sticker drifted (hud.gd).** The mirrored buyback literal still
+  read `40 + lv*8` while `pal_sell_price` moved to base 20 — guests saw ~20g
+  over the real payout. Sticker now mirrors base 20, and a lockstep smoke
+  check recomputes both sides so the formulas can't silently fork again.
+- **`kin_gacha` had no client gate (hud.gd → net.gd → game.gd).** A guest pull
+  ran `gacha_pull()` fully client-side — unvalidated host bypass inconsistent
+  with every neighboring paid verb. Now `net.pay("gacha", {gold_coin: GACHA_COST})`
+  holds the gold client-side and `gacha_req` flies; host validates ghost reach
+  (`_nearest_struct("kin_gacha", at, 6.0)`), rolls with host rng, ships the egg
+  via `give_remote`, and refuses echo `pay_rej` (hold refunds). `gacha_done`
+  settles the hold and logs the roll.
+- **Division-order fragility (game.gd).** `merchant_deaths` divides the bounty;
+  the increment lands first today, but `maxi(1, merchant_deaths)` makes a
+  future reorder non-fatal.
+
+Suite after recheck: `903 checks, 0 failures, 0 skipped`. Balance sim still
+`0 failures`. New regression pins: sticker/formula lockstep, ghostless
+`gacha_req` refusal, host roll + bag delivery through the remote path.
+
+Coordinates note surfaced during fixture work: `structures` keys and
+`_ghost_at`/`player.pos` all live in *tile* space (world is 220² cells); the
+first fixture divided by 32 and missed reach. Cell-space is the contract.

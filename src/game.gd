@@ -7188,6 +7188,21 @@ func gacha_pull() -> void:
 	log_msg(tr("The gacha rattles — out rolls a %s") % tr(str(ItemData.ITEMS[eid]["name"])))
 	sfx_play("catch")
 
+func gacha_req_remote(pid: int) -> String:
+	# the host feeds the slot for a guest: the asker's bag already gave the
+	# gold (net.pay hold — a refusal echoes pay_rej), we only gate on reach
+	# and roll the egg with host authority. Returns "" on refusal.
+	var at := _ghost_at(pid)
+	if at.x < -1e8:
+		return ""
+	var site := _nearest_struct("kin_gacha", at, 6.0)
+	if site.x < 0:
+		note_remote(pid, "Stand by the brass mouth to pull")
+		return ""
+	var eid: String = "huge_kin_egg" if rng.chance(0.1) else "kin_egg"
+	give_remote(pid, eid, 1)
+	return eid
+
 func board_hunt_credit(sp: String, pid := 0) -> void:
 	# the guild pays for thinning whether the kin leaves in a bag or a box —
 	# and whoever did the thinning pockets the bounty, keeper or guest
@@ -7338,7 +7353,7 @@ func hit_merchant(dmg: float, pid := 0) -> void:
 		floater(merchant.pos, tr("GUARDS!"), "#ff5544")
 	if merchant_hp <= 0:
 		merchant_deaths += 1 # repeat murders pay a fraction — not a farm
-		var drops_n := maxi(4, rng.int_range(30, 60) / merchant_deaths)
+		var drops_n := maxi(4, rng.int_range(30, 60) / maxi(1, merchant_deaths))
 		spawn_drop("gold_coin", drops_n, merchant.pos)
 		floater(merchant.pos, tr("+%dg") % drops_n, "#ffd76e")
 		log_msg(tr("The merchant is dead. The Iron Pact remembers"))

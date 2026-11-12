@@ -792,7 +792,11 @@ func interact() -> void:
 					game.notice_board_action()
 				return
 			"kin_gacha":
-				game.gacha_pull()
+				if game.net != null and game.net.is_client():
+					if game.net.pay("gacha", {"gold_coin": Game.GACHA_COST}):
+						game.net.rpc("gacha_req") # the host rolls and ships the egg
+				else:
+					game.gacha_pull()
 				return
 			"fossil_bed":
 				if game.net != null and game.net.is_client():
@@ -2113,11 +2117,11 @@ func sellable_pals() -> Array: # only your OWN kin ride the sell rail — guests
 	if game.net != null and game.net.is_client():
 		for d in game.net_box: # a guest's roster is the mirrored dict, not game.box
 			var sp: Dictionary = SpeciesData.species_of(str(d["sid"]))
-			# host recomputes the real buyback at r_sell_pal — alpha isn't on the
-			# wire row, so the sticker here can sit a hair under the paid price
+			# mirror of pal_sell_price — keep the formula in lockstep (base 20);
+			# alpha isn't on the wire row, so an alpha sticker reads under paid
 			out.append({"uid": int(d["uid"]), "lv": int(d["lv"]), "sid": str(d["sid"]),
 				"name": str(tr(str(sp.get("name", d["sid"])))),
-				"price": 40 + int(d["lv"]) * 8 + (60 if d["lucky"] else 0) \
+				"price": 20 + int(d["lv"]) * 8 + (60 if d["lucky"] else 0) \
 					+ int(d["star"]) * 50})
 		return out
 	for bp in game.box:

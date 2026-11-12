@@ -1196,6 +1196,28 @@ func egg_done(egg_id: String) -> void:
 	game.log_msg(tr("Egg in the incubator — 90s to hatch"))
 
 @rpc("any_peer", "call_remote", "reliable")
+func gacha_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "gacha")
+		return
+	var eid := game.gacha_req_remote(pid)
+	if eid == "":
+		_pay_rej(pid, "gacha") # reach refused — the gold hold comes home
+	elif multiplayer.get_peers().has(pid):
+		rpc_id(pid, "gacha_done", eid)
+
+@rpc("authority", "call_remote", "reliable")
+func gacha_done(eid: String) -> void:
+	if is_host:
+		return
+	pay_settle("gacha", false) # the gold stayed in the slot — the egg is ours
+	game.log_msg(tr("The gacha rattles — out rolls a %s") \
+		% tr(str(ItemData.ITEMS.get(str(eid), {}).get("name", eid))))
+
+@rpc("any_peer", "call_remote", "reliable")
 func infuse_req(uid: float) -> void:
 	if not is_host:
 		return

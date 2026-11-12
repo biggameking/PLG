@@ -8250,6 +8250,41 @@ func run() -> void:
 	check("pact ledger rides the save", sv36 is Dictionary and int(sv36.get("mdeaths", 0)) == 3)
 	game.merchant_deaths = 0
 
+	# --- audit-37 recheck: guest sell sticker mirrors the real buyback ---
+	# hud's guest list can't see bp objects, so it mirrors pal_sell_price in
+	# literals — this lockstep check fails if either side's base drifts again
+	var mirror_pal: Kin = game.gen_pal("loampuff", 3, p.pos)
+	mirror_pal.lucky = true; mirror_pal.star = 2
+	var mirror_price: int = 20 + 3 * 8 + 60 + 2 * 50 # hud.gd guest-sticker literal
+	check("guest sell sticker mirrors pal_sell_price",
+		mirror_price == game.pal_sell_price(mirror_pal),
+		"mirror=%d real=%d" % [mirror_price, game.pal_sell_price(mirror_pal)])
+	game.entity_layer.remove_child(mirror_pal)
+	mirror_pal.free()
+
+	# guests pull the gacha over the wire: reach-gated, host-rolled, refunded
+	# on refusal — the asker's gold is a net.pay hold, never client-trusted
+	check("gacha_req refuses a ghostless asker", game.gacha_req_remote(77) == "")
+	game.net.spawn_ghost(88)
+	var gacha_site := Vector2i(-1, -1)
+	for off in range(2, 10): # cells are the world unit — find a bare tile
+		var cand := Vector2i(int(p.pos.x) + off, int(p.pos.y))
+		if not game.structures.has(cand):
+			gacha_site = cand; break
+	game.structures[gacha_site] = {"id": "kin_gacha", "pos": gacha_site,
+		"hp": 120, "level": 1}
+	game._struct_gen += 1
+	game.net.ghosts[88].net_pos = Vector3(gacha_site.x + 0.5, gacha_site.y + 0.5, 0)
+	var bag_eggs: int = game.item_count("kin_egg") + game.item_count("huge_kin_egg")
+	var rolled := game.gacha_req_remote(88)
+	check("gacha_req rolls host-side by the brass mouth",
+		rolled in ["kin_egg", "huge_kin_egg"], "rolled=%s" % rolled)
+	check("the remote egg lands in a bag",
+		game.item_count("kin_egg") + game.item_count("huge_kin_egg") == bag_eggs + 1)
+	game.structures.erase(gacha_site)
+	game._struct_gen += 1
+	game.net.ghosts.erase(88)
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is
