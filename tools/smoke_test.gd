@@ -6803,8 +6803,11 @@ func run() -> void:
 		"windup=%.2f tail=%s" % [wb.slam_windup, str(game.floaters.back().get("t", ""))])
 	check("boss stayed planted through the windup", wb.pos == root_pos)
 	# the boss unroots once the slam fires — re-anchor the ghost at arm's
-	# reach before asserting the ring count, or a walking boss flakes the check
-	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 0.5, wb.pos.y, 0)
+	# reach before asserting the ring count, or a walking boss flakes the check.
+	# Same-point anchor: audit-43's endpoint exemption still leaves interior
+	# cells on a diagonal at any nonzero offset — sharing the boss's point
+	# has none, so LoS can't flake.
+	game.net.ghosts[99].net_pos = Vector3(wb.pos.x, wb.pos.y, 0)
 	check("a guest inside the ring counts", wb.pact_slam() == 1,
 		"hits — ghost hugging close sits inside the 2.6 zone")
 	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 40, wb.pos.y, 0)
@@ -8371,8 +8374,27 @@ func run() -> void:
 	# every pause row resolves — a dead menu verb is a dead verb for all inputs
 	var hud36 = load("res://src/hud.gd")
 	check("pause INVENTORY row routes", "m_inv" in hud36.SHELL_ACTS)
-	# the catch-odds preview opens on touch too (gate removed, facing-target added)
 	var hudsrc := FileAccess.get_file_as_string("res://src/hud.gd")
+	# audit-48: every act any UI can emit must reach run_click's routing —
+	# the m_join lesson (rule 49) generalized into a census. Emitted ids =
+	# title/pause row[1]s + literal "act":"x" emitters; handled ids = names
+	# inside run_click's body + SHELL_ACTS + the kinbox RPC table.
+	var rc_i: int = hudsrc.find("func run_click")
+	var rc_body: String = hudsrc.substr(rc_i, hudsrc.find("\nfunc ", rc_i + 10) - rc_i)
+	var handled := {}
+	for hm48 in RegEx.create_from_string("\"([a-z_0-9]+)\"").search_all(rc_body):
+		handled[hm48.get_string(1)] = true
+	for sa48 in hudn.SHELL_ACTS:
+		handled[sa48] = true
+	for kb48 in ["box_out", "party_in", "lead", "deploy", "base_in", "fav", "butcher", "sell_pal"]:
+		handled[kb48] = true
+	var emitted := {}
+	for rw48 in hudn.title_rows() + hudn.pause_rows():
+		emitted[str(rw48[1])] = true
+	for em48 in RegEx.create_from_string("\"act\":\\s*\"([a-z_0-9]+)\"").search_all(hudsrc):
+		emitted[em48.get_string(1)] = true
+	var dead_acts: Array = emitted.keys().filter(func(a): return not handled.has(a))
+	check("every emitted act is routed", dead_acts.is_empty(), "dead=%s" % dead_acts)
 	check("catch preview isn't touch-gated",
 		not ("tiers2.is_empty() and not game.touch_ui" in hudsrc))
 	var netsrc := FileAccess.get_file_as_string("res://src/net.gd")
