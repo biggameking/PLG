@@ -383,6 +383,11 @@ func pal_sync(arr: Array) -> void:
 	if is_host:
 		return # the host's own broadcast echoes back — it's the authority already
 	var seen := {}
+	var byid := {} # one O(pals) pass per packet — find_net_pal's per-row linear
+	# scan ran ~48k compares/broadcast at 220 kin (audit-45)
+	for q in game.pals:
+		if q.net_id > 0:
+			byid[q.net_id] = q
 	for e in arr:
 		if not (e is Array) or e.size() < 6 or not Game._fin(e[0]):
 			continue
@@ -390,7 +395,7 @@ func pal_sync(arr: Array) -> void:
 		if nid <= 0:
 			continue # host uids are >=1 — a zero/negative row would spawn an untrackable phantom every tick
 		seen[nid] = true
-		var p := game.find_net_pal(nid)
+		var p: Kin = byid.get(nid)
 		if p == null:
 			# [species, x, y, lv, mode, lucky, net_id, boss, alpha, spire_tag,
 			#  mounted_by, owner_id, soul_boost] — spawn_net_pal's wire shape
@@ -765,12 +770,13 @@ func got_loot(id: String, n: int) -> void:
 # converges on the next broadcast. Same trust rules as take_drop — the
 # sender's ghost must actually be standing near the thing it touches.
 func struct_state_pack() -> Array:
-	var seen := []
+	var seen := {} # dict-dedupe — ~1600 cells × ~400 dicts ran a linear
+	# `st in seen` scan every 0.5s broadcast (audit-45)
 	var arr := []
 	for k in game.structures:
 		var st = game.structures[k]
-		if st not in seen:
-			seen.append(st)
+		if not seen.has(st):
+			seen[st] = true
 			var o: Vector2i = st.get("pos", k) # origin cell — the wire key
 			arr.append([st["id"], o.x, o.y, st.get("store", {}),
 				game.struct_wire_state(st)])

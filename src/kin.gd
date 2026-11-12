@@ -550,26 +550,55 @@ func anchor_pos() -> Vector2:
 			return Vector2(g.net_pos.x, g.net_pos.y)
 	return game.player.pos
 
+var _foe_scan_t := -1.0
+var _foe_cache: Kin = null
+var _grab_cache = null
+
+func _rescan_foe() -> void:
+	# the O(pals) threat sweep on a 4Hz clock, staggered per-kin — six partners
+	# rescanning every physics frame was ~10k checks/frame at cap (audit-45)
+	_foe_cache = null
+	if stance == "passive":
+		return
+	var bd := 6.0 if stance != "aggressive" else 9.0
+	for p in game.pals:
+		if p.mode != "wild" or p.hp <= 0:
+			continue
+		if stance != "aggressive" \
+				and p.aggro != 0 and p.aggro != uid and not p.raid \
+				and not (p.aggro > 0 and p.aggro in game.party):
+			continue # threats: hunting the player, me, a party member, or raiders
+		var d := pos.distance_to(p.pos)
+		if d < bd:
+			bd = d
+			_foe_cache = p
+
+func _rescan_drop() -> void:
+	_grab_cache = null
+	var gd := 16.0 # squared budget — fetch radius is 4 cells
+	for d in game.drops:
+		var dd := pos.distance_squared_to(d["pos"])
+		if dd < gd:
+			gd = dd; _grab_cache = d
+
 func partner_ai(dt: float) -> void:
 	if not visible:
 		pos = anchor_pos()
 		return
-	# attack nearest wild kin threatening player — stance tunes who counts
-	# (the island kin commands: auto defends, aggressive hunts on sight)
-	var best: Kin = null
-	var bd := 6.0 if stance != "aggressive" else 9.0
-	if stance != "passive":
-		for p in game.pals:
-			if p.mode != "wild" or p.hp <= 0:
-				continue
-			if stance != "aggressive" \
-					and p.aggro != 0 and p.aggro != uid and not p.raid \
-					and not (p.aggro > 0 and p.aggro in game.party):
-				continue # threats: hunting the player, me, a party member, or raiders
-			var d := pos.distance_to(p.pos)
-			if d < bd:
-				bd = d
-				best = p
+	if _foe_scan_t < 0.0:
+		_foe_scan_t = 0.25 * float(absi(uid) % 8) / 8.0 # stagger the rescan phases
+	_foe_scan_t -= dt
+	if _foe_scan_t <= 0.0:
+		_foe_scan_t = 0.25
+		_rescan_foe()
+		_rescan_drop()
+	if _foe_cache != null and (not is_instance_valid(_foe_cache) \
+			or _foe_cache.hp <= 0 or _foe_cache.mode != "wild"):
+		_foe_cache = null
+	# stance gates the cached lock every frame — aggressive→passive drops the
+	# target NOW, not when the rescan clock next fires
+	var best: Kin = _foe_cache if stance != "passive" else null
+	var bd := pos.distance_to(best.pos) if best != null else 1e9
 	# the island focus fire: whatever the player just hit outranks the nearest threat
 	var focus: Kin = game.focus_target
 	if stance != "passive" and is_instance_valid(focus) and focus.hp > 0 \
@@ -591,12 +620,9 @@ func partner_ai(dt: float) -> void:
 			step_toward(best.pos, dt)
 		return
 	# the island fetch: an idle partner pads over to nearby drops and bags them
-	var grab = null
-	var gd := 16.0
-	for d in game.drops:
-		var dd := pos.distance_squared_to(d["pos"])
-		if dd < gd:
-			gd = dd; grab = d
+	if _grab_cache != null and not (_grab_cache in game.drops):
+		_grab_cache = null # a hauler (or despawn) already took it
+	var grab = _grab_cache
 	if grab != null:
 		if pos.distance_squared_to(grab["pos"]) > 0.4:
 			step_toward(grab["pos"], dt)
@@ -605,6 +631,7 @@ func partner_ai(dt: float) -> void:
 			game.floater(grab["pos"], tr("+%d %s") % [grab["n"],
 				tr(str(ItemData.ITEMS.get(grab["id"], {}).get("name", grab["id"])))], "#ffe08a")
 			game.take_drop(grab)
+			_grab_cache = null
 		return
 	var anchor := anchor_pos()
 	if pos.distance_to(anchor) > 1.8:

@@ -2556,7 +2556,9 @@ func danger_active() -> bool:
 	if net != null and net.is_client():
 		return net_danger # a client can't see raid flags — the host ships the verdict at 2Hz
 	# what makes the island tense: a live raid wave, a running gauntlet,
-	# or an enraged (phase-2) boss still standing
+	# or an enraged (phase-2) boss still standing. Deliberately NOT memoized —
+	# its callers are truth-gates (sleep, tests) that read it right after the
+	# raid flag flips; ~220 field reads is ~1us, cheaper than a stale answer
 	if not gauntlet.is_empty():
 		return true
 	for q in pals:
@@ -2624,10 +2626,12 @@ func _process(dt: float) -> void:
 	update_projectiles(dt)
 	tick_box(dt)
 	tick_death_marks()
-	# floaters age
-	for f in floaters:
+	# floaters age — backward erase, no per-frame filter alloc (audit-45)
+	for i in range(floaters.size() - 1, -1, -1):
+		var f: Dictionary = floaters[i]
 		f["age"] += dt
-	floaters = floaters.filter(func(f): return f["age"] < 1.2)
+		if f["age"] >= 1.2:
+			floaters.remove_at(i)
 	# ground-drop pickup on walk-over (host only — a client's bags live in
 	# net_drops and pay through the take_drop RPC, never this loop)
 	if net == null or not net.is_client():
@@ -2650,7 +2654,7 @@ func _process(dt: float) -> void:
 				take_drop(d)
 	# client-side drop replicas: we ask, the host decides (and pays via got_loot)
 	if net != null and net.is_client():
-		for did in net_drops.keys():
+		for did in net_drops: # direct iter — the drops dict isn't mutated here
 			if drops_wanted.has(did):
 				continue
 			var dd: Dictionary = net_drops[did]
@@ -2660,11 +2664,13 @@ func _process(dt: float) -> void:
 	# respawn trickle + stump regrow + raid sweep are world mutations —
 	# host territory; a client replays them and gets phantom divergence
 	if net == null or not net.is_client():
-		var wild_n := 0
-		for wp in pals:
-			if wp.mode == "wild":
-				wild_n += 1
-		if wild_n < 30 and rng.chance(dt * 0.15):
+		if t - _wild_n_t > 0.5: # the O(pals) recount ran every frame (audit-45)
+			_wild_n_t = t
+			_wild_n = 0
+			for wp in pals:
+				if wp.mode == "wild":
+					_wild_n += 1
+		if _wild_n < 30 and rng.chance(dt * 0.15):
 			spawn_wild()
 		# stumps regrow into trees over a few in-game days
 		if rng.chance(dt * 0.02):
@@ -2677,7 +2683,9 @@ func _process(dt: float) -> void:
 		# base raid waves
 		tick_raid(dt)
 		tick_supply(dt)
-		tick_raider_sweep()
+		if t - _raid_sweep_t > 2.0: # 240s expiry needs no per-frame O(pals) pass
+			_raid_sweep_t = t
+			tick_raider_sweep()
 	tick_migration(dt) # deliberate local-fauna authority — see tick_migration
 
 func tick_raider_sweep() -> void:
@@ -2742,11 +2750,11 @@ func can_place(sid: String, tx: int, ty: int) -> bool:
 	return true
 
 func kinbox_count() -> int:
-	var seen := []
+	var seen := {}
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st["id"] == "kinbox" and st not in seen:
-			seen.append(st) # footprint cells share one st dict — dedupe
+		if st["id"] == "kinbox":
+			seen[st] = true # footprint cells share one st dict — dedupe
 	return seen.size()
 
 func nearest_kinbox(at: Vector2) -> Vector2i:
@@ -2783,10 +2791,9 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	if sid == "kinbox" and kinbox_count() >= 1 + MAX_EXTRA_BOXES:
 		log_msg(tr("Max %d kinboxes (base + outposts)") % (1 + MAX_EXTRA_BOXES))
 		return false
-	var seen_st := []
+	var seen_st := {}
 	for k in structures:
-		if structures[k] not in seen_st:
-			seen_st.append(structures[k]) # dedupe footprint cells → true count
+		seen_st[structures[k]] = true # dedupe footprint cells → true count
 	if seen_st.size() >= MAX_STRUCTURES:
 		log_msg(tr("Build limit reached (%d)") % MAX_STRUCTURES)
 		return false
@@ -2989,12 +2996,14 @@ func tick_repairs(dt: float) -> void:
 			fixers += 1.0
 	if fixers <= 0.0:
 		return
-	var seen := []
+	var seen := {} # dict-dedupe — footprint cells share one st; a linear
+	# `st in seen` scan over ~400 dicts × ~1600 cells ran ~600k compares/frame
+	# (audit-45). Same shape save_game already uses.
 	for k in structures:
 		var st: Dictionary = structures[k]
-		if st in seen:
-			continue # footprint cells share one st dict
-		seen.append(st)
+		if seen.has(st):
+			continue
+		seen[st] = true
 		var sd: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
 		var mx: float = float(sd.get("hp", 4000 if sd.get("anchor", false) else 200))
 		if st.get("hp", mx) < mx:
@@ -3584,6 +3593,9 @@ var _heat_d := 1e9
 var _heat_t := -1.0
 var _heat_n := -1 # structure generation the memo answered for — bumps on any cell write
 var _struct_gen := 0 # same-size swap (raze A, build B) must still invalidate (audit-36)
+var _wild_n := 0
+var _wild_n_t := -1.0
+var _raid_sweep_t := -3.0
 
 func nearest_heat(at: Vector2) -> float:
 	# distance to the closest warmth source — the night chill threshold.
@@ -3603,6 +3615,25 @@ func nearest_heat(at: Vector2) -> float:
 				and "fire" in q.spec.get("elements", []):
 			bd = minf(bd, at.distance_to(q.pos)) # only YOUR fire pal snuggles up
 	_heat_at = at; _heat_d = bd; _heat_t = t; _heat_n = _struct_gen
+	return bd
+
+var _spring_d := 1e9
+var _spring_t := -1.0
+var _spring_n := -1
+var _spring_at := Vector2.ZERO
+
+func nearest_spring(at: Vector2) -> float:
+	# distance to the closest hot_spring cell — the keeper's soak check ran
+	# this O(structure-cells) scan every physics frame while injured
+	# (audit-45). Same memo shape as nearest_heat.
+	if t - _spring_t < 0.4 and _spring_n == _struct_gen \
+			and at.distance_squared_to(_spring_at) < 0.56:
+		return _spring_d
+	var bd := 1e9
+	for k in structures:
+		if structures[k]["id"] == "hot_spring":
+			bd = minf(bd, at.distance_to(Vector2(k.x + 0.5, k.y + 0.5)))
+	_spring_at = at; _spring_d = bd; _spring_t = t; _spring_n = _struct_gen
 	return bd
 
 func base_pals() -> Array:
@@ -6975,10 +7006,9 @@ func net_place(sid: String, tx: int, ty: int, pid: int) -> bool:
 	var gp = net.ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 9.0:
 		return false # fail closed: no ghost, no build — proximity is mandatory
-	var seen_st := []
+	var seen_st := {}
 	for k in structures:
-		if structures[k] not in seen_st:
-			seen_st.append(structures[k])
+		seen_st[structures[k]] = true
 	if seen_st.size() >= MAX_STRUCTURES:
 		return false
 	if not can_place(sid, tx, ty): # terrain/footprint/cap rules still hold

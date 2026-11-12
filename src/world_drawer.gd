@@ -35,11 +35,28 @@ const GROUND_NAMES := {
 	World.Tile.DIRT: "dirt", World.Tile.FARMLAND: "farmland",
 }
 
+# Variant names are prebaked per tile type — the old per-tile string concat
+# ("base_%d" % v) allocated ~15k strings/frame at max zoom-out (audit-45).
+static var _VNAMES := {}
+
+static func _vnames() -> Dictionary:
+	if _VNAMES.is_empty():
+		for t in [World.Tile.GRASS, World.Tile.TALLGRASS, World.Tile.FLOWER,
+				World.Tile.SAND, World.Tile.WATER, World.Tile.STONEFIELD,
+				World.Tile.DIRT, World.Tile.FARMLAND]:
+			var base: String = GROUND_NAMES[t]
+			var n := 4 if t == World.Tile.GRASS else 2
+			var a := []
+			for i in n:
+				a.append(base + "_" + str(i))
+			_VNAMES[t] = a
+	return _VNAMES
+
 func draw_ground(x: int, y: int) -> void:
 	var t: int = world.tile_at(x, y)
-	var base: String = GROUND_NAMES.get(t, "grass")
+	var names: Array = _vnames().get(t, _vnames()[World.Tile.GRASS])
 	var v := int(Rng.hash2(x, y, world.seed + 55) * 4.0)
-	var name := base + "_" + str(v if t == World.Tile.GRASS else (v % 2))
+	var name: String = names[v if t == World.Tile.GRASS else (v % 2)]
 	if not cells.has(name):
 		name = "grass_0"
 	var p := Iso.to_screen(x + 0.5, y + 0.5, world.elev_at(x, y))

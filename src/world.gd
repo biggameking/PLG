@@ -15,6 +15,8 @@ var spawn_zone: PackedByteArray = PackedByteArray()
 var spawn := Vector2i.ZERO
 var structures := {}                                # idx -> structure node id
 var seed := 1
+var terrain_gen := 0 # bumped by generate() — the drawer repaints only when
+# this or the visible region changes (tiles/elev/ramp are write-once)
 
 enum Tile { GRASS, TALLGRASS, FLOWER, SAND, WATER, STONEFIELD, DIRT, FARMLAND }
 enum Decor { NONE, TREE_A, TREE_B, ROCK, ORE_GOLD, ORE_COAL, BERRY, STUMP }
@@ -210,4 +212,5 @@ func generate(new_seed: int) -> Vector2i:
 			var mix := elev_at(x - 1, y) != e0 or elev_at(x + 1, y) != e0 or elev_at(x, y - 1) != e0 or elev_at(x, y + 1) != e0
 			ramp[i] = 1 if (mix and Rng.hash2(x, y, seed + 913) < 0.45) else 0
 	spawn = Vector2i(cx, cy)
+	terrain_gen += 1
 	return spawn

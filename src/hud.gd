@@ -85,8 +85,28 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var pf = load("res://fonts/PressStart2P-Regular.ttf")
 	if pf != null:
-		pf.fallbacks = [font] # CJK and icons fall through to the system face
+		# fallback ladder: pixel Latin → bundled pixel CJK → bundled symbols →
+		# system face. SystemFont can't rasterize on web/Android (audit-45) —
+		# the bundled subsets carry every zh + HUD glyph there. load_dynamic_font
+		# reads the raw .ttf, so no .import sidecar is needed in the export.
+		var cjk := FontFile.new()
+		var chain: Array[Font] = []
+		if cjk.load_dynamic_font("res://fonts/FusionPixel12px.ttf") == OK:
+			chain.append(cjk)
+		var syms := FontFile.new()
+		if syms.load_dynamic_font("res://fonts/DejaVuSymbols.ttf") == OK:
+			chain.append(syms)
+		chain.append(font)
+		pf.fallbacks = chain
 		font = pf # the island's own voice: pixel type, not the engine default
+
+var _memo_t := -1.0      # 4Hz hud-string/scan refresh clock (audit-45)
+var _mouse_finger := false # LMB-through-touch active (desktop forced touch_ui)
+var _memo_boss: Kin = null
+var _memo_den := ""
+var _memo_raid_txt := ""
+var _memo_mission_txt := ""
+var _memo_hints: Array = []
 
 var nav_hold := 0.0 # menu hold-to-repeat clock — edge press moves once, hold marches
 func _process(dt: float) -> void:
@@ -161,6 +181,25 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if event is InputEventScreenDrag:
 			touch_move(event.position, event.index)
+			get_viewport().set_input_as_handled()
+			return
+		# desktop "TOUCH CONTROLS: on" — a mouse emits no ScreenTouch, so the
+		# row rendered dead buttons that still swallowed clicks (audit-45).
+		# Route LMB through the touch path under a synthetic finger index.
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				if touch_zone_hit(event.position):
+					touch_down(event.position, 99)
+					_mouse_finger = true
+					get_viewport().set_input_as_handled()
+					return
+			elif _mouse_finger:
+				touch_up(99)
+				_mouse_finger = false
+				get_viewport().set_input_as_handled()
+				return
+		if _mouse_finger and event is InputEventMouseMotion:
+			touch_move(event.position, 99)
 			get_viewport().set_input_as_handled()
 			return
 	# text panels type in EVERY state — the pause shell can open them, so the
@@ -982,23 +1021,51 @@ func _draw() -> void:
 	var wcol := Ink.VIOLET if game.weather == "storm" else (Ink.TEAL if game.weather == "rain" else (Ink.GOLD if game.weather == "drought" else Ink.INK))
 	draw_string(font, Vector2(r.x - 132, 25), tr("Day %d  %02d:00%s") % [game.day, int(game.tod), wicon],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, wcol)
-	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0: # the island raid horn
+	# 4Hz memo — the boss/den O(pals) scans, tr() formats, and the string-trim
+	# shaping loops all ran per frame here (audit-45). Rebuilt on a tick;
+	# drawn every frame from the cache below.
+	if game.t - _memo_t > 0.25:
+		_memo_t = game.t
+		_memo_boss = null
+		var bd := 18.0
+		for q in game.pals:
+			if q.hp <= 0 or not (q.boss or q.alpha):
+				continue
+			if q.mode == "box" or q.mode == "partner":
+				continue
+			var dd: float = q.pos.distance_to(game.player.pos)
+			if dd < bd:
+				bd = dd; _memo_boss = q
+		_memo_den = ""
+		if game.crowned:
+			for q in game.pals:
+				if is_instance_valid(q) and q.mode == "wild" and q.species_id in Game.LEGENDARY_DEN:
+					_memo_den = tr(" · warden up") if q.boss else tr(" · heir roams")
+					break
+		_memo_raid_txt = ""
+		if game.raid_t < 30.0:
+			_memo_raid_txt = tr("RAID IN %ds") % int(ceilf(game.raid_t))
+		_memo_mission_txt = ""
+		if game.mission_idx < game.MISSIONS.size():
+			var mt: String = tr("★ %s") % tr(str(game.MISSIONS[game.mission_idx]["text"]))
+			while mt.length() > 4 and font.get_string_size(mt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > 202.0:
+				mt = mt.left(mt.length() - 2) # same column contract as the hints below
+			_memo_mission_txt = mt
+		_memo_hints.clear()
+		var hkey: String = "touch" if game.touch_ui else ("pad" if game.using_pad else "")
+		for h in game.active_hints():
+			var htxt: String = tr("» ") + tr(str(h.get(hkey, h["text"])) if hkey != "" else str(h["text"]))
+			while htxt.length() > 4 and font.get_string_size(htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > 200.0:
+				htxt = htxt.left(htxt.length() - 2) # clip to the column — unbounded text ran off the screen edge
+			_memo_hints.append(htxt)
+	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0 and _memo_raid_txt != "": # the island raid horn
 		var raid_r := Rect2(r.x / 2 - 80, 8, 160, 22)
 		draw_rect(raid_r, Color(Ink.RED, 0.85))
 		draw_rect(raid_r, Ink.INK, false, 1.5)
-		draw_string(font, Vector2(r.x / 2 - 62, 24), tr("RAID IN %ds") % int(ceilf(game.raid_t)),
+		draw_string(font, Vector2(r.x / 2 - 62, 24), _memo_raid_txt,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.PAPER)
 	# boss bar: nearest alpha/boss in the fray gets a name + hp strip
-	var boss: Kin = null
-	var bd := 18.0
-	for q in game.pals:
-		if q.hp <= 0 or not (q.boss or q.alpha):
-			continue
-		if q.mode == "box" or q.mode == "partner":
-			continue
-		var dd: float = q.pos.distance_to(game.player.pos)
-		if dd < bd:
-			bd = dd; boss = q
+	var boss: Kin = _memo_boss if is_instance_valid(_memo_boss) else null
 	if boss:
 		var frac: float = clampf(boss.hp / boss.max_hp, 0.0, 1.0)
 		var bw := 240.0
@@ -1010,20 +1077,13 @@ func _draw() -> void:
 			tr("%s %s Lv%d%s") % [tr("BOSS") if boss.boss else "α", tr(str(boss.spec["name"])), boss.level,
 				tr(" ☠%dg") % boss.bounty if boss.bounty > 0 else ""],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.PAPER)
-	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
+	if _memo_mission_txt != "": # the island guide rope
 		Ink.tag(self, Rect2(r.x - 220, 32, 208, 18))
-		var mt: String = tr("★ %s") % tr(str(game.MISSIONS[game.mission_idx]["text"]))
-		while mt.length() > 4 and font.get_string_size(mt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > 202.0:
-			mt = mt.left(mt.length() - 2) # same column contract as the hints below
-		draw_string(font, Vector2(r.x - 214, 45), mt,
+		draw_string(font, Vector2(r.x - 214, 45), _memo_mission_txt,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	var hy := 62.0
-	for h in game.active_hints(): # contextual nudges — retire themselves
+	for htxt in _memo_hints: # contextual nudges — retire themselves
 		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
-		var hkey: String = "touch" if game.touch_ui else ("pad" if game.using_pad else "")
-		var htxt: String = tr("» ") + tr(str(h.get(hkey, h["text"])) if hkey != "" else str(h["text"]))
-		while htxt.length() > 4 and font.get_string_size(htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > 200.0:
-			htxt = htxt.left(htxt.length() - 2) # clip to the column — unbounded text ran off the screen edge
 		draw_string(font, Vector2(r.x - 212, hy), htxt,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		hy += 17
@@ -1042,12 +1102,7 @@ func _draw() -> void:
 	if game.crowned:
 		var legs := game.net_den if game.net != null and game.net.is_client() \
 			else game.den_caught() # a guest's tally is the host's ledger
-		var den := ""
-		for q in game.pals:
-			if is_instance_valid(q) and q.mode == "wild" and q.species_id in Game.LEGENDARY_DEN:
-				# the first warden fights; only the heir is ball-able
-				den = tr(" · warden up") if q.boss else tr(" · heir roams")
-				break
+		var den := _memo_den # the O(pals) roam scan is memoized at 4Hz above
 		if den == "":
 			var soon := -1.0
 			for br in game.boss_respawns:

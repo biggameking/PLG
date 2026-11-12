@@ -24,6 +24,7 @@ func _ready() -> void:
 
 var decor_need := true
 var last_vis := Rect2i(-999, -999, 0, 0)
+var last_terrain := -1
 func _on_decor_dirty() -> void:
 	decor_need = true
 
@@ -58,12 +59,18 @@ func _process(_dt: float) -> void:
 	cam.global_position = cam.global_position.lerp(pl.global_position, 0.12)
 	cam.offset = Vector2(randf() - 0.5, randf() - 0.5) * game.shake * 14.0 if game.shake > 0.001 else Vector2.ZERO
 	var vis := visible_tiles()
-	if decor_need or vis != last_vis: # decor pool only on camera move / decor change
+	var moved := vis != last_vis
+	if decor_need or moved: # decor pool only on camera move / decor change
 		refresh_decor()
 		decor_need = false
-		last_vis = vis
 	game.drawer.region = vis
-	game.drawer.queue_redraw()
+	# tiles/elev/ramp are write-once after generate() — repaint only when the
+	# visible window or the terrain generation actually changes (audit-45:
+	# unconditional redraw ran ~25k texture calls every frame at zoom-out)
+	if moved or game.world.terrain_gen != last_terrain:
+		game.drawer.queue_redraw()
+		last_vis = vis
+		last_terrain = game.world.terrain_gen
 
 func _unhandled_input(e: InputEvent) -> void:
 	if game.panel != "": # panels eat the wheel for scrolling, not zoom

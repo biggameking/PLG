@@ -1270,3 +1270,20 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   (8 stale rows pruned), zh≠en prose, guide page parity.
 - Deferred: bundled CJK font for export targets (desktop fallback correct).
 - 958/0/0. Audit doc: docs/reviews/audit-44-localization.md.
+
+### S92 — export credibility + perf-under-cap (audit-45) — SHIPPED
+- HIGH: docs/+prototype/ purged from all 3 preset exclude_filters (was
+  shipping banned-lexicon notes + third-party screenshots + TS source in
+  every PCK); bundled subset fonts (FusionPixel 192KB CJK + DejaVu 21KB
+  symbols) end the web/Android tofu — loaded via load_dynamic_font, licenses
+  ship in fonts/; tick_repairs dict-dedupe (~600k compares/frame killed).
+- MED: terrain repaint only on vis/terrain_gen change + prebaked variant
+  LUT; HUD 4Hz memo for boss/den scans + tr() formats + trim loops; pal_sync
+  per-packet net_id map; struct_state_pack dict dedupe; spring-heal memo;
+  partner AI staggered 4Hz rescan (stance re-gates per frame); raider sweep
+  0.5Hz; wild recount 2Hz; perf_probe now fails on >4x-baseline budgets.
+- Config: explicit SDK floors (24/35), web thread_support off, console
+  wrapper off, config/version+description, Android backup on, desktop
+  touch=on LMB→virtual-finger routing.
+- Verified-correct inventory covers renderer/input/caps/authority/audio.
+- 958-961/0. Audit doc: docs/reviews/audit-45-export-perf.md.

@@ -6732,8 +6732,11 @@ func run() -> void:
 		and str(game.floaters.back().get("t", "")) == "PACT SLAM",
 		"windup=%.2f tail=%s" % [wb.slam_windup, str(game.floaters.back().get("t", ""))])
 	check("boss stayed planted through the windup", wb.pos == root_pos)
+	# the boss unroots once the slam fires — re-anchor the ghost at arm's
+	# reach before asserting the ring count, or a walking boss flakes the check
+	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 0.5, wb.pos.y, 0)
 	check("a guest inside the ring counts", wb.pact_slam() == 1,
-		"hits — ghost at +1.5 sits inside the 2.6 zone")
+		"hits — ghost hugging close sits inside the 2.6 zone")
 	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 40, wb.pos.y, 0)
 	var w_pl := game.player.pos
 	game.player.pos = wb.pos + Vector2(40, 0)
@@ -6860,6 +6863,25 @@ func run() -> void:
 	check("bad lang falls back", TranslationServer.get_locale().begins_with("en") or tr("SETTINGS") == "SETTINGS")
 	game.settings["lang"] = prev_lang; game.apply_settings()
 	check("tr en", tr("SETTINGS") == "SETTINGS")
+	# audit-45: web/android have no working SystemFont — the bundled fallback
+	# chain must rasterize the zh column AND the HUD icon set or those
+	# targets tofu. has_char walks each fallback's own cmap.
+	var zh_font := false
+	var sym_font := false
+	for fb44 in hudn.font.get_fallbacks():
+		zh_font = zh_font or fb44.has_char(ord("建"))
+		sym_font = sym_font or (fb44.has_char(ord("✕")) and fb44.has_char(ord("⚡")))
+	check("hud font chain rasterizes zh", zh_font,
+		"SystemFont-less targets tofu otherwise")
+	check("hud font chain rasterizes the icon set", sym_font, "")
+	# the export presets must keep dev-only payloads out of the PCK — docs/
+	# holds migration lexicon notes + third-party reference screenshots;
+	# prototype/ is uncompiled TypeScript (audit-45 H1)
+	var presets := FileAccess.get_file_as_string("res://export_presets.cfg")
+	var preset_n := presets.count("export_filter=\"all_resources\"")
+	var excl_n := presets.count("exclude_filter=\"store/*,tools/*,docs/*,prototype/*\"")
+	check("every preset excludes dev payloads", preset_n > 0 and excl_n == preset_n,
+		"%d presets, %d filtered" % [preset_n, excl_n])
 
 	# every sfx_play literal must name a real SFX key — a typo plays silence
 	var sfx_re := RegEx.create_from_string("sfx_play\\(\"([^\"]+)\"\\)")

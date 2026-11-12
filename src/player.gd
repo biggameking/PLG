@@ -334,13 +334,10 @@ func _physics_process(dt: float) -> void:
 	elif lamp_r <= 0 and _lamp != null:
 		_lamp.queue_free()
 		_lamp = null
-	# a soak in the spring mends the keeper too (the island bath comfort)
-	if hp < max_hp:
-		for k in game.structures:
-			var st4: Dictionary = game.structures[k]
-			if st4["id"] == "hot_spring" and Vector2(k).distance_to(pos) <= 2.5:
-				hp = minf(max_hp, hp + max_hp * 0.02 * dt)
-				break
+	# a soak in the spring mends the keeper too (the island bath comfort) —
+	# memoized: the per-cell scan ran every physics frame while injured (audit-45)
+	if hp < max_hp and game.nearest_spring(pos) <= 2.9:
+		hp = minf(max_hp, hp + max_hp * 0.02 * dt)
 	# the island night chill + latitude bands: past dusk and away from
 	# firelight the cold bleeds hp — never below 30%. The far north freezes
 	# all day; the far south scorches by day (a swim or cooling armor saves

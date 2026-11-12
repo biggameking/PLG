@@ -1,4 +1,15 @@
 extends SceneTree
+
+# Timing budgets (~4x the local baseline, audit-45 M8): a probe that only
+# prints lets a 5x regression ship green. FAIL = exit code 1.
+var fails := 0
+
+func check_perf(what: String, elapsed_ms: int, budget_ms: int) -> void:
+	var ok := elapsed_ms <= budget_ms
+	if not ok:
+		fails += 1
+	print("=== %s PERF %s: %d ms (budget %d) ===" % ["PASS" if ok else "FAIL", what, elapsed_ms, budget_ms])
+
 func _boot() -> void:
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
@@ -23,12 +34,17 @@ func _boot() -> void:
 	for i in 200:
 		for p in game.pals:
 			p._physics_process(0.016)
-	print("=== PERF kin-tick: %d ms for 200 rounds x %d kin ===" % [Time.get_ticks_msec() - t0, game.pals.size()])
+	var kin_ms: int = Time.get_ticks_msec() - t0
+	print("=== PERF kin-tick: %d ms for 200 rounds x %d kin ===" % [kin_ms, game.pals.size()])
+	# baseline ~0.004ms/kin/round → 4x headroom per kin-round
+	check_perf("kin-tick", kin_ms, maxi(400, game.pals.size() * 200 / 60))
 	# game-level tick
 	t0 = Time.get_ticks_msec()
 	for i in 200:
 		game._process(0.016)
-	print("=== PERF game-tick: %d ms for 200 ticks, structures=%d ===" % [Time.get_ticks_msec() - t0, game.structures.size()])
+	var gt_ms: int = Time.get_ticks_msec() - t0
+	print("=== PERF game-tick: %d ms for 200 ticks, structures=%d ===" % [gt_ms, game.structures.size()])
+	check_perf("game-tick", gt_ms, 200) # baseline 9ms
 	# raid-stress: PLG_RAID=N — a hostile wave under tower fire is the
 	# heaviest live combat scene this game produces
 	var raid_n := int(OS.get_environment("PLG_RAID"))
@@ -64,9 +80,11 @@ func _boot() -> void:
 				if is_instance_valid(q):
 					q._physics_process(0.016)
 			game._process(0.016)
+		var raid_ms: int = Time.get_ticks_msec() - t0
 		print("=== PERF raid-tick: %d ms for 400 ticks (raiders=%d alive, projectiles=%d) ===" % [
-			Time.get_ticks_msec() - t0, spawned.filter(func(q): return is_instance_valid(q) and q.hp > 0).size(),
+			raid_ms, spawned.filter(func(q): return is_instance_valid(q) and q.hp > 0).size(),
 			game.projectiles.size()])
+		check_perf("raid-tick", raid_ms, 1500) # baseline ~220ms
 		for rp in spawned:
 			if is_instance_valid(rp):
 				game.pals.erase(rp)
@@ -114,9 +132,10 @@ func _boot() -> void:
 				if is_instance_valid(w2):
 					w2._physics_process(0.016)
 			game._process(0.016)
+		var base_ms: int = Time.get_ticks_msec() - t0
 		print("=== PERF base-tick: %d ms for 400 ticks (workers=%d live) ===" % [
-			Time.get_ticks_msec() - t0,
-			workers.filter(func(w): return is_instance_valid(w)).size()])
+			base_ms, workers.filter(func(w): return is_instance_valid(w)).size()])
+		check_perf("base-tick", base_ms, 1500) # baseline ~200ms
 		for st3 in sites:
 			if st3 != null:
 				st3["workers"] = []
@@ -125,6 +144,7 @@ func _boot() -> void:
 				game.pals.erase(wp2)
 				wp2.job_site = null
 				wp2.free()
-	quit(0)
+	print("=== perf probe: %d budget failures ===" % fails)
+	quit(1 if fails > 0 else 0)
 func _initialize() -> void:
 	call_deferred("_boot")
