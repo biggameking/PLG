@@ -698,13 +698,23 @@ func interact() -> void:
 				game.panel = "craft"
 				return
 			"furnace", "mill", "crusher", "logging_site", "stone_pit", "gathering_site", "ore_mine", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy", "generator", "ranch", "cooler":
-				# automated sites: E reports the stockpile, no crafting here
+				# automated sites: E takes the stockpile — output shouldn't be
+				# hostage to a staffed hauler (audit-32). Bag overflow spills
+				# to the ground via add_item's own rule. Replica stores are the
+				# host's truth — guests get a refusal, never a local drain.
 				var sdef: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
-				var eggs: String = "  %d egg(s)" % st["store"].get("kin_egg", 0) if st["id"] == "ranch" and st.get("store", {}).get("kin_egg", 0) > 0 else ""
+				if game.net != null and game.net.is_client():
+					game.log_msg(tr("%s — only the keeper handles the stockpile") % tr(str(sdef.get("name", st["id"]))))
+					return
 				if st.get("store", {}).is_empty():
 					game.log_msg(tr("%s: %d workers, nothing stored") % [tr(str(sdef.get("name", st["id"]))), st["workers"].size()])
 				else:
-					game.log_msg(tr("%s stores: %s%s") % [tr(str(sdef.get("name", st["id"]))), str(st["store"]), eggs])
+					var took := []
+					for iid in st["store"].keys():
+						took.append("%s x%d" % [tr(str(ItemData.ITEMS.get(str(iid), {}).get("name", iid))), int(st["store"][iid])])
+						game.add_item(str(iid), int(st["store"][iid]))
+					st["store"].clear()
+					game.log_msg(tr("%s: took %s") % [tr(str(sdef.get("name", st["id"]))), ", ".join(took)])
 				return
 			"feed_box":
 				game.chest_ref = st # pals eat out of it; it's still a container
@@ -790,9 +800,11 @@ func interact() -> void:
 					var hint: String = game.egg_hint(inc.get("pair"))
 					game.log_msg(tr("Incubating %s: %ds left") % [hint if hint != "" else tr("egg"),
 						int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t))])
-				elif game.item_count("kin_egg") > 0 or game.item_count("huge_kin_egg") > 0:
+				elif game.item_count("kin_egg") > 0 or game.item_count("bred_kin_egg") > 0 \
+						or game.item_count("huge_kin_egg") > 0:
 					if game.net != null and game.net.is_client():
-						var eg := "huge_kin_egg" if game.item_count("huge_kin_egg") > 0 else "kin_egg"
+						var eg := "huge_kin_egg" if game.item_count("huge_kin_egg") > 0 \
+							else ("bred_kin_egg" if game.item_count("bred_kin_egg") > 0 else "kin_egg")
 						if game.net.pay("egg", {eg: 1}):
 							game.net.rpc("egg_req", eg)
 					else:
@@ -1124,6 +1136,16 @@ func _draw() -> void:
 		if game.treasure: # the surveyor's X — follow it and dig
 			var tp := mr.position + Vector2(game.treasure["pos"].x / game.world.WORLD_W * ms, game.treasure["pos"].y / game.world.WORLD_H * ms)
 			draw_rect(Rect2(tp - Vector2(3, 3), Vector2(6, 6)), Ink.GOLD)
+		for stk in game.spire_pos: # pact spires ping once their ground is charted
+			var spos: Vector2i = game.spire_pos[stk]
+			if spos.y * game.world.WORLD_W + spos.x >= game.explored.size() \
+					or game.explored[spos.y * game.world.WORLD_W + spos.x] == 0:
+				continue
+			var spp := mr.position + Vector2(spos.x / float(game.world.WORLD_W) * ms, spos.y / float(game.world.WORLD_H) * ms)
+			if game.spires_done.has(stk):
+				draw_rect(Rect2(spp - Vector2(3, 3), Vector2(6, 6)), Ink.VIOLET, false, 1.0)
+			else:
+				draw_rect(Rect2(spp - Vector2(3, 3), Vector2(6, 6)), Ink.VIOLET)
 
 	draw_floaters()
 	draw_weather_fx(r)
@@ -2067,12 +2089,12 @@ func use_item(k: String) -> void:
 				game.log_msg(tr("The gauntlet answers the host, not guests"))
 			elif game.start_gauntlet():
 				game.add_item(k, -1)
-		"kin_egg", "huge_kin_egg":
+		"kin_egg", "bred_kin_egg", "huge_kin_egg":
 			if game.net != null and game.net.is_client():
 				if game.net.pay("egg", {k: 1}): # the egg leaves the bag on the click
 					game.net.rpc("egg_req", k)
 			else:
-				game.deposit_egg()  # needs a free incubator nearby — huge eggs take the slot first
+				game.deposit_egg(k) # the clicked egg wins when held — save the bred one for its bloodline
 		"fishing_rod":
 			# reusable — the rod never leaves the pack; guests ask the host
 			# to roll at their ghost's shore

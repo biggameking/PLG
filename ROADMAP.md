@@ -1018,3 +1018,32 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   source before implementation. Keep-list honored: mission rope
   retroactive pay, catch-odds feedback, zone-0 passive nights.
   docs/reviews/audit-30-first-session.md.
+
+## audit-31 — S75 recheck: the small-truth batch
+  All nine S75 claims source-verified, no C/H. Landed: F8 arms
+  before it loads (overwrite class), place_free kinbox grants the
+  same raid grace, MAX_DROPS eviction skips mine-flagged corpse
+  packs, opening-ring kin tether to home (meta, transient by
+  design), guest bed reach aligned to host, cold hints read the
+  real 10-tile warmth radius, hint copy truths (Start→GUIDE,
+  weaken-first), footer honors has_save, build bar un-overlapped
+  (measured header + name-only rows + zh cost names). Bonus:
+  pos_pps wall-clock bucket refresh killed the node-hop flake.
+  Rule 115. Smoke 845/0. 93c1122.
+## audit-32 — mid-game progression sweep + fixes
+  Context-free probe of the kinbox → missions 2-10 → base economy →
+  zones → spires → gauntlet → crown → accord arc. One hard dead-end:
+  gauntlet_sigil only spawned inside its own reward loop — the trial,
+  mission 10, the Accord and the sixth party slot were unreachable.
+  Landed: spire kills pay 1 sigil (idempotent), merchant carries a 10%
+  sigil listing; gauntlet raiders exempt from the 240s stale sweep and
+  tick_gauntlet reconciles left↔live (void on empty, never silent-pay);
+  bred_kin_egg split from kin_egg so wild eggs can't drain ranch
+  parentage (legacy ranch stores migrate on load); host E empties any
+  automated stockpile (guests refused); spire placement gains a third
+  door-validated pass and all passes require a walkable same-elev
+  approach; spire_pos pings violet on charted minimap cells (spos
+  serialized + guardian-derived self-heal); Guide Vol. IX documents
+  the late arc. +16 checks. Smoke 858/0 (1 known worldgen skip).
+  Sim 0 failures. Rule 116. Shot: /tmp/plg-s76-map.png.
+

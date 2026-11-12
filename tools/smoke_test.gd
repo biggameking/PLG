@@ -2011,7 +2011,7 @@ func run() -> void:
 			chest_st = game.structures.get(Vector2i(ranch_k.x + 4, ranch_k.y))
 		chest_st["store"]["cake"] = 1
 		game.tick_ranch(ranch_k, st_r, 61.0)
-		check("ranch egg", st_r["store"].get("kin_egg", 0) >= 1)
+		check("ranch egg", st_r["store"].get("bred_kin_egg", 0) >= 1)
 		check("cake consumed", chest_st["store"].get("cake", 0) == 0)
 		# parentage now carries passives for inheritance
 		check("egg records passives", st_r["egg_parents"].size() > 0 and st_r["egg_parents"][0].size() >= 6)
@@ -7679,6 +7679,228 @@ func run() -> void:
 	# boot can't promise a continue that doesn't exist
 	check("footer tracks the real save flag", game.has_save == FileAccess.file_exists("user://savegame.plg"),
 		"has_save=%s" % game.has_save)
+
+	# ---------- audit-32 follow-ups: the mid-game trial batch ----------
+	var items_a32: Dictionary = game.items.duplicate()
+	var sd_a32: Dictionary = game.spires_done.duplicate()
+	var ga_a32: Dictionary = game.gauntlet.duplicate()
+	var ms_a32: Array = game.merchant_stock.duplicate()
+	var spos_a32: Dictionary = game.spire_pos.duplicate()
+
+	# C1: a broken spire pays the gauntlet's first ticket — before this the
+	# sigil only spawned inside its own reward loop, a hard progression wall
+	var stag32 := ""
+	for i78 in game.SPIRE_DEFS.size():
+		var tg78 := "spire_%d" % i78
+		if not game.spires_done.has(tg78):
+			stag32 = tg78; break
+	check("worldgen left a spire to break", stag32 != "", "done=%d" % game.spires_done.size())
+	if stag32 != "":
+		var sig0_32: int = game.item_count("gauntlet_sigil")
+		game.record_spire(stag32)
+		check("a broken spire pays its sigil", game.item_count("gauntlet_sigil") == sig0_32 + 1)
+		game.record_spire(stag32)
+		check("a recorded ruin can't pay twice", game.item_count("gauntlet_sigil") == sig0_32 + 1)
+	game.items = items_a32
+	game.spires_done = sd_a32
+
+	# merchant dark-stock: the briefcase can carry a sigil — the gold path for
+	# a keeper who hasn't broken one yet (10% roll, bounded probe)
+	var sig_seen := false
+	for i78 in 400:
+		game.gen_merchant_stock()
+		for r78 in game.merchant_stock:
+			if str(r78.get("id", "")) == "gauntlet_sigil":
+				sig_seen = true; break
+		if sig_seen:
+			break
+	check("the merchant's briefcase can carry a sigil", sig_seen)
+	game.merchant_stock = ms_a32
+
+	# H1: the 240s stale-raider sweep must spare gauntlet kin — a kited wave
+	# that times out would count as cleared and pay the trial for free
+	var gk: Kin = game.gen_pal("fenlump", 1, Vector2(8, 8))
+	gk.mode = "wild"; gk.raid = true; gk.boss = false
+	gk.set_meta("gauntlet", true); gk.set_meta("raid_t0", game.t - 999.0)
+	game.pals.append(gk)
+	var rk78: Kin = game.gen_pal("fenlump", 1, Vector2(9, 9))
+	rk78.mode = "wild"; rk78.raid = true; rk78.boss = false
+	rk78.set_meta("raid_t0", game.t - 999.0)
+	game.pals.append(rk78)
+	game.gauntlet = {} # empty: tick_gauntlet early-returns, the sweep is what runs
+	var st_a32: String = game.state
+	game.state = "play"
+	game._process(0.05)
+	check("the stale-raider sweep spares gauntlet kin", game.pals.has(gk))
+	check("...but still clears a plain raider", not game.pals.has(rk78))
+	game.state = st_a32
+	game.pals.erase(gk)
+	if gk.get_parent(): gk.get_parent().remove_child(gk)
+	gk.free()
+	if is_instance_valid(rk78):
+		if rk78.get_parent(): rk78.get_parent().remove_child(rk78)
+		rk78.free()
+
+	# reconciliation: live raiders shrink 'left' to the truth; an emptied
+	# field voids the trial — never silently pays
+	game.gauntlet = {"wave": 1, "left": 5}
+	var q1: Kin = game.gen_pal("fenlump", 1, Vector2(8, 8))
+	q1.set_meta("gauntlet", true); game.pals.append(q1)
+	var q2: Kin = game.gen_pal("fenlump", 1, Vector2(9, 9))
+	q2.set_meta("gauntlet", true); game.pals.append(q2)
+	game.tick_gauntlet()
+	check("gauntlet left reconciles to live raiders", game.gauntlet.get("left", -1) == 2,
+		"left=%s" % game.gauntlet.get("left"))
+	game.pals.erase(q1); game.pals.erase(q2)
+	if q1.get_parent(): q1.get_parent().remove_child(q1)
+	if q2.get_parent(): q2.get_parent().remove_child(q2)
+	q1.free(); q2.free()
+	game.tick_gauntlet()
+	check("a deserted field voids the trial", game.gauntlet.is_empty())
+	# ...and a real clear still pays — no reconciliation may eat the reward
+	var orb0_32: int = game.item_count("legendary_orb")
+	var sig1_32: int = game.item_count("gauntlet_sigil")
+	game.gauntlet = {"wave": 3, "left": 0}
+	game.tick_gauntlet()
+	check("a cleared gauntlet still pays", game.gauntlet.is_empty()
+		and game.item_count("legendary_orb") == orb0_32 + 2
+		and game.item_count("gauntlet_sigil") == sig1_32 + 1
+		and game.mission_flags.get("gauntlet", false),
+		"orbs=%d sigils=%d" % [game.item_count("legendary_orb"), game.item_count("gauntlet_sigil")])
+	game.mission_flags.erase("gauntlet")
+	game.items = items_a32
+	game.gauntlet = ga_a32
+
+	# H2: parentage rides bred eggs only — a wild egg can never drain the
+	# ranch's bloodline queue (the old shared-id FIFO let it)
+	for k78 in game.structures:
+		game.structures[k78].erase("egg_parents") # fixture isolation
+	var inc78 := Vector2i(-1, -1)
+	for r78 in range(2, 40):
+		var done78 := false
+		for dx78 in range(-r78, r78 + 1):
+			for dy78 in range(-r78, r78 + 1):
+				if maxi(absi(dx78), absi(dy78)) != r78:
+					continue
+				var c78 := Vector2i(int(game.player.pos.x) + dx78, int(game.player.pos.y) + dy78)
+				if game.place_free("incubator", c78.x, c78.y):
+					inc78 = c78; done78 = true; break
+			if done78: break
+		if done78: break
+	check("fixture planted an incubator", inc78.x >= 0)
+	if inc78.x >= 0:
+		var inc_st32: Dictionary = game.structures[inc78]
+		inc_st32["egg_parents"] = [["fenlump", "fenlump", 10, 20, [], [], [], [], [0]]]
+		var ppos78: Vector2 = game.player.pos
+		game.player.pos = Vector2(inc78.x + 0.5, inc78.y + 0.5) # ours is surely nearest
+		game.items = {"kin_egg": 1}
+		game.deposit_egg()
+		check("a wild egg can't claim ranch blood", inc_st32.get("egg_inc", {}).get("pair") == null
+			and inc_st32["egg_parents"].size() == 1,
+			"inc=%s q=%d" % [inc_st32.get("egg_inc", {}), inc_st32["egg_parents"].size()])
+		inc_st32.erase("egg_inc")
+		game.items = {"bred_kin_egg": 1}
+		game.deposit_egg()
+		check("a bred egg claims its bloodline", inc_st32.get("egg_inc", {}).get("pair") != null
+			and inc_st32["egg_parents"].is_empty())
+		game.player.pos = ppos78
+		# teardown: the fixture's footprint leaves structures AND world.structures
+		for dx79 in range(2):
+			for dy79 in range(2):
+				var cc79 := inc78 + Vector2i(dx79, dy79)
+				game.structures.erase(cc79)
+				game.world.structures.erase(game.world.idx(cc79.x, cc79.y))
+		if is_instance_valid(inc_st32.get("node")):
+			inc_st32["node"].queue_free()
+	game.items = items_a32
+
+	# M4: automated stockpiles answer the keeper's E — output can't be hostage
+	# to a staffed hauler; replica stores refuse a guest cold
+	var ranch_st: Dictionary = {}
+	var ranch_cell := Vector2i(-1, -1)
+	for r78 in range(2, 60):
+		var done79 := false
+		for dx78 in range(-r78, r78 + 1):
+			for dy78 in range(-r78, r78 + 1):
+				if maxi(absi(dx78), absi(dy78)) != r78:
+					continue
+				var c79 := Vector2i(40 + dx78, 40 + dy78) # far corner — no base traffic
+				if game.place_free("ranch", c79.x, c79.y):
+					ranch_cell = c79; ranch_st = game.structures[c79]
+					done79 = true; break
+			if done79: break
+		if done79: break
+	check("fixture planted a ranch", ranch_cell.x >= 0)
+	if ranch_cell.x >= 0:
+		ranch_st["store"] = {"gold_coin": 7, "bred_kin_egg": 1}
+		var ppos79: Vector2 = game.player.pos
+		var gold0_32: int = game.item_count("gold_coin")
+		var bred0_32: int = game.item_count("bred_kin_egg")
+		game.player.pos = Vector2(ranch_cell.x + 0.5, ranch_cell.y + 0.5) # inside the footprint
+		var hudw: Node = main.get_node("UILayer/HUD")
+		hudw.interact()
+		check("the keeper empties a stockpile with E", ranch_st["store"].is_empty()
+			and game.item_count("gold_coin") == gold0_32 + 7
+			and game.item_count("bred_kin_egg") == bred0_32 + 1,
+			"store=%s gold=%d bred=%d" % [ranch_st["store"],
+				game.item_count("gold_coin"), game.item_count("bred_kin_egg")])
+		# guest: the replica store is the host's truth — E refuses, bag untouched
+		var pp_a32 = game.net.multiplayer.multiplayer_peer
+		var peer_a32 := ENetMultiplayerPeer.new()
+		peer_a32.create_client("127.0.0.1", 7777)
+		game.net.is_host = false
+		game.net.multiplayer.multiplayer_peer = peer_a32
+		ranch_st["store"] = {"gold_coin": 9}
+		var gold1_32: int = game.item_count("gold_coin")
+		hudw.interact()
+		check("a guest can't drain the replica store", ranch_st["store"].size() == 1
+			and game.item_count("gold_coin") == gold1_32,
+			"store=%s gold=%d" % [ranch_st["store"], game.item_count("gold_coin")])
+		game.net.is_host = true
+		game.net.multiplayer.multiplayer_peer = pp_a32
+		peer_a32.close()
+		game.player.pos = ppos79
+		for dx79 in range(4): # ranch footprint is 4x3
+			for dy79 in range(3):
+				var cc79 := ranch_cell + Vector2i(dx79, dy79)
+				game.structures.erase(cc79)
+				game.world.structures.erase(game.world.idx(cc79.x, cc79.y))
+		if is_instance_valid(ranch_st.get("node")):
+			ranch_st["node"].queue_free()
+	game.items = items_a32
+
+	# spos: arena markers ride the save — real tags merge, forged cells die
+	var sf78 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	sf78.store_var({"seed": game.world.seed, "day": 1, "tod": 8.0, "tech_points": 0,
+		"unlocked": [], "items": {}, "party": [], "kin": [], "structures": {},
+		"player": {"pos": [30.0, 30.0], "hp": 50.0, "level": 1, "xp": 0, "cap_lv": 1},
+		"spos": {"spire_0": [10, 20], "spire_99": [1, 1], "bogus": [1, 2],
+			"spire_1": ["x", 5], "spire_2": [-99, 0]}})
+	sf78.close()
+	var sload78: bool = game.load_game()
+	check("spire markers ride the save, forged ones die", sload78
+		and game.spire_pos.get("spire_0") == Vector2i(10, 20)
+		and not game.spire_pos.has("spire_99") and not game.spire_pos.has("bogus")
+		and not game.spire_pos.has("spire_1") and not game.spire_pos.has("spire_2"),
+		"spos=%s" % game.spire_pos)
+	game.items = items_a32
+	game.spires_done = sd_a32
+
+	# L1: every arena's south door opens onto walkable same-elev ground — all
+	# three placement passes enforce it, so no guardian gates behind a cliff.
+	# Loads don't run place_pois (guardians ride the save, not worldgen), so
+	# regenerate first to replay placement and repopulate the marker map.
+	game.regenerate(game.world.seed)
+	var door_bad := ""
+	for tag80 in game.spire_pos:
+		var sp80: Vector2i = game.spire_pos[tag80]
+		if game.world.blocked(sp80.x, sp80.y + 3) \
+				or game.world.elev_at(sp80.x, sp80.y + 3) != game.world.elev_at(sp80.x, sp80.y + 1):
+			door_bad = tag80
+	check("every spire door opens onto walkable ground", door_bad == ""
+		and game.spire_pos.size() == game.SPIRE_DEFS.size(),
+		"bad=%s n=%d" % [door_bad, game.spire_pos.size()])
+	game.spire_pos = spos_a32
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

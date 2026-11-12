@@ -792,10 +792,18 @@ const ITEMS = {
  "kin_egg": {
   "id": "kin_egg",
   "name": "Kin Egg",
-  "desc": "A fertilized egg from the ranch. Use to hatch.",
+  "desc": "A wild egg — nest find or market oddity. Use to hatch.",
   "usable": true,
   "stack": 5,
   "price": 30
+ },
+ "bred_kin_egg": {
+  "id": "bred_kin_egg",
+  "name": "Bred Egg",
+  "desc": "A ranch pairing's egg — its bloodline is on record. Use to hatch.",
+  "usable": true,
+  "stack": 5,
+  "price": 50
  },
  "huge_kin_egg": {
   "id": "huge_kin_egg",

@@ -1179,8 +1179,23 @@ func gauntlet_next_wave() -> void:
 func tick_gauntlet() -> void:
 	if net != null and net.is_client():
 		return # the trial is a host event — its raiders arrive as replicas
-	if gauntlet.is_empty() or gauntlet["left"] > 0:
+	if gauntlet.is_empty():
 		return
+	if gauntlet["left"] > 0:
+		# reconcile against live raiders — any despawn path that forgot to
+		# decrement (culls, unloads) would stall the trial forever otherwise
+		var live := 0
+		for q in pals:
+			if q.has_meta("gauntlet"):
+				live += 1
+		if live < gauntlet["left"]:
+			gauntlet["left"] = live
+			if live == 0: # every raider gone and nobody cleared them — void the run
+				log_msg(tr("The tower reclaims its question — the gauntlet ends unanswered"))
+				gauntlet = {}
+				return
+		if gauntlet["left"] > 0:
+			return
 	var apex: int = 4 if crowned else 3 # a crowned keeper gets one more question
 	if gauntlet["wave"] < apex:
 		gauntlet_next_wave()
@@ -2518,10 +2533,10 @@ func _process(dt: float) -> void:
 		tick_raid(dt)
 		tick_supply(dt)
 		for q in pals.duplicate(): # stale raiders wander off instead of stacking up
-			if q.mode == "wild" and q.raid and not q.boss and t - q.get_meta("raid_t0", t) > 240.0:
-				if q.has_meta("gauntlet") and not gauntlet.is_empty(): # swept raiders count against the wave too — kill_pal never sees them
-					gauntlet["left"] -= 1
-					q.remove_meta("gauntlet")
+			# gauntlet pals are exempt — a timeout that counts as a kill pays the
+			# trial for kiting laps. They aggro the keeper; they stay till it ends.
+			if q.mode == "wild" and q.raid and not q.boss and not q.has_meta("gauntlet") \
+					and t - q.get_meta("raid_t0", t) > 240.0:
 				pals.erase(q)
 				q.queue_free()
 	tick_migration(dt) # deliberate local-fauna authority — see tick_migration
@@ -4246,6 +4261,7 @@ func save_game() -> void:
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed, "dex_full": dex_full,
 		"spires": spires_done.keys(), "crowned": crowned, "accord": accord,
+		"spos": spire_pos,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
 		"board_quest": board_quest,
@@ -4400,6 +4416,7 @@ func load_game() -> bool:
 	dex_full = d.get("dex_full") is bool and d["dex_full"] \
 		and catch_counts.size() >= ownable_species_count()
 	spires_done.clear()
+	spire_pos.clear()
 	var spv = d.get("spires", [])
 	if spv is Array: # only real spire tags — a foreign save can't forge a crown
 		for tg in spv:
@@ -4407,6 +4424,14 @@ func load_game() -> bool:
 			if spire_tag_ok(stg):
 				spires_done[stg] = true
 	crowned = (d.get("crowned") is bool and d["crowned"]) and spires_done.size() >= SPIRE_DEFS.size() # the crown must be earned, not written — and "x" == true aborts like int({}) does
+	var spv2 = d.get("spos", {})
+	if spv2 is Dictionary: # arena markers: real tags, in-bounds ints only
+		for tk in spv2.keys():
+			var tp2 = spv2[tk]
+			if spire_tag_ok(str(tk)) and tp2 is Array and tp2.size() == 2 \
+					and _fin(tp2[0]) and _fin(tp2[1]) \
+					and world.in_bounds(_i(tp2[0]), _i(tp2[1])):
+				spire_pos[str(tk)] = Vector2i(_i(tp2[0]), _i(tp2[1]))
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm", "drought"] else "clear"
 	weather_t = clampf(_f(d.get("wthr_t", 0.0)), 0.0, 120.0)
 	var gtv = d.get("grotto", []) # dungeon markers ride the save like everything else
@@ -4589,6 +4614,10 @@ func load_game() -> bool:
 		elif pals.size() < MAX_PALS:
 			entity_layer.add_child(np)
 			pals.append(np)
+			if np.spire_tag != "" and not spire_pos.has(np.spire_tag):
+				# a guardian IS its arena — pre-spos saves and crafted saves
+				# alike get their map ping back by derivation, not by fiat
+				spire_pos[np.spire_tag] = Vector2i(int(np.pos.x), int(np.pos.y))
 		else:
 			np.free() # past the AI/cap guard — rule 1 applies to saves too
 			continue
@@ -4692,6 +4721,14 @@ func load_game() -> bool:
 						st["egg_parents"].append(e2)
 					if st["egg_parents"].size() >= MAX_EGG_QUEUE:
 						break # the runtime cap binds loaded rows too — a crafted save can't stuff it
+			# S76 migration: a legacy ranch stored its laid eggs under kin_egg —
+			# the shared id let any wild egg drain the bloodline queue. Nothing
+			# but a pairing ever writes a ranch's store, so every kin_egg found
+			# there is a bred egg by definition — rename it once, on the way in.
+			if sid == "ranch" and int(st["store"].get("kin_egg", 0)) > 0:
+				st["store"]["bred_kin_egg"] = int(st["store"].get("bred_kin_egg", 0)) \
+					+ int(st["store"]["kin_egg"])
+				st["store"].erase("kin_egg")
 			if sv.get("exp") is Dictionary and sid == "expedition_post":
 				var exp_d: Dictionary = sv["exp"]
 				var left: float = _f(exp_d.get("left", 0.0))
@@ -5040,7 +5077,8 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	st["egg_parents"].append([a.species_id, b.species_id, a.talent, b.talent,
 		a.passives.duplicate(), b.passives.duplicate(),
 		a.learned_skills(), b.learned_skills(), owners])
-	st["store"]["kin_egg"] = st["store"].get("kin_egg", 0) + 1 # lays AT the ranch; haulers collect
+	st["store"]["bred_kin_egg"] = st["store"].get("bred_kin_egg", 0) + 1 # lays AT the ranch; haulers collect —
+	# bred eggs carry their own id so parentage claims can never land on a wild egg
 	floater(Vector2(key.x + 0.5, key.y + 0.5), tr("Egg!"), "#f5e6c8")
 	log_msg(tr("%s + %s produced an egg!") % [tr(str(a.spec["name"])), tr(str(b.spec["name"]))])
 
@@ -5129,14 +5167,18 @@ func pull_from_storage(id: String, need: int) -> int:
 			left -= take
 	return need - left
 
-func deposit_egg() -> void:
+func deposit_egg(prefer: String = "") -> void:
 	if client_locked():
 		return
 	# the island: eggs go into an incubator; hatching takes real time.
-	# Huge eggs take the slot first — a guaranteed Lucky is worth it.
+	# A clicked egg wins when held — else huge > bred > wild, the old order.
 	var egg_id := ""
-	if item_count("huge_kin_egg") > 0:
+	if prefer in ["kin_egg", "bred_kin_egg", "huge_kin_egg"] and item_count(prefer) > 0:
+		egg_id = prefer
+	elif item_count("huge_kin_egg") > 0:
 		egg_id = "huge_kin_egg"
+	elif item_count("bred_kin_egg") > 0:
+		egg_id = "bred_kin_egg"
 	elif item_count("kin_egg") > 0:
 		egg_id = "kin_egg"
 	else:
@@ -5146,7 +5188,9 @@ func deposit_egg() -> void:
 		log_msg(tr("Need a free incubator nearby"))
 		return
 	add_item(egg_id, -1)
-	var pair = _claim_egg_parent(0)
+	# only a bred egg carries a pairing claim — wild and huge eggs hatch off
+	# the common pool and can never drain the ranch's parentage queue
+	var pair = _claim_egg_parent(0) if egg_id == "bred_kin_egg" else null
 	var warm_hint := false
 	for k3 in structures:
 		if structures[k3]["id"] == "campfire" \
@@ -5157,8 +5201,8 @@ func deposit_egg() -> void:
 		"huge": egg_id == "huge_kin_egg"}
 	var hint := egg_hint(pair)
 	log_msg(tr("%s incubating - ready in 90s%s%s")
-		% ["Huge egg" if egg_id == "huge_kin_egg" else "Egg",
-			"" if warm_hint else " (a campfire would hurry it)",
+		% [tr("Huge egg") if egg_id == "huge_kin_egg" else tr("Egg"),
+			"" if warm_hint else tr(" (a campfire would hurry it)"),
 			" — " + hint if hint != "" else ""])
 
 # parentage is claimed by bloodline owner: entry[8] carries the parents'
@@ -5198,7 +5242,7 @@ func _free_incubator(at: Vector2, bound := 20.0) -> Vector2i:
 # host-side guest deposit: the claimed egg kind is whitelisted, the slot
 # carries the depositor's pid so the hatch lands in THEIR slice
 func egg_req_remote(pid: int, egg_id: String) -> bool:
-	if egg_id not in ["kin_egg", "huge_kin_egg"]:
+	if egg_id not in ["kin_egg", "bred_kin_egg", "huge_kin_egg"]:
 		return false
 	var at := _ghost_at(pid)
 	if at.x < -1e8:
@@ -5207,7 +5251,7 @@ func egg_req_remote(pid: int, egg_id: String) -> bool:
 	if site.x < 0:
 		note_remote(pid, "Need a free incubator nearby")
 		return false
-	var pair = _claim_egg_parent(pid)
+	var pair = _claim_egg_parent(pid) if egg_id == "bred_kin_egg" else null
 	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
 		"huge": egg_id == "huge_kin_egg", "own_pid": pid,
 		"own_tag": str(net.peer_tags.get(pid, "")) if net != null else ""}
@@ -5989,6 +6033,8 @@ const SPIRE_DEFS := [
 	{"elem": "dragon", "lv": 50, "zone": 3},
 ]
 var spires_done := {} # tag -> true — persists with the save
+var spire_pos := {}   # tag -> Vector2i arena center — minimap pings (worldgen-deterministic,
+                      # but serialized anyway so a mid-run schema bump can't lose the trail)
 var crowned := false
 var has_save := false # cached file_exists for the title row — no per-frame stat syscall
 
@@ -6033,6 +6079,11 @@ func spawn_pact_spires() -> void:
 						for dx in range(-3, 4):
 							if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 								ok = false
+				# the south door must open onto ground you can walk in on —
+				# a cliff-face approach would gate the guardian behind gear
+				if world.blocked(tx, ty + 3) \
+						or world.elev_at(tx, ty + 3) != world.elev_at(tx, ty + 1):
+					ok = false
 				if not ok:
 					continue
 				_place_spire(sd, tx, ty, si)
@@ -6040,8 +6091,32 @@ func spawn_pact_spires() -> void:
 				done = true
 			if done:
 				break
+	# last resort: a spire that survived strict AND relaxed still owes the
+	# campaign a body — any free standable cell with a real door approach
+	# takes it, zone be damned. A missing spire is an uncompletable save;
+	# an off-biome one is a story, and a cliff-locked one is the same lie.
+	for si in SPIRE_DEFS.size():
+		if spire_pos.has("spire_%d" % si):
+			continue
+		var sd2: Dictionary = SPIRE_DEFS[si]
+		var done2 := false
+		var tries2 := 0
+		while tries2 < 20000 and not done2:
+			tries2 += 1
+			var tx2 := rng.int_range(4, World.WORLD_W - 6)
+			var ty2 := rng.int_range(4, World.WORLD_H - 6)
+			if world.blocked(tx2, ty2) or structures.has(Vector2i(tx2, ty2)):
+				continue
+			if world.blocked(tx2, ty2 + 3) \
+					or world.elev_at(tx2, ty2 + 3) != world.elev_at(tx2, ty2 + 1):
+				continue
+			_place_spire(sd2, tx2, ty2, si)
+			done2 = true
+			placed += 1
+			log_msg(tr("A stray spire rose off its biomes — the pact doesn't read maps"))
 	if placed < SPIRE_DEFS.size():
 		push_warning("only %d of %d pact spires placed — campaign uncompletable on this map" % [placed, SPIRE_DEFS.size()])
+		log_msg(tr("Only %d pact spires stand — the island is broken; tell the dev") % placed)
 	if placed > 0:
 		log_msg(tr("The Iron Pact raised %d spires across the Wildmere — break them all") % placed)
 
@@ -6060,6 +6135,7 @@ func _place_spire(sd: Dictionary, tx: int, ty: int, placed: int) -> void:
 	bp.setup(self, spire_pick(str(sd["elem"])), int(sd["lv"]), Vector2(tx + 0.5, ty + 0.5))
 	bp.home = bp.pos
 	bp.spire_tag = "spire_%d" % placed
+	spire_pos[bp.spire_tag] = Vector2i(tx, ty) # the campaign spine earns a map ping
 	bp.sprite.scale = Vector2(1.9, 1.9)
 	pals.append(bp)
 	if place_free("chest", tx - 1, ty - 1):
@@ -6083,9 +6159,15 @@ func record_spire(tag: String) -> void:
 	if not spire_tag_ok(tag):
 		return # a crown must never be minted from a forged tag — every
 		# writer validates, and the choke point re-checks regardless
+	if spires_done.has(tag):
+		return # a ruin pays its sigil once — a doubled kill call can't mint two
 	spires_done[tag] = true
 	var n := spires_done.size()
 	log_msg(tr("Pact spire broken! %d of %d") % [n, SPIRE_DEFS.size()])
+	# the tower yields its dare: a broken spire is the gauntlet's first source —
+	# without this the sigil only ever paid inside its own reward loop
+	add_item("gauntlet_sigil", 1)
+	log_msg(tr("The tower's sigil is yours — sound it for the gauntlet"))
 	if n >= SPIRE_DEFS.size() and not crowned:
 		crowned = true
 		add_item("legendary_orb", 3)
@@ -6177,6 +6259,7 @@ func regenerate(s: int) -> void:
 	grotto_room2 = Vector2i(-1, -1)
 	boss_respawns.clear() # the old world's dens died with it
 	spires_done.clear() # a fresh island raises fresh spires
+	spire_pos.clear() # and fresh markers for them
 	crowned = false
 	accord = false # a new island owes nobody its last contract
 	gauntlet = {} # and so did any trial in progress
@@ -7002,6 +7085,10 @@ func gen_merchant_stock() -> void:
 	# and sometimes a dare: a boss sigil under the counter, priced to hesitate
 	if rng.chance(0.15):
 		merchant_stock.append({"id": "boss_sigil", "n": 1, "price": 150})
+	# a rarer dare: the gauntlet's ticket — a gold path for keepers who
+	# haven't broken a spire yet (spire kills pay one each, guaranteed)
+	if rng.chance(0.10):
+		merchant_stock.append({"id": "gauntlet_sigil", "n": 1, "price": 120})
 	# black-market kin (the island): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):

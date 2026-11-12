@@ -620,3 +620,13 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     change. Same audit: untranslated fragments hide inside format parts —
     `cost += id.left(4)` shipped raw item ids to zh players; wrap the
     composed unit, not just the headline string.
+116. **Progression keys need a first-source audit, not just a use-site
+    check.** `gauntlet_sigil` was only ever awarded inside its own reward
+    loop — a perfect circular dependency that shipped a dead campaign arc.
+    For every item/flag that gates progress, grep its WRITE sites and ask
+    "can a player reach this without already having it?" — then add the
+    check to the suite as a source-existence assertion. Corollary: worldgen
+    collections that `load_game` can't repopulate via `place_pois` (POIs
+    ride the save, not worldgen) must serialize AND self-heal — `spire_pos`
+    merges validated `spos` rows then derives the rest from live guardian
+    tags, so a pre-field save loses nothing.

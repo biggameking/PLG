@@ -237,6 +237,28 @@ before the locals do.
 Fill the kindex — each entry shows habitat, drops, and
 work suitability. The islands remember everything you
 catalog. Good hunting.""",
+"""— VOL. IX —
+THE PACT, THE SIGILS, THE TRIAL
+
+The Iron Pact raised five spires across the Wildmere — rock
+rings you can see from off-shore, each held by an alpha
+guardian. Chart their ground and the spires ping violet on
+your map. Break a guardian and the spire falls; every ruin
+yields a Gauntlet Sigil, the tower's own dare.
+
+Sound a sigil at your kinbox and the tower answers: three
+waves, harder than anything the wilds field, closing with a
+true boss. Clear it and the tower pays — orbs, effigies,
+gold, and the next sigil. Lose the field and the question
+ends unanswered; sound another sigil to try again.
+
+Break all five spires and the island crowns you keeper.
+A crowned keeper who sounds a sigil faces a fourth, apex
+wave — the tower's last question — and the Wildmere's
+final contract, the Accord, waits for the keeper who proves
+every seal: the crown, the apex trial, and every legend's
+heir caught from the deep dens. The Accord signs in gold
+and opens a sixth place in your party.""",
 ]
 
 const PAGES_ZH: Array[String] = [
@@ -424,6 +446,24 @@ const PAGES_ZH: Array[String] = [
 
 填满图鉴——每条都写着栖息地、掉落和工种。群岛记得
 你编目的一切。狩猎顺利。""",
+"""—— 卷九 ——
+契约、符印与试炼
+
+铁契在荒原竖起五座契约塔——离岸就能望见的石环，
+每座都由头领守卫坐镇。踏勘过塔基的土地后，塔会在
+地图上亮起紫标。击败守卫，塔即崩塌；每处废墟都会
+交出一枚试炼符印——高塔亲手递来的战书。
+
+在精灵箱旁鸣响符印，高塔便作答：三波连战，强度压过
+荒野里的一切，压轴的是真正的首领。试炼通过，高塔
+付账——精灵球、雕像、金币，以及下一枚符印。败退则
+战问作废，再鸣一枚重头再来。
+
+五塔尽破，群岛便加冕你为守护者。已加冕的守护者再
+鸣符印，将面对第四波巅峰战——高塔最后的一问——而
+荒原的终极契约"群野之约"，在等待集齐全部封印的守
+护者：王冠、巅峰试炼、以及深渊巢穴中每一只传说嫡
+裔。契约以金印签订，并为你的队伍开启第六个席位。""",
 ]
 
 static func pages() -> Array[String]:
