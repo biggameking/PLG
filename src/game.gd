@@ -689,6 +689,7 @@ func assign_remote(pid: int, at: Vector2) -> void:
 			bd = d
 			best = p
 	if best == null:
+		note_remote(pid, "No kin of yours nearby to assign", [])
 		return
 	if best.job_site != null:
 		best.job_site["workers"].erase(best)
@@ -951,6 +952,8 @@ func spawn_net_pal(d) -> void:
 	if spire_tag_ok(nstag):
 		np.spire_tag = nstag # same whitelist the save path uses
 	np.mounted_by = nmount
+	np.owner_id = maxi(_i(d[11]), 0) if d.size() > 11 else 0 # whose kin this
+		# shadow is — the kinbox [recall]/[mv] verbs key off it for guests
 	np.visible = np.mounted_by == 0 # a ridden mount hides under its rider
 	pals.append(np)
 
@@ -1297,6 +1300,12 @@ var treasure := {}               # treasure-map dig spot {pos} — one chart at 
 var reveal_t := 0.0               # throttle: sight updates twice a second
 var focus_target: Kin = null      # the island focus fire: the pal you last hit
 var focus_t := 0.0                # ...stays the partner's priority for 4s
+
+func credit_catch_local(sid: String) -> void:
+	# the keeper's own ledger — on a client this counts ONLY their throws
+	# (the world book lives host-side); on the host net_catch writes the same
+	# dict directly, so this is the guest's slice, never a double-credit
+	catch_counts[sid] = int(catch_counts.get(sid, 0)) + 1
 
 func total_catches() -> int:
 	var n := 0
@@ -2013,6 +2022,9 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		board_hunt_credit(target.species_id, pid) # a boxed pal still thins the herd — theirs counts too
 		_kill_xp(pid, int(round(target.level * 3.0))) # flat rate — catch_xp would feed the HOST'S streak
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
+		# world ledger above (accord/dex track the island's whole catalog) —
+		# the guest's own ledger rides home so THEIR kindex/missions can tick
+		net.rpc_id(pid, "catch_credit", target.species_id)
 		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
 			log_msg(tr("Kindex mastery: %s +10%%") % tr(str(target.spec["name"])))
 			for mp in pals:
@@ -2368,30 +2380,37 @@ func net_live() -> bool:
 var HINTS := [
 	{"id": "orb", "once": 20.0,
 	 "text": "Q aims — weaken a wild kin first, then throw (low HP catches easier)",
+	 "touch": "AIM + ATK throws — weaken it first",
 	 "pad": "X aims — weaken it first, then RT throws",
 	 "cond": func(g): return g.item_count("kin_orb") > 0 and g.catch_counts.is_empty() and g.player != null},
 	{"id": "chop", "once": 15.0,
 	 "text": "LMB swings — trees drop wood, rocks drop stone, berries feed you",
+	 "touch": "ATK swings — trees drop wood, rocks drop stone",
 	 "pad": "RT swings — trees drop wood, rocks drop stone, berries feed you",
 	 "cond": func(g): return g.item_count("wood") == 0 and g.item_count("stone") == 0},
 	{"id": "build", "once": 25.0,
 	 "text": "B builds — a workbench turns wood + stone into gear",
+	 "touch": "BLD builds — a workbench turns wood + stone into gear",
 	 "pad": "Back builds — a workbench turns wood + stone into gear",
 	 "cond": func(g): return g.kinbox_pos.x >= 0 and not g.structures.values().any(func(s): return s["id"] == "workbench")},
 	{"id": "kinbox", "once": 30.0,
 	 "text": "B builds — your kinbox wants 4 lumenite + 6 wood + 6 stone",
+	 "touch": "BLD builds — your kinbox wants 4 lumenite + 6 wood + 6 stone",
 	 "pad": "Back builds — your kinbox wants 4 lumenite + 6 wood + 6 stone",
 	 "cond": func(g): return g.kinbox_pos.x < 0},
 	{"id": "guide", "once": 12.0,
 	 "text": "N opens the field guide — every verb lives there",
+	 "touch": "≡ → GUIDE — every verb lives there",
 	 "pad": "Start → GUIDE — every verb lives there",
 	 "cond": func(g): return g.t > 30.0},
 	{"id": "eat", "once": 12.0,
 	 "text": "You're starving — eat berries or cooked food (I opens the bag)",
+	 "touch": "You're starving — eat berries or cooked food (INV opens the bag)",
 	 "pad": "You're starving — eat berries or cooked food (dpad-up opens the bag)",
 	 "cond": func(g): return g.player != null and g.player.hunger < 25.0},
 	{"id": "dusk", "once": 18.0,
 	 "text": "Sun's dropping — B builds a campfire (6w 3s), a straw bed sleeps",
+	 "touch": "Sun's dropping — BLD builds a campfire, a straw bed sleeps",
 	 "pad": "Sun's dropping — Back builds a campfire, a straw bed sleeps",
 	 "cond": func(g): return g.tod >= 19.0 and g.tod < 21.0 and g.nearest_heat(g.player.pos) > 10.0},
 	{"id": "night", "once": 15.0,
@@ -2727,6 +2746,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 				world.hp[ci0] = 0
 				mark_decor(ci0)
 			structures[Vector2i(tx + dx, ty + dy)] = st
+			_struct_gen += 1
 			world.structures[ci0] = st
 	if sid == "kinbox":
 		if kinbox_pos.x < 0:
@@ -2781,6 +2801,7 @@ func place_free(sid: String, tx: int, ty: int, store: Dictionary = {}) -> bool:
 				world.hp[ci1] = 0
 				mark_decor(ci1)
 			structures[Vector2i(tx + dx, ty + dy)] = st
+			_struct_gen += 1
 			world.structures[ci1] = st
 	if sid == "kinbox":
 		var o := Vector2i(tx, ty)
@@ -3438,7 +3459,8 @@ const HEAT_IDS := ["campfire", "torch", "furnace", "hot_spring"]
 var _heat_at := Vector2.INF # nearest_heat memo: the query point it answers for
 var _heat_d := 1e9
 var _heat_t := -1.0
-var _heat_n := -1 # structures.size() the memo answered for — place/raze invalidates
+var _heat_n := -1 # structure generation the memo answered for — bumps on any cell write
+var _struct_gen := 0 # same-size swap (raze A, build B) must still invalidate (audit-36)
 
 func nearest_heat(at: Vector2) -> float:
 	# distance to the closest warmth source — the night chill threshold.
@@ -3446,7 +3468,7 @@ func nearest_heat(at: Vector2) -> float:
 	# memoized for ~0.4s within a tile: the chill check runs per physics frame
 	# and the hint lambdas ask twice more — a structures-wide scan is wasted
 	# on a position that barely moved
-	if t - _heat_t < 0.4 and _heat_n == structures.size() \
+	if t - _heat_t < 0.4 and _heat_n == _struct_gen \
 			and at.distance_squared_to(_heat_at) < 0.56:
 		return _heat_d
 	var bd := 1e9
@@ -3457,7 +3479,7 @@ func nearest_heat(at: Vector2) -> float:
 		if q.hp > 0 and q.mode in ["partner", "base"] \
 				and "fire" in q.spec.get("elements", []):
 			bd = minf(bd, at.distance_to(q.pos)) # only YOUR fire pal snuggles up
-	_heat_at = at; _heat_d = bd; _heat_t = t; _heat_n = structures.size()
+	_heat_at = at; _heat_d = bd; _heat_t = t; _heat_n = _struct_gen
 	return bd
 
 func base_pals() -> Array:
@@ -3659,6 +3681,8 @@ func cycle_field_pal() -> void:
 	# the pad's 1-9: rotate which party member holds the field — deployed
 	# steps to the next standing kin; nothing out sends the lead. KO'd
 	# members are skipped; a lone out ball comes home (audit-34)
+	if net != null and net.is_client():
+		return # a guest's bench/party is a wire view — cycling would orphan a replica (audit-36)
 	if party.is_empty():
 		return
 	var cur := party_pal()
@@ -4434,6 +4458,7 @@ func load_game() -> bool:
 	for k in structures.keys():
 		structures[k]["node"].queue_free()
 	structures.clear()
+	_struct_gen += 1
 	world.structures.clear()
 	world.generate(int(d["seed"])) # numeric-verified above — the typed parameter would abort on anything else
 	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
@@ -4830,6 +4855,7 @@ func load_game() -> bool:
 		for dy in range(h):
 			for dx in range(w):
 				structures[Vector2i(tx + dx, ty + dy)] = st
+				_struct_gen += 1
 				world.structures[world.idx(tx + dx, ty + dy)] = st
 		if sid == "kinbox":
 			var o := Vector2i(tx, ty)
@@ -5022,6 +5048,9 @@ func tick_raid(dt: float) -> void:
 		log_msg(tr("Raid party spotted — a %s is coming for the kinbox!") % howl)
 		sfx_play("horn")
 		floater(player.pos, tr("RAID INCOMING"), "#e8452f")
+		if net != null: # guests get the same 30s horn, not just the wave
+			for gpid in net.ghosts:
+				note_remote(int(gpid), "RAID INCOMING — %s!", [howl])
 	if raid_t <= 0:
 		raid_t = 240.0 + rng.next() * 180.0
 		raid_warned = false # next wave gets its own warning
@@ -6341,6 +6370,7 @@ func regenerate(s: int) -> void:
 		if is_instance_valid(structures[k]["node"]):
 			structures[k]["node"].queue_free()
 	structures.clear()
+	_struct_gen += 1
 	world.structures.clear()
 	for dd0 in drops: # old world's ground loot doesn't carry over
 		if is_instance_valid(dd0["node"]):
@@ -6571,6 +6601,9 @@ func partner_skill() -> void:
 		return
 	var m := player.get_global_mouse_position()
 	var tw0: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
+	if touch_ui: # no cursor under a slab — fire down the facing line (audit-36)
+		var fv := player.facing.normalized() if player.facing.length() > 0.01 else Vector2.RIGHT
+		tw0 = player.pos + fv * 4.0
 	var psk = PARTNER_SKILLS.get(p.species_id)
 	if psk != null and not partner_gear_ok(p.species_id):
 		log_msg(tr("%s's %s needs its kin gear — unlock %s in the tech tree")

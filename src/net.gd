@@ -218,6 +218,15 @@ func net_floater(x: float, y: float, txt: String, col: String) -> void:
 	game.floater(Vector2(float(x), float(y)), tr(str(txt).substr(0, 24)), str(col))
 
 @rpc("authority", "call_remote", "reliable")
+func catch_credit(sid) -> void:
+	# the keeper's own catch ledger — the host's world book already logged
+	# this catch for accord/dex; this local copy is what the guest's kindex
+	# and mission chain read, so it must only count THEIR throws
+	if game == null or multiplayer.is_server():
+		return
+	game.credit_catch_local(str(sid))
+
+@rpc("authority", "call_remote", "reliable")
 func guest_hit(dmg: float) -> void:
 	if multiplayer.is_server() or not is_finite(dmg):
 		return # host wildlife only bites through the wire toward guests — NaN bites nothing
@@ -362,7 +371,7 @@ func pal_state_pack() -> Array:
 				var rg = ghosts[p.mounted_by]
 				p.pos = Vector2(rg.net_pos.x, rg.net_pos.y)
 			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.hp, p.lucky, p.boss,
-				p.alpha, p.spire_tag, p.mounted_by])
+				p.alpha, p.spire_tag, p.mounted_by, p.owner_id])
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -385,7 +394,8 @@ func pal_sync(arr: Array) -> void:
 				e[8] if e.size() > 8 else false,
 				e[9] if e.size() > 9 else false,
 				e[10] if e.size() > 10 else "",
-				e[11] if e.size() > 11 else 0])
+				e[11] if e.size() > 11 else 0,
+				e[12] if e.size() > 12 else 0])
 		else:
 			p.net_target = Vector2(Game._f(e[2]), Game._f(e[3]))
 			p.hp = maxf(0.0, Game._f(e[6])) if e.size() > 6 else p.hp

@@ -830,7 +830,6 @@ v cycles the field kin's orders: auto / aggressive / passive,v cycles the field 
 %s%s %s Lv%d T%d %s%s,%s%s %s Lv%d T%d %s%s,%s%s %s Lv%d T%d %s%s
 %s%s%s %s%s Lv%d T%d %sHP%d/%d,%s%s%s %s%s Lv%d T%d %sHP%d/%d,%s%s%s %s%s Lv%d T%d %sHP%d/%d
 %s%s×%d,%s%s×%d,%s%s×%d
-", ",", ",，
 ?  ?????,?  ?????,？ ?????
 BASE (%d/%d) — click to recall,BASE (%d/%d) — click to recall,基地（%d/%d）——点击召回
 BOX (%d),BOX (%d),箱子（%d）
@@ -945,3 +944,12 @@ Huge egg,Huge egg,巨蛋
 PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin,PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin,手柄  十字键：上=背包 右=骑乘 左=精灵技 下=地图  L3 拆除  R3 换人
 You're starving — eat berries or cooked food (dpad-up opens the bag),You're starving — eat berries or cooked food (dpad-up opens the bag),你快饿死了——吃点浆果或熟食（十字键上打开背包）
 %s starved out - it will recover in the box (build a feed box!),%s starved out - it will recover in the box (build a feed box!),%s 饿倒了——会在精灵箱里恢复（快建饲料箱！）
+"AIM + ATK throws — weaken it first","AIM + ATK throws — weaken it first","AIM + ATK 投球——先削弱它"
+"ATK swings — trees drop wood, rocks drop stone","ATK swings — trees drop wood, rocks drop stone","ATK 挥击——砍树得木，砸石得石"
+"BLD builds — a workbench turns wood + stone into gear","BLD builds — a workbench turns wood + stone into gear","BLD 建造——工作台把木+石变成装备"
+"BLD builds — your kinbox wants 4 lumenite + 6 wood + 6 stone","BLD builds — your kinbox wants 4 lumenite + 6 wood + 6 stone","BLD 建造——精灵箱要 4 流明石 + 6 木 + 6 石"
+"≡ → GUIDE — every verb lives there","≡ → GUIDE — every verb lives there","≡ → 手册——所有操作都在里面"
+"You're starving — eat berries or cooked food (INV opens the bag)","You're starving — eat berries or cooked food (INV opens the bag)","你快饿死了——吃点浆果或熟食（INV 打开背包）"
+"Sun's dropping — BLD builds a campfire, a straw bed sleeps","Sun's dropping — BLD builds a campfire, a straw bed sleeps","太阳要下山了——BLD 建个篝火，草床过夜"
+"No kin of yours nearby to assign","No kin of yours nearby to assign","附近没有你的精灵可指派"
+"RAID INCOMING — %s!","RAID INCOMING — %s!","突袭来袭——%s！"

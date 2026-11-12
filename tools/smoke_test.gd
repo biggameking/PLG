@@ -5964,7 +5964,7 @@ func run() -> void:
 		# snapshot kin rows share the tick packer — hp and mounted_by ride along
 		var snap_rows: Array = game.net.state_snapshot().get("kin", [])
 		check("snapshot kin rows carry the full pack", snap_rows.size() > 0
-			and snap_rows[0].size() == 12)
+			and snap_rows[0].size() >= 13)
 		# the host's own saddle: ghosts[1].net_pos is never fed — the pack row
 		# must read player.pos, not the sentinel (-1,-1)
 		var unb6: Kin = game.gen_pal("scalfang", 6, Vector2(5, 5))
@@ -6029,7 +6029,7 @@ func run() -> void:
 	var v41_pack: Array = game.net.pal_state_pack() # the 2Hz pack must not die on .level
 	check("kin wire-pack carries the full roster shape",
 		v41_pack.any(func(e: Array) -> bool:
-			return e.size() == 12 and e[0] == v41_wit.uid and int(e[4]) == 7))
+			return e.size() >= 13 and e[0] == v41_wit.uid and int(e[4]) == 7))
 	game.pals.erase(v41_wit)
 	v41_wit.queue_free()
 	# S42 eighth-audit batch: honest-path economy + ownership edge cases
@@ -8149,6 +8149,46 @@ func run() -> void:
 		eff36.size() == 1 and int(eff36[0].get("n", 0)) == 3,
 		"rows=%d" % eff36.size())
 	game.accord = accord0
+
+	# ---------- audit-36: guest parity — own ledger, own hands, own verbs
+	# the keeper's own catch ledger ticks independently of the world book
+	var cc0: int = int(game.catch_counts.get("puffmite", 0))
+	game.credit_catch_local("puffmite")
+	check("a guest's own catch credits their own ledger",
+		int(game.catch_counts.get("puffmite", 0)) == cc0 + 1)
+	game.catch_counts["puffmite"] = cc0
+	# the wire carries owner_id so a guest can tell their crew apart
+	var pack36: Array = game.net.pal_state_pack()
+	var pack_ok := not pack36.is_empty()
+	for row36 in pack36:
+		if not (row36 is Array) or row36.size() < 13 or not (row36[12] is int or row36[12] is float):
+			pack_ok = false
+	check("pal_state_pack ships owner_id at [12]", pack_ok,
+		"rows=%d" % pack36.size())
+	# a replica keeps its owner's stamp
+	var np36: int = game.pals.size()
+	game.spawn_net_pal(["puffmite", game.player.pos.x + 5.0, game.player.pos.y,
+		4, "base", false, 991, false, false, "", 0, 7])
+	check("a guest-owned replica knows its owner",
+		game.pals.size() == np36 + 1 and game.pals.back().owner_id == 7)
+	if game.pals.size() == np36 + 1:
+		var rep36: Kin = game.pals.back()
+		game.pals.erase(rep36)
+		game.entity_layer.remove_child(rep36)
+		rep36.free()
+	# every pause row resolves — a dead menu verb is a dead verb for all inputs
+	var hud36 = load("res://src/hud.gd")
+	check("pause INVENTORY row routes", "m_inv" in hud36.SHELL_ACTS)
+	# the catch-odds preview opens on touch too (gate removed, facing-target added)
+	var hudsrc := FileAccess.get_file_as_string("res://src/hud.gd")
+	check("catch preview isn't touch-gated",
+		not ("tiers2.is_empty() and not game.touch_ui" in hudsrc))
+	var netsrc := FileAccess.get_file_as_string("res://src/net.gd")
+	check("catch_credit rides the wire", "func catch_credit" in netsrc
+		and "credit_catch_local" in netsrc)
+	var gamesrc := FileAccess.get_file_as_string("res://src/game.gd")
+	check("the raid horn relays to guests", "RAID INCOMING — %s!" in gamesrc)
+	check("assign_remote answers a miss", "No kin of yours nearby" in gamesrc)
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

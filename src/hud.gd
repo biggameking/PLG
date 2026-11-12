@@ -7,6 +7,7 @@ var font: Font = ThemeDB.fallback_font
 var show_help := false
 var guide_page := 0
 var dex_scroll := 0
+var guide_scroll := 0 # in-page scroll — a volume taller than the paper still reads
 var chest_scroll := 0
 var craft_scroll := 0
 var shop_scroll := 0
@@ -382,6 +383,7 @@ func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to re
 		"kinbox": kin_scroll = maxi(0, kin_scroll + dir)
 		"tech": tech_scroll = maxi(0, tech_scroll + dir)
 		"statues": stat_scroll = maxi(0, stat_scroll + dir)
+		"guide": guide_scroll = maxi(0, guide_scroll + dir)
 
 func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked := false) -> void:
 	# tap scrollers — lists taller than the panel need a slab-reachable tail
@@ -517,8 +519,12 @@ func run_click(cr: Dictionary) -> void:
 		"dex_dn": _panel_scroll(1)
 		"guide_prev":
 			guide_page = maxi(guide_page - 1, 0)
+			guide_scroll = 0
 		"guide_next":
 			guide_page = mini(guide_page + 1, GuideData.pages().size() - 1)
+			guide_scroll = 0
+		"guide_up": _panel_scroll(-1)
+		"guide_dn": _panel_scroll(1)
 		"chest_up": _panel_scroll(-1)
 		"chest_dn": _panel_scroll(1)
 		"craft_up": _panel_scroll(-1)
@@ -570,7 +576,7 @@ func run_click(cr: Dictionary) -> void:
 				chest_bulk(cr["act"])
 
 const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_host", "m_chat",
-	"m_tech", "m_dex", "m_statues", "m_guide", "set_back", "resume",
+	"m_tech", "m_dex", "m_statues", "m_guide", "m_inv", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
 	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
 
@@ -608,7 +614,7 @@ func shell_act(act: String) -> void:
 		"m_statues":
 			game.panel = "statues"
 		"m_guide":
-			game.panel = "guide"; guide_page = 0
+			game.panel = "guide"; guide_page = 0; guide_scroll = 0
 		"set_back":
 			game.panel = ""
 		"resume":
@@ -928,19 +934,30 @@ func _draw() -> void:
 			Ink.TEAL)
 		# the island throw preview: hovering a wild kin shows the catch odds
 		var tiers2 := game.sphere_tiers()
-		if not tiers2.is_empty() and not game.touch_ui:
+		if not tiers2.is_empty():
 			var sid2: String = tiers2[clampi(pl.sphere_sel, 0, tiers2.size() - 1)]
-			var mp2 := get_global_mouse_position()
-			var tw2: Vector2 = Iso.from_screen(mp2.x, mp2.y, pl.elev())
 			var bp2: Kin = null
-			var bd2 := 1.6
-			for q in game.pals:
-				if q.mode != "wild" or q.hp <= 0:
-					continue
-				var dd := q.pos.distance_to(tw2)
-				if dd < bd2:
-					bd2 = dd
-					bp2 = q
+			if game.touch_ui: # no hover under a thumb — preview the facing-line target
+				var bd2t := 5.0
+				var fv := pl.facing.normalized() if pl.facing.length() > 0.01 else Vector2.RIGHT
+				for q in game.pals:
+					if q.mode != "wild" or q.hp <= 0:
+						continue
+					var dq := q.pos.distance_to(pl.pos)
+					if dq < bd2t and (q.pos - pl.pos).normalized().dot(fv) > 0.3:
+						bd2t = dq
+						bp2 = q
+			else:
+				var mp2 := get_global_mouse_position()
+				var tw2: Vector2 = Iso.from_screen(mp2.x, mp2.y, pl.elev())
+				var bd2 := 1.6
+				for q in game.pals:
+					if q.mode != "wild" or q.hp <= 0:
+						continue
+					var dd := q.pos.distance_to(tw2)
+					if dd < bd2:
+						bd2 = dd
+						bp2 = q
 			if bp2:
 				if bp2.boss:
 					wtext(Vector2(12, 112), tr("✦ %s Lv%d — a legend: orbs bounce off") % [tr(str(bp2.spec["name"])), bp2.level],
@@ -994,7 +1011,8 @@ func _draw() -> void:
 	var hy := 62.0
 	for h in game.active_hints(): # contextual nudges — retire themselves
 		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
-		var htxt: String = tr("» ") + tr(str(h.get("pad", h["text"])) if game.using_pad else str(h["text"]))
+		var hkey: String = "touch" if game.touch_ui else ("pad" if game.using_pad else "")
+		var htxt: String = tr("» ") + tr(str(h.get(hkey, h["text"])) if hkey != "" else str(h["text"]))
 		while htxt.length() > 4 and font.get_string_size(htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > 200.0:
 			htxt = htxt.left(htxt.length() - 2) # clip to the column — unbounded text ran off the screen edge
 		draw_string(font, Vector2(r.x - 212, hy), htxt,
@@ -1849,11 +1867,14 @@ func draw_kinbox(r: Vector2) -> void:
 			click_rects.append({"rect": Rect2(rect.position + Vector2(342, 0), Vector2(34, 17)), "act": "skills", "arg": pr["arg"]})
 			draw_string(font, Vector2(rect.position + Vector2(344, 13)), "[mv]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.TEAL)
-		draw_string(font, Vector2(rect.position.x, y), tr("%s%s%s %s%s Lv%d T%d %sHP%d/%d") % [
-			"● " if pr["out"] else "○ ", str(pr["name"]).left(12),
+		var prow: String = tr("%s%s%s %s%s Lv%d T%d %s%d/%d") % [
+			"● " if pr["out"] else "○ ", str(pr["name"]).left(11),
 			"☆" if pr["lucky"] else "", pr["sex"], pr["star_s"], pr["lv"], pr["talent"],
 			(tr(str(pr["ailment"])) + "!  ") if pr["ailment"] != "" else "",
-			pr["hp"], pr["max_hp"]],
+			pr["hp"], pr["max_hp"]]
+		while prow.length() > 4 and font.get_string_size(prow, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > 246.0:
+			prow = prow.left(prow.length() - 2) # button column starts at +254 — the stats stay off it
+		draw_string(font, Vector2(rect.position.x, y), prow,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if pr["ailment"] != "" else Ink.INK)
 		y += 17
 	# deployed workforce (the island: kin working the base live in the world)
@@ -1865,18 +1886,20 @@ func draw_kinbox(r: Vector2) -> void:
 		draw_string(font, Vector2(rr.position.x + 16, y), tr("BASE (%d/%d) — click to recall") % [workers.size(), game.max_base_pals()],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 		y += 18
+		var my_pid := multiplayer.get_unique_id() if game.net != null and game.net.is_client() else 0
 		for wp in workers:
 			var wrect := Rect2(rr.position.x + 24, y - 11, 250, 17)
 			draw_portrait(Vector2(rr.position.x + 4, y - 13), wp.species_id)
-			if game.net == null or not game.net.is_client():
+			var mine: bool = game.net == null or not game.net.is_client() or wp.owner_id == my_pid
+			if mine:
 				click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
-				# a guest reads the crew roster but can't recall the keeper's kin
+				# a guest recalls only their own hands — the wire enforces it too
 			draw_string(font, Vector2(wrect.position.x, y), tr("%s%s %s Lv%d T%d %s%s") % [tr(str(wp.spec["name"])),
 				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
 				tr(str(StructureData.STRUCTURES.get(wp.job_site["id"], {}).get("name", wp.job_site["id"]))) if wp.job_site else tr("idle"),
 				" [%s]" % tr(str(wp.ailment)) if wp.ailment != "" else ""],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if wp.ailment != "" else Ink.TEAL)
-			if game.net == null or not game.net.is_client():
+			if mine:
 				click_rects.append({"rect": Rect2(wrect.position + Vector2(258, 0), Vector2(34, 17)), "act": "skills", "arg": wp})
 				draw_string(font, Vector2(wrect.position.x + 260, y), "[mv]",
 					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.TEAL)
@@ -2401,26 +2424,43 @@ func draw_guide(r: Vector2) -> void:
 	var rr := Rect2(Vector2(r.x - w, 10) / 2.0 + Vector2(0, 20), Vector2(w, h - 30))
 	Ink.card(self, rr, Ink.PAPER)
 	var lines := []
+	var max_w := 560.0 # the paper's inner width — measure, don't count chars
+	var gsz := 10
 	for raw in GuideData.pages()[guide_page].split("\n"):
-		if raw.length() <= 74:
+		if font.get_string_size(raw, HORIZONTAL_ALIGNMENT_LEFT, -1, gsz).x <= max_w:
 			lines.append(raw)
 			continue
 		var rest: String = raw
-		while rest.length() > 74:
-			var cut: int = rest.rfind(" ", 74)
-			if cut < 30:
-				cut = 74
+		while font.get_string_size(rest, HORIZONTAL_ALIGNMENT_LEFT, -1, gsz).x > max_w:
+			var cut := -1
+			for probe in range(mini(rest.length(), 96), 20, -1):
+				if rest.substr(probe, 1) == " " and font.get_string_size(rest.left(probe), HORIZONTAL_ALIGNMENT_LEFT, -1, gsz).x <= max_w:
+					cut = probe
+					break
+			if cut < 0: # no space fits — hard-break at the measured width
+				cut = 30
+				while cut < rest.length() and font.get_string_size(rest.left(cut + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, gsz).x <= max_w:
+					cut += 1
 			lines.append(rest.substr(0, cut))
 			rest = rest.substr(cut + 1)
 		lines.append(rest)
+	var vis := int((rr.end.y - 44.0 - (rr.position.y + 22)) / 14) + 1 # rows the paper holds
+	guide_scroll = clampi(guide_scroll, 0, maxi(0, lines.size() - vis))
 	var y := rr.position.y + 22
-	for i in range(lines.size()):
+	for i in range(guide_scroll, lines.size()):
 		var ln: String = lines[i]
-		var head: bool = ln.begins_with("—") or (i < 2 and ln == ln.to_upper() and ln.length() > 3)
+		var head: bool = ln.begins_with("—") or (i - guide_scroll < 2 and ln == ln.to_upper() and ln.length() > 3)
+		if y > rr.end.y - 44.0: # the paper ends before the prose does — clip, never spill
+			break
 		draw_string(font, Vector2(rr.position.x + 22, y), ln,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, gsz,
 			Ink.ORANGE if head else Ink.INK)
-		y += 19
+		y += 14
+	if lines.size() > vis: # more prose below the fold — say so
+		draw_string(font, Vector2(rr.end.x - 110, rr.position.y + 16),
+			tr("%d-%d / %d") % [guide_scroll + 1, mini(lines.size(), guide_scroll + vis), lines.size()],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
+		_scroll_btns(rr, "guide_up", "guide_dn")
 	draw_string(font, Vector2(rr.position.x + 22, rr.end.y - 14),
 		tr("Esc/n close · ←/→ turn the page · %d / %d") % [guide_page + 1, GuideData.pages().size()],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK_SOFT)
