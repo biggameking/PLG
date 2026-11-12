@@ -7195,6 +7195,10 @@ func gen_merchant_stock() -> void:
 	# haven't broken a spire yet (spire kills pay one each, guaranteed)
 	if rng.chance(0.10):
 		merchant_stock.append({"id": "gauntlet_sigil", "n": 1, "price": 120})
+	# the Accord's standing order: a sealed keeper can always buy effigies —
+	# a real gold sink plumbed into soul_infuse, not a lottery line
+	if accord:
+		merchant_stock.append({"id": "sprigmelt_effigy", "n": 3, "price": 160})
 	# black-market kin (the island): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):

@@ -265,8 +265,10 @@ re-call their heirs in a day and a half — favoring the
 names you have yet to catch, a crowned keeper may keep
 every legend for the roster. Apex trials pay out
 whenever you can sound a sigil, the catalog counts to its
-last page, stars condense, statues still teach. The
-Wildmere is yours; spend it.""",
+last page, stars condense, statues still teach. And the
+merchant honors the contract: a sealed keeper's briefcase
+always holds effigies — gold into souls, as often as you
+can pay. The Wildmere is yours; spend it.""",
 ]
 
 const PAGES_ZH: Array[String] = [
@@ -477,7 +479,9 @@ const PAGES_ZH: Array[String] = [
 且偏爱那些你尚未收服的名讳，已加冕的守护者尽可将
 每只传说收入名册。只要还有符印可鸣，巅峰试炼就永
 远有账可结；图鉴数到最后一页，星级凝聚，石像犹有
-功课可授。荒原归你——好好享用。""",
+功课可授。商队也认这份契约：签约守护者的公文包里
+永远备着圣像——金币换魂魄，随你买得起多少次。荒
+原归你——好好享用。""",
 ]
 
 static func pages() -> Array[String]:

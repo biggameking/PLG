@@ -8136,6 +8136,19 @@ func run() -> void:
 	var h35a: float = game.nearest_heat(game.player.pos)
 	var h35b: float = game.nearest_heat(game.player.pos)
 	check("nearest_heat memo is self-consistent", h35a == h35b)
+	# the Accord's standing order only exists once the contract seals
+	var accord0: bool = game.accord
+	game.accord = false
+	game.gen_merchant_stock()
+	check("no accord, no standing effigy order",
+		game.merchant_stock.all(func(e): return e.get("id") != "sprigmelt_effigy"))
+	game.accord = true
+	game.gen_merchant_stock()
+	var eff36: Array = game.merchant_stock.filter(func(e): return e.get("id") == "sprigmelt_effigy")
+	check("a sealed accord stocks effigies every visit",
+		eff36.size() == 1 and int(eff36[0].get("n", 0)) == 3,
+		"rows=%d" % eff36.size())
+	game.accord = accord0
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
