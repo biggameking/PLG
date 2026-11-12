@@ -588,6 +588,17 @@ func run() -> void:
 			bad_gate.append(rec["id"])
 	check("every recipe gate names a real tech node", bad_gate.is_empty(),
 		"bad=%s" % bad_gate)
+	# audit-47: project.godot must parse whole — an inline '#' comment once
+	# swallowed the [rendering] header and deadened every setting in it
+	var pcf := ConfigFile.new()
+	check("project.godot parses", pcf.load("res://project.godot") == OK, "load failed")
+	var psecs: Array = pcf.get_sections()
+	var needed := ["application", "display", "rendering", "input"] # empty sections (intl.) don't list
+	check("every project.godot section parses", needed.all(func(s): return s in psecs),
+		"missing=%s" % needed.filter(func(s): return s not in psecs))
+	check("etc2 flag reads true", ProjectSettings.get_setting(
+		"rendering/textures/vram_compression/import_etc2_astc") == true,
+		"android export needs it (audit-47)")
 	var free_xy = func(sid: String):
 		var bx := int(game.kinbox_pos.x); var by := int(game.kinbox_pos.y)
 		for r0 in range(2, 30):
