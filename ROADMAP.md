@@ -1179,3 +1179,21 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   `_struct_gen` invalidation — same pattern as nearest_heat.
 - 6 new assertions; 911/0/1skip; SIM 0; SIM-ECO 0. Audit doc:
   docs/reviews/audit-39-kin-ai.md.
+
+### S87 — boss/endgame mechanics lens (audit-40) — SHIPPED
+- HIGH: saved hp was clamped against the pre-bonus max_hp BEFORE
+  apply_bonuses() — every flagged kin (alpha/boss/star/lucky/soul) silently
+  lost its multiplier share of hp on reload; an 8x guardian relogged at
+  1/8 health. Clamp now lands after bonuses; missing field heals full.
+- take_dps shares the 50% phase gate — DoT can't skip enter_phase_two.
+- Raider sweep extracted to tick_raider_sweep() and now retires any wild
+  raider when no trial lives — a mid-gauntlet save can no longer strand a
+  permanent uncatchable boss (or add).
+- danger_active requires engagement — a leashed phase-2 boss is dormant,
+  not a forever-drone (phase itself persists; re-engaging resumes it).
+- MAX_PALS enforced in raid spawn loops + the raid horn; untagged guardians
+  record their spire via an 8-cell home fallback; raid_t/rt0 clamp on load;
+  crowned re-derives from spires_done; den respawns dedup by sid+anchor;
+  phase-2 adds carry raid/raid_t0 so the sweep retires them.
+- 11 new assertions + sweep fixture updated to the live-trial contract.
+  922/0/0; SIM 0. Audit doc: docs/reviews/audit-40-boss-endgame.md.
