@@ -7333,6 +7333,246 @@ func run() -> void:
 	game.net.multiplayer.multiplayer_peer.close()
 	game.net.multiplayer.multiplayer_peer = null # back to honest offline
 
+	# ---------- S75: first-session hardening (audit-30) ----------
+	var st_sv75: String = game.state
+	game.state = "play"
+	# starter cargo must cover the first kinbox's lumenite — audit-30 found
+	# mission 1 asking for 4 with no early source: the drift grant is the fix
+	var inv_sv75: Dictionary = game.items.duplicate()
+	var kb_cost75 := {}
+	for c75 in StructureData.STRUCTURES["kinbox"]["cost"]:
+		kb_cost75[str(c75[0])] = int(c75[1])
+	var lum0_75: int = game.item_count("lumenite")
+	var orb0_75: int = game.item_count("kin_orb")
+	game.grant_starter_kit()
+	check("starter cargo covers kinbox lumenite",
+		game.item_count("lumenite") - lum0_75 >= int(kb_cost75.get("lumenite", 999)),
+		"grant=%d cost=%d" % [game.item_count("lumenite") - lum0_75, int(kb_cost75.get("lumenite", 0))])
+	check("starter cargo has 3 orbs", game.item_count("kin_orb") - orb0_75 == 3)
+	game.items = inv_sv75
+	# renewable lumenite: rocks shed a shard at 12% — seed the rng so both
+	# sides of the roll are deterministic (int_range eats a roll first)
+	var rng_sv75: int = game.rng.s
+	var sh_cell := Vector2i(-1, -1)
+	for sy75 in range(10, mini(60, game.world.WORLD_H - 4)):
+		for sx75 in range(10, mini(60, game.world.WORLD_W - 4)):
+			if game.world.tile_at(sx75, sy75) != World.Tile.WATER:
+				sh_cell = Vector2i(sx75, sy75); break
+		if sh_cell.x >= 0: break
+	var sh_i: int = game.world.idx(sh_cell.x, sh_cell.y)
+	var dec_sv75 = game.world.decor[sh_i]
+	var hp_sv75 = game.world.hp[sh_i]
+	var drops_n75: int = game.drops.size()
+	var shard_hit := false
+	var shard_miss := false
+	for s75 in range(600): # observe real outcomes — same cell re-armed, seed forced
+		if shard_hit and shard_miss:
+			break
+		game.world.decor[sh_i] = World.Decor.ROCK
+		game.world.hp[sh_i] = 10
+		game.rng.s = s75
+		var dn75: int = game.drops.size()
+		game.harvest_cell(sh_cell.x, sh_cell.y)
+		var got := game.drops.slice(dn75).any(func(d6): return d6["id"] == "lumenite")
+		if got:
+			shard_hit = true
+		else:
+			shard_miss = true
+		while game.drops.size() > dn75:
+			var dp76 = game.drops.pop_back()
+			if is_instance_valid(dp76.get("node")):
+				dp76["node"].queue_free()
+	check("rock sheds a lumenite shard", shard_hit, "no shard in 600 tries")
+	check("shard roll can miss", shard_miss, "never missed in 600 tries")
+	while game.drops.size() > drops_n75:
+		var dp75 = game.drops.pop_back()
+		if is_instance_valid(dp75.get("node")):
+			dp75["node"].queue_free()
+	game.world.decor[sh_i] = dec_sv75
+	game.world.hp[sh_i] = hp_sv75
+	game.rng.s = rng_sv75
+	# day-1 clock runs at half rate — the first dusk lands ~4 min in
+	var day_sv75: int = game.day
+	var tod_sv75: float = game.tod
+	game.day = 1; game.tod = 12.0
+	game._process(0.5)
+	var rate1: float = game.tod - 12.0
+	game.day = 4; game.tod = 12.0
+	game._process(0.5)
+	var rate4: float = game.tod - 12.0
+	check("day 1 runs at half rate", absf(rate1 - 0.025) < 0.003 and absf(rate4 - 0.05) < 0.003,
+		"d1=%.4f d4=%.4f" % [rate1, rate4])
+	game.day = day_sv75; game.tod = tod_sv75
+	# straw beds refuse daylight on the host too — same night gate as guests
+	var hud75: Node = main.get_node("UILayer/HUD")
+	var facing_sv: Vector2 = game.player.facing
+	var ppos_sv75: Vector2 = game.player.pos
+	var m_sv75 = game.merchant
+	game.merchant = null
+	game.player.facing = Vector2(1, 0)
+	var bed_cell75 := Vector2i(int(game.player.pos.x) + 1, int(game.player.pos.y))
+	while game.structures.has(bed_cell75):
+		bed_cell75.x += 1
+	game.player.pos = Vector2(bed_cell75.x - 0.5, bed_cell75.y + 0.5)
+	game.structures[bed_cell75] = {"id": "straw_bed", "pos": bed_cell75, "timer": 0.0,
+		"hp": 200, "workers": [], "store": {}}
+	var pet_sv75 := []
+	for q75 in game.pals: # the pet path intercepts E — clear arm's reach
+		if q75.mode in ["partner", "base"] and q75.pos.distance_to(game.player.pos) < 1.5:
+			pet_sv75.append([q75, q75.pos])
+			q75.pos += Vector2(6, 0)
+	var aggro_sv75 := []
+	for q76 in game.pals:
+		aggro_sv75.append([q76, q76.aggro, q76.raid, q76.hp, q76.san, q76.hunger])
+		q76.aggro = -1; q76.raid = false
+	var hp_sv77: float = game.player.hp
+	game.tod = 12.0
+	hud75.interact()
+	check("daytime straw bed refused", game.day == day_sv75
+		and "not night" in str(game.messages.back()),
+		"day=%d msg=%s" % [game.day, str(game.messages.back())])
+	game.tod = 23.0
+	hud75.interact()
+	check("night straw bed sleeps to dawn", game.day == day_sv75 + 1 and game.tod == 6.0,
+		"day=%d tod=%.1f" % [game.day, game.tod])
+	for q77 in aggro_sv75:
+		q77[0].aggro = q77[1]; q77[0].raid = q77[2]
+		q77[0].hp = q77[3]; q77[0].san = q77[4]; q77[0].hunger = q77[5]
+	for pv75 in pet_sv75:
+		pv75[0].pos = pv75[1]
+	game.player.pos = ppos_sv75; game.player.facing = facing_sv; game.player.hp = hp_sv77
+	game.merchant = m_sv75
+	game.day = day_sv75; game.tod = tod_sv75
+	game.structures.erase(bed_cell75)
+	# death spills a mine-flagged pack that outlives the 600s decay AND a reboot
+	var drops_n77: int = game.drops.size()
+	var items_sv77: Dictionary = game.items.duplicate()
+	var equip_sv77: Dictionary = game.player.equipment.duplicate()
+	var marks_sv77: Array = game.death_marks.duplicate()
+	var ppos77: Vector2 = game.player.pos
+	var hp77: float = game.player.hp
+	game.items = {"stone": 7} # a single marker stack keeps the spill bounded
+	game.player.hp = 0.0
+	game.respawn_player()
+	var mine_d = null
+	for dd77 in game.drops.slice(drops_n77):
+		if dd77.get("mine", false) and dd77.get("id") == "stone":
+			mine_d = dd77
+	check("death spills a mine-flagged pack", mine_d != null,
+		"new=%d" % (game.drops.size() - drops_n77))
+	if mine_d != null:
+		mine_d["age"] = 700.0
+		game.spawn_drop("wood", 1, mine_d["pos"]) # same-age normal drop dies on schedule
+		game.drops.back()["age"] = 700.0
+		# walk-over pickup shares the tick — put the player far away so decay
+		# is the only variable between the two bags
+		var away75: Vector2 = mine_d["pos"] + Vector2(30, 0)
+		if away75.x > game.world.WORLD_W - 3.0 or away75.x < 3.0:
+			away75 = mine_d["pos"] - Vector2(30, 0)
+		game.player.pos = away75
+		game._process(0.05)
+		check("corpse pack outlives decay", game.drops.has(mine_d)
+			and not game.drops.any(func(d9): return d9.get("id") == "wood" and d9.get("age", 0.0) >= 700.0))
+		game.save_game()
+		var ok75: bool = game.load_game()
+		check("corpse pack survives reload", ok75
+			and game.drops.any(func(d8): return d8.get("mine", false)),
+			"load=%s" % ok75)
+	while game.drops.size() > drops_n77:
+		var dp77 = game.drops.pop_back()
+		if is_instance_valid(dp77.get("node")):
+			dp77["node"].queue_free()
+	game.items = items_sv77
+	game.player.equipment = equip_sv77
+	game.player.pos = ppos77; game.player.hp = hp77
+	game.death_marks = marks_sv77
+	# the opening beat seeds docile kin inside the spawn ring — no empty-island luck
+	var pals_sv75: Array = game.pals.duplicate()
+	var ring_ok := true
+	if game.pals.size() > game.MAX_PALS - 6:
+		ring_ok = false
+		for q78 in game.pals.duplicate():
+			if q78.mode == "wild":
+				game.pals.erase(q78); q78.free(); ring_ok = true; break
+	if ring_ok:
+		game.spawn_wild(true)
+		var ring75 := 0
+		for q79 in game.pals:
+			if not pals_sv75.has(q79) and q79.mode == "wild" \
+					and q79.pos.distance_to(game.player.pos) < 8.5:
+				ring75 += 1
+		check("opening ring spawns docile kin", ring75 >= 1, "ring=%d" % ring75)
+	else:
+		check("opening ring spawns docile kin", true, "skipped: roster full")
+	for q80 in game.pals.duplicate():
+		if not pals_sv75.has(q80):
+			game.pals.erase(q80)
+			if q80.get_parent():
+				q80.get_parent().remove_child(q80)
+			q80.free()
+	# first kinbox plants a raid grace — no same-breath wave on a fresh base
+	var raid_sv75: float = game.raid_t
+	var kb_sv75: Vector2i = game.kinbox_pos
+	var xb_sv75: Array = game.extra_boxes.duplicate()
+	var items_sv78: Dictionary = game.items.duplicate()
+	for c78 in StructureData.STRUCTURES["kinbox"]["cost"]:
+		if game.item_count(c78[0]) < int(c78[1]):
+			game.add_item(c78[0], int(c78[1]) - game.item_count(c78[0]))
+	game.kinbox_pos = Vector2i(-1, -1)
+	game.raid_t = 30.0
+	var kb_cell := Vector2i(-1, -1)
+	var placed75 := false
+	for r75 in range(2, 40):
+		for dx75 in range(-r75, r75 + 1):
+			for dy75 in range(-r75, r75 + 1):
+				if maxi(absi(dx75), absi(dy75)) != r75:
+					continue
+				var k75 := Vector2i(int(game.player.pos.x) + dx75, int(game.player.pos.y) + dy75)
+				if game.place_structure("kinbox", k75.x, k75.y):
+					placed75 = true; kb_cell = k75; break
+			if placed75: break
+		if placed75: break
+	check("first kinbox buys raid grace", placed75 and game.raid_t >= game.DAY_LEN + 59.9,
+		"placed=%s raid_t=%.1f" % [placed75, game.raid_t])
+	if placed75:
+		var st75 = game.structures[kb_cell]
+		for dx76 in range(2):
+			for dy76 in range(2):
+				var cc75 := kb_cell + Vector2i(dx76, dy76)
+				game.structures.erase(cc75)
+				game.world.structures.erase(game.world.idx(cc75.x, cc75.y))
+		if is_instance_valid(st75.get("node")):
+			st75["node"].queue_free()
+	game.kinbox_pos = kb_sv75
+	game.extra_boxes = xb_sv75
+	game.raid_t = raid_sv75
+	game.items = items_sv78
+	# contextual hints: the first-session conds fire when they should
+	var hmap75 := {}
+	for h75 in game.HINTS:
+		hmap75[h75["id"]] = h75
+	game.kinbox_pos = Vector2i(-1, -1)
+	check("kinbox hint before first base", hmap75.has("kinbox")
+		and hmap75["kinbox"]["cond"].call(game))
+	game.kinbox_pos = kb_sv75
+	var cf75 := []
+	for st77 in game.structures.values():
+		if st77["id"] == "campfire" and st77 not in cf75:
+			cf75.append(st77)
+			st77["id"] = "_campfire"
+	game.tod = 20.0
+	check("dusk hint without campfire", hmap75.has("dusk") and hmap75["dusk"]["cond"].call(game))
+	game.tod = 22.5
+	check("night hint without campfire", hmap75.has("night") and hmap75["night"]["cond"].call(game))
+	for st78 in cf75:
+		st78["id"] = "campfire"
+	game.tod = tod_sv75
+	var t_sv75: float = game.t # headless time barely accrues — stage the clock the cond reads
+	game.t = 40.0
+	check("guide hint stays available early", hmap75.has("guide") and hmap75["guide"]["cond"].call(game))
+	game.t = t_sv75
+	game.state = st_sv75
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is
@@ -7340,6 +7580,17 @@ func run() -> void:
 	var hudl: Node = main.get_node("UILayer/HUD")
 	game.state = "title"
 	hudl.shell_act("new_game")
+	if game.has_save:
+		# S75: a live save gates NEW GAME behind an explicit second tap —
+		# anything else on the menu disarms it instead of tripping it later
+		check("sweep: new game arms overwrite confirm", hudl.new_game_armed
+			and game.state == "title", "state=%s" % game.state)
+		hudl.shell_act("m_settings")
+		check("sweep: stray act disarms", not hudl.new_game_armed)
+		hudl.shell_act("set_back")
+		hudl.shell_act("new_game")
+		check("sweep: new game re-arms", hudl.new_game_armed)
+		hudl.shell_act("new_game")
 	check("sweep: new game enters play", game.state == "play", "state=%s" % game.state)
 	game.state = "paused"
 	hudl.shell_act("m_settings")

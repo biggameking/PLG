@@ -557,9 +557,17 @@ const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_host", "
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
 	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
 
+var new_game_armed := false # first tap arms — the second confirms the overwrite
+
 func shell_act(act: String) -> void:
+	if act != "new_game":
+		new_game_armed = false # any other row disarms — no stale confirm lingers
 	match act:
 		"new_game":
+			if game.has_save and not new_game_armed:
+				new_game_armed = true # a save exists — make the overwrite explicit
+				return
+			new_game_armed = false
 			game.state = "play"
 			game.log_msg(tr("Day 1 on the Wildmere — catch a kin, feed it, put it to work."))
 		"continue":
@@ -704,6 +712,8 @@ func interact() -> void:
 			"straw_bed":
 				if game.net != null and game.net.is_client():
 					game.net.rpc("sleep_req")
+				elif not game.is_night():
+					game.log_msg(tr("It's not night yet"))
 				else:
 					game.sleep_to_morning()
 				return
@@ -1073,11 +1083,12 @@ func _draw() -> void:
 			tr("1-%d sends that party kin out (press again to recall) — one ball on the field") % game.party_cap(),
 			tr("v cycles the field kin's orders: auto / aggressive / passive"),
 			tr("HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)"),
-			tr("Glider descends cliffs. Sick kin need medicine in feed box/bag."),
+			tr("GUIDE n — the field manual"),
+			tr("GLIDER descends cliffs. Sick kin need medicine."),
 		]
-		Ink.card(self, Rect2(10, r.y - 136, 580, 96))
+		Ink.card(self, Rect2(10, r.y - 30 - lines.size() * 17, 580, lines.size() * 17 + 22))
 		for i in range(lines.size()):
-			draw_string(font, Vector2(20, r.y - 116 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
+			draw_string(font, Vector2(20, r.y - 18 - (lines.size() - i) * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 
 	# minimap (M): baked world image + live player/kinbox markers
 
@@ -1455,7 +1466,8 @@ func title_rows() -> Array: # the title menu's rows as data — pad nav and smok
 	var rows := []
 	if game.has_save:
 		rows.append(["CONTINUE", "continue", Color.WHITE])
-	rows.append(["NEW GAME", "new_game", Color.WHITE])
+	rows.append(["SURE? this overwrites your save" if new_game_armed else "NEW GAME",
+		"new_game", Color(0.95, 0.55, 0.5) if new_game_armed else Color.WHITE])
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join", Color.WHITE]) # co-op straight from boot
 	rows.append(["SETTINGS", "m_settings", Color.WHITE])
@@ -1551,14 +1563,23 @@ func draw_build_bar(r: Vector2) -> void:
 	var bx := 10.0
 	var by := r.y - 200.0
 	Ink.card(self, Rect2(bx, by, 620, 56), Ink.PAPER, 0.0, 3.0)
-	draw_string(font, Vector2(bx + 8, by + 16), tr("BUILD — tap/1-9 pick, tap again to cancel") + (tr("  (placing: %s)") % tr(str(StructureData.STRUCTURES[game.buildable_list()[build_sel]]["name"])) if build_sel >= 0 else ""),
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
+	var head := tr("BUILD — tap/1-9 pick, tap again to cancel")
+	if build_sel >= 0:
+		var ps: Dictionary = StructureData.STRUCTURES[game.buildable_list()[build_sel]]
+		var pcost := ""
+		for c in ps.get("cost", []):
+			pcost += "%d %s  " % [c[1], tr(str(ItemData.ITEMS.get(str(c[0]), {}).get("name", c[0])))]
+		head += tr("  (placing: %s — %s)") % [tr(str(ps["name"])), pcost.strip_edges()]
+	draw_string(font, Vector2(bx + 8, by + 16), head, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 	for i in range(mini(9, lst.size())):
 		var s: Dictionary = StructureData.STRUCTURES[lst[i]]
 		var cost := ""
+		var afford := true
 		for c in s.get("cost", []):
 			cost += "%d%s " % [c[1], c[0].left(4)]
-		var col := Ink.ORANGE if i == build_sel else Ink.INK
+			if game.item_count(str(c[0])) < int(c[1]):
+				afford = false
+		var col := Ink.ORANGE if i == build_sel else (Ink.INK if afford else Color(0.72, 0.45, 0.4))
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
 		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": i})

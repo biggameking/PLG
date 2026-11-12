@@ -993,3 +993,28 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   L: hit-flood buckets, ghostless take_drop fail-closed, live-lure
   stomp refusal, NaN guards across every float-arg handler.
   Rules 109-113. Smoke 816/0.
+
+## S75 — first-session hardening (audit-30 fixes)
+  C1 soft lock closed: starter cargo is 3 orbs + 4 drift lumenite
+  (exactly a kinbox's share); rocks/ore/coal shed a 12% shard so
+  lumenite stays renewable. C2 pacing: day 1 clock runs half rate —
+  first dusk ~4 min, not ~130s. spawn_wild(true) seeds 3 docile
+  zone-0 kin inside the spawn ring at worldgen only. First kinbox
+  plants raid_t = DAY_LEN+60 grace. Corpse bags mine-flagged —
+  600s decay can't eat them, flag round-trips the save ("m" bool).
+  Host straw_bed takes the same is_night gate as guests. NEW GAME
+  with a live save arms a red SURE? row before it fires. New hints:
+  chop / kinbox cost / guide N / dusk campfire prep; night hint
+  rewritten off the phantom torch (it was never an ItemData row).
+  Help card auto-sizes (was overflowing at 8 lines); build bar shows
+  the full recipe on the selected header + dims short rows.
+  Smoke 835/0 — 17 new assertions, all with live values.
+
+## audit-30 — first-15-minutes onboarding reaudit
+  Context-free lens on the opening arc: found the C1 lumenite
+  soft-lock chain (fossil beds zone-locked, crusher needs kinbox,
+  rod needs lumenite, maps downstream) and the C2 two-minute
+  daylight crush. Every finding independently verified against
+  source before implementation. Keep-list honored: mission rope
+  retroactive pay, catch-odds feedback, zone-0 passive nights.
+  docs/reviews/audit-30-first-session.md.

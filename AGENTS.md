@@ -602,3 +602,12 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     leave via `structures.erase`; real teardown wants real shapes. And
     snapshot EVERY ambient key a scan touches (`egg_parents` lives on any
     structure — clear all of them before asserting claims).
+114. **Fixtures observe outcomes; they never simulate the code path.** My
+    lumenite-shard test mirrored `int_range` + `next()` to predict a seed —
+    a hidden consumer elsewhere in the call chain would silently shift the
+    stream. The robust fixture re-arms the world (same cell, hp=10) and
+    forces `rng.s`, then reads what actually spawned. Same family: a shared
+    tick couples the variable under test to unrelated systems — my corpse-
+    bag check died because `_process` runs walk-over pickup alongside
+    decay; isolate by moving the player out of pickup radius, not by
+    assuming the tick only decays.

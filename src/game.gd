@@ -312,10 +312,9 @@ func _ready() -> void:
 	player = preload("res://src/player.gd").new()
 	entity_layer.add_child(player)
 	player.setup(self, Vector2(spawn.x + 0.5, spawn.y + 0.5))
-	# starter kit
-	for id in ["kin_orb", "kin_orb", "kin_orb", "torch"]:
-		add_item(id, 1)
+	grant_starter_kit()
 	log_msg(tr("Welcome to Kinbound. Press H for help."))
+	log_msg(tr("You washed ashore with 3 orbs and some drift lumenite."))
 	# POIs roll off the world seed even at boot — the same lane regenerate()
 	# uses, or a guest of a fresh-boot host gets phantom walls where the host
 	# sees floor (the join path replays placement from world.seed)
@@ -323,6 +322,13 @@ func _ready() -> void:
 	rng.s = (world.seed ^ 0x9E3779B9) & 0xFFFFFFFF
 	place_pois()
 	rng.s = rsav # gameplay rolls resume from the session stream
+
+func grant_starter_kit() -> void:
+	# starter kit: three orbs and the drift cargo — four lumenite is
+	# exactly a kinbox's share, so mission 1 is solvable on day 1
+	for id in ["kin_orb", "kin_orb", "kin_orb"]:
+		add_item(id, 1)
+	add_item("lumenite", 4)
 
 func saddle_for(p: Kin) -> String:
 	# the island gear rule: every mount wants its own tack — flyers, swimmers
@@ -783,7 +789,7 @@ func wild_lv(zone: int) -> int:
 	# the island: the night shift spawns meaner — same table, +2 after dusk
 	return rng.int_range(1 + zone * 3, 4 + zone * 5) + (2 if is_night() else 0)
 
-func spawn_wild() -> void:
+func spawn_wild(opening := false) -> void:
 	if net != null and net.is_client():
 		return # host owns the wild roster — ours arrive as pal_sync replicas
 	var want := 42
@@ -841,6 +847,27 @@ func spawn_wild() -> void:
 				mp.home = p.home
 				pals.append(mp)
 				wild_n += 1
+	if opening: # the opening beat: a few docile kin inside the spawn ring —
+		var ring_n := 0 # a new keeper shouldn't have to hunt for a first catch
+		var ring_tries := 0
+		var z0: Array = acq_pool(ZONE_SPECIES[0] + SpeciesGen.zone_pool(0))
+		z0 = z0.filter(func(s): return SpeciesData.species_of(str(s)).get("hostile", 0) == 0)
+		while ring_n < 3 and ring_tries < 60 and pals.size() < MAX_PALS:
+			ring_tries += 1
+			var a9 := rng.next() * TAU
+			var r9 := 4.5 + rng.next() * 3.0 # outside the pop-radius, on the first screen
+			var rx := int(player.pos.x + cos(a9) * r9)
+			var ry := int(player.pos.y + sin(a9) * r9)
+			if rx < 4 or ry < 4 or rx >= World.WORLD_W - 5 or ry >= World.WORLD_H - 5 \
+					or world.blocked(rx, ry) \
+					or world.tiles[world.idx(rx, ry)] == World.Tile.WATER or z0.is_empty():
+				continue
+			var rp2 := preload("res://src/kin.gd").new()
+			entity_layer.add_child(rp2)
+			rp2.setup(self, pick_wild_species(z0), wild_lv(0), Vector2(rx + 0.5, ry + 0.5))
+			rp2.home = rp2.pos
+			pals.append(rp2)
+			ring_n += 1
 
 func pick_wild_species(pool: Array) -> String:
 	# the island day/night ecology: dark kin are nocturnal — they only spawn
@@ -1514,12 +1541,15 @@ func respawn_player() -> void:
 		for id in items.keys():
 			if items[id] > 0:
 				var a := rng.next() * TAU
-				spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8))
+				# corpse bags are mine-flagged: the 600s decay can't eat the
+				# gear you died for — only you (or a hauler) takes it back
+				spawn_drop(id, items[id], player.pos + Vector2(cos(a), sin(a)) * (0.4 + rng.next() * 0.8), true)
 				dropped += items[id]
 				items.erase(id) # don't leave ghost "x0" rows in the bag
 				unequip_if_gone(id)
 	if dropped > 0:
 		log_msg(tr("You dropped %d items where you fell!") % dropped)
+		log_msg(tr("Your pack lies where you fell — tombstone on the map (M)"))
 		death_marks.append(player.pos) # the island tombstone: the map remembers the spill
 		if death_marks.size() > 3:
 			death_marks.pop_front() # only the freshest few spills earn a mark
@@ -1995,6 +2025,12 @@ func harvest_cell(tx: int, ty: int) -> void:
 			World.Decor.STUMP: "wood"}[d]
 		var n: int = 1 if d == World.Decor.BERRY else rng.int_range(1, 3)
 		spawn_drop(loot, n, Vector2(tx + 0.5, ty + 0.5))
+		if d in [World.Decor.ROCK, World.Decor.ORE_GOLD, World.Decor.ORE_COAL] \
+				and rng.next() < 0.12:
+			# a rare shard in the rubble — lumenite stays renewable after the
+			# drift cargo is spent, or mission 1 could brick on a whim offering
+			spawn_drop("lumenite", 1, Vector2(tx + 0.5, ty + 0.5))
+			log_msg(tr("A lumenite shard gleams in the rubble"))
 		world.decor[i] = World.Decor.STUMP if (d == World.Decor.TREE_A or d == World.Decor.TREE_B) else World.Decor.NONE
 		world.hp[i] = 0
 		mark_decor(i)
@@ -2011,7 +2047,7 @@ func dirty_decor_pack() -> Array:
 	dirty_decor.clear()
 	return arr
 
-func spawn_drop(id: String, n: int, at: Vector2) -> void:
+func spawn_drop(id: String, n: int, at: Vector2, mine := false) -> void:
 	if net != null and net.is_client():
 		return # every synced bag arrives via net_drops — a local copy would
 		# pay twice: once on walk-over, once through the take_drop RPC
@@ -2019,7 +2055,7 @@ func spawn_drop(id: String, n: int, at: Vector2) -> void:
 	if drops.size() >= MAX_DROPS:
 		take_drop(drops.front()) # flood backstop: oldest bag evaporates
 	drops.append({"id": id, "n": n, "pos": at, "node": drop_sprite(id, at),
-		"cool": 0.0, "age": 0.0, "did": next_drop_id})
+		"cool": 0.0, "age": 0.0, "did": next_drop_id, "mine": mine})
 	next_drop_id += 1
 
 func drop_sprite(id: String, at: Vector2) -> Sprite2D:
@@ -2272,16 +2308,32 @@ var HINTS := [
 	 "text": "Q aims — click a wild kin to throw an orb",
 	 "pad": "X aims — RT throws at a wild kin",
 	 "cond": func(g): return g.item_count("kin_orb") > 0 and g.catch_counts.is_empty() and g.player != null},
+	{"id": "chop", "once": 15.0,
+	 "text": "LMB swings — trees drop wood, rocks drop stone, berries feed you",
+	 "pad": "RT swings — trees drop wood, rocks drop stone, berries feed you",
+	 "cond": func(g): return g.item_count("wood") == 0 and g.item_count("stone") == 0},
 	{"id": "build", "once": 25.0,
 	 "text": "B builds — a workbench turns wood + stone into gear",
 	 "pad": "Back builds — a workbench turns wood + stone into gear",
 	 "cond": func(g): return g.kinbox_pos.x >= 0 and not g.structures.values().any(func(s): return s["id"] == "workbench")},
+	{"id": "kinbox", "once": 30.0,
+	 "text": "B builds — your kinbox wants 4 lumenite + 6 wood + 6 stone",
+	 "pad": "Back builds — your kinbox wants 4 lumenite + 6 wood + 6 stone",
+	 "cond": func(g): return g.kinbox_pos.x < 0},
+	{"id": "guide", "once": 12.0,
+	 "text": "N opens the field guide — every verb lives there",
+	 "pad": "Back opens the field guide — every verb lives there",
+	 "cond": func(g): return g.t > 30.0},
 	{"id": "eat", "once": 12.0,
 	 "text": "You're starving — eat berries or cooked food (I opens the bag)",
 	 "cond": func(g): return g.player != null and g.player.hunger < 25.0},
+	{"id": "dusk", "once": 18.0,
+	 "text": "Sun's dropping — B builds a campfire (6w 3s), a straw bed sleeps",
+	 "pad": "Sun's dropping — Back builds a campfire, a straw bed sleeps",
+	 "cond": func(g): return g.tod >= 19.0 and g.tod < 21.0 and not g.structures.values().any(func(s): return s["id"] == "campfire")},
 	{"id": "night", "once": 15.0,
-	 "text": "Night bites cold — carry a torch or stand by a fire",
-	 "cond": func(g): return g.is_night() and g.player != null and g.item_count("torch") > 0 and g.player.equipment.get("weapon") != "torch"},
+	 "text": "Night bites cold — stand by a campfire or a fire-kin",
+	 "cond": func(g): return g.is_night() and g.player != null and not g.structures.values().any(func(s): return s["id"] == "campfire")},
 	{"id": "san", "once": 15.0,
 	 "text": "A kin is flagging — feed it and let it rest",
 	 "cond": func(g): return g.pals.any(func(q): return q.mode in ["partner", "base"] and q.san < 30.0)},
@@ -2341,7 +2393,9 @@ func _process(dt: float) -> void:
 	t += dt
 	tick_hints(dt)
 	if net == null or not net.is_client(): # clients take tod from env_sync — the host's clock owns the sky
-		tod += dt / DAY_LEN * 24.0
+		# day 1 runs at half rate: the first dusk lands ~4 min in, not ~2 —
+		# the tutorial arc can't fit inside 130 seconds of daylight
+		tod += dt / DAY_LEN * 24.0 * (0.5 if day == 1 else 1.0)
 		if tod >= 24.0:
 			tod -= 24.0
 			day += 1
@@ -2411,7 +2465,9 @@ func _process(dt: float) -> void:
 		for i in range(drops.size() - 1, -1, -1):
 			var d: Dictionary = drops[i]
 			d["age"] = d.get("age", 0.0) + dt
-			if d["age"] > 600.0: # old loot decays — else the world fills with bags
+			if d["age"] > 600.0 and not d.get("mine", false):
+				# old loot decays — else the world fills with bags; a corpse
+				# spill is the player's own pack, it waits for the walk back
 				take_drop(d)
 				continue
 			if d["cool"] > 0.0:
@@ -2610,6 +2666,9 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		if kinbox_pos.x < 0:
 			kinbox_pos = Vector2i(tx, ty)
 			log_msg(tr("Base established! Assign kin with F."))
+			# first-base grace: the island lets a fresh keeper breathe — the
+			# opening raid can't land inside the same breath that raised it
+			raid_t = maxf(raid_t, DAY_LEN + 60.0)
 		else:
 			extra_boxes.append(Vector2i(tx, ty))
 			log_msg(tr("Outpost kinbox online — shared box network"))
@@ -4162,7 +4221,8 @@ func save_game() -> void:
 		"perks": perks, "stat_pts": stat_pts, "equip": player.equipment,
 		"wear": player.weapon_wear, "awear": player.armor_wear,
 		"v": SAVE_VER, "kin": pals_data, "structures": structs, "catches": catch_counts,
-		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y}),
+		"drops": drops.map(func(dd): return {"id": dd["id"], "n": dd["n"], "x": dd["pos"].x, "y": dd["pos"].y,
+			"m": dd.get("mine", false) if dd.get("mine", false) else null}), # corpse bags keep their mercy flag across a reload
 		"crafts": craft_queue.slice(0, MAX_CRAFT_QUEUE).map(
 			func(cq): return {"out": cq["out"], "n": cq["n"], "left": cq["left"]}),
 		"respawns": boss_respawns.slice(0, MAX_RESPAWNS).map(
@@ -4280,7 +4340,8 @@ func load_game() -> bool:
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
 				and ItemData.ITEMS.has(str(dd0["id"])) \
 				and _fin(dd0["x"]) and _fin(dd0["y"]):
-			spawn_drop(str(dd0["id"]), maxi(_i(dd0.get("n", 1)), 0), Vector2(float(dd0["x"]), float(dd0["y"]))) # negative n would corrupt the item ledger
+			spawn_drop(str(dd0["id"]), maxi(_i(dd0.get("n", 1)), 0), Vector2(float(dd0["x"]), float(dd0["y"])),
+				dd0.get("m") is bool and dd0["m"]) # negative n would corrupt the item ledger; the corpse flag rides too
 	boss_respawns.clear()
 	for rb in (d["respawns"] if d.get("respawns") is Array else []):
 		var rp = rb.get("pos") if rb is Dictionary else null
@@ -6152,7 +6213,7 @@ func place_pois() -> void:
 	spawn_lairs()
 	spawn_camps() # Iron Pact poacher camps — guards spawn locally like lair bosses
 	spawn_fossils() # old bones re-spawned with the world
-	spawn_wild() # after player.pos so the no-spawn radius is measured from the new point
+	spawn_wild(true) # after player.pos so the no-spawn radius is measured from the new point
 
 # ---------- effigy statues ----------
 const PERK_COST := 2
