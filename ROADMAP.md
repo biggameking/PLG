@@ -1168,3 +1168,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   self-cheat, out of model.
 - Process lesson banked: background audit subagents truncate final reports —
   foreground or file-output for audit lenses.
+
+### S86 — kin AI behavior lens (audit-39) — SHIPPED
+- Expedition KO no longer deletes the gatherer as wild loot (High); the post
+  relinks its berth on return so jobs survive trips and saves; haulers
+  wander+warn under no-capacity and drop honestly at the 90s unreachable
+  bound; assign paths empty the paw; KO clears berserk_t; load honors the
+  workers≤4 crew cap.
+- Three per-frame scans (find_foe/bed/dummy) memoized at 0.4s with
+  `_struct_gen` invalidation — same pattern as nearest_heat.
+- 6 new assertions; 911/0/1skip; SIM 0; SIM-ECO 0. Audit doc:
+  docs/reviews/audit-39-kin-ai.md.

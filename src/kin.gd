@@ -24,6 +24,16 @@ var carry = null             # {id,n} while hauling
 var haul_scan_t := 0.0       # rescan clock — keeps the O(cells) sweeps off the per-frame path
 var haul_cell := Vector2i(-1, -1) # cached chest cell while carrying
 var haul_dest := Vector2.ZERO     # last scanned walk target for the pickup leg
+var carry_hold_t := 0.0     # seconds on-paw — an unreachable stash drops the goods eventually
+var stall_warn_t := 0.0     # throttles the "nowhere to stash" floater
+var foe_scan_t := 0.0       # guard-scan clock — keeps the O(pals) sweep off the per-frame path
+var foe_cache: Kin = null   # last raider seen — valid until the next rescan
+var bed_scan_t := 0.0       # bed-scan clock + structure generation — memoized like nearest_heat
+var bed_scan_gen := -1
+var bed_cell := Vector2i(-1, -1)
+var dummy_scan_t := 0.0     # sparring-scan clock — same memo shape as the bed scan
+var dummy_scan_gen := -1
+var dummy_cell := Vector2i(-1, -1)
 var home := Vector2.ZERO     # spawn anchor; alphas tether to their lair
 var target := Vector2.ZERO
 var atk_cd := 0.0
@@ -633,7 +643,14 @@ func base_ai(dt: float) -> void:
 	# crew covers the yard, not just arm's reach)
 	# a posted guard watches a wider beat than a yard hand — the island's
 	# sentries pull raids off the workers, not just off their own toes
-	var foe: Kin = find_foe()
+	foe_scan_t -= dt
+	if foe_scan_t <= 0.0:
+		foe_scan_t = 0.4 # raiders don't teleport — a short cache beats a per-frame O(pals) sweep
+		foe_cache = find_foe()
+	elif foe_cache != null and (not is_instance_valid(foe_cache) \
+			or foe_cache.hp <= 0 or foe_cache.mode != "wild"):
+		foe_cache = null # a KO'd/boxed raider is no target — next rescan re-arms
+	var foe: Kin = foe_cache
 	if foe != null:
 		if not cast_skills(foe, dt):
 			if pos.distance_to(foe.pos) > 1.1:
@@ -651,7 +668,12 @@ func base_ai(dt: float) -> void:
 	# Tired kin pad over to the nearest kin bed first when one is built.
 	var nocturnal: bool = "dark" in spec.get("elements", [])
 	if game.is_night() != nocturnal:
-		var bc := game.nearest_bed_cell(pos)
+		bed_scan_t -= dt
+		if bed_scan_t <= 0.0 or bed_scan_gen != game._struct_gen:
+			bed_scan_t = 0.4
+			bed_scan_gen = game._struct_gen # beds come and go — the cache rides the generation
+			bed_cell = game.nearest_bed_cell(pos)
+		var bc := bed_cell
 		var rested := false
 		if bc.x >= 0:
 			var bp := Vector2(bc.x + 0.5, bc.y + 0.5)
@@ -688,13 +710,19 @@ func base_ai(dt: float) -> void:
 		# the island training dummy: an idle kin marches to the nearest straw man
 		# and spars — fighters earn their keep between raids instead of
 		# milling about the yard
-		var dk := Vector2i(-1, -1); var dbd := 100.0
-		for k2 in game.structures:
-			if game.structures[k2]["id"] != "training_dummy":
-				continue
-			var dd3 := pos.distance_squared_to(Vector2(k2.x + 0.5, k2.y + 0.5))
-			if dd3 < dbd:
-				dbd = dd3; dk = k2
+		dummy_scan_t -= dt
+		if dummy_scan_t <= 0.0 or dummy_scan_gen != game._struct_gen:
+			dummy_scan_t = 0.4
+			dummy_scan_gen = game._struct_gen
+			dummy_cell = Vector2i(-1, -1)
+			var dbd := 100.0
+			for k2 in game.structures:
+				if game.structures[k2]["id"] != "training_dummy":
+					continue
+				var dd3 := pos.distance_squared_to(Vector2(k2.x + 0.5, k2.y + 0.5))
+				if dd3 < dbd:
+					dbd = dd3; dummy_cell = k2
+		var dk := dummy_cell
 		if dk.x >= 0:
 			var dp := Vector2(dk.x + 0.5, dk.y + 0.5)
 			if pos.distance_to(dp) > 1.3:
@@ -716,11 +744,32 @@ func base_ai(dt: float) -> void:
 func haul_ai(dt: float) -> void:
 	haul_scan_t -= dt
 	if carry != null:
+		carry_hold_t += dt # goods on-paw too long means the stash is a fiction
+		if carry_hold_t > 90.0:
+			game.spawn_drop(carry["id"], carry["n"], pos) # give up honestly — the pile waits for a real chest
+			carry = null
+			carry_hold_t = 0.0
+			haul_cell = Vector2i(-1, -1)
+			game.floater(pos, tr("%s gave up hauling") % tr(str(spec.get("name", species_id))), "#ffcf7a")
+			game.log_msg(tr("%s couldn't reach a chest — goods dropped at its feet") % tr(str(spec.get("name", species_id))))
+			return
 		if haul_scan_t <= 0.0:
 			haul_scan_t = 0.4 # chests don't move — a short cache beats a per-frame dict sweep
 			haul_cell = game.nearest_chest_cell(pos, carry["id"])
 		if haul_cell.x < 0:
-			return  # no chest that can take it: hold the goods
+			stall_warn_t -= dt
+			if stall_warn_t <= 0.0: # no chest can take it — hold, wander, say so
+				stall_warn_t = 15.0
+				game.floater(pos, tr("%s has nowhere to stash %s") % \
+					[tr(str(spec.get("name", species_id))), tr(str(ItemData.ITEMS.get(carry["id"], {}).get("name", carry["id"])))], "#ffcf7a")
+			wander_t -= dt
+			if wander_t <= 0:
+				wander_t = 2.0 + game.rng.next() * 3.0
+				var wa := game.rng.next() * TAU
+				target = pos + Vector2(cos(wa), sin(wa)) * 2.0
+			if pos.distance_to(target) > 0.4:
+				step_toward(target, dt)
+			return
 		var cp := Vector2(haul_cell.x + 0.5, haul_cell.y + 0.5)
 		if pos.distance_to(cp) > 1.8:
 			step_toward(cp, dt)
@@ -762,6 +811,7 @@ func haul_ai(dt: float) -> void:
 			site_id = sst["store"].keys()[0]
 			carry = {"id": site_id, "n": sst["store"][site_id]}
 			sst["store"].erase(site_id)
+			carry_hold_t = 0.0
 			haul_cell = Vector2i(-1, -1); haul_scan_t = 0.0 # fresh goods → rescan a chest next frame
 		return
 	bd2 = bd
@@ -788,6 +838,7 @@ func haul_ai(dt: float) -> void:
 			return # a faster hauler already claimed it — no loot duplication
 		carry = {"id": pick["id"], "n": pick["n"]}
 		game.take_drop(pick)
+		carry_hold_t = 0.0
 		haul_cell = Vector2i(-1, -1); haul_scan_t = 0.0
 
 func tick_needs(dt: float) -> void:

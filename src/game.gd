@@ -229,6 +229,8 @@ func unbox_pal(p: Kin) -> void:
 		entity_layer.add_child(p)
 	else:
 		p.reparent(entity_layer)
+	p.visible = true # cold-storage daylight: a pal KO'd mid-expedition kept
+	# its invisibility into the box — re-entering the world clears it
 
 func next_uid() -> int:
 	next_uid_v += 1
@@ -697,6 +699,10 @@ func assign_remote(pid: int, at: Vector2) -> void:
 		return
 	var site: Variant = find_work_site(best, 6.0)
 	if site:
+		if best.carry != null: # cargo goes home to the asker's bag, not hostage
+			give_remote(pid, best.carry["id"], best.carry["n"])
+			best.carry = null
+			best.carry_hold_t = 0.0
 		if best not in site["workers"]:
 			site["workers"].append(best)
 		best.job_site = site
@@ -1005,7 +1011,9 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 		return # replicas die by host snapshot, never by local simulation
 	player.dismount_if(p)
 	_unbind_mount(p) # a KO'd mount can't stay bound — the rider walks it off
-	var owned := p.mode in ["partner", "base", "bench"]
+	var owned := p.mode in ["partner", "base", "bench", "expedition"]
+	# an expedition pal is still ours — a raider biting the invisible gatherer
+	# KOs it to the box; it must not die as loot-dropping wild fauna
 	if not owned: # only wild/raid pals drop loot or pay xp — KO'd own pals would farm infinitely
 		var mult := 4 if p.alpha else (3 if p.lucky else 1)
 		if p.lucky:
@@ -1063,6 +1071,7 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 		p.mode = "box"
 		p.statuses.clear() # a KO'd pal shouldn't come out of the box still burning
 		p.stun_t = 0.0
+		p.berserk_t = 0.0 # a rampage dies with the KO — redeploy starts calm
 		p.revive_t = t + 300.0  # the island-style revive timer
 		if box.size() < MAX_BOX + 32: # KO'd kin get a small overflow lane past the
 			box.append(p)             # catch cap — losing a downed partner to an
@@ -3385,6 +3394,12 @@ func return_expedition(p: Kin, st: Dictionary, key: Vector2i) -> void:
 	p.mode = "base"
 	p.visible = true
 	p.pos = Vector2(key.x + 0.5, key.y + 1.4) # lands just south of the post
+	# the post holds the gatherer's berth: job survives the trip AND the save —
+	# hygiene dropped it from workers[] on departure, the return relinks it
+	if p.job_site == st and st["workers"].size() < 4 and p not in st["workers"]:
+		st["workers"].append(p)
+	elif p.job_site == st:
+		p.job_site = null # berth filled while away — tick_assign finds new work
 	# the island expeditions tire the crew — the haul costs SAN and a meal
 	p.san = maxf(0.0, p.san - 15.0)
 	p.hunger = minf(100.0, p.hunger + 25.0)
@@ -3854,6 +3869,10 @@ func assign_worker() -> void:
 		return # the host's yard, the host's call: evict is allowed, posting is not
 	var site: Variant = find_work_site(best, 6.0)
 	if site:
+		if best.carry != null: # a hauler pinned to a job must not strand the goods
+			add_item(best.carry["id"], best.carry["n"]) # the keeper's bag takes it
+			best.carry = null
+			best.carry_hold_t = 0.0
 		if best not in site["workers"]:
 			site["workers"].append(best) # idempotent — a stale entry must not duplicate
 		best.job_site = site
@@ -4876,7 +4895,10 @@ func load_game() -> bool:
 		if parts2.size() < 2:
 			continue # malformed job cell key
 		var cell := Vector2i(int(parts2[0]), int(parts2[1]))
-		if structures.has(cell) and pj[0].mode in ["base", "expedition"] and pj[0] not in structures[cell]["workers"]:
+		if structures.has(cell) and pj[0].mode in ["base", "expedition"] \
+				and pj[0] not in structures[cell]["workers"] \
+				and structures[cell]["workers"].size() < 4:
+			# same crew cap find_work_site enforces — a crafted save can't stuff a site
 			structures[cell]["workers"].append(pj[0])
 			pj[0].job_site = structures[cell]
 	for lp2 in pals:

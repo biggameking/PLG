@@ -8303,6 +8303,72 @@ func run() -> void:
 	game.net_merchant_apply(false, 0.0, 0.0)
 	game.merchant = m36
 
+	# --- audit-39: kin AI behavior closures ---
+	# an expedition kin KO'd mid-trip goes to the box, not the wild's loot table
+	var xpal: Kin = game.gen_pal("loampuff", 5, p.pos)
+	xpal.mode = "expedition"; xpal.visible = false
+	game.pals.append(xpal)
+	game.kill_pal(xpal, true)
+	check("KO'd expedition kin lands in the box, not the loot table",
+		xpal.mode == "box" and xpal in game.box,
+		"mode=%s in_box=%s" % [xpal.mode, xpal in game.box])
+	check("the boxed expedition kin keeps no wild flags",
+		xpal.job_site == null and xpal.carry == null)
+	game.box.erase(xpal); xpal.get_parent().remove_child(xpal); xpal.free()
+
+	# return_expedition relinks the berth — the job survives trip AND save
+	var xp_cell := Vector2i(-1, -1)
+	for off39 in range(3, 12):
+		var cand39 := Vector2i(int(p.pos.x) + off39, int(p.pos.y) + 2)
+		if not game.structures.has(cand39):
+			xp_cell = cand39; break
+	var xpost := {"id": "expedition_post", "pos": xp_cell, "hp": 200, "level": 1,
+		"workers": [], "store": {}, "timer": 0.0}
+	game.structures[xp_cell] = xpost
+	game._struct_gen += 1
+	var gather39: Kin = game.gen_pal("loampuff", 5, p.pos)
+	gather39.mode = "base"; gather39.job_site = xpost
+	xpost["workers"].append(gather39)
+	xpost["workers"].erase(gather39) # departure hygiene drops the row
+	game.pals.append(gather39)
+	game.return_expedition(gather39, xpost, xp_cell)
+	check("the post holds the returning gather39's berth",
+		gather39 in xpost["workers"] and gather39.job_site == xpost)
+	game.pals.erase(gather39); xpost["workers"].erase(gather39)
+	game.entity_layer.remove_child(gather39); gather39.free()
+	game.structures.erase(xp_cell); game._struct_gen += 1
+
+	# a haul39 with nowhere to stash wanders instead of freezing in place
+	var haul39: Kin = game.gen_pal("loampuff", 5, p.pos)
+	haul39.mode = "base"
+	haul39.carry = {"id": "wood", "n": 3}
+	game.pals.append(haul39)
+	var hpos39: Vector2 = haul39.pos
+	for i39 in 8:
+		haul39.haul_ai(0.2) # 1.6s of stall — wander must move it
+	check("a stashed-nowhere haul39 still wanders",
+		haul39.pos.distance_to(hpos39) > 0.2 or haul39.wander_t > 0.0,
+		"moved=%.2f" % haul39.pos.distance_to(hpos39))
+	# …and gives up honestly after a long unreachable leg
+	haul39.carry_hold_t = 95.0
+	var drops_n39: int = game.drops.size()
+	haul39.haul_ai(0.1)
+	check("an unreachable stash drops the goods at its feet",
+		haul39.carry == null and game.drops.size() > drops_n39,
+		"drops=%d was=%d" % [game.drops.size(), drops_n39])
+	game.pals.erase(haul39); game.entity_layer.remove_child(haul39); haul39.free()
+	var drop_e39 = game.drops.back() if not game.drops.is_empty() else null
+	if drop_e39 != null:
+		game.drops.erase(drop_e39)
+
+	# a KO wipes the rampage clock — redeployed kin start calm, not berserk
+	var berk39: Kin = game.gen_pal("loampuff", 5, p.pos)
+	berk39.mode = "partner"; berk39.berserk_t = 8.0
+	game.pals.append(berk39)
+	game.kill_pal(berk39, true)
+	check("a KO clears the rampage", berk39.berserk_t == 0.0 and berk39.mode == "box")
+	game.box.erase(berk39); berk39.get_parent().remove_child(berk39); berk39.free()
+
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
 	# load — one unbroken path, each hop asserted (to_title's scene reload is
