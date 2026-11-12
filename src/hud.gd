@@ -985,9 +985,13 @@ func _draw() -> void:
 			if soon >= 0.0:
 				den = tr(" · stirs ~%dh") % maxi(1, int(soon / Game.DAY_LEN * 24.0))
 		Ink.tag(self, Rect2(r.x - 230, hy - 11, 222, 15))
-		draw_string(font, Vector2(r.x - 226, hy),
-			tr("DEN %d/%d") % [legs, Game.LEGENDARY_DEN.size()] + den,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
+		if game.accord:
+			draw_string(font, Vector2(r.x - 226, hy),
+				tr("ACCORD SEALED ✦"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
+		else:
+			draw_string(font, Vector2(r.x - 226, hy),
+				tr("DEN %d/%d") % [legs, Game.LEGENDARY_DEN.size()] + den,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var my := r.y - 24
 	for i in range(game.messages.size()):
 		var m: String = game.messages[game.messages.size() - 1 - i]

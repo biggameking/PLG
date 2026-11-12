@@ -2327,6 +2327,16 @@ func run() -> void:
 		"n": {"x": 1}, "day": [3], "got": "abc"}, {"on": true, "x": {"q": 2}, "y": []})
 	check("env_sync hostile bq/merch", game.board_quest["n"] == 0
 		and game.board_quest["day"] == -1 and game.board_quest["got"] == 0)
+	# the campaign spine rides env_sync — a guest's roster cap must not
+	# truncate the host's sixth slot (env_sync runs client-side only)
+	var ac_cr2: bool = game.crowned
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], true, true)
+	check("env_sync carries crown + accord",
+		game.crowned and game.accord and game.party_cap() == 6)
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], false, false)
+	check("env_sync revokes on host truth",
+		not game.crowned and not game.accord)
+	game.crowned = ac_cr2
 	game.drop_sync([[991, "wood", {"n": 9}, {"x": 1}, [2.0]]])
 	check("drop_sync hostile coords coerce", game.net_drops.has(991)
 		and game.net_drops[991]["n"] == 0 and game.net_drops[991]["pos"] == Vector2.ZERO)
@@ -6306,6 +6316,81 @@ func run() -> void:
 		and v44_r2["ap"] == 6 and game.mission_flags.has("gauntlet_ex"))
 	game.mission_flags.erase("gauntlet_ex")
 	game.crowned = v44_cr
+	# --- S72: the Wildmere Accord — three seals widen the field roster ---
+	var ac_cc: Dictionary = game.catch_counts.duplicate()
+	var ac_cr: bool = game.crowned
+	var ac_sd: Dictionary = game.spires_done.duplicate()
+	var ac_ex: bool = game.mission_flags.get("gauntlet_ex", false)
+	var ac_acc: bool = game.accord
+	var ac_cap0: int = game.party_cap()
+	game.accord = false
+	game.spires_done.clear()
+	for ac_si in Game.SPIRE_DEFS.size(): # the crown must survive its own derivation
+		game.spires_done["spire_%d" % ac_si] = true
+	game.crowned = true
+	game.mission_flags["gauntlet_ex"] = true
+	for ac_ls in Game.LEGENDARY_DEN:
+		game.catch_counts[ac_ls] = 1
+	var ac_last: String = Game.LEGENDARY_DEN[Game.LEGENDARY_DEN.size() - 1]
+	game.catch_counts.erase(ac_last) # two seals only — the contract must hold
+	game.tick_accord()
+	check("accord needs every legend heir", not game.accord)
+	game.catch_counts[ac_last] = 1
+	game.tick_accord()
+	check("three seals set the accord + widen the roster",
+		game.accord and ac_cap0 == 5 and game.party_cap() == 6)
+	check("accord banner + epilogue landed",
+		game.floaters.back()["t"] == tr("THE WILDMERE ACCORD")
+		and game.messages.back().contains("SIX"))
+	var ac_fl0: int = game.floaters.size()
+	game.tick_accord()
+	check("the accord seals once per save", game.floaters.size() == ac_fl0)
+	# the sixth slot is real — box_to_party promotes past the old five
+	var ac_party_bak: Array = game.party.duplicate()
+	var ac_staged: Array = []
+	for ac_i in range(6):
+		var ac_k: Kin = game.gen_pal("fenjelly", 3, game.player.pos)
+		ac_k.mode = "box"; game.box.append(ac_k); ac_staged.append(ac_k)
+	game.party.clear()
+	for ac_i in range(5):
+		game.party.append(ac_staged[ac_i].uid)
+	game.box_to_party(ac_staged[5])
+	check("the accord fields a sixth kin", game.party.size() == 6,
+		"party=%d" % game.party.size())
+	game.party.clear()
+	for ac_u in ac_party_bak:
+		game.party.append(int(ac_u))
+	for ac_k in ac_staged:
+		# send_out may have re-parented a promoted kin into pals — scrub all four
+		game.pals.erase(ac_k); game.box.erase(ac_k)
+		game.bench.erase(ac_k); game.party.erase(ac_k.uid)
+		if ac_k.get_parent(): ac_k.get_parent().remove_child(ac_k)
+		ac_k.free()
+	# the contract rides the save — and can't be forged on a bare flag
+	game.save_game()
+	game.accord = false
+	game.load_game()
+	check("accord + EX seal survive reload",
+		game.accord and game.party_cap() == 6
+		and game.mission_flags.get("gauntlet_ex", false),
+		"accord=%s ex=%s" % [game.accord, game.mission_flags.get("gauntlet_ex", false)])
+	var ac_rf := FileAccess.open("user://savegame.plg", FileAccess.READ)
+	var ac_forged = ac_rf.get_var()
+	ac_rf.close()
+	ac_forged["accord"] = true; ac_forged["crowned"] = false; ac_forged["spires"] = []
+	var ac_ff := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	ac_ff.store_var(ac_forged); ac_ff.close()
+	game.load_game()
+	check("a forged accord without the crown is refused", not game.accord)
+	game.crowned = ac_cr
+	game.spires_done.clear()
+	for ac_sk in ac_sd:
+		game.spires_done[ac_sk] = ac_sd[ac_sk]
+	if ac_ex: game.mission_flags["gauntlet_ex"] = true
+	else: game.mission_flags.erase("gauntlet_ex")
+	game.accord = ac_acc
+	game.catch_counts = ac_cc
+	game.save_game() # leave a sane save for the rest of the run
 	# pause shell hosts the panel verbs for every input device
 	var peer_bak2 = game.net.multiplayer.multiplayer_peer
 	game.net.multiplayer.multiplayer_peer = null # host row is a no-peer offer

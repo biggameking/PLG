@@ -572,14 +572,14 @@ func r_box_to_party(bp: Kin, pid: int) -> void:
 	if bp.hp <= 0 or bp.mode != "box":
 		return
 	var rp := rparty_for(pid)
-	if rp.size() >= 5:
-		note_remote(pid, "Party full (5)")
+	if rp.size() >= party_cap():
+		note_remote(pid, "Party full (%d)" % party_cap())
 		return
 	box.erase(bp)
 	rp.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	if _bench_add(bp): # saturated bench lands it back in the box, mode corrected
 		rp.append(bp.uid)
-		note_remote(pid, "%s joined your party (%d/5)" % [tr(str(bp.spec["name"])), rp.size()])
+		note_remote(pid, "%s joined your party (%d/%d)" % [tr(str(bp.spec["name"])), rp.size(), party_cap()])
 		if r_out_pal(pid) == null:
 			r_send_out(bp.uid, pid)
 	else:
@@ -1179,6 +1179,11 @@ var mission_t := 0.0
 var dex_seen := {}      # species_id -> true — a wild one came within ~15 cells once
 var dex_claimed := 0    # highest 10-species milestone tier already paid
 var dex_t := 0.0
+var accord := false     # the Wildmere Accord — crown + all ten legend heirs
+# + the EX gauntlet. Sealed once per save; the island fields a sixth slot.
+
+func party_cap() -> int:
+	return 6 if accord else 5
 var weather := "clear"  # "clear" | "rain" | "storm" | "drought" — rolls every couple of game hours
 var weather_t := 0.0
 var pray_cd := 0.0            # absolute t — shrine prayer cooldown
@@ -1229,6 +1234,23 @@ func tick_dex(dt: float) -> void:
 		log_msg("KINDEX: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
 		floater(player.pos, "KINDEX MILESTONE", "#c08cff")
 		dex_claimed = tier
+	tick_accord()
+
+func tick_accord() -> void:
+	# the Wildmere Accord — the island's last contract. Three seals: the
+	# crown, every legend heir caught once, and the EX gauntlet cleared.
+	# Seals once per save and widens the field roster for good.
+	if accord or not crowned or not mission_flags.get("gauntlet_ex", false):
+		return
+	for ls in LEGENDARY_DEN:
+		if int(catch_counts.get(ls, 0)) <= 0:
+			return
+	accord = true
+	floater(player.pos, tr("THE WILDMERE ACCORD"), "#ffd76e")
+	log_msg(tr("THE WILDMERE ACCORD — the island kneels to its keeper."))
+	log_msg(tr("Your party can field SIX kin from now on."))
+	sfx_play("horn")
+	rumble(0.5, 0.9, 0.6)
 
 func reveal_at(c: Vector2, r: float) -> void:
 	# the island fog of war: walking peels the dark back a sight-radius at a time
@@ -1725,7 +1747,7 @@ func resolve_sphere(sp) -> void:
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
 		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
 	if randf() < chance:
-		if party.size() >= 5 and box.size() >= MAX_BOX: # backstop: an over-stuffed box is real memory
+		if party.size() >= party_cap() and box.size() >= MAX_BOX: # backstop: an over-stuffed box is real memory
 			floater(target.pos, "BOX FULL", "#e8963c")
 			log_msg("Kinbox is full (%d) - can't store %s" % [MAX_BOX, tr(str(target.spec["name"]))])
 			target.aggro = -1
@@ -1755,10 +1777,10 @@ func resolve_sphere(sp) -> void:
 		target.aggro = -1
 		release_event_flags(target)
 		_reden_legend(target)
-		if party.size() < 5: # the island rule: catch joins the party until it's full
+		if party.size() < party_cap(): # the island rule: catch joins the party until it's full
 			if _bench_add(target): # orbs ride in the same cold store as the box — a saturated bench overflows there too
 				party.append(target.uid)
-				log_msg("%s joins your party (%d/5)" % [tr(str(target.spec["name"])), party.size()])
+				log_msg("%s joins your party (%d/%d)" % [tr(str(target.spec["name"])), party.size(), party_cap()])
 				if party_pal() == null:
 					send_out(target.uid) # an empty slot means the new catch takes the field
 			# false → the overflow lane already boxed or freed it — no double add
@@ -3430,14 +3452,14 @@ func box_to_party(bp: Kin) -> void:
 	if bp.hp <= 0 or bp.mode != "box": # the remote twin gates the same way — a field pal isn't box cargo
 		log_msg("%s is KO'd - wait for it to recover" % tr(str(bp.spec["name"])) if bp.hp <= 0 else "%s isn't in the box" % tr(str(bp.spec["name"])))
 		return
-	if party.size() >= 5:
-		log_msg("Party full (5) - send someone to the box first")
+	if party.size() >= party_cap():
+		log_msg("Party full (%d) - send someone to the box first" % party_cap())
 		return
 	box.erase(bp)
 	party.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	if _bench_add(bp): # the island: new members wait in their ball until sent out
 		party.append(bp.uid)
-		log_msg("%s joined the bench (%d/5)" % [tr(str(bp.spec["name"])), party.size()])
+		log_msg("%s joined the bench (%d/%d)" % [tr(str(bp.spec["name"])), party.size(), party_cap()])
 		if party_pal() == null:
 			send_out(bp.uid)
 	else:
@@ -4067,7 +4089,7 @@ func save_game() -> void:
 		"pbx": [kinbox_pos.x, kinbox_pos.y], # which kinbox is primary
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed,
-		"spires": spires_done.keys(), "crowned": crowned,
+		"spires": spires_done.keys(), "crowned": crowned, "accord": accord,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
 		"board_quest": board_quest,
@@ -4254,11 +4276,14 @@ func load_game() -> bool:
 	mission_flags.clear()
 	var mf = d.get("mflags", {})
 	if mf is Dictionary: # bounded: only real mission keys, bools only
-		for mk in MISSION_KEYS:
+		for mk in MISSION_KEYS + ["gauntlet_ex"]: # chain keys + the EX seal — event flags ride the same dict
 			if mf.get(mk) is bool and mf[mk]:
 				mission_flags[mk] = true
 		if mission_flags.size() >= 64: # paranoia cap — same contract as every runtime set
 			mission_flags.clear()
+	# the accord rides the save but can't be forged without its seals —
+	# an uncrowned flag is the same lie as a crowned flag with no spires
+	accord = crowned and mission_flags.get("gauntlet_ex", false) and d.get("accord") is bool and d["accord"]
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
 		for slot in ["weapon", "armor", "acc1", "acc2"]:
@@ -4277,7 +4302,7 @@ func load_game() -> bool:
 	party.clear()
 	for u in d["party"]: # typed-array assignment rejects untyped arrays from foreign saves
 		var uu := _i(u)
-		if uu != 0 and party.size() < 5 and not party.has(uu): # uid 0 names nobody; a forged strip can't duplicate either
+		if uu != 0 and party.size() < party_cap() and not party.has(uu): # uid 0 names nobody; a forged strip can't duplicate either
 			party.append(uu)
 	var ppos = d["player"].get("pos", [player.pos.x, player.pos.y])
 	if ppos is Array and ppos.size() >= 2 and _fin(ppos[0]) and _fin(ppos[1]):
@@ -4408,7 +4433,7 @@ func load_game() -> bool:
 		party.clear()
 		for pi in d["party_idx"]:
 			if pi is int and pi >= 0 and pi < loaded.size() \
-					and party.size() < 5 and not party.has(loaded[pi].uid):
+					and party.size() < party_cap() and not party.has(loaded[pi].uid):
 				party.append(loaded[pi].uid) # a forged strip can't duplicate or overflow
 	else: # pre-party_idx saves stored raw uids — new pals got fresh uids, so old refs are dead
 		party = party.filter(func(u): return find_pal(u) != null or bench_pal_of(u) != null)
@@ -4425,7 +4450,7 @@ func load_game() -> bool:
 					arr.append(loaded[int(pi2)].uid) # a forged strip can't pin a guest "full" on dup uids
 			var rtk := str(tag).substr(0, 24)
 			if not arr.is_empty() and rtk != "": # an empty tag can't own a roster — rebind_owner refuses it too
-				remote_parties[rtk] = arr.slice(0, 5)
+				remote_parties[rtk] = arr.slice(0, party_cap())
 	var pbx_sv := Vector2i(-9999, -9999) # saved primary kinbox, if the save is new enough
 	var pv = d.get("pbx", [])
 	if pv is Array and pv.size() >= 2 and _fin(pv[0]) and _fin(pv[1]):
@@ -5965,6 +5990,7 @@ func regenerate(s: int) -> void:
 	boss_respawns.clear() # the old world's dens died with it
 	spires_done.clear() # a fresh island raises fresh spires
 	crowned = false
+	accord = false # a new island owes nobody its last contract
 	gauntlet = {} # and so did any trial in progress
 	remote_parties.clear() # guest rosters describe the old world's kin
 	clear_net_drops()

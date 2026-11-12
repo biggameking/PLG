@@ -382,9 +382,11 @@ func pal_sync(arr: Array) -> void:
 @rpc("authority", "call_remote", "unreliable")
 func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 		bq: Dictionary = {}, merch: Dictionary = {}, wmode: int = -1,
-		unl: Array = []) -> void:
+		unl: Array = [], cr: bool = false, acc: bool = false) -> void:
 	if is_host:
 		return
+	game.crowned = cr == true # campaign spine is host truth — the crown and
+	game.accord = acc == true # the accord gate party_cap + the HUD tally alike
 	game.tod = clampf(Game._f(tod, game.tod), 0.0, 24.0) # the host's clock owns the sky — a NaN/INF tod still can't reach it
 	game.day = maxi(Game._i(day), 1)
 	game.net_danger = danger == true # raids are host truth; the drone mirrors it
@@ -1254,7 +1256,7 @@ func box_sync(arr: Array, pty: Array, prows: Array = []) -> void:
 	for u in pty:
 		if Game._fin(u) and not game.party.has(int(u)):
 			game.party.append(int(u))
-		if game.party.size() >= 5: # same strip bound the save path enforces
+		if game.party.size() >= game.party_cap(): # same strip bound the save path enforces
 			break
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1381,7 +1383,8 @@ func _process(dt: float) -> void:
 				"n": game.board_quest.get("n", 0), "day": game.board_quest.get("day", -1),
 				"sp": game.board_quest.get("sp", ""), "got": game.board_quest.get("got", 0)}
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
-				bq_send, mp2, game.work_mode, game.unlocked) # clock + sky + threat + posting + trader + orders + tech are host truth — the holder's pid stays home
+				bq_send, mp2, game.work_mode, game.unlocked,
+				game.crowned, game.accord) # clock + sky + threat + posting + trader + orders + tech + the campaign spine are host truth — the holder's pid stays home
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose
