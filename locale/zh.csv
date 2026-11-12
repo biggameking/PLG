@@ -20,8 +20,8 @@ off,off,关
 BACK,BACK,返回
 "Day 1 on the Wildmere — catch a kin, feed it, put it to work.","Day 1 on the Wildmere — catch a kin, feed it, put it to work.",来到野泽的第一天——抓一只精灵，喂饱它，让它干活。
 Welcome to Kinbound. Press H for help.,Welcome to Kinbound. Press H for help.,欢迎来到《Kinbound》。按 H 查看帮助。
-Q aims — click a wild kin to throw an orb,Q aims — click a wild kin to throw an orb,按 Q 瞄准——点击野生精灵丢出精灵球
-X aims — RT throws at a wild kin,X aims — RT throws at a wild kin,按 X 瞄准——RT 向野生精灵丢球
+"Q aims — weaken a wild kin first, then throw (low HP catches easier)","Q aims — weaken a wild kin first, then throw (low HP catches easier)",按 Q 瞄准——先把野生精灵打残再丢球（血越少越好抓）
+"X aims — weaken it first, then RT throws","X aims — weaken it first, then RT throws",按 X 瞄准——先打残，再 RT 丢球
 B builds — a workbench turns wood + stone into gear,B builds — a workbench turns wood + stone into gear,按 B 建造——工作台把木头和石头变成装备
 Back builds — a workbench turns wood + stone into gear,Back builds — a workbench turns wood + stone into gear,按 Back 建造——工作台把木头和石头变成装备
 You're starving — eat berries or cooked food (I opens the bag),You're starving — eat berries or cooked food (I opens the bag),你快饿死了——吃点浆果或熟食（按 I 打开背包）
@@ -478,7 +478,7 @@ APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper,APEX GAUNTLET C
 ARMOR BROKE!,ARMOR BROKE!,护甲碎了！
 Bag full - %s x%d dropped,Bag full - %s x%d dropped,背包已满——%s x%d 掉落了
 Bait tossed — something hungry will smell it,Bait tossed — something hungry will smell it,诱饵抛出去了——饥饿的家伙会闻到
-Base established! Assign kin with F.,Base established! Assign kin with F.,基地落成！按 F 给精灵分工。
+Base established! E on the kinbox posts a kin to the yard.,Base established! E on the kinbox posts a kin to the yard.,基地落成！对着精灵箱按 E，派一只精灵守院。
 Base level %d! +2 workforce slots,Base level %d! +2 workforce slots,基地 Lv%d！+2 个工位
 Base level maxed,Base level maxed,基地已满级
 Base mission: ,Base mission: ,基础任务：
@@ -814,7 +814,7 @@ MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CH
 v cycles the field kin's orders: auto / aggressive / passive,v cycles the field kin's orders: auto / aggressive / passive,v 切换场上精灵的指令：自动 / 激进 / 被动
 "HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)","HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",开房 j  加入 k（输入房主 IP 后回车）商人 e（到访时）
  MAX, MAX, 满级
-%d %s %s,%d %s %s,%d %s %s
+%d %s,%d %s,%d %s
 %s  %d%%,%s  %d%%,%s  %d%%
 %s  x%d,%s  x%d,%s  x%d
 %s  ·spotted·,%s  ·spotted·,%s  ·见过·
@@ -921,11 +921,13 @@ It's not night yet,It's not night yet,还没到夜里
 B builds — your kinbox wants 4 lumenite + 6 wood + 6 stone,B builds — your kinbox wants 4 lumenite + 6 wood + 6 stone,B 建造——精灵箱要 4 流明石 + 6 木头 + 6 石头
 Back builds — your kinbox wants 4 lumenite + 6 wood + 6 stone,Back builds — your kinbox wants 4 lumenite + 6 wood + 6 stone,Back 建造——精灵箱要 4 流明石 + 6 木头 + 6 石头
 N opens the field guide — every verb lives there,N opens the field guide — every verb lives there,N 打开野外手册——所有操作都在里面
-Back opens the field guide — every verb lives there,Back opens the field guide — every verb lives there,Back 打开野外手册——所有操作都在里面
+Start → GUIDE — every verb lives there,Start → GUIDE — every verb lives there,Start → 手册——所有操作都在里面
 "Sun's dropping — B builds a campfire (6w 3s), a straw bed sleeps","Sun's dropping — B builds a campfire (6w 3s), a straw bed sleeps",日落了——按 B 起篝火（6木 3石），草铺能睡
 "Sun's dropping — Back builds a campfire, a straw bed sleeps","Sun's dropping — Back builds a campfire, a straw bed sleeps",日落了——按 Back 起篝火，草铺能睡
 Night bites cold — stand by a campfire or a fire-kin,Night bites cold — stand by a campfire or a fire-kin,夜寒刺骨——挨着篝火或火系精灵
-  (placing: %s — %s),  (placing: %s — %s),  （放置中：%s——%s）
-SURE? this overwrites your save,SURE? this overwrites your save,确认？这会覆盖你的存档
+BUILD  placing: %s — %s,BUILD  placing: %s — %s,建造  放置：%s — %s
+OVERWRITE the save?,OVERWRITE the save?,确认覆盖存档？
 GUIDE n — the field manual,GUIDE n — the field manual,GUIDE n——野外手册
 GLIDER descends cliffs. Sick kin need medicine.,GLIDER descends cliffs. Sick kin need medicine.,滑翔翼能下悬崖。病了的精灵要喂药。
+Press F8 again to reload the last save — progress since is lost,Press F8 again to reload the last save — progress since is lost,再按一次 F8 重读上个存档——之后的进度将丢失
+enter = new game · click a row,enter = new game · click a row,回车 = 新游戏 · 点击选择

@@ -30,8 +30,12 @@ dusk — stand near a fire, hug a fire kin, or wear hide. And if
 the sky won't cooperate, a weather shrine takes lumenite in
 exchange for a word with the heavens: sun, rain, thunder,
 drought, and back around — choose the sky your yard needs.
-Mind the parch: fields beyond a well's shadow work a fifth
-slower under a dry sky, while fire kin come into their own.
+Where does lumenite come from? The drift cargo you washed
+up with covers the first kinbox; after that, swing at the
+rocks — the odd shard glints in the rubble of stone, coal,
+and gold ore alike. Mind the parch: fields beyond a well's
+shadow work a fifth slower under a dry sky, while fire kin
+come into their own.
 
 The far north freezes around the clock. The far south scorches
 by day and snaps cold at night. Pack warm fur and a tropical
@@ -41,7 +45,14 @@ any chill, and a cold mint salad lets the noon sun slide off. For
 the dark miles between camps, a miner's cap burns a carbide lamp
 on your hat — both hands free for the pick. No cap? A bowl of
 glowcap soup does for a few hours: cave mushrooms simmered
-down, and the light comes from inside you.""",
+down, and the light comes from inside you.
+
+Fall in the field and your cargo stays where you fell — the
+island marks the spot with a stone, and the pack waits for
+you to come back for it. Wilds will not touch it, time will
+not rot it, and even a save-and-leave keeps it pinned. What
+drops can be lost is the ordinary scatter from broken rocks
+and felled beasts — that decays. Your death-pack does not.""",
 """— VOL. II —
 THE ART OF THE BALL
 
@@ -248,8 +259,10 @@ const PAGES_ZH: Array[String] = [
 猎食。入夜后寒气咬人——靠近火堆、抱紧火系精灵，或穿
 上皮甲。要是天公不作美，天气神龛收流明石，替你跟老天
 打个招呼：晴、雨、雷、旱轮着来——选你的院子要的天。
-小心旱情：井阴影之外的田地在旱天下慢两成，火系精灵
-倒是如鱼得水。
+流明石打哪来？你漂上岸时的漂流货够起第一个精灵箱；
+往后就得抡镐了——石头、煤、金矿的碎渣里都闪着碎片的
+光。小心旱情：井阴影之外的田地在旱天下慢两成，火系
+精灵倒是如鱼得水。
 
 极北之地终年在冰点以下，极南之地白天灼人夜里刺骨。
 去找传说巢穴之前，备好保暖皮毛和热带织物——或者干脆
@@ -257,7 +270,12 @@ const PAGES_ZH: Array[String] = [
 把正午的日头滑开。营地之间的夜路，矿工帽上的电石灯
 替你照亮——两只手都空得出来抡镐。没帽子？一碗萤菇汤
 也能顶几个钟头：洞里采的蘑菇熬化了，光从你自己身上
-往外透。""",
+往外透。
+
+在野外倒下，你的货会留在倒下的地方——岛在那儿给你
+立块石头，背包等你回来捡。野兽碰不了它，时间烂不掉
+它，存档离开它也钉在原地。会丢的只是敲石头、打野兽
+掉的那点寻常散货——那些会腐。你的遗物包不会。""",
 """—— 卷二 ——
 投球的艺术
 

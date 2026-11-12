@@ -312,7 +312,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.save_game()
 		return
 	if event.is_action_pressed("load_save"):
-		game.load_game()
+		# same overwrite class as NEW GAME — one stray F8 can't vaporize a
+		# session. First tap arms and says so; the second within 4s loads.
+		if game.load_arm > game.t:
+			game.load_arm = -1.0
+			game.load_game()
+		else:
+			game.load_arm = game.t + 4.0
+			game.log_msg(tr("Press F8 again to reload the last save — progress since is lost"))
 		return
 	if event.is_action_pressed("host_net"):
 		if game.net and game.net.multiplayer.multiplayer_peer == null:
@@ -1460,13 +1467,15 @@ func draw_title(r: Vector2) -> void:
 	var y := r.y * 0.42
 	for row in title_rows():
 		y = menu_row(cx, y, 220, row[0], row[1], row[2])
-	draw_string(font, Vector2(14, r.y - 12), tr("enter = continue · click a row"), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(Ink.PAPER, 0.6))
+	draw_string(font, Vector2(14, r.y - 12),
+		tr("enter = continue · click a row") if game.has_save else tr("enter = new game · click a row"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(Ink.PAPER, 0.6))
 
 func title_rows() -> Array: # the title menu's rows as data — pad nav and smoke both read this
 	var rows := []
 	if game.has_save:
 		rows.append(["CONTINUE", "continue", Color.WHITE])
-	rows.append(["SURE? this overwrites your save" if new_game_armed else "NEW GAME",
+	rows.append(["OVERWRITE the save?" if new_game_armed else "NEW GAME",
 		"new_game", Color(0.95, 0.55, 0.5) if new_game_armed else Color.WHITE])
 	if game.net != null and multiplayer.multiplayer_peer == null:
 		rows.append(["JOIN SESSION", "m_join", Color.WHITE]) # co-op straight from boot
@@ -1564,26 +1573,32 @@ func draw_build_bar(r: Vector2) -> void:
 	var by := r.y - 200.0
 	Ink.card(self, Rect2(bx, by, 620, 56), Ink.PAPER, 0.0, 3.0)
 	var head := tr("BUILD — tap/1-9 pick, tap again to cancel")
+	var hfont := 12
 	if build_sel >= 0:
 		var ps: Dictionary = StructureData.STRUCTURES[game.buildable_list()[build_sel]]
 		var pcost := ""
 		for c in ps.get("cost", []):
 			pcost += "%d %s  " % [c[1], tr(str(ItemData.ITEMS.get(str(c[0]), {}).get("name", c[0])))]
-		head += tr("  (placing: %s — %s)") % [tr(str(ps["name"])), pcost.strip_edges()]
-	draw_string(font, Vector2(bx + 8, by + 16), head, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
+		head = tr("BUILD  placing: %s — %s") % [tr(str(ps["name"])), pcost.strip_edges()]
+		hfont = 11 # the full recipe needs the smaller face to stay on the card
+		if font.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, hfont).x > 604.0:
+			hfont = 10 # long recipes (Lumenite Shard & friends) step down again
+		while font.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, hfont).x > 604.0 and head.length() > 8:
+			head = head.left(head.length() - 2) # last-ditch crop — never spill off the card
+	draw_string(font, Vector2(bx + 8, by + 16), head, HORIZONTAL_ALIGNMENT_LEFT, -1, hfont, Ink.TEAL)
 	for i in range(mini(9, lst.size())):
 		var s: Dictionary = StructureData.STRUCTURES[lst[i]]
-		var cost := ""
 		var afford := true
 		for c in s.get("cost", []):
-			cost += "%d%s " % [c[1], c[0].left(4)]
 			if game.item_count(str(c[0])) < int(c[1]):
 				afford = false
 		var col := Ink.ORANGE if i == build_sel else (Ink.INK if afford else Color(0.72, 0.45, 0.4))
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
 		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": i})
-		draw_string(font, Vector2(x, y), tr("%d %s %s") % [i + 1, tr(str(s["name"])).left(7), cost.left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+		# name only — the 122px slot can't hold a cost too; the selected
+		# structure's full recipe lives in the header line above
+		draw_string(font, Vector2(x, y), tr("%d %s") % [i + 1, tr(str(s["name"])).left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 func draw_tech(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)

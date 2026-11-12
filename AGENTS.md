@@ -611,3 +611,12 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     bag check died because `_process` runs walk-over pickup alongside
     decay; isolate by moving the player out of pickup radius, not by
     assuming the tick only decays.
+115. **Text layout is measured in pixels, not character budgets.** The build
+    bar's `.left(9)` truncations looked defensive until a screenshot showed
+    ~160px of row text overprinting a 122px slot — char counts lie across
+    fonts, locales (CJK glyphs are double-width), and composed strings.
+    Fixed-pitch UI gets a `font.get_string_size` check at draw time (step
+    the font down, crop as last resort) or pixel evidence on every layout
+    change. Same audit: untranslated fragments hide inside format parts —
+    `cost += id.left(4)` shipped raw item ids to zh players; wrap the
+    composed unit, not just the headline string.

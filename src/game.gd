@@ -72,6 +72,7 @@ var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
+var load_arm := -1.0 # F8 quick-load confirmation arm — a stray tap can't vaporize a session
 const DAY_LEN := 240.0     # seconds per game day
 const SAVE_VER := 2        # 1 = pre-rename ids (Migrate handles); 2 = kinbound ids
 
@@ -866,7 +867,10 @@ func spawn_wild(opening := false) -> void:
 			entity_layer.add_child(rp2)
 			rp2.setup(self, pick_wild_species(z0), wild_lv(0), Vector2(rx + 0.5, ry + 0.5))
 			rp2.home = rp2.pos
-			pals.append(rp2)
+			rp2.set_meta("ring_kin", true) # opening catch targets stay near home — idle-at-
+			pals.append(rp2) # title wandering can't walk them off the first screen.
+			# transient by design (rule 20): the meta is a first-minutes guard, and wild
+			# kin respawn unmarked on load — a returning keeper needs no tethered prey
 			ring_n += 1
 
 func pick_wild_species(pool: Array) -> String:
@@ -2053,7 +2057,12 @@ func spawn_drop(id: String, n: int, at: Vector2, mine := false) -> void:
 		# pay twice: once on walk-over, once through the take_drop RPC
 	# tiny tinted bag icon; drops persist until picked up (player or hauler kin)
 	if drops.size() >= MAX_DROPS:
-		take_drop(drops.front()) # flood backstop: oldest bag evaporates
+		var ev: Dictionary = drops.front() # flood backstop: oldest bag evaporates —
+		for dd2 in drops: # but never a corpse bag; those wait for the walk back
+			if not dd2.get("mine", false):
+				ev = dd2
+				break
+		take_drop(ev)
 	drops.append({"id": id, "n": n, "pos": at, "node": drop_sprite(id, at),
 		"cool": 0.0, "age": 0.0, "did": next_drop_id, "mine": mine})
 	next_drop_id += 1
@@ -2305,8 +2314,8 @@ func net_live() -> bool:
 # seconds of cumulative display). Max 3 on screen.
 var HINTS := [
 	{"id": "orb", "once": 20.0,
-	 "text": "Q aims — click a wild kin to throw an orb",
-	 "pad": "X aims — RT throws at a wild kin",
+	 "text": "Q aims — weaken a wild kin first, then throw (low HP catches easier)",
+	 "pad": "X aims — weaken it first, then RT throws",
 	 "cond": func(g): return g.item_count("kin_orb") > 0 and g.catch_counts.is_empty() and g.player != null},
 	{"id": "chop", "once": 15.0,
 	 "text": "LMB swings — trees drop wood, rocks drop stone, berries feed you",
@@ -2322,7 +2331,7 @@ var HINTS := [
 	 "cond": func(g): return g.kinbox_pos.x < 0},
 	{"id": "guide", "once": 12.0,
 	 "text": "N opens the field guide — every verb lives there",
-	 "pad": "Back opens the field guide — every verb lives there",
+	 "pad": "Start → GUIDE — every verb lives there",
 	 "cond": func(g): return g.t > 30.0},
 	{"id": "eat", "once": 12.0,
 	 "text": "You're starving — eat berries or cooked food (I opens the bag)",
@@ -2330,10 +2339,10 @@ var HINTS := [
 	{"id": "dusk", "once": 18.0,
 	 "text": "Sun's dropping — B builds a campfire (6w 3s), a straw bed sleeps",
 	 "pad": "Sun's dropping — Back builds a campfire, a straw bed sleeps",
-	 "cond": func(g): return g.tod >= 19.0 and g.tod < 21.0 and not g.structures.values().any(func(s): return s["id"] == "campfire")},
+	 "cond": func(g): return g.tod >= 19.0 and g.tod < 21.0 and g.nearest_heat(g.player.pos) > 10.0},
 	{"id": "night", "once": 15.0,
 	 "text": "Night bites cold — stand by a campfire or a fire-kin",
-	 "cond": func(g): return g.is_night() and g.player != null and not g.structures.values().any(func(s): return s["id"] == "campfire")},
+	 "cond": func(g): return g.is_night() and g.player != null and g.nearest_heat(g.player.pos) > 10.0},
 	{"id": "san", "once": 15.0,
 	 "text": "A kin is flagging — feed it and let it rest",
 	 "cond": func(g): return g.pals.any(func(q): return q.mode in ["partner", "base"] and q.san < 30.0)},
@@ -2665,7 +2674,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	if sid == "kinbox":
 		if kinbox_pos.x < 0:
 			kinbox_pos = Vector2i(tx, ty)
-			log_msg(tr("Base established! Assign kin with F."))
+			log_msg(tr("Base established! E on the kinbox posts a kin to the yard."))
 			# first-base grace: the island lets a fresh keeper breathe — the
 			# opening raid can't land inside the same breath that raised it
 			raid_t = maxf(raid_t, DAY_LEN + 60.0)
@@ -2720,6 +2729,9 @@ func place_free(sid: String, tx: int, ty: int, store: Dictionary = {}) -> bool:
 		var o := Vector2i(tx, ty)
 		if kinbox_pos.x < 0:
 			kinbox_pos = o
+			# same first-base grace as the local build path — a guest raising
+			# the island's first kinbox buys the yard its quiet day too
+			raid_t = maxf(raid_t, DAY_LEN + 60.0)
 		elif o != kinbox_pos and o not in extra_boxes and extra_boxes.size() < MAX_EXTRA_BOXES:
 			extra_boxes.append(o)
 	return true
@@ -5507,8 +5519,8 @@ func work_req_remote(pid: int) -> int:
 # you still have to be AT a bed: remote napping is a heal exploit
 func sleep_req_remote(pid: int) -> bool:
 	var at := _ghost_at(pid)
-	if at.x < -1e8 or _nearest_struct("straw_bed", at, 6.0).x < 0:
-		return false
+	if at.x < -1e8 or _nearest_struct("straw_bed", at, 3.0).x < 0:
+		return false # ~the host's own interact reach — no remote napping from mid-yard
 	if not is_night(): # a guest nap skips only the dangerous hours — the
 		return false    # self-limiting gate: one sleep rolls dawn to 6am
 	for q in pals:

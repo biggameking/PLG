@@ -470,6 +470,8 @@ func wild_ai(dt: float) -> void:
 		wander_t = 1.5 + game.rng.next() * 3.0
 		var a := game.rng.next() * TAU
 		target = pos + Vector2(cos(a), sin(a)) * (1.5 + game.rng.next() * 3.0)
+		if has_meta("ring_kin") and home != Vector2.ZERO and target.distance_to(home) > 6.0:
+			target = home + Vector2(cos(a), sin(a)) * 2.0 # opening kin hold their ground
 	step_toward(target, dt)
 	# aggro check — apex pounces from further out, ordinary hostiles at arm's
 	# length; the nearest warm body wins, host player or a guest's ghost

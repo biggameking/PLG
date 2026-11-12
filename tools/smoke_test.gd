@@ -6936,6 +6936,7 @@ func run() -> void:
 				wk = cc
 	check("blink fixtures planted", kb.x >= 0 and wk.x >= 0, "kb=%s wk=%s" % [kb, wk])
 	if kb.x >= 0:
+		g0.set_meta("pos_pps", 60.0) # wall-clock bucket — refresh between probes (rule 44)
 		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0)
 		check("respawn blink lands", g0.net_pos == Vector3(kb.x + 0.5, kb.y + 2.5, 0))
 	if wk.x >= 0:
@@ -6947,13 +6948,16 @@ func run() -> void:
 				break
 		check("off-node source exists", src_far != Vector2.ZERO)
 		g0.net_pos = Vector3(src_far.x, src_far.y, 0) # open ground, far from stones
+		g0.set_meta("pos_pps", 60.0)
 		game.net.sync_pos(wdst.x, wdst.y, 0.0)
 		check("waypoint jump off-node dies", g0.net_pos == Vector3(src_far.x, src_far.y, 0))
 		# the home lane has a cooldown — a death-blink isn't a free escape rope
 		g0.net_pos = Vector3(src_far.x, src_far.y, 0)
+		g0.set_meta("pos_pps", 60.0)
 		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0)
 		check("home blink cooldown bites", g0.net_pos == Vector3(src_far.x, src_far.y, 0))
 		g0.net_pos = Vector3(kb.x + 0.5, kb.y + 2.5, 0) # standing at the pad
+		g0.set_meta("pos_pps", 60.0)
 		game.net.sync_pos(wdst.x, wdst.y, 0.0) # …then node→node
 		check("node-to-node hop lands", g0.net_pos == Vector3(wdst.x, wdst.y, 0))
 	# elevation is validated too — guests can't float above the skybox
@@ -7572,6 +7576,109 @@ func run() -> void:
 	check("guide hint stays available early", hmap75.has("guide") and hmap75["guide"]["cond"].call(game))
 	game.t = t_sv75
 	game.state = st_sv75
+
+	# ---------- audit-31 follow-ups: the small-truth batch ----------
+	# L1: place_free's kinbox branch owes the same first-base grace as the
+	# paid verb — a guest's synced base can't dodge the quiet day
+	var raid_sv76: float = game.raid_t
+	var kb_sv76: Vector2i = game.kinbox_pos
+	var xb_sv76: Array = game.extra_boxes.duplicate()
+	game.kinbox_pos = Vector2i(-1, -1)
+	game.raid_t = 5.0
+	var pf_cell := Vector2i(-1, -1)
+	for r76 in range(2, 40):
+		var done76 := false
+		for dx76 in range(-r76, r76 + 1):
+			for dy76 in range(-r76, r76 + 1):
+				if maxi(absi(dx76), absi(dy76)) != r76:
+					continue
+				var k76 := Vector2i(int(game.player.pos.x) + dx76, int(game.player.pos.y) + dy76)
+				if game.place_free("kinbox", k76.x, k76.y):
+					pf_cell = k76; done76 = true; break
+			if done76: break
+		if done76: break
+	check("place_free kinbox buys the same grace", pf_cell.x >= 0
+		and game.raid_t >= game.DAY_LEN + 59.9, "cell=%s raid_t=%.1f" % [pf_cell, game.raid_t])
+	if pf_cell.x >= 0:
+		var st76 = game.structures[pf_cell]
+		for dx77 in range(2):
+			for dy77 in range(2):
+				var cc76 := pf_cell + Vector2i(dx77, dy77)
+				game.structures.erase(cc76)
+				game.world.structures.erase(game.world.idx(cc76.x, cc76.y))
+		if is_instance_valid(st76.get("node")):
+			st76["node"].queue_free()
+	game.kinbox_pos = kb_sv76
+	game.extra_boxes = xb_sv76
+	game.raid_t = raid_sv76
+
+	# L7: a corpse pack outranks the drop flood — the MAX_DROPS eviction must
+	# skip mine-flagged bags even when the corpse is the oldest entry
+	var drops_sv76: Array = game.drops.duplicate()
+	game.drops.clear() # nodes stay parented — the array is what the flood test owns
+	var psv76: Vector2 = game.player.pos
+	game.player.pos = Vector2(-500, -500) # out of pickup reach — nothing auto-loots
+	game.spawn_drop("wood", 1, Vector2(1, 1), true)
+	for i76 in game.MAX_DROPS:
+		game.spawn_drop("stone", 1, Vector2(2 + (i76 % 9), 2 + (i76 / 9) % 9))
+	game.spawn_drop("wood", 1, Vector2(3, 3))
+	var mine_n := 0; var plain_n := 0
+	for d79 in game.drops:
+		if d79.get("mine", false): mine_n += 1
+		else: plain_n += 1
+	check("corpse pack outranks the drop flood", game.drops.size() == game.MAX_DROPS
+		and mine_n == 1, "size=%d mine=%d" % [game.drops.size(), mine_n])
+	check("the flood evicted a plain bag, not the corpse", plain_n == game.MAX_DROPS - 1,
+		"plain=%d" % plain_n)
+	for d77 in game.drops:
+		if is_instance_valid(d77.get("node")):
+			d77["node"].queue_free()
+	game.drops = drops_sv76 # the originals' nodes never left the tree
+	game.player.pos = psv76
+
+	# L4: opening-ring kin keep to their patch — idle-at-title wandering can't
+	# walk the first catch targets off the opening screen. Runs BEFORE the
+	# quickload probe: a real load rebuilds pals and the meta is transient.
+	# Fixture plants its own flagged kin — no dependence on worldgen leftovers.
+	var rk76: Kin = game.gen_pal("fenlump", 1, Vector2(8, 8))
+	rk76.mode = "wild"; rk76.home = Vector2(8, 8)
+	rk76.set_meta("ring_kin", true)
+	game.pals.append(rk76)
+	var ppos76: Vector2 = game.player.pos
+	game.player.pos = rk76.home + Vector2(40, 40) # out of every aggro radius
+	rk76.pos = rk76.home + Vector2(10, 0)
+	rk76.aggro = -1; rk76.aggro_pid = 0
+	var lure_sv76: Dictionary = game.lure
+	game.lure = {} # a stale chum pile would divert the wander check
+	rk76.wander_t = -1.0
+	rk76._physics_process(0.05)
+	check("ring kin wanders stay near home", rk76.target.distance_to(rk76.home) <= 2.1,
+		"target=%s home=%s" % [rk76.target, rk76.home])
+	game.player.pos = ppos76
+	game.lure = lure_sv76
+	game.pals.erase(rk76)
+	if rk76.get_parent(): rk76.get_parent().remove_child(rk76)
+	rk76.free()
+
+	# M2: F8 arms before it loads — one stray tap can't vaporize a session
+	var st_sv76: String = game.state
+	game.state = "play"
+	var hudx: Node = main.get_node("UILayer/HUD")
+	var ld_ev := InputEventAction.new()
+	ld_ev.action = "load_save"; ld_ev.pressed = true
+	game.load_arm = -1.0
+	hudx._unhandled_input(ld_ev)
+	check("quickload first tap arms", game.load_arm > game.t,
+		"arm=%.1f t=%.1f" % [game.load_arm, game.t])
+	hudx._unhandled_input(ld_ev)
+	check("quickload second tap loads", game.load_arm < 0,
+		"arm=%.1f" % game.load_arm) # arm<0 means the second tap fell through to load_game
+	game.state = st_sv76
+
+	# L10: the title footer picks its line off the real save flag — a fresh
+	# boot can't promise a continue that doesn't exist
+	check("footer tracks the real save flag", game.has_save == FileAccess.file_exists("user://savegame.plg"),
+		"has_save=%s" % game.has_save)
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
