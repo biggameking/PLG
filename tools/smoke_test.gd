@@ -7960,6 +7960,31 @@ func run() -> void:
 	game.accord = acc_a33
 	game.catch_counts = cc_a33
 	game.mission_flags = mf_a32
+	# a congested world defers the den's heir — a dropped legend respawn would
+	# silence the den forever and strand the Accord on that save
+	var brs_a33: Array = game.boss_respawns.duplicate(true)
+	var pad_from := game.pals.size()
+	game.pals.resize(game.MAX_PALS) # size is all the capacity gate reads
+	game.boss_respawns = [{"sid": "scalbeak", "lv": 30, "pos": [1.0, 1.0],
+		"alpha": true, "boss": true, "at": 0.0}]
+	game.tick_boss_respawns()
+	check("a full world defers the den heir, never drops it",
+		game.boss_respawns.size() == 1 and game.boss_respawns[0].get("at", 0.0) > 0.0)
+	game.pals.resize(pad_from)
+	# and a forged non-alpha legend record still spawns the catchable heir
+	game.boss_respawns = [{"sid": "nibhand", "lv": 30, "pos": [1.0, 1.0],
+		"alpha": false, "boss": false, "at": 0.0}]
+	game.tick_boss_respawns()
+	var heir_np: Kin = game.pals[game.pals.size() - 1] if game.pals.size() > pad_from else null
+	check("forged respawn record can't smuggle an immune legend",
+		heir_np != null and heir_np.alpha
+		and heir_np.species_id in game.LEGENDARY_DEN
+		and game.catchable(heir_np))
+	if heir_np != null:
+		game.pals.erase(heir_np)
+		if heir_np.get_parent(): heir_np.get_parent().remove_child(heir_np)
+		heir_np.free()
+	game.boss_respawns = brs_a33
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

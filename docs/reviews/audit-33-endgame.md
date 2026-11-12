@@ -47,9 +47,30 @@ remains afterward.
 
 - Before: `den_caught()` capped at 8/10 — verified against
   `species_gen.gd` bodies + `ownable()` predicate.
-- After: `==== 868 checks, 0 failures, 0 skipped ====`.
+- After: `==== 869 checks, 0 failures, 0 skipped ====`.
 - One unrelated ambient flake observed ("night shift", worldgen
   bed-proximity dependent, passes on re-run; predates this batch).
+
+## Post-fix verification sweep (second context-free pass)
+
+The verification subagent re-read the landed fix and confirmed all 8
+claims (gate semantics, warden immunity, pool exclusions, every
+`ownable()` caller, real non-tautological smoke assertions). It found
+two more defects, now fixed in the same stage:
+
+- **[Medium → fixed] Congestion dropped the heir forever.**
+  `tick_boss_respawns` ran `remove_at(i)` BEFORE the `MAX_PALS` check —
+  a legend respawn firing at 220 kin was discarded permanently, the den
+  went silent, and the Accord stranded again. Now the record defers
+  (`at += 60s`) on a full world; only corrupted species entries drop.
+- **[Low → fixed] Forged save could smuggle an immune roamer.**
+  Load-path respawn records honored `alpha: false` on a legend sid →
+  a non-alpha, non-boss legend nothing can catch. The spawn now forces
+  `alpha = true` in the legend branch — the heir contract is enforced
+  at the only place it matters.
+
+New assertions: full-world defer retains + re-arms the record; a forged
+`alpha:false` legend record still spawns a catchable alpha heir.
 
 ## Process note
 

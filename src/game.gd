@@ -1098,10 +1098,15 @@ func tick_boss_respawns() -> void:
 		var br: Dictionary = boss_respawns[i]
 		if t < br.get("at", INF):
 			continue
-		boss_respawns.remove_at(i)
 		var sid := str(br.get("sid", ""))
-		if pals.size() >= MAX_PALS or SpeciesData.species_of(sid).is_empty():
-			continue # cap reached or corrupted entry — the den stays empty
+		if pals.size() >= MAX_PALS:
+			# a full world defers, never drops — a discarded legend respawn
+			# silences the den forever and strands the Accord (audit-33)
+			br["at"] = t + 60.0
+			continue
+		boss_respawns.remove_at(i)
+		if SpeciesData.species_of(sid).is_empty():
+			continue # corrupted entry — the den stays empty
 		var legend := sid in LEGENDARY_DEN
 		if legend:
 			# a legendary den never re-raises the same warden — it calls a NEW
@@ -1115,7 +1120,7 @@ func tick_boss_respawns() -> void:
 		var pp: Array = br.get("pos", [0, 0])
 		var at := Vector2(float(pp[0]), float(pp[1])) if pp.size() >= 2 else Vector2.ZERO
 		var np := preload("res://src/kin.gd").new()
-		np.alpha = bool(br.get("alpha", false))
+		np.alpha = legend or bool(br.get("alpha", false)) # a re-den'd legend is always the heir — a forged non-alpha record would roam immune forever
 		np.boss = bool(br.get("boss", false)) and not legend
 		entity_layer.add_child(np)
 		np.setup(self, sid, clampi(int(br.get("lv", 30)), 1, 60), at)
