@@ -59,6 +59,15 @@ func solid_structure(i: int) -> bool:
 	# spikes etc. are structures you can stand on — flagged walkable at placement
 	return structures.has(i) and not structures[i].get("walkable", false)
 
+func swim_open(x: int, y: int) -> bool:
+	# an aquatic kin may only occupy a water cell that carries nothing else —
+	# the old blocked_swim(x,y,x,y) call could never see this: i==fi early-
+	# returned false before the decor/structure checks ran (audit-42)
+	if not in_bounds(x, y):
+		return false
+	var i := idx(x, y)
+	return tiles[i] == Tile.WATER and decor[i] == Decor.NONE and not solid_structure(i)
+
 func blocked_swim(x: int, y: int, from_x: float, from_y: float) -> bool:
 	# aquatic kin: water is open, everything else still blocks
 	if not in_bounds(x, y):
@@ -158,6 +167,10 @@ func generate(new_seed: int) -> Vector2i:
 			if tiles[i] == Tile.SAND and Rng.hash2(x, y, seed + 9) < 0.12:
 				decor[i] = Decor.ORE_GOLD
 				hp[i] = 45
+	decor[idx(cx, cy)] = Decor.NONE # the berry/ore pass runs after the spawn
+	hp[idx(cx, cy)] = 0            # clearing — the landing cell itself must
+	# never roll a bush or a boulder (same-tile escape would free you anyway,
+	# but the opening shot matters); clear the stale hp budget with it
 	for y in WORLD_H:
 		for x in WORLD_W:
 			var i := idx(x, y)

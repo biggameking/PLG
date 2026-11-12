@@ -1213,3 +1213,23 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - INFO: player hp floor 1 on load; hunger polarity hazard documented.
 - 10 new assertions; 932/0/2skip(seed-conditional). Audit doc:
   docs/reviews/audit-41-player-lifecycle.md.
+
+### S89 — world generation & POI semantics lens (audit-42) — SHIPPED
+- MED: poi_reach() — seeded flood-fill from spawn through the real movement
+  predicate (elevation steps). All campaign POIs gate on it: lair/grotto/den
+  centres, spire door approaches on strict, relaxed AND last-resort paths.
+  A coherent door on a cliff-locked plateau can no longer wall the run.
+- MED: empty species pools can't abort the campaign — lair pool computed once
+  (zone-3 → zone-2 fallback), the loop skips, the den/grotto/spire/nest/
+  waypoint tail still runs. pick_wild_species("")→""; all callers skip;
+  summon_raid refuses on an empty zone-3 pool (sigil kept).
+- LOW: pool checks moved BEFORE side-effect writes — empty pools no longer
+  leave sealed grottos or orphaned torch rings; cage captives check the pick.
+- LOW: blocked_swim(x,y,x,y) was a same-cell no-op — new world.swim_open()
+  (water + no decor + no solid structure) in spawn_wild and migration.
+- LOW: spawn-cell clearing re-runs after the berry/ore pass (decor + hp).
+- LOW: spire rock rings skip water/structure cells on all three paths.
+- LOW: load_game clamps off-enum decor bytes (byte 99 → NONE), matching the
+  net snapshot path's contract.
+- 9 new assertions incl. forged-decor and live-spire reachability sweeps;
+  942/0/1skip. Audit doc: docs/reviews/audit-42-worldgen-poi.md.

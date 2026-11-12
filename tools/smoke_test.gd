@@ -8484,6 +8484,44 @@ func run() -> void:
 		else:
 			game.items["gauntlet_sigil"] = sig40
 
+	# --- audit-42: worldgen & POI semantics (runs while the world still
+	# carries real spire markers — the forged saves below gut them) ---
+	# M1: the campaign spine is walkable — every spire's south-door approach
+	# sits inside the spawn-flooded reach set the placement gate used
+	var reach42: Dictionary = game.poi_reach()
+	check("the reach set covers spawn", reach42.has(game.world.spawn))
+	var sp_ok42 := true
+	for tg42 in game.spire_pos:
+		var sp42: Vector2i = game.spire_pos[tg42]
+		if not reach42.has(sp42 + Vector2i(0, 3)):
+			sp_ok42 = false
+	check("every spire door opens onto connected ground", sp_ok42,
+		"spires=%d" % game.spire_pos.size())
+	# the ring can't drown a lake — no water cell wears rock inside a spire ring
+	var wat_ok42 := true
+	for tg42b in game.spire_pos:
+		var sp42b: Vector2i = game.spire_pos[tg42b]
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				var c42: Vector2i = sp42b + Vector2i(dx, dy)
+				if maxi(absi(dx), absi(dy)) == 2 and game.world.in_bounds(c42.x, c42.y) \
+						and game.world.tiles[game.world.idx(c42.x, c42.y)] == World.Tile.WATER \
+						and game.world.decor[game.world.idx(c42.x, c42.y)] == World.Decor.ROCK:
+					wat_ok42 = false
+	check("no spire ring drowns a lake", wat_ok42)
+	# the placement pool can't mint index 0 of nothing
+	check("an empty species pool picks nothing", game.pick_wild_species([]) == "")
+	# swim_open sees water honestly — the i==fi early-out is gone
+	var wat42 := -1
+	for i42 in game.world.tiles.size():
+		if game.world.tiles[i42] == World.Tile.WATER \
+				and game.world.swim_open(i42 % World.WORLD_W, i42 / World.WORLD_W):
+			wat42 = i42; break
+	check("a clear water cell passes swim_open", wat42 >= 0)
+	check("the landing cell is dry and clear",
+		game.world.decor_at(game.world.spawn.x, game.world.spawn.y) == World.Decor.NONE
+		and not game.world.swim_open(game.world.spawn.x, game.world.spawn.y))
+
 	# F7/F8: hostile timers coerce and the crown re-derives from the ruins —
 	# a forged save can't pin raids or dethrone a finished campaign
 	var sf40 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
@@ -8505,6 +8543,22 @@ func run() -> void:
 			rt_ok40 = false
 	check("a negative rt0 can't pin a raider", rt_ok40)
 	check("the crown re-derives from the ruins", sload40 and game.crowned)
+
+	# audit-42 L5: an off-enum decor byte dies at the load door — the net
+	# snapshot path always clamped, the save path now matches
+	var df42 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	var dec42 := PackedByteArray()
+	dec42.resize(game.world.decor.size())
+	dec42[0] = 99
+	var hpm42 := PackedByteArray()
+	hpm42.resize(game.world.hp.size())
+	df42.store_var({"seed": game.world.seed, "day": 1, "tod": 8.0,
+		"tech_points": 0, "unlocked": [], "items": {}, "party": [],
+		"player": {"hp": 50.0, "level": 1, "xp": 0, "cap_lv": 1},
+		"kin": [], "structures": {}, "decor": dec42, "hp_map": hpm42})
+	df42.close()
+	check("an off-enum decor byte clamps to NONE", game.load_game()
+		and game.world.decor[0] == int(World.Decor.NONE))
 
 	# --- audit-41: player lifecycle & survival hardening ---
 	# M1: soul_boost rides the wire — a replica prices the statue panel off it

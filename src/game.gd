@@ -815,11 +815,13 @@ func spawn_wild(opening := false) -> void:
 		var zone := world.zone_at(x, y)
 		var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone))
 		var sid := pick_wild_species(pool)
+		if sid == "":
+			continue # an empty zone pool spawns nothing — not a ghost row
 		var sp: Dictionary = SpeciesData.species_of(sid)
 		var aquatic: bool = "water" in sp.get("elements", [])
 		var in_water: bool = world.tiles[world.idx(x, y)] == World.Tile.WATER
 		if in_water:
-			if not aquatic or world.blocked_swim(x, y, x, y):
+			if not aquatic or not world.swim_open(x, y):
 				continue # landlubbers can't pop up in a lake
 		elif world.blocked(x, y):
 			continue
@@ -883,6 +885,12 @@ func spawn_wild(opening := false) -> void:
 func pick_wild_species(pool: Array) -> String:
 	# the island day/night ecology: dark kin are nocturnal — they only spawn
 	# after dusk, and they dominate the night table in mixed zones.
+	# NOTE: this branches on is_night() inside the seeded placement lane —
+	# rng CONSUMPTION is identical either way (one int_range), so stream
+	# parity and coordinates hold; only species CONTENT varies by tod.
+	# Never pick POSITIONS by tod inside this lane (audit-42).
+	if pool.is_empty():
+		return "" # callers guard — an empty zone pool must not mint index 0
 	var dark := pool.filter(func(s): return "dark" in SpeciesData.species_of(str(s)).get("elements", []))
 	if is_night():
 		if not dark.is_empty():
@@ -1732,6 +1740,8 @@ func summon_raid() -> bool:
 		log_msg(tr("The island is too crowded for a raid boss"))
 		return false # the cap binds attackers too — the horn refuses, sigil kept
 	var pool: Array = SpeciesGen.zone_pool(3)
+	if pool.is_empty():
+		return false # trimmed species data can't mint a raid boss either
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	var bp := preload("res://src/kin.gd").new()
 	bp.alpha = true
@@ -4536,7 +4546,11 @@ func load_game() -> bool:
 	world.generate(int(d["seed"])) # numeric-verified above — the typed parameter would abort on anything else
 	if d.get("decor") is PackedByteArray and d["decor"].size() == world.decor.size() \
 			and d.get("hp_map") is PackedByteArray and d["hp_map"].size() == world.hp.size():
-		world.decor = d["decor"]
+		var ddec: PackedByteArray = d["decor"].duplicate() # clamp a copy — an
+		for i2 in ddec.size(): # off-enum byte reaches harvest_cell's literal
+			if ddec[i2] > int(World.Decor.STUMP): # lookup; the net path does
+				ddec[i2] = World.Decor.NONE    # this, the save path didn't
+		world.decor = ddec                     # (audit-42)
 		world.hp = d["hp_map"]
 	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
 		log_msg(tr("Save layout predates the current world format - fresh terrain"))
@@ -5081,7 +5095,7 @@ func tick_migration(dt: float) -> void:
 			continue # a herd on your boots is an ambush, not a migration
 		var in_water: bool = world.tiles[world.idx(x, y)] == World.Tile.WATER
 		if in_water:
-			if not aquatic or world.blocked_swim(x, y, x, y):
+			if not aquatic or not world.swim_open(x, y):
 				continue
 		elif world.blocked(x, y):
 			continue
@@ -5626,7 +5640,9 @@ func spawn_camps() -> void:
 			continue
 		var pool: Array = acq_pool(ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone))
 		var cst: Dictionary = structures[Vector2i(tx, ty)]
-		cst["captive"] = {"sp": pick_wild_species(pool), "lv": rng.int_range(8 + zone * 4, 14 + zone * 6)}
+		var csp := pick_wild_species(pool) # "" on an empty pool — a cage that
+		if csp != "":                    # can't hold a species holds nothing
+			cst["captive"] = {"sp": csp, "lv": rng.int_range(8 + zone * 4, 14 + zone * 6)}
 		var gn := 2 + int(rng.chance(0.5))
 		for i in gn:
 			var gid: String = "ironpact_grunt" if i % 2 == 0 else "ironpact_sweeper"
@@ -5983,11 +5999,45 @@ func condense_remote(pid: int) -> bool:
 	note_remote(pid, "%s condensed to star %d!", [ap.spec["name"], ap.star])
 	return true
 
+var _reach_seed := -1
+var _reach_set := {}
+
+func poi_reach() -> Dictionary:
+	# cells walkable from spawn under the REAL movement predicate — elevation
+	# steps included. Campaign POIs must land reachable or a cliff-locked
+	# plateau can wall the run before grapple/birds exist (audit-42 MED).
+	# Computed once per world seed — call it BEFORE POI side effects write
+	# structures, and it reflects natural terrain only.
+	if _reach_seed == world.seed and not _reach_set.is_empty():
+		return _reach_set
+	_reach_seed = world.seed
+	_reach_set = {}
+	var q: Array = [world.spawn]
+	_reach_set[world.spawn] = true
+	while not q.is_empty():
+		var c: Vector2i = q.pop_back()
+		for d4 in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = c + d4
+			if _reach_set.has(n):
+				continue
+			if world.blocked(n.x, n.y, float(c.x), float(c.y)):
+				continue
+			_reach_set[n] = true
+			q.append(n)
+	return _reach_set
+
 func spawn_lairs() -> void:
 	# Zone-3 boss lairs: torch ring + an Alpha guarding elite guards
 	var placed := 0
 	var tries := 0
-	while placed < 3 and tries < 6000:
+	poi_reach() # natural-terrain walk-set — computed before any POI writes
+	# the pool is position-independent — compute once. An EMPTY pool must
+	# skip the lair loop, never return: the whole campaign-POI tail
+	# (den/grotto/spires/nests/waypoints) is called below (audit-42)
+	var lair_pool := acq_pool(SpeciesGen.zone_pool(3))
+	if lair_pool.is_empty():
+		lair_pool = acq_pool(SpeciesGen.zone_pool(2))
+	while placed < 3 and tries < 6000 and not lair_pool.is_empty():
 		tries += 1
 		var tx := rng.int_range(6, World.WORLD_W - 8)
 		var ty := rng.int_range(6, World.WORLD_H - 8)
@@ -5998,16 +6048,15 @@ func spawn_lairs() -> void:
 			for dx in range(-2, 3):
 				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 					ok = false
+		if not _reach_set.has(Vector2i(tx, ty)):
+			ok = false # a boss arena on a sealed plateau walls the run (audit-42)
 		if not ok:
 			continue
 		# torch ring (8 cells around a 5x5 clearing)
 		for c in [Vector2i(tx-2,ty-2),Vector2i(tx+2,ty-2),Vector2i(tx-2,ty+2),Vector2i(tx+2,ty+2)]:
 			place_free("torch", c.x, c.y)
 		# alpha boss at center — alphas are catchable, so the pool is too
-		var pool := acq_pool(SpeciesGen.zone_pool(3))
-		if pool.is_empty():
-			pool = acq_pool(SpeciesGen.zone_pool(2))
-		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
+		var sid: String = lair_pool[rng.int_range(0, lair_pool.size() - 1)]
 		var bp := preload("res://src/kin.gd").new()
 		entity_layer.add_child(bp)
 		bp.alpha = true # before setup: apply_bonuses folds the 4x into max_hp
@@ -6015,7 +6064,7 @@ func spawn_lairs() -> void:
 		pals.append(bp)
 		# 2 elite guards
 		for i in 2:
-			var gsid: String = pool[rng.int_range(0, pool.size() - 1)]
+			var gsid: String = lair_pool[rng.int_range(0, lair_pool.size() - 1)]
 			var gp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(gp)
 			gp.setup(self, gsid, rng.int_range(18, 26), Vector2(tx + 0.5 + (1 if i == 0 else -1), ty + 0.5))
@@ -6102,8 +6151,16 @@ func spawn_grotto() -> void:
 			for dx in range(-3, 4):
 				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 					ok = false
+		if not _reach_set.has(Vector2i(tx, ty)):
+			ok = false # the door cell must be walkable before the seal (audit-42)
 		if not ok:
 			continue
+		# the warden: a zone-3 alpha boss, orb-immune like all dungeon bosses.
+		# Check the pool BEFORE sealing the ring — an empty chamber behind
+		# unbreakable-looking rock is a lie on the minimap (audit-42)
+		var pool := SpeciesGen.zone_pool(3)
+		if pool.is_empty():
+			return
 		# seal the chamber: a rock ring the player has to crack open
 		for dy in range(-3, 4):
 			for dx in range(-3, 4):
@@ -6111,10 +6168,6 @@ func spawn_grotto() -> void:
 					var i2 := world.idx(tx + dx, ty + dy)
 					world.decor[i2] = World.Decor.ROCK
 					world.hp[i2] = 60
-		# the warden: a zone-3 alpha boss, orb-immune like all dungeon bosses
-		var pool := SpeciesGen.zone_pool(3)
-		if pool.is_empty():
-			return
 		var bp := preload("res://src/kin.gd").new()
 		bp.alpha = true
 		bp.boss = true
@@ -6314,6 +6367,9 @@ func spawn_pact_spires() -> void:
 				if world.blocked(tx, ty + 2, tx + 0.5, ty + 1.5) \
 						or world.blocked(tx, ty + 3, tx + 0.5, ty + 2.5):
 					ok = false
+				if not _reach_set.has(Vector2i(tx, ty + 3)):
+					ok = false # coherent door ≠ connected door — a spire on a
+					# sealed plateau can't be reached on foot (audit-42)
 				if not ok:
 					continue
 				_place_spire(sd, tx, ty, si)
@@ -6340,6 +6396,9 @@ func spawn_pact_spires() -> void:
 			if world.blocked(tx2, ty2 + 2, tx2 + 0.5, ty2 + 1.5) \
 					or world.blocked(tx2, ty2 + 3, tx2 + 0.5, ty2 + 2.5):
 				continue
+			if not _reach_set.has(Vector2i(tx2, ty2 + 3)):
+				continue # even the last resort owes the campaign a real door —
+				# a cliff-locked spire is the same lie as a missing one
 			_place_spire(sd2, tx2, ty2, si)
 			done2 = true
 			placed += 1
@@ -6356,6 +6415,10 @@ func _place_spire(sd: Dictionary, tx: int, ty: int, placed: int) -> void:
 		for dx in range(-2, 3):
 			if maxi(absi(dx), absi(dy)) == 2 and not (dy == 2 and dx == 0):
 				var j := world.idx(tx + dx, ty + dy)
+				if world.tiles[j] == World.Tile.WATER \
+						or structures.has(Vector2i(tx + dx, ty + dy)):
+					continue # the ring can't drown a lake or eat another POI —
+					# relaxed/last-resort paths don't pre-verify the rim (audit-42)
 				world.decor[j] = World.Decor.ROCK
 				world.hp[j] = 60
 	var bp := preload("res://src/kin.gd").new()
@@ -6424,14 +6487,18 @@ func spawn_legendary_den() -> void:
 			for dx in range(-3, 4):
 				if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 					ok = false
+		if not _reach_set.has(Vector2i(tx, ty)):
+			ok = false # the heir's arena must be walkable-in (audit-42)
 		if not ok:
 			continue
+		var pool := LEGENDARY_DEN.filter(func(s): return not SpeciesGen.SPECIES.get(s, {}).is_empty())
+		if pool.is_empty():
+			return # species data trimmed — skip the den rather than spawn a
+			# ghost. Checked BEFORE the torch ring: an heir-less ring is just
+			# debris on the map (audit-42)
 		for c in [Vector2i(tx-3,ty-3),Vector2i(tx+3,ty-3),Vector2i(tx-3,ty+3),Vector2i(tx+3,ty+3),
 				Vector2i(tx,ty-3),Vector2i(tx,ty+3),Vector2i(tx-3,ty),Vector2i(tx+3,ty)]:
 			place_free("torch", c.x, c.y)
-		var pool := LEGENDARY_DEN.filter(func(s): return not SpeciesGen.SPECIES.get(s, {}).is_empty())
-		if pool.is_empty():
-			return # species data trimmed — skip the den rather than spawn a ghost
 		var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 		var bp := preload("res://src/kin.gd").new()
 		bp.alpha = true
