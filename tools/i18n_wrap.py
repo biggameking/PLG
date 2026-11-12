@@ -7,6 +7,10 @@ Rules:
 - inside {} dict literals only VALUE-position strings (prev sig char ':') wrap
 - literals already inside tr() are skipped
 - emits wrapped files + keys.txt of every wrapped literal
+
+HISTORICAL one-shot (S74). Line-scoped — continuation lines of a call are
+never scanned (weather/altar dict literals escaped it once). For new emit
+sites just write tr() by hand; locale/zh.csv + the smoke lint is the ledger.
 """
 import re, sys, os
 

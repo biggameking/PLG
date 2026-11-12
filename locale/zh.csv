@@ -70,7 +70,7 @@ EFFIGIES,EFFIGIES,祭像
 End the session first (quit to title),End the session first (quit to title),先结束会话（退回标题）
 Esc/n close · ←/→ turn the page · %d / %d,Esc/n close · ←/→ turn the page · %d / %d,Esc/n 关闭 · ←/→ 翻页 · %d / %d
 Fists,Fists,空手
-Glider descends cliffs. Sick kin need medicine in feed box/bag.,Glider descends cliffs. Sick kin need medicine in feed box/bag.,滑翔翼可下崖。生病的精灵需要把药放进饲料箱或背包。
+Glider descends cliffs. Sick kin need medicine in feed box/bag.,Glider descends cliffs. Sick kin need medicine in feed box/bag.,滑翔翼可下悬崖。生病的精灵需要喂食箱/背包里的药。
 Incubating %s: %ds left,Incubating %s: %ds left,孵化中 %s：剩 %d 秒
 Incubator empty - bring a kin egg,Incubator empty - bring a kin egg,孵化器空着——放一枚精灵蛋
 INV,INV,背包
@@ -267,7 +267,7 @@ Kin Gacha,Kin Gacha,精灵扭蛋机
 Lightning Rod,Lightning Rod,避雷针
 Logging Site,Logging Site,伐木场
 Mill,Mill,磨坊
-Monitoring Stand,Monitoring Stand,监控台
+Monitoring Stand,Monitoring Stand,监视台
 Notice Board,Notice Board,告示板
 Oil Extractor,Oil Extractor,采油机
 Orb Works,Orb Works,造球工坊
@@ -389,13 +389,13 @@ KINDEX COMPLETE — every kin on record. +3 legendary orbs,KINDEX COMPLETE — e
 -,-,-
 -%d,-%d,-%d
 !,!,！
-!! RAID: %d hostile kin approach your base !!,!! RAID: %d hostile kin approach your base !!,！！突袭：%d 只敌对契约兽逼近基地！！
+!! RAID: %d hostile kin approach your base !!,!! RAID: %d hostile kin approach your base !!,！！突袭：%d 只敌对精灵逼近基地！！
 [friend] ,[friend] ,[友方] 
 [you] ,[you] ,[你] 
 * hatched! *,* hatched! *,* 孵化了！*
 %d boss lairs marked deep in the world,%d boss lairs marked deep in the world,%d 处首领巢穴标记在世界深处
 %d food spoiled,%d food spoiled,%d 份食物腐坏了
-%d perishable item%s turned — staff an ice box,%d perishable item%s turned — staff an ice box,%d 件易腐物品变质了——给冰柜配个工兽
+%d perishable item(s) turned — staff an ice box,%d perishable item(s) turned — staff an ice box,%d 件易腐物品变质了——给冰柜配个工兽
 %d waypoints hum out in the wilds,%d waypoints hum out in the wilds,%d 座路标在野外嗡鸣
 %dth %s caught - bonus XP!,%dth %s caught - bonus XP!,第 %d 只 %s 捕获——奖励经验！
 %s -> %s,%s -> %s,%s → %s
@@ -404,7 +404,7 @@ KINDEX COMPLETE — every kin on record. +3 legendary orbs,KINDEX COMPLETE — e
 %s + %s produced an egg!,%s + %s produced an egg!,%s 和 %s 产下了一颗蛋！
 %s already knows every %s move,%s already knows every %s move,%s 已学会全部 %s 系招式
 %s answers to its keeper,%s answers to its keeper,%s 只听从主人
-%s broke free (%d%%),%s broke free (%d%%),%s 挣脱了（%d%）
+%s broke free (%d%%),%s broke free (%d%%),%s 挣脱了（%d%%）
 %s broke free from player %d's orb,%s broke free from player %d's orb,%s 挣脱了玩家 %d 的兽球
 %s broke!,%s broke!,%s 坏掉了！
 %s burned out — now weakened,%s burned out — now weakened,%s 烧尽了——陷入虚弱
@@ -468,7 +468,7 @@ A sealed grotto echoes in the deep wilds,A sealed grotto echoes in the deep wild
 A sealed grotto echoes in the deep wilds — it sounds deep,A sealed grotto echoes in the deep wilds — it sounds deep,一座封印石窟在野地深处回响——听起来很深
 A sealed grotto echoes in the deep wilds — something huge breathes within,A sealed grotto echoes in the deep wilds — something huge breathes within,一座封印石窟在野地深处回响——里面有什么巨物在呼吸
 A supply crate lands nearby — grab it before the locals do,A supply crate lands nearby — grab it before the locals do,一箱补给落在附近——抢在本地人之前拿到
-A thunderstorm rolls in — electric kin crackle,A thunderstorm rolls in — electric kin crackle,雷雨滚滚而来——电系契约兽噼啪作响
+A thunderstorm rolls in — electric kin crackle,A thunderstorm rolls in — electric kin crackle,雷雨滚滚而来——电系精灵噼啪作响
 A wandering merchant has arrived! (E to trade),A wandering merchant has arrived! (E to trade),流浪商人到了！（按 E 交易）
 Alpha %s down! Bonus orb.,Alpha %s down! Bonus orb.,头目 %s 倒下！奖励兽球。
 an egg!,an egg!,一颗蛋！
@@ -478,7 +478,7 @@ APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper,APEX GAUNTLET C
 ARMOR BROKE!,ARMOR BROKE!,护甲碎了！
 Bag full - %s x%d dropped,Bag full - %s x%d dropped,背包已满——%s x%d 掉落了
 Bait tossed — something hungry will smell it,Bait tossed — something hungry will smell it,诱饵抛出去了——饥饿的家伙会闻到
-Base established! Assign kin with F.,Base established! Assign kin with F.,基地落成！按 F 给契约兽分工。
+Base established! Assign kin with F.,Base established! Assign kin with F.,基地落成！按 F 给精灵分工。
 Base level %d! +2 workforce slots,Base level %d! +2 workforce slots,基地 Lv%d！+2 个工位
 Base level maxed,Base level maxed,基地已满级
 Base mission: ,Base mission: ,基础任务：
@@ -516,7 +516,7 @@ Craft queue is full,Craft queue is full,制作队列已满
 Crafted %s x%d,Crafted %s x%d,做出了 %s x%d
 Crafting %s… (%ds),Crafting %s… (%ds),制作 %s……（%d 秒）
 cured!,cured!,治好了！
-Demolished %s (50%% refund),Demolished %s (50%% refund),拆除了 %s（返还 50%）
+Demolished %s (50%% refund),Demolished %s (50%% refund),拆除了 %s（返还 50%%）
 Dismounted,Dismounted,已下马
 dream chaser!,dream chaser!,逐梦！
 Egg hatched: %s%s (talent %d)!,Egg hatched: %s%s (talent %d)!,蛋孵化了：%s%s（资质 %d）！
@@ -553,16 +553,16 @@ IT GRINS.,IT GRINS.,它在狞笑。
 IT REARS UP,IT REARS UP,它人立而起
 Join failed,Join failed,加入失败
 Joining %s:%d ...,Joining %s:%d ...,正在加入 %s:%d ……
-Kin gacha: it wants 30 gold in the slot,Kin gacha: it wants 30 gold in the slot,契约兽扭蛋机：投币口要 30 金
+Kin gacha: it wants 30 gold in the slot,Kin gacha: it wants 30 gold in the slot,精灵扭蛋机：投币口要 30 金
 Kinbox full - make room first,Kinbox full - make room first,兽箱已满——先腾个位置
 Kinbox is full,Kinbox is full,兽箱已满
 Kinbox is full — the captive won't leave its cage,Kinbox is full — the captive won't leave its cage,兽箱已满——囚徒不肯离开笼子
 Kinbox is full (%d) - %s got away,Kinbox is full (%d) - %s got away,兽箱已满（%d）——%s 跑掉了
 Kinbox is full (%d) - can't store %s,Kinbox is full (%d) - can't store %s,兽箱已满（%d）——存不下 %s
-Kindex mastery: %s +10%%,Kindex mastery: %s +10%%,图鉴精通：%s +10%
+Kindex mastery: %s +10%%,Kindex mastery: %s +10%%,图鉴精通：%s +10%%
 KINDEX MILESTONE,KINDEX MILESTONE,图鉴里程碑
 KINDEX: %d species caught! +%d tech,KINDEX: %d species caught! +%d tech,图鉴：已捕获 %d 种！+%d 技术点
-Lead kin is down,Lead kin is down,领头契约兽倒下了
+Lead kin is down,Lead kin is down,领头精灵倒下了
 "Level up! Lv%d (+2 tech, +1 stat)","Level up! Lv%d (+2 tech, +1 stat)",升级！Lv%d（+2 技术点，+1 属性点）
 Lightning bites the rod — banked an electric organ,Lightning bites the rod — banked an electric organ,雷电咬上避雷针——存进一枚电器官
 Lucky %s dropped gold!,Lucky %s dropped gold!,幸运的 %s 掉出了金币！
@@ -582,22 +582,22 @@ Need %d ancient parts,Need %d ancient parts,需要 %d 个古代零件
 Need %d effigies or a stat point (have %d),Need %d effigies or a stat point (have %d),需要 %d 个图腾或 1 属性点（现有 %d）
 Need %d effigies to infuse %s,Need %d effigies to infuse %s,灌注 %s 需要 %d 个图腾
 Need %d gold,Need %d gold,需要 %d 金
-Need %d same-species kin for star %d (have %d),Need %d same-species kin for star %d (have %d),升到 %d 星需要 %d 只同种契约兽（现有 %d）
+Need %d same-species kin for star %d (have %d),Need %d same-species kin for star %d (have %d),需要 %d 只同种精灵升 %d 星（现有 %d）
 Need %d tech points,Need %d tech points,需要 %d 技术点
 Need %s in the bag,Need %s in the bag,背包里需要有 %s
 Need a free incubator nearby,Need a free incubator nearby,附近需要一台空闲孵化器
 Need a kinbox to summon the raid,Need a kinbox to summon the raid,需要一座兽箱来召来突袭
 Need to be at a %s,Need to be at a %s,需要站在 %s 旁
 needs cake!,needs cake!,要蛋糕！
-No active kin to condense,No active kin to condense,没有出战契约兽可凝聚
-No active kin to teach,No active kin to teach,没有出战契约兽可传授
-No base kin nearby,No base kin nearby,附近没有驻扎的契约兽
+No active kin to condense,No active kin to condense,没有出战精灵可凝聚
+No active kin to teach,No active kin to teach,没有出战精灵可传授
+No base kin nearby,No base kin nearby,附近没有驻扎的精灵
 No host answered — check the address,No host answered — check the address,无人应答——检查地址
-No kin in the line of fire,No kin in the line of fire,射线上没有契约兽
-No mountable kin nearby (right saddle in pack?),No mountable kin nearby (right saddle in pack?),附近没有可骑乘的契约兽（鞍具带对了吗？）
+No kin in the line of fire,No kin in the line of fire,射线上没有精灵
+No mountable kin nearby (right saddle in pack?),No mountable kin nearby (right saddle in pack?),附近没有可骑乘的精灵（鞍具带对了吗？）
 No orbs loaded!,No orbs loaded!,没有装填兽球！
 No orbs! Craft kin_orb at a workbench.,No orbs! Craft kin_orb at a workbench.,没有兽球！去工作台做几颗 kin_orb。
-No party kin,No party kin,队伍里没有契约兽
+No party kin,No party kin,队伍里没有精灵
 No perks to forget,No perks to forget,没有可遗忘的特质
 No workplace nearby,No workplace nearby,附近没有工位
 Nothing to demolish,Nothing to demolish,没有可拆除的东西
@@ -636,7 +636,7 @@ Save has wrong field types - starting fresh,Save has wrong field types - startin
 Save is from a newer build - not loading,Save is from a newer build - not loading,存档来自更新的版本——无法读取
 Save layout predates the current world format - fresh terrain,Save layout predates the current world format - fresh terrain,存档布局早于当前世界格式——重新生成地形
 Save missing field '%s' - starting fresh,Save missing field '%s' - starting fresh,存档缺少字段 '%s'——重新开始
-Send out a kin first,Send out a kin first,先放出一只契约兽
+Send out a kin first,Send out a kin first,先放出一只精灵
 SHATTERED,SHATTERED,粉碎
 Skipped unknown species in save: %s,Skipped unknown species in save: %s,跳过存档中的未知物种：%s
 Skipped unknown structure in save: %s,Skipped unknown structure in save: %s,跳过存档中的未知建筑：%s
@@ -651,7 +651,7 @@ Statue upgraded: %s Lv%d,Statue upgraded: %s Lv%d,雕像升级：%s Lv%d
 STREAK x%d!,STREAK x%d!,连捕 x%d！
 STRIKE!,STRIKE!,好球！
 SUPPLY DROP!,SUPPLY DROP!,补给空投！
-"Synced %d structures, %d kin","Synced %d structures, %d kin",已同步 %d 座建筑、%d 只契约兽
+"Synced %d structures, %d kin","Synced %d structures, %d kin",已同步 %d 座建筑、%d 只精灵
 Synced world seed %d,Synced world seed %d,已同步世界种子 %d
 The altar drinks lumenite — thunder answers,The altar drinks lumenite — thunder answers,祭坛饮下流明石——雷霆作答
 The altar drinks your lumenite — the sky shifts,The altar drinks your lumenite — the sky shifts,祭坛饮下流明石——天色变幻
@@ -697,11 +697,11 @@ zzz,zzz,呼噜
 "A corked bottle — inside, a faded treasure chart!","A corked bottle — inside, a faded treasure chart!",一个塞着软木塞的瓶子——里面是一张褪色的藏宝图！
 A soggy coin purse!,A soggy coin purse!,一只湿透的钱袋！
 A wild %s took the bait!,A wild %s took the bait!,一只野生 %s 咬钩了！
-Base is full (%d kin — level up for more slots),Base is full (%d kin — level up for more slots),基地已满（%d 只契约兽——升级解锁更多栏位）
+Base is full (%d kin — level up for more slots),Base is full (%d kin — level up for more slots),基地已满（%d 只精灵——升级解锁更多栏位）
 Can't sleep — hostiles are after someone,Can't sleep — hostiles are after someone,睡不着——有人被敌人盯上了
-Caught kin fluids x%d,Caught kin fluids x%d,契约兽体液 x%d
+Caught kin fluids x%d,Caught kin fluids x%d,精灵体液 x%d
 Just weeds and berries.,Just weeds and berries.,只有水草和浆果。
-Need a kinbox to deploy kin,Need a kinbox to deploy kin,需要一座兽箱才能派驻契约兽
+Need a kinbox to deploy kin,Need a kinbox to deploy kin,需要一座兽箱才能派驻精灵
 Notice board: give another keeper a turn,Notice board: give another keeper a turn,告示板：让别的管家也来一轮
 Notice board: someone's filling it — give it a moment,Notice board: someone's filling it — give it a moment,告示板：有人正在交委托——稍等
 Party full (%d),Party full (%d),队伍已满（%d）
@@ -710,3 +710,203 @@ Too far to mount,Too far to mount,太远，骑不上去
 You caught %s Lv%d,You caught %s Lv%d,你抓到了 %s Lv%d
 [ deposit all ],[ deposit all ],[ 全部存入 ]
 [ take all ],[ take all ],[ 全部取出 ]
+Bramplume,Bramplume,翔爪翎
+Brancrest,Brancrest,燃冠战鸟
+Branling,Branling,焰刃浪
+Branpurr,Branpurr,焰顽狸
+Briarchim,Briarchim,森斥猴
+Briarmaw,Briarmaw,棘冠龙
+Bringloom,Bringloom,浮魟
+Bubgloom,Bubgloom,汽壶精
+Bubgoo,Bubgoo,诡沫鱼
+Bubwrith,Bubwrith,藻鳞蟒
+Chilgloom,Chilgloom,寒巾魅
+Cindchew,Cindchew,熔壳兽
+Cindpaw,Cindpaw,烬鬃犬
+Corlfang,Corlfang,汐猎蟒
+Dewmane,Dewmane,浪鬃犬
+Dewpuff,Dewpuff,星滴
+Digsnout,Digsnout,裂崖豕
+Doztail,Doztail,眠运狐
+Duskpurr,Duskpurr,魅夜猫
+Duskwing,Duskwing,吱夜蝠
+Embpaw,Embpaw,烬尾犬
+Embquill,Embquill,烬刺穴
+Faradwisp,Faradwisp,雷云球
+Fernchim,Fernchim,蕨泰坦
+Fernveil,Fernveil,眠百合
+Flarbeak,Flarbeak,朱焰神鸟
+Floraling,Floraling,瓣舞灵
+Frostfang,Frostfang,冰獭龙
+Glaclump,Glaclump,雪球团
+Glacmane,Glacmane,丝霜蛾
+Grimling,Grimling,月时魔
+Grithoof,Grithoof,熔蹄兽
+Gritmite,Gritmite,泥丸虫
+Hushnib,Hushnib,缎耳兔
+Hushsmith,Hushsmith,心螈匠
+Ivyveil,Ivyveil,藤纱灵
+Lazburr,Lazburr,沼壳伏
+Lazpuff,Lazpuff,壶鼻象
+Leaftrot,Leaftrot,樱叶龙
+Loamquill,Loamquill,钻壳龟
+Mimspike,Mimspike,绵刺球
+Mimtrot,Mimtrot,粉绒驼
+Mossjelly,Mossjelly,蜜苔蜂
+Mossveil,Mossveil,苔后
+Mosswisp,Mosswisp,桂香蛾
+Murkwing,Murkwing,黯翼鸦
+Nibhand,Nibhand,圣掌骑
+Noctfang,Noctfang,渊蛇王
+Noctgloom,Noctgloom,夜鱿友
+Noctmane,Noctmane,月鬃狼
+Noctplume,Noctplume,夜霆使
+Petalantler,Petalantler,莓角鹿
+Puffchim,Puffchim,蛮猩
+Pyrejelly,Pyrejelly,火苗精
+Pyreplume,Pyreplume,凰焰翎
+Pyresmith,Pyresmith,狂焰匠
+Rimemane,Rimemane,霜鬃帚
+Rimewhisk,Rimewhisk,霜须兔
+Ripbell,Ripbell,眠铃鳄
+Ripwrith,Ripwrith,雨舞龙
+Scalbeak,Scalbeak,啸天龙
+Scalcrest,Scalcrest,梦羽龙
+Scalfang,Scalfang,狱焰狐
+Shadegloom,Shadegloom,夜语魅
+Shadehand,Shadehand,枭贤士
+Shadekin,Shadekin,渊骑
+Shadesmith,Shadesmith,蝎死骑
+Shadewisp,Shadewisp,颅灯灵
+Snovfawn,Snovfawn,雪驯鹿
+Snovmool,Snovmool,牙驮兽
+Snovstride,Snovstride,凌霜骥
+Snowtail,Snowtail,雪尾
+Soltalon,Soltalon,煤爪隼
+Sparkhaunt,Sparkhaunt,霆魅
+Sparkwhisk,Sparkwhisk,电须鼠
+Sprigveil,Sprigveil,萤纱贤
+Statchew,Statchew,炮雷熊
+Statstride,Statstride,雷角骏
+Tambeak,Tambeak,爆喙鸟
+Tammane,Tammane,嚎鬃狼
+Tawtail,Tawtail,咧尾猫
+Terrkin,Terrkin,漠工神
+Terrnib,Terrnib,穴鼹
+Thornhoof,Thornhoof,棘蹄
+Thornmelt,Thornmelt,荆叶跳
+Tidscale,Tidscale,潮鳞皇
+Veilkin,Veilkin,狐巫
+Veilplume,Veilplume,裂羽鹫
+Vermtrot,Vermtrot,幽谷龙
+Worthand,Worthand,林射手
+Wortling,Wortling,蜂骑士
+Wortquill,Wortquill,棘甲岩
+Wyrmhoof,Wyrmhoof,钢颚龙
+Zapplume,Zapplume,雷翎鸟
+Zaptrot,Zaptrot,掣电犬
+MOVE wasd/arrows  SPRINT shift  DODGE space,MOVE wasd/arrows  SPRINT shift  DODGE space,移动 wasd/方向键  冲刺 shift  闪避 space
+MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab,MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab,近战/砍 lmb  瞄准 q  投掷 lmb  兽球 tab
+"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t","BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",建造 b（1-9 选件，lmb 放置，rmb 取消）背包 i  科技 t
+"INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h","INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h",互动 e（工作台=制作，兽箱=管理）分工 f  帮助 h
+MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter,MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter,地图 m  拆除 x（光标下）骑乘 r  兽技 g  雕像 u  图鉴 p  聊天 enter
+1-%d sends that party kin out (press again to recall) — one ball on the field,1-%d sends that party kin out (press again to recall) — one ball on the field,1-%d 派出对应精灵（再按收回）——场上只能放一球
+v cycles the field kin's orders: auto / aggressive / passive,v cycles the field kin's orders: auto / aggressive / passive,v 切换场上精灵的指令：自动 / 激进 / 被动
+"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)","HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",开房 j  加入 k（输入房主 IP 后回车）商人 e（到访时）
+ MAX, MAX, 满级
+%d %s %s,%d %s %s,%d %s %s
+%s  %d%%,%s  %d%%,%s  %d%%
+%s  x%d,%s  x%d,%s  x%d
+%s  ·spotted·,%s  ·spotted·,%s  ·见过·
+%s %d:%02d,%s %d:%02d,%s %d:%02d
+%s %s  pow%d  cd%ds,%s %s  pow%d  cd%ds,%s %s  威力%d  冷却%d秒
+%s Lv%d  soul+%d  (cost %d),%s Lv%d  soul+%d  (cost %d),%s Lv%d  魂+%d（消耗 %d）
+%s Lv%d %s%s,%s Lv%d %s%s,%s Lv%d %s%s
+%s x%d,%s x%d,%s x%d
+%s x%d  %dg,%s x%d  %dg,%s x%d  %d金
+%s x%d  +%dg,%s x%d  +%dg,%s x%d  +%d金
+%s x%d  <-  %s,%s x%d  <-  %s,%s x%d  ←  %s
+"%s%s  (%d,%d)  %dm","%s%s  (%d,%d)  %dm","%s%s  （%d,%d） %dm"
+%s%s %s Lv%d T%d %s%s,%s%s %s Lv%d T%d %s%s,%s%s %s Lv%d T%d %s%s
+%s%s%s %s%s Lv%d T%d %sHP%d/%d,%s%s%s %s%s Lv%d T%d %sHP%d/%d,%s%s%s %s%s Lv%d T%d %sHP%d/%d
+%s%s×%d,%s%s×%d,%s%s×%d
+", ",", ",，
+?  ?????,?  ?????,？ ?????
+BASE (%d/%d) — click to recall,BASE (%d/%d) — click to recall,基地（%d/%d）——点击召回
+BOX (%d),BOX (%d),箱子（%d）
+HP %d/%d  Lv%d  XP%d,HP %d/%d  Lv%d  XP%d,HP %d/%d  Lv%d  经验 %d
+Lv%d %s  +%dg,Lv%d %s  +%dg,Lv%d %s  +%d金
+RAID IN %ds,RAID IN %ds,突袭 %d 秒后
+REPAIR %s [%d/%d]  <-  %s,REPAIR %s [%d/%d]  <-  %s,修理 %s [%d/%d] ← %s
+SELL (50%),SELL (50%),出售（50%）
+SOUL INFUSION (+4%/soul),SOUL INFUSION (+4%/soul),魂灵灌注（+4%/魂）
+TECH  (pts: %d),TECH  (pts: %d),科技（点数：%d）
+[>base],[>base],[→基地]
+[UPGRADE],[UPGRADE],[升级]
+rows swap party/base,rows swap party/base,整行调换：队伍↔基地
+» ,» ,» 
+★ %s,★ %s,★ %s
+Build a Kinbox,Build a Kinbox,建一座兽箱
+Catch 3 kin,Catch 3 kin,捕捉 3 只精灵
+Deploy a kin to base (kinbox),Deploy a kin to base (kinbox),派驻一只精灵到基地（兽箱）
+Build a Logging Site,Build a Logging Site,建一处伐木场
+Craft a kin orb,Craft a kin orb,制作一颗兽球
+Build a Ranch,Build a Ranch,建一座牧场
+Build a Kin Bed,Build a Kin Bed,建一张小窝
+Defeat an alpha or boss,Defeat an alpha or boss,击败一只头目或首领
+Hatch a bred egg,Hatch a bred egg,孵化一颗繁育蛋
+Clear the gauntlet sigil,Clear the gauntlet sigil,通关徽记试炼
+DEF,DEF,防御
+SPD,SPD,速度
+GLOW,GLOW,发光
+KI,KI,薪
+WA,WA,浇
+PL,PL,种
+HA,HA,工
+LU,LU,伐
+MI,MI,矿
+TR,TR,搬
+GA,GA,采
+FA,FA,农
+CO,CO,冷
+ME,ME,医
+EL,EL,电
+  %s x%d  %.0fs,  %s x%d  %.0fs,  %s x%d  %.0fs
+"BUILD — tap/1-9 pick, tap again to cancel","BUILD — tap/1-9 pick, tap again to cancel",建造——点按/1-9 选件，再点取消
+  (placing: %s),  (placing: %s),（放置：%s）
+%s %s Lv%d%s,%s %s Lv%d%s,%s %s Lv%d%s
+ ☠%dg, ☠%dg, ☠%d金
+%s %s,%s %s,%s %s
+%ds,%ds,%d秒
+%s  [%s],%s  [%s],%s  [%s]
+[ %s ],[ %s ],[ %s ]
+idle,idle,空闲
+MERCHANT  (gold: %d),MERCHANT  (gold: %d),商人（金币：%d）
+  ·here·,  ·here·,  ·此处·
+click a node to blink there · esc closes,click a node to blink there · esc closes,点击节点闪现过去 · esc 关闭
+ z%d  , z%d  , z%d  
+%s — slot up to 3 moves (Esc closes),%s — slot up to 3 moves (Esc closes),%s——最多装配 3 招（Esc 关闭）
+empty loadout = all learned moves fire,empty loadout = all learned moves fire,空配招栏=已学招式全部自动施放
+BASE LV%d,BASE LV%d,基地 LV%d
+KINDEX   %d/%d caught · %d seen,KINDEX   %d/%d caught · %d seen,图鉴   已捕获 %d/%d · 已目击 %d
+wheel scroll · every 10 species caught pays +2 tech,wheel scroll · every 10 species caught pays +2 tech,滚轮翻页 · 每捕获 10 种 +2 技术点
+deploy 2 kin,deploy 2 kin,派驻 2 只精灵
+build 8 structures + deploy 4 kin,build 8 structures + deploy 4 kin,建成 8 座建筑 + 派驻 4 只精灵
+catch 12 kin + build 14 structures,catch 12 kin + build 14 structures,捕获 12 只精灵 + 建成 14 座建筑
+deploy 8 kin + reach day 5,deploy 8 kin + reach day 5,派驻 8 只精灵 + 撑到第 5 天
+HUNT FILLED +%dg,HUNT FILLED +%dg,悬赏完成 +%d金
+ashore,ashore,上岸
+inland,inland,向内陆
+%s line,%s line,%s 一脉
+egg,egg,蛋
+auto,auto,自动
+aggressive,aggressive,主攻
+passive,passive,跟随
+AIM — tap a kin to throw,AIM — tap a kin to throw,瞄准——点按精灵投掷
+AIM — click a kin to throw (Q cancel),AIM — click a kin to throw (Q cancel),瞄准——点击精灵投掷（Q 取消）
+✦ %s Lv%d — a legend: orbs bounce off,✦ %s Lv%d — a legend: orbs bounce off,✦ %s Lv%d ——传说：精灵球会被弹开
+A drought settles in — the fields thirst,A drought settles in — the fields thirst,旱灾降临——田地干渴
+The sky clears,The sky clears,天空放晴
+The altar drinks lumenite — a dry wind answers,The altar drinks lumenite — a dry wind answers,祭坛饮下流明石——干风回应
+The offering burns off — the sky clears,The offering burns off — the sky clears,祭品燃尽——天空放晴
+The sky shifts,The sky shifts,天色流转

@@ -771,7 +771,7 @@ func interact() -> void:
 				var inc = st.get("egg_inc")
 				if inc is Dictionary:
 					var hint: String = game.egg_hint(inc.get("pair"))
-					game.log_msg(tr("Incubating %s: %ds left") % [hint if hint != "" else "egg",
+					game.log_msg(tr("Incubating %s: %ds left") % [hint if hint != "" else tr("egg"),
 						int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t))])
 				elif game.item_count("kin_egg") > 0 or game.item_count("huge_kin_egg") > 0:
 					if game.net != null and game.net.is_client():
@@ -784,7 +784,7 @@ func interact() -> void:
 					game.log_msg(tr("Incubator empty - bring a kin egg"))
 				return
 			"wooden_wall", "spikes":
-				game.log_msg(tr("%s (HP %d)") % [StructureData.STRUCTURES[st["id"]]["name"], int(st.get("hp", 0))])
+				game.log_msg(tr("%s (HP %d)") % [tr(str(StructureData.STRUCTURES[st["id"]]["name"])), int(st.get("hp", 0))])
 				return
 	if game.has_structure("kinbox"):
 		game.panel = "kinbox"
@@ -859,7 +859,7 @@ func _draw() -> void:
 	Ink.tag(self, Rect2(12, 37, 224, 5))
 	var spc: Color = Ink.TEAL if pl.stamina > 15.0 else Ink.RED
 	draw_rect(Rect2(14, 38, int(220 * clampf(pl.stamina / 100.0, 0, 1)), 3), spc)
-	draw_string(font, Vector2(16, 25), "HP %d/%d  Lv%d  XP%d" % [int(pl.hp), int(pl.max_hp), pl.level, pl.xp],
+	draw_string(font, Vector2(16, 25), tr("HP %d/%d  Lv%d  XP%d") % [int(pl.hp), int(pl.max_hp), pl.level, pl.xp],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 	var tiers := game.sphere_tiers()
 	var sx := 12
@@ -871,19 +871,19 @@ func _draw() -> void:
 		Ink.tag(self, Rect2(sx, 44, 78, 20))
 		if sel:
 			draw_rect(Rect2(sx, 44, 78, 20), Ink.ORANGE, false, 1.5)
-		draw_string(font, Vector2(sx + 4, 59), "%s x%d" % [tr(str(ItemData.ITEMS[id]["name"])).left(7), n],
+		draw_string(font, Vector2(sx + 4, 59), tr("%s x%d") % [tr(str(ItemData.ITEMS[id]["name"])).left(7), n],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		sx += 82
 	draw_equipment_line() # gear row under the orb chips
 	if pl.meal_t > 0.0 and not pl.meal_buff.is_empty(): # the island meal timer chip
 		var btxt := ""
 		for bk in pl.meal_buff:
-			btxt += "%s+%d%% " % [bk.to_upper(), int(float(pl.meal_buff[bk]) * 100)]
+			btxt += "%s+%d%% " % [tr(str(bk.to_upper())), int(float(pl.meal_buff[bk]) * 100)]
 		Ink.tag(self, Rect2(240, 24, 112, 16))
-		draw_string(font, Vector2(244, 36), "%s %d:%02d" % [btxt.strip_edges(), int(pl.meal_t) / 60, int(pl.meal_t) % 60],
+		draw_string(font, Vector2(244, 36), tr("%s %d:%02d") % [btxt.strip_edges(), int(pl.meal_t) / 60, int(pl.meal_t) % 60],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	if pl.aiming:
-		wtext(Vector2(12, 96), "AIM — tap a kin to throw" if game.touch_ui else "AIM — click a kin to throw (Q cancel)",
+		wtext(Vector2(12, 96), tr("AIM — tap a kin to throw") if game.touch_ui else tr("AIM — click a kin to throw (Q cancel)"),
 			Ink.TEAL)
 		# the island throw preview: hovering a wild kin shows the catch odds
 		var tiers2 := game.sphere_tiers()
@@ -902,14 +902,14 @@ func _draw() -> void:
 					bp2 = q
 			if bp2:
 				if bp2.boss:
-					wtext(Vector2(12, 112), "✦ %s Lv%d — a legend: orbs bounce off" % [tr(str(bp2.spec["name"])), bp2.level],
+					wtext(Vector2(12, 112), tr("✦ %s Lv%d — a legend: orbs bounce off") % [tr(str(bp2.spec["name"])), bp2.level],
 						Ink.GOLD)
 				else:
 					var cap_pow2: float = game.cap_power_of(bp2)
 					var ch := minf(0.97, Combat.catch_chance(maxf(0.0, bp2.hp) / bp2.max_hp, cap_pow2,
 						ItemData.ITEMS[sid2].get("spherePower", 26), bp2.any_status(), false, pl.capture_level))
 					var col := Ink.GREEN if ch >= 0.5 else (Ink.ORANGE if ch >= 0.2 else Ink.RED)
-					wtext(Vector2(12, 112), "Catch %s Lv%d: %d%%" % [tr(str(bp2.spec["name"])), bp2.level, int(ch * 100)], col)
+					wtext(Vector2(12, 112), tr("Catch %s Lv%d: %d%%") % [tr(str(bp2.spec["name"])), bp2.level, int(ch * 100)], col)
 	Ink.tag(self, Rect2(r.x - 140, 10, 128, 20))
 	var wicon := "  ⚡" if game.weather == "storm" else ("  ☂" if game.weather == "rain" else ("  ☀" if game.weather == "drought" else ""))
 	var wcol := Ink.VIOLET if game.weather == "storm" else (Ink.TEAL if game.weather == "rain" else (Ink.GOLD if game.weather == "drought" else Ink.INK))
@@ -919,7 +919,7 @@ func _draw() -> void:
 		var raid_r := Rect2(r.x / 2 - 80, 8, 160, 22)
 		draw_rect(raid_r, Color(Ink.RED, 0.85))
 		draw_rect(raid_r, Ink.INK, false, 1.5)
-		draw_string(font, Vector2(r.x / 2 - 62, 24), "RAID IN %ds" % int(ceilf(game.raid_t)),
+		draw_string(font, Vector2(r.x / 2 - 62, 24), tr("RAID IN %ds") % int(ceilf(game.raid_t)),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.PAPER)
 	# boss bar: nearest alpha/boss in the fray gets a name + hp strip
 	var boss: Kin = null
@@ -940,18 +940,18 @@ func _draw() -> void:
 			Ink.RED if boss.boss else Ink.ORANGE)
 		draw_portrait(Vector2(r.x / 2 - bw / 2 - 26, 32), boss.species_id, 24.0, 19.0)
 		draw_string(font, Vector2(r.x / 2 - bw / 2 + 4, 47),
-			"%s %s Lv%d%s" % ["BOSS" if boss.boss else "α", tr(str(boss.spec["name"])), boss.level,
-				" ☠%dg" % boss.bounty if boss.bounty > 0 else ""],
+			tr("%s %s Lv%d%s") % [tr("BOSS") if boss.boss else "α", tr(str(boss.spec["name"])), boss.level,
+				tr(" ☠%dg") % boss.bounty if boss.bounty > 0 else ""],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.PAPER)
 	if game.mission_idx < game.MISSIONS.size(): # the island guide rope
 		Ink.tag(self, Rect2(r.x - 220, 32, 208, 18))
-		draw_string(font, Vector2(r.x - 214, 45), "★ %s" % game.MISSIONS[game.mission_idx]["text"],
+		draw_string(font, Vector2(r.x - 214, 45), tr("★ %s") % tr(str(game.MISSIONS[game.mission_idx]["text"])),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	var hy := 62.0
 	for h in game.active_hints(): # contextual nudges — retire themselves
 		Ink.tag(self, Rect2(r.x - 216, hy - 11, 208, 15))
 		var htxt: String = str(h.get("pad", h["text"])) if game.using_pad else str(h["text"])
-		draw_string(font, Vector2(r.x - 212, hy), "» " + tr(htxt),
+		draw_string(font, Vector2(r.x - 212, hy), tr("» ") + tr(htxt),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		hy += 17
 	var spire_n: int = game.net_spires if game.net != null and game.net.is_client() \
@@ -1001,7 +1001,7 @@ func _draw() -> void:
 		Ink.tag(self, Rect2(r.x - 150, py, 138, 16))
 		draw_portrait(Vector2(r.x - 172, py), str(pr.get("sid", "")))
 		var tag := "!" if pr["stance"] == "aggressive" else ("." if pr["stance"] == "passive" else "")
-		draw_string(font, Vector2(r.x - 144, py + 13), "%s Lv%d %s%s" % [pr["name"], pr["lv"],
+		draw_string(font, Vector2(r.x - 144, py + 13), tr("%s Lv%d %s%s") % [tr(str(pr["name"])), pr["lv"],
 			"●" if pr["out"] else "○", tag], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		py += 18
 	# the island partner-skill readout: name + cooldown under the party strip
@@ -1010,8 +1010,8 @@ func _draw() -> void:
 		var cd_left: float = float(psk_p.skill_cd.get("partner", 0.0)) - game.t
 		Ink.tag(self, Rect2(r.x - 150, py, 138, 16))
 		draw_string(font, Vector2(r.x - 144, py + 13),
-			"%s %s" % [tr(str(game.PARTNER_SKILLS[psk_p.species_id]["name"])),
-				"READY" if cd_left <= 0 else "%ds" % ceili(cd_left)],
+			tr("%s %s") % [tr(str(game.PARTNER_SKILLS[psk_p.species_id]["name"])),
+				tr("READY") if cd_left <= 0 else tr("%ds") % ceili(cd_left)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Ink.GOLD if cd_left <= 0 else Ink.INK_SOFT)
 	# build ghost preview
@@ -1065,15 +1065,15 @@ func _draw() -> void:
 			draw_settings(r)
 	if show_help:
 		var lines := [
-			"MOVE wasd/arrows  SPRINT shift  DODGE space",
-			"MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab",
-			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
-			"INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h",
-			"MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter",
-			"1-%d sends that party kin out (press again to recall) — one ball on the field" % game.party_cap(),
-			"v cycles the field kin's orders: auto / aggressive / passive",
-			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
-			"Glider descends cliffs. Sick kin need medicine in feed box/bag.",
+			tr("MOVE wasd/arrows  SPRINT shift  DODGE space"),
+			tr("MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab"),
+			tr("BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t"),
+			tr("INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h"),
+			tr("MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter"),
+			tr("1-%d sends that party kin out (press again to recall) — one ball on the field") % game.party_cap(),
+			tr("v cycles the field kin's orders: auto / aggressive / passive"),
+			tr("HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)"),
+			tr("Glider descends cliffs. Sick kin need medicine in feed box/bag."),
 		]
 		Ink.card(self, Rect2(10, r.y - 136, 580, 96))
 		for i in range(lines.size()):
@@ -1509,7 +1509,7 @@ func draw_settings(r: Vector2) -> void:
 	var y := rr.position.y + 54
 	for b in [["master", "MASTER"], ["music", "MUSIC"], ["sfx", "SFX"]]:
 		var v: float = game.settings[b[0]]
-		draw_string(font, Vector2(rr.position.x + 24, y + 14), "%s  %d%%" % [tr(b[1]), int(v * 100)],
+		draw_string(font, Vector2(rr.position.x + 24, y + 14), tr("%s  %d%%") % [tr(b[1]), int(v * 100)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Ink.PAPER_DARK)
 		draw_rect(Rect2(rr.position.x + 140, y + 4, 150, 14), Ink.INK_SOFT, false, 1.0)
@@ -1524,34 +1524,34 @@ func draw_settings(r: Vector2) -> void:
 	y += 8
 	var fs := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": fs, "act": "fullscreen", "arg": null})
-	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), "%s  [%s]" % [tr("FULLSCREEN"), tr("ON") if game.settings["fullscreen"] else tr("off")],
+	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), tr("%s  [%s]") % [tr("FULLSCREEN"), tr("ON") if game.settings["fullscreen"] else tr("off")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.settings["fullscreen"] else Ink.INK)
 	y += 32
 	var rd := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": rd, "act": "raids_tgl", "arg": null})
-	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), "%s  [%s]" % [tr("BASE RAIDS"), tr("ON") if game.settings["raids"] else tr("off")],
+	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), tr("%s  [%s]") % [tr("BASE RAIDS"), tr("ON") if game.settings["raids"] else tr("off")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.settings["raids"] else Ink.INK_SOFT)
 	y += 32
 	var lg := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": lg, "act": "lang_tgl", "arg": null})
-	draw_string(font, Vector2(lg.position.x, lg.position.y + 18), "%s  [%s]" % [tr("LANGUAGE"), "中文" if game.settings.get("lang", "en") == "zh" else "EN"],
+	draw_string(font, Vector2(lg.position.x, lg.position.y + 18), tr("%s  [%s]") % [tr("LANGUAGE"), "中文" if game.settings.get("lang", "en") == "zh" else "EN"],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 	y += 32
 	var tg := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": tg, "act": "touch_tgl", "arg": null})
-	draw_string(font, Vector2(tg.position.x, tg.position.y + 18), "%s  [%s]" % [tr("TOUCH CONTROLS"), tr(str(game.settings.get("touch", "auto")).to_upper())],
+	draw_string(font, Vector2(tg.position.x, tg.position.y + 18), tr("%s  [%s]") % [tr("TOUCH CONTROLS"), tr(str(game.settings.get("touch", "auto")).to_upper())],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.touch_ui else Ink.INK_SOFT)
 	y += 44
 	var bk := Rect2(rr.position.x + 24, y, 120, 28)
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})
-	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), "[ %s ]" % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
+	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), tr("[ %s ]") % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()
 	var bx := 10.0
 	var by := r.y - 200.0
 	Ink.card(self, Rect2(bx, by, 620, 56), Ink.PAPER, 0.0, 3.0)
-	draw_string(font, Vector2(bx + 8, by + 16), "BUILD — tap/1-9 pick, tap again to cancel" + ("  (placing: %s)" % StructureData.STRUCTURES[game.buildable_list()[build_sel]]["name"] if build_sel >= 0 else ""),
+	draw_string(font, Vector2(bx + 8, by + 16), tr("BUILD — tap/1-9 pick, tap again to cancel") + (tr("  (placing: %s)") % tr(str(StructureData.STRUCTURES[game.buildable_list()[build_sel]]["name"])) if build_sel >= 0 else ""),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 	for i in range(mini(9, lst.size())):
 		var s: Dictionary = StructureData.STRUCTURES[lst[i]]
@@ -1562,12 +1562,12 @@ func draw_build_bar(r: Vector2) -> void:
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
 		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": i})
-		draw_string(font, Vector2(x, y), "%d %s %s" % [i + 1, s["name"].left(7), cost.left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+		draw_string(font, Vector2(x, y), tr("%d %s %s") % [i + 1, tr(str(s["name"])).left(7), cost.left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 func draw_tech(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)
 	Ink.card(self, rr)
-	draw_string(font, Vector2(rr.position + Vector2(16, 24)), "TECH  (pts: %d)" % game.tech_points,
+	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("TECH  (pts: %d)") % game.tech_points,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
 	var colw := 232.0
 	var cap := int((rr.size.x - 24) / colw) * 18 # columns × rows that actually fit
@@ -1614,7 +1614,7 @@ func draw_chest(r: Vector2) -> void:
 	chest_scroll = clampi(chest_scroll, 0, maxi(0, skeys.size() - 12))
 	for i2 in range(chest_scroll, skeys.size()):
 		var iid: String = skeys[i2]
-		draw_string(font, Vector2(rr.position.x + 16, y), "%s  x%d" % [tr(str(ItemData.ITEMS.get(iid, {}).get("name", iid))), st["store"][iid]],
+		draw_string(font, Vector2(rr.position.x + 16, y), tr("%s  x%d") % [tr(str(ItemData.ITEMS.get(iid, {}).get("name", iid))), st["store"][iid]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 		y += 18
 		if y > rr.end.y - 16:
@@ -1636,7 +1636,7 @@ func draw_craft(r: Vector2) -> void:
 		for c in rep["cost"]:
 			rcost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
 		var wnm: String = tr(str(ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "?")))
-		draw_string(font, Vector2(rrect.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [wnm,
+		draw_string(font, Vector2(rrect.position.x, y), tr("REPAIR %s [%d/%d]  <-  %s") % [wnm,
 			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(46)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep["afford"] else Ink.INK_SOFT)
 		y += 24
@@ -1648,7 +1648,7 @@ func draw_craft(r: Vector2) -> void:
 		for c in rep_a["cost"]:
 			acost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
 		var anm: String = tr(str(ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "?")))
-		draw_string(font, Vector2(rrect_a.position.x, y), "REPAIR %s [%d/%d]  <-  %s" % [anm,
+		draw_string(font, Vector2(rrect_a.position.x, y), tr("REPAIR %s [%d/%d]  <-  %s") % [anm,
 			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(46)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep_a["afford"] else Ink.INK_SOFT)
 		y += 24
@@ -1674,7 +1674,7 @@ func draw_craft(r: Vector2) -> void:
 			break # don't leave click rects for rows that were never drawn
 		var rect := Rect2(rr.position.x + 16, y - 12, 440, 18)
 		click_rects.append({"rect": rect, "act": "craft", "arg": rec["id"]})
-		draw_string(font, Vector2(rect.position.x, y), "%s x%d  <-  %s" % [out_name, rec["out"][1], cost.left(50)],
+		draw_string(font, Vector2(rect.position.x, y), tr("%s x%d  <-  %s") % [out_name, rec["out"][1], cost.left(50)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK if afford else Ink.INK_SOFT)
 		y += 20
 		if y > rr.end.y - 16:
@@ -1689,7 +1689,7 @@ func draw_craft(r: Vector2) -> void:
 			if y > rr.end.y - 14:
 				break
 			var nm: String = tr(str(ItemData.ITEMS.get(cq["out"], {}).get("name", cq["out"])))
-			draw_string(font, Vector2(rr.position.x + 16, y), "  %s x%d  %.0fs" % [nm, cq["n"], cq["left"]],
+			draw_string(font, Vector2(rr.position.x + 16, y), tr("  %s x%d  %.0fs") % [nm, cq["n"], cq["left"]],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN)
 			y += 15
 
@@ -1727,7 +1727,7 @@ func draw_inv(r: Vector2) -> void:
 		elif usable:
 			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
 			nm += "  [use]"
-		draw_string(font, Vector2(cx0, y0), "%s x%d" % [nm.left(16), game.items[k]],
+		draw_string(font, Vector2(cx0, y0), tr("%s x%d") % [nm.left(16), game.items[k]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD if usable else Ink.INK)
 	if keys.size() > rows:
 		_scroll_btns(rr, "inv_up", "inv_dn")
@@ -1737,22 +1737,22 @@ func draw_kinbox(r: Vector2) -> void:
 	Ink.card(self, rr)
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("KINBOX"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.TEAL)
-	draw_string(font, Vector2(rr.position + Vector2(112, 24)), "rows swap party/base",
+	draw_string(font, Vector2(rr.position + Vector2(112, 24)), tr("rows swap party/base"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
 	# the island base level: the terminal grades your base and pays slots
-	var blv_txt := "BASE LV%d" % game.base_level
+	var blv_txt := tr("BASE LV%d") % game.base_level
 	if game.base_level < game.BASE_LEVEL_MAX:
 		var bmet: bool = game.base_mission_done(game.base_level)
-		blv_txt += " · " + String(game.BASE_MISSION_TEXT[game.base_level]).left(20)
+		blv_txt += " · " + tr(str(game.BASE_MISSION_TEXT[game.base_level])).left(20)
 		draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 38), blv_txt.left(42),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GREEN if bmet else Ink.INK_SOFT)
 		if bmet and (game.net == null or not game.net.is_client()):
 			click_rects.append({"rect": Rect2(rr.position.x + 505, rr.position.y + 12, 80, 20),
 				"act": "base_up"})
-			draw_string(font, Vector2(rr.position.x + 505, rr.position.y + 26), "[UPGRADE]",
+			draw_string(font, Vector2(rr.position.x + 505, rr.position.y + 26), tr("[UPGRADE]"),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GOLD)
 	else:
-		draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 38), blv_txt + " MAX",
+		draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 38), blv_txt + tr(" MAX"),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 	var y := rr.position.y + 54
 	draw_string(font, Vector2(rr.position.x + 16, y), tr("PARTY"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
@@ -1762,7 +1762,7 @@ func draw_kinbox(r: Vector2) -> void:
 		draw_portrait(Vector2(rr.position.x + 4, y - 13), str(pr.get("sid", "")))
 		click_rects.append({"rect": rect, "act": "party_in", "arg": pr["uid"]})
 		click_rects.append({"rect": Rect2(rect.position + Vector2(254, 0), Vector2(52, 17)), "act": "deploy", "arg": pr["arg"]})
-		draw_string(font, Vector2(rect.position + Vector2(254, 13)), "[>base]", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GREEN)
+		draw_string(font, Vector2(rect.position + Vector2(254, 13)), tr("[>base]"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GREEN)
 		click_rects.append({"rect": Rect2(rect.position + Vector2(310, 0), Vector2(30, 17)), "act": "lead", "arg": pr["uid"]})
 		draw_string(font, Vector2(rect.position + Vector2(312, 13)), "[▼]" if pr["out"] else "[*]",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.GOLD)
@@ -1770,7 +1770,7 @@ func draw_kinbox(r: Vector2) -> void:
 			click_rects.append({"rect": Rect2(rect.position + Vector2(342, 0), Vector2(34, 17)), "act": "skills", "arg": pr["arg"]})
 			draw_string(font, Vector2(rect.position + Vector2(344, 13)), "[mv]",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.TEAL)
-		draw_string(font, Vector2(rect.position.x, y), "%s%s%s %s%s Lv%d T%d %sHP%d/%d" % [
+		draw_string(font, Vector2(rect.position.x, y), tr("%s%s%s %s%s Lv%d T%d %sHP%d/%d") % [
 			"● " if pr["out"] else "○ ", str(pr["name"]).left(12),
 			"☆" if pr["lucky"] else "", pr["sex"], pr["star_s"], pr["lv"], pr["talent"],
 			(tr(str(pr["ailment"])) + "!  ") if pr["ailment"] != "" else "",
@@ -1783,7 +1783,7 @@ func draw_kinbox(r: Vector2) -> void:
 		workers = workers.filter(func(wp): return wp.owner_id == 0) # a guest's hands aren't yours to recall
 	if not workers.is_empty():
 		y += 8
-		draw_string(font, Vector2(rr.position.x + 16, y), "BASE (%d/%d) — click to recall" % [workers.size(), game.max_base_pals()],
+		draw_string(font, Vector2(rr.position.x + 16, y), tr("BASE (%d/%d) — click to recall") % [workers.size(), game.max_base_pals()],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 		y += 18
 		for wp in workers:
@@ -1792,9 +1792,9 @@ func draw_kinbox(r: Vector2) -> void:
 			if game.net == null or not game.net.is_client():
 				click_rects.append({"rect": wrect, "act": "base_in", "arg": wp})
 				# a guest reads the crew roster but can't recall the keeper's kin
-			draw_string(font, Vector2(wrect.position.x, y), "%s%s %s Lv%d T%d %s%s" % [tr(str(wp.spec["name"])),
+			draw_string(font, Vector2(wrect.position.x, y), tr("%s%s %s Lv%d T%d %s%s") % [tr(str(wp.spec["name"])),
 				"☆" if wp.lucky else "", wp.sex, wp.level, wp.talent,
-				wp.job_site["id"] if wp.job_site else "idle",
+				tr(str(StructureData.STRUCTURES.get(wp.job_site["id"], {}).get("name", wp.job_site["id"]))) if wp.job_site else tr("idle"),
 				" [%s]" % tr(str(wp.ailment)) if wp.ailment != "" else ""],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.RED if wp.ailment != "" else Ink.TEAL)
 			if game.net == null or not game.net.is_client():
@@ -1804,7 +1804,7 @@ func draw_kinbox(r: Vector2) -> void:
 			y += 17
 	y += 10
 	var brows := box_rows()
-	draw_string(font, Vector2(rr.position.x + 16, y), "BOX (%d)" % brows.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
+	draw_string(font, Vector2(rr.position.x + 16, y), tr("BOX (%d)") % brows.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
 	y += 18
 	var colw := 288.0
 	var rows: int = int((rr.end.y - y - 8) / 16)
@@ -1905,15 +1905,15 @@ func draw_shop(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 60, 600, 480)
 	Ink.card(self, rr)
 	draw_string(font, Vector2(rr.position.x + 16, rr.position.y + 24),
-		"MERCHANT  (gold: %d)" % game.item_count("gold_coin"),
+		tr("MERCHANT  (gold: %d)") % game.item_count("gold_coin"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
 	if game.merchant == null:
-		draw_string(font, rr.position + Vector2(16, 50), "The merchant has left.",
+		draw_string(font, rr.position + Vector2(16, 50), tr("The merchant has left."),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK_SOFT)
 		return
 	var y := rr.position.y + 48
 	draw_string(font, Vector2(rr.position.x + 16, y), tr("BUY"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.GREEN)
-	draw_string(font, Vector2(rr.position.x + 316, y), "SELL (50%)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
+	draw_string(font, Vector2(rr.position.x + 316, y), tr("SELL (50%)"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.ORANGE)
 	y += 20
 	var sy := y
 	var sell_n := 0 # sell column counts only rows that actually render
@@ -1935,7 +1935,7 @@ func draw_shop(r: Vector2) -> void:
 		if it["n"] > 0 and afford:
 			click_rects.append({"rect": rect, "act": "buy", "arg": i})
 		var col := Ink.INK if (it["n"] > 0 and afford) else Ink.INK_SOFT # the till can't comp what the bag can't cover
-		draw_string(font, Vector2(rect.position.x, y), "%s x%d  %dg" % [nm.left(16), it["n"], it["price"]],
+		draw_string(font, Vector2(rect.position.x, y), tr("%s x%d  %dg") % [nm.left(16), it["n"], it["price"]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 		y += 17
 		if y > rr.end.y - 14:
@@ -1953,7 +1953,7 @@ func draw_shop(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
 		click_rects.append({"rect": rect, "act": "sell", "arg": k})
-		draw_string(font, Vector2(rect.position.x, y), "%s x%d  +%dg" % [tr(str(ItemData.ITEMS[k]["name"])).left(16),
+		draw_string(font, Vector2(rect.position.x, y), tr("%s x%d  +%dg") % [tr(str(ItemData.ITEMS[k]["name"])).left(16),
 			game.items[k], maxi(1, int(price * 0.5))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		y += 17
 		if y > rr.end.y - 14:
@@ -1968,8 +1968,8 @@ func draw_shop(r: Vector2) -> void:
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
 		click_rects.append({"rect": rect, "act": "sell_pal", "arg": int(bp["uid"])})
 		draw_portrait(Vector2(rect.position.x, y - 14), str(bp.get("sid", "")))
-		draw_string(font, Vector2(rect.position.x + 24, y), "Lv%d %s  +%dg" % [int(bp["lv"]),
-			str(bp["name"]).left(14), int(bp["price"])],
+		draw_string(font, Vector2(rect.position.x + 24, y), tr("Lv%d %s  +%dg") % [int(bp["lv"]),
+			tr(str(bp["name"])).left(14), int(bp["price"])],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.ORANGE)
 		y += 17
 		shown += 1
@@ -2118,24 +2118,24 @@ func draw_travel(r: Vector2) -> void:
 	var nodes := game.travel_nodes()
 	var rr := Rect2(r.x / 2 - 200, 80, 400, 90 + nodes.size() * 20)
 	Ink.card(self, rr)
-	draw_string(font, rr.position + Vector2(16, 24), "WAYPOINT NET",
+	draw_string(font, rr.position + Vector2(16, 24), tr("WAYPOINT NET"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.TEAL)
 	var y := rr.position.y + 50
 	var me := Vector2i(game.player.pos)
 	for n in nodes:
 		var k: Vector2i = n["key"]
-		var nm := "Kinbox" if n["id"] == "kinbox" else "Waypoint"
+		var nm := tr("Kinbox") if n["id"] == "kinbox" else tr("Waypoint")
 		var here := (k - me).length() < 3.0
 		var rect := Rect2(rr.position.x + 16, y - 12, 360, 18)
 		if not here:
 			click_rects.append({"rect": rect, "act": "travel", "arg": k})
 		var col := Ink.INK_SOFT if here else Ink.INK
-		draw_string(font, Vector2(rect.position.x, y), "%s%s  (%d,%d)  %dm" %
-			[nm, "  ·here·" if here else "", k.x, k.y, int(n["dist"])],
+		draw_string(font, Vector2(rect.position.x, y), tr("%s%s  (%d,%d)  %dm") %
+			[nm, tr("  ·here·") if here else "", k.x, k.y, int(n["dist"])],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 		y += 20
 	draw_string(font, Vector2(rr.position.x + 16, rr.end.y - 14),
-		"click a node to blink there · esc closes", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
+		tr("click a node to blink there · esc closes"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
 
 func draw_dex(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 300, 40, 600, 560)
@@ -2144,7 +2144,7 @@ func draw_dex(r: Vector2) -> void:
 	var caught := game.catch_counts.size()
 	var seen_n: int = game.dex_seen.size()
 	draw_string(font, rr.position + Vector2(16, 24),
-		"KINDEX   %d/%d caught · %d seen" % [caught, ids.size(), seen_n],
+		tr("KINDEX   %d/%d caught · %d seen") % [caught, ids.size(), seen_n],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.VIOLET)
 	var rows := 32
 	dex_scroll = clampi(dex_scroll, 0, maxi(0, ids.size() - rows))
@@ -2159,14 +2159,14 @@ func draw_dex(r: Vector2) -> void:
 			draw_string(font, Vector2(rr.position.x + 40, y), str(tr(str(sp.get("name", sid)))).left(18),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 			var hz := SpeciesGen.habitat(sid) # Kindex habitat: where to hunt it
-			draw_string(font, Vector2(rr.position.x + 310, y), "%s%s×%d" % [els.left(8),
-				(" z%d  " % hz) if hz >= 0 else "  ", cc],
+			draw_string(font, Vector2(rr.position.x + 310, y), tr("%s%s×%d") % [els.left(8),
+				(tr(" z%d  ") % hz) if hz >= 0 else "  ", cc],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GREEN)
 			# field guide: a caught species tells you what it drops
 			var dnames := []
 			for dr in sp.get("drops", []):
 				dnames.append(str(tr(str(ItemData.ITEMS.get(dr[0], {}).get("name", dr[0])))).left(8))
-			draw_string(font, Vector2(rr.position.x + 445, y), ", ".join(dnames).left(11),
+			draw_string(font, Vector2(rr.position.x + 445, y), tr(", ").join(dnames).left(11),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
 			# and which posts it can staff — the base-planning half of the entry
 			draw_string(font, Vector2(rr.position.x + 530, y), game.work_str(sp).left(10),
@@ -2174,14 +2174,14 @@ func draw_dex(r: Vector2) -> void:
 		elif game.dex_seen.has(sid):
 			draw_string(font, Vector2(rr.position.x + 16, y), "%s" % sp.get("glyph", "?"),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
-			draw_string(font, Vector2(rr.position.x + 40, y), "%s  ·spotted·" % str(tr(str(sp.get("name", sid)))).left(18),
+			draw_string(font, Vector2(rr.position.x + 40, y), tr("%s  ·spotted·") % str(tr(str(sp.get("name", sid)))).left(18),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
 		else:
-			draw_string(font, Vector2(rr.position.x + 16, y), "?  ?????",
+			draw_string(font, Vector2(rr.position.x + 16, y), tr("?  ?????"),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(Ink.INK, 0.35))
 		y += 15
 	draw_string(font, Vector2(rr.position.x + 16, rr.end.y - 16),
-		"wheel scroll · every 10 species caught pays +2 tech", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
+		tr("wheel scroll · every 10 species caught pays +2 tech"), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Ink.INK_SOFT)
 	if ids.size() > rows:
 		_scroll_btns(rr, "dex_up", "dex_dn")
 
@@ -2249,7 +2249,7 @@ func draw_statues(r: Vector2) -> void:
 		y += 24
 	# soul infusion: the same effigies harden a kin you own
 	y += 10
-	draw_string(font, Vector2(rr.position.x + 16, y - 16), "SOUL INFUSION (+4%/soul)", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.VIOLET)
+	draw_string(font, Vector2(rr.position.x + 16, y - 16), tr("SOUL INFUSION (+4%/soul)"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.VIOLET)
 	var infused := []
 	for uid in game.party:
 		var qp: Kin = game.find_pal(uid)
@@ -2272,7 +2272,7 @@ func draw_statues(r: Vector2) -> void:
 			click_rects.append({"rect": rect2, "act": "infuse", "arg": q2.uid})
 		var col2 := Ink.INK_SOFT if full else Ink.INK
 		draw_portrait(Vector2(rect2.position.x, y - 11), q2.species_id)
-		draw_string(font, Vector2(rect2.position.x + 24, y), "%s Lv%d  soul+%d  (cost %d)" %
+		draw_string(font, Vector2(rect2.position.x + 24, y), tr("%s Lv%d  soul+%d  (cost %d)") %
 			[str(tr(str(q2.spec["name"]))).left(14), q2.level, q2.soul_boost, cost2],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col2)
 		y += 20
@@ -2289,12 +2289,12 @@ func draw_skills(r: Vector2) -> void:
 	Ink.card(self, rr)
 	var tp := game.skill_target
 	if tp == null or not is_instance_valid(tp):
-		draw_string(font, rr.position + Vector2(16, 24), "No kin selected",
+		draw_string(font, rr.position + Vector2(16, 24), tr("No kin selected"),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 		return
 	draw_portrait(rr.position + Vector2(16, 10), tp.species_id, 24.0, 19.0)
 	draw_string(font, rr.position + Vector2(44, 24),
-		"%s — slot up to 3 moves (Esc closes)" % tr(str(tp.spec["name"])),
+		tr("%s — slot up to 3 moves (Esc closes)") % tr(str(tp.spec["name"])),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 	var y := rr.position.y + 50
 	for sid in tp.learned_skills():
@@ -2302,7 +2302,7 @@ func draw_skills(r: Vector2) -> void:
 		var on: bool = sid in tp.equipped
 		var rect := Rect2(rr.position.x + 16, y - 12, 400, 18)
 		click_rects.append({"rect": rect, "act": "skill_tgl", "arg": {"p": tp, "sid": sid}})
-		draw_string(font, Vector2(rect.position.x, y), "%s %s  pow%d  cd%ds" %
+		draw_string(font, Vector2(rect.position.x, y), tr("%s %s  pow%d  cd%ds") %
 			["[x]" if on else "[ ]", str(tr(str(sk.get("name", sid)))).left(18),
 				int(sk.get("power", 0)), int(sk.get("cooldown", 2))],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
@@ -2310,7 +2310,7 @@ func draw_skills(r: Vector2) -> void:
 		y += 19
 	y += 8
 	draw_string(font, Vector2(rr.position.x + 16, y),
-		"empty loadout = all learned moves fire",
+		tr("empty loadout = all learned moves fire"),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK_SOFT)
 
 

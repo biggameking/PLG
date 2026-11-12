@@ -6713,6 +6713,7 @@ func run() -> void:
 
 	# i18n — zh translation registered, toggle swaps tr() output, garbage coerced
 	check("zh translation loaded", "zh" in TranslationServer.get_loaded_locales())
+	var prev_lang := str(game.settings.get("lang", "en"))
 	game.settings["lang"] = "zh"; game.apply_settings()
 	check("tr zh", tr("SETTINGS") == "设置")
 	check("tr zh covers new rows", tr("JOIN SESSION") == "加入会话" and tr("TOUCH CONTROLS") == "触屏控制"
@@ -6730,10 +6731,52 @@ func run() -> void:
 	game.note_remote(0, "You caught %s Lv%d", ["Fenjelly", 3])
 	check("note_remote local path formats", game.messages[-1] == "你抓到了 沼冻灵 Lv3",
 		"tail=%s" % game.messages[-1])
+	# csv integrity lint — the row shapes audit-28 proved break silently:
+	# 3 columns exactly, no duplicate msgid, en/zh placeholder parity, and no
+	# lone % inside a zh template that gets % formatted downstream
+	var csv_ok := true
+	var csv_seen := {}
+	var csv_re := RegEx.create_from_string("%[-+0-9.*]*[sdxfov]")
+	var csv_f := FileAccess.open("res://locale/zh.csv", FileAccess.READ)
+	var csv_first := true
+	if csv_f == null:
+		csv_ok = false
+	else:
+		while not csv_f.eof_reached():
+			var row := csv_f.get_csv_line()
+			if csv_first:
+				csv_first = false
+				continue
+			if row.size() == 1 and row[0] == "":
+				continue
+			if row.size() != 3:
+				print("csv row col-count: ", row.size(), " key=", row[0].substr(0, 40))
+				csv_ok = false
+				continue
+			if csv_seen.has(row[0]):
+				print("csv dup msgid: ", row[0].substr(0, 50))
+				csv_ok = false
+			csv_seen[row[0]] = true
+			var en_sig := []
+			for pm in csv_re.search_all(row[0].replace("%%", "")):
+				en_sig.append(pm.get_string())
+			var zh_sig := []
+			for pm2 in csv_re.search_all(row[2].replace("%%", "")):
+				zh_sig.append(pm2.get_string())
+			en_sig.sort(); zh_sig.sort()
+			if en_sig != zh_sig:
+				print("csv placeholder parity: ", row[0].substr(0, 50), " | zh=", row[2].substr(0, 50))
+				csv_ok = false
+			if en_sig.size() > 0:
+				var zh_rest: String = csv_re.sub(row[2].replace("%%", ""), "", true)
+				if "%" in zh_rest:
+					print("csv zh lone-%: ", row[0].substr(0, 50))
+					csv_ok = false
+	check("zh.csv structural lint", csv_ok)
 	check("tr fallback", tr("NO_SUCH_KEY_XYZ") == "NO_SUCH_KEY_XYZ")
 	game.settings["lang"] = "bogus"; game.apply_settings()
 	check("bad lang falls back", TranslationServer.get_locale().begins_with("en") or tr("SETTINGS") == "SETTINGS")
-	game.settings["lang"] = "en"; game.apply_settings()
+	game.settings["lang"] = prev_lang; game.apply_settings()
 	check("tr en", tr("SETTINGS") == "SETTINGS")
 
 	# hero accessories: the crown jewels and back wings are real pixels, not

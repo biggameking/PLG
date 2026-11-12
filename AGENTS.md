@@ -559,3 +559,19 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     produces nothing; a stale `.translation` binary hid an entire i18n
     batch behind a green suite. Do not commit `.translation` binaries or
     trust `--import` for locale work: edit the csv, run the suite.
+106. **The csv is a format-template contract, linted in the suite.** Every
+    row: 3 columns, unique msgid, en/zh placeholder-signature parity, and no
+    lone `%` in zh when the key is `%`-formatted downstream (`50%` must be
+    `50%%`). Reordering `%d` args across clauses silently swaps values —
+    keep en arg order. `tools/` append scripts caused a fused row once:
+    never `open('a')`-append without a trailing-newline guard — read, edit,
+    rewrite the whole file.
+107. **A rule written is a rule re-audited.** Rule 104 was in the file while
+    `note_remote(pid, fmt % args)` and `note_remote(pid, k, [tr(name)])`
+    shipped the exact violation it bans. When a protocol rule lands, grep
+    every sender of that channel in the same pass.
+108. **Runtime-read data files need `importer="keep"`.** `FileAccess` on a
+    `res://` path with a real importer resolves through the remap — an
+    exported build reads the imported binary or nothing. `zh.csv.import`
+    is keep; verify with `--export-pack` + byte-probe the pck when adding
+    another raw file read.

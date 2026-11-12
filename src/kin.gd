@@ -790,8 +790,8 @@ func tick_needs(dt: float) -> void:
 			low_san_t += 1.0
 			if low_san_t > 60.0:
 				ailment = AILMENTS[game.rng.int_range(0, AILMENTS.size() - 1)]
-				game.log_msg(tr("%s developed %s! Give it medicine.") % [spec["name"], ailment])
-				game.floater(pos, ailment.to_upper(), "#d06a6a")
+				game.log_msg(tr("%s developed %s! Give it medicine.") % [tr(str(spec["name"])), tr(str(ailment))])
+				game.floater(pos, tr(str(ailment)).to_upper(), "#d06a6a")
 				low_san_t = 0.0
 		else:
 			low_san_t = 0.0

@@ -22,3 +22,4 @@ net_join_out.txt
 # python cache
 tools/art/__pycache__/
 tools/art/render/
+extension_api.json

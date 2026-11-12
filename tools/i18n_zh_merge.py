@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Merge zh translations for the tr()-wrapped log/floater keys into locale/zh.csv."""
+"""Merge zh translations for the tr()-wrapped log/floater keys into locale/zh.csv.
+
+HISTORICAL one-shot (S74): the ZH table below was the seed batch; locale/zh.csv
+is now the single source of truth and the smoke suite lints it structurally
+(3 cols, unique msgid, en/zh placeholder parity, no lone %). Do not re-run this
+to append rows — it reads ephemeral /tmp key lists that no longer exist, and
+blind appends caused the fused-row bug. Edit the CSV directly instead."""
 import csv, sys
 
 ZH = {

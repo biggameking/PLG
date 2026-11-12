@@ -547,7 +547,7 @@ func r_retract(pid: int) -> void:
 	if cur == null:
 		return
 	_unbind_mount(cur) # a mount called back to the bench can't stay claimed
-	var rc_name: String = tr(str(cur.spec["name"])) # capture before the overflow lane can free it
+	var rc_name: String = str(cur.spec["name"]) # capture before the overflow lane can free it
 	if not _bench_add(cur):
 		rparty_for(pid).erase(cur.uid) # saturated lanes boxed/freed it — the strip can't keep a ghost uid
 	note_remote(pid, "%s recalled", [rc_name])
@@ -1323,7 +1323,7 @@ func tick_weather(dt: float) -> void:
 	if next != weather:
 		weather = next
 		log_msg({"rain": tr("Rain sweeps over the island"), "storm": tr("A thunderstorm rolls in — electric kin crackle"),
-			"drought": "A drought settles in — the fields thirst", "clear": "The sky clears"}.get(weather, "The sky clears"))
+			"drought": tr("A drought settles in — the fields thirst"), "clear": tr("The sky clears")}.get(weather, tr("The sky clears")))
 
 func tick_missions(dt: float) -> void:
 	if mission_idx >= MISSIONS.size():
@@ -1337,7 +1337,7 @@ func tick_missions(dt: float) -> void:
 		mission_idx += 1
 		add_item("gold_coin", int(m["gold"]))
 		tech_points += int(m["tp"])
-		log_msg(tr("MISSION: %s — done! +%dg +%d tech") % [m["text"], int(m["gold"]), int(m["tp"])])
+		log_msg(tr("MISSION: %s — done! +%dg +%d tech") % [tr(str(m["text"])), int(m["gold"]), int(m["tp"])])
 		floater(player.pos, tr("MISSION DONE"), "#8ef0ff")
 
 var shake := 0.0 # camera kick — decays to nothing, main.gd turns it into a pixel offset
@@ -1708,8 +1708,8 @@ func pray_weather() -> void:
 	weather_t = 0.0 # the forced sky holds until the next natural roll
 	pray_cd = t + 600.0
 	log_msg({"rain": tr("You offer lumenite — rain answers"), "storm": tr("The altar drinks lumenite — thunder answers"),
-		"drought": "The altar drinks lumenite — a dry wind answers",
-		"clear": "The offering burns off — the sky clears"}.get(nxt, "The sky shifts"))
+		"drought": tr("The altar drinks lumenite — a dry wind answers"),
+		"clear": tr("The offering burns off — the sky clears")}.get(nxt, tr("The sky shifts")))
 	sfx_play("level")
 
 func throw_bait() -> void:
@@ -1767,7 +1767,7 @@ func fertilize() -> void:
 	structures[best]["fert"] = t + 300.0
 	add_item("fertilizer", -1)
 	floater(Vector2(best.x + 0.5, best.y + 0.5), tr("fertilized!"), "#a8c84a")
-	log_msg(tr("%s surges for five minutes") % StructureData.STRUCTURES[structures[best]["id"]]["name"])
+	log_msg(tr("%s surges for five minutes") % tr(str(StructureData.STRUCTURES[structures[best]["id"]]["name"])))
 
 func cap_power_of(target: Kin) -> float:
 	return Combat.cap_power(float(target.spec["capturePower"]), target.level, target.lucky)
@@ -2859,14 +2859,14 @@ func craft(recipe_id: String) -> void:
 			costs.append([c[0], c[1]])
 		craft_queue.append({"out": r["out"][0], "n": r["out"][1],
 			"left": float(r.get("work", 20)) / 10.0, "cost": costs})
-		log_msg(tr("Crafting %s… (%ds)") % [ItemData.ITEMS[r["out"][0]]["name"],
+		log_msg(tr("Crafting %s… (%ds)") % [tr(str(ItemData.ITEMS[r["out"][0]]["name"])),
 			int(craft_queue.back()["left"])])
 		return
 	for c in r.get("cost", []):
 		add_item(c[0], -c[1])
 	add_item(r["out"][0], r["out"][1])
 	note_crafted(r["out"][0])
-	log_msg(tr("Crafted %s x%d") % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
+	log_msg(tr("Crafted %s x%d") % [tr(str(ItemData.ITEMS[r["out"][0]]["name"])), r["out"][1]])
 
 func repair_quote() -> Dictionary:
 	return repair_quote_for("weapon")
@@ -2914,7 +2914,7 @@ func repair_weapon() -> void:
 	for c in rep["cost"]:
 		add_item(c[0], -c[1])
 	player.weapon_wear = float(rep["max"])
-	log_msg(tr("Repaired %s") % ItemData.ITEMS[player.equipment["weapon"]]["name"])
+	log_msg(tr("Repaired %s") % tr(str(ItemData.ITEMS[player.equipment["weapon"]]["name"])))
 
 func repair_armor() -> void:
 	var rep := repair_quote_armor()
@@ -2926,7 +2926,7 @@ func repair_armor() -> void:
 	for c in rep["cost"]:
 		add_item(c[0], -c[1])
 	player.armor_wear = float(rep["max"])
-	log_msg(tr("Repaired %s") % ItemData.ITEMS[player.equipment["armor"]]["name"])
+	log_msg(tr("Repaired %s") % tr(str(ItemData.ITEMS[player.equipment["armor"]]["name"])))
 
 func tick_crafts(dt: float) -> void:
 	if craft_queue.is_empty():
@@ -2945,7 +2945,7 @@ func tick_crafts(dt: float) -> void:
 		if cq["left"] <= 0:
 			add_item(cq["out"], cq["n"])
 			note_crafted(cq["out"])
-			log_msg(tr("Crafted %s x%d") % [ItemData.ITEMS[cq["out"]]["name"], cq["n"]])
+			log_msg(tr("Crafted %s x%d") % [tr(str(ItemData.ITEMS[cq["out"]]["name"])), cq["n"]])
 			craft_queue.remove_at(i)
 
 func pal_gain_xp(q: Kin, n: int) -> void:
@@ -3026,7 +3026,7 @@ func tick_spoilage() -> void:
 		rot += gone
 	if rot > 0:
 		floater(player.pos, tr("%d food spoiled") % rot, "#8a7a50")
-		log_msg(tr("%d perishable item%s turned — staff an ice box") % [rot, "s" if rot != 1 else ""])
+		log_msg(tr("%d perishable item(s) turned — staff an ice box") % rot)
 
 var spoil_t := 0.0
 
@@ -3203,7 +3203,7 @@ func tick_production(dt: float) -> void:
 				st["store"][pr[0]] = st["store"].get(pr[0], 0) + pr[1]
 			var t := ""
 			for pr in prod:
-				t += "+%d %s  " % [pr[1], pr[0]]
+				t += "+%d %s  " % [pr[1], tr(str(ItemData.ITEMS.get(pr[0], {}).get("name", pr[0])))]
 			floater(Vector2(key.x + 0.5, key.y + 0.5), t.strip_edges(), "#a8e6a1")
 
 func return_expedition(p: Kin, st: Dictionary, key: Vector2i) -> void:
@@ -3234,7 +3234,10 @@ func return_expedition(p: Kin, st: Dictionary, key: Vector2i) -> void:
 		got[pick] = int(got.get(pick, 0)) + 1 + p.level / 15
 	for k in got:
 		st["store"][k] = int(st["store"].get(k, 0)) + int(got[k])
-	log_msg(tr("%s returns from expedition: %s") % [tr(str(p.spec.get("name", p.species_id))), str(got)])
+	var gtxt := ""
+	for k2 in got:
+		gtxt += "%s x%d  " % [tr(str(ItemData.ITEMS.get(k2, {}).get("name", k2))), int(got[k2])]
+	log_msg(tr("%s returns from expedition: %s") % [tr(str(p.spec.get("name", p.species_id))), gtxt.strip_edges()])
 	floater(Vector2(key.x + 0.5, key.y + 0.5), tr("EXPEDITION!"), "#ffe08a")
 
 func consume_ready(cons: Array) -> bool:
@@ -3443,7 +3446,7 @@ func work_str(spec: Dictionary) -> String:
 		or (int(w[a]) == int(w[b]) and str(a) < str(b)))
 	var out := ""
 	for k in ks:
-		out += "%s%d " % [WORK_ABBR.get(k, "?"), int(w[k])]
+		out += "%s%d " % [tr(str(WORK_ABBR.get(k, "?"))), int(w[k])]
 	return out.strip_edges()
 
 func cycle_stance(uid: int) -> void:
@@ -3454,7 +3457,7 @@ func cycle_stance(uid: int) -> void:
 	if p == null:
 		return
 	p.stance = STANCES[(STANCES.find(p.stance) + 1) % STANCES.size()]
-	log_msg(tr("%s: %s") % [tr(str(p.spec["name"])), p.stance])
+	log_msg(tr("%s: %s") % [tr(str(p.spec["name"])), tr(str(p.stance))])
 
 func bench_pal_of(uid: int) -> Kin:
 	for bp in bench:
@@ -3621,7 +3624,8 @@ func party_to_box(uid: int) -> void:
 	p.mode = "box"
 	if p.carry != null: # hauling cargo doesn't vanish into the box
 		add_item(p.carry["id"], p.carry["n"])
-		log_msg(tr("%s dropped off %d %s") % [tr(str(p.spec["name"])), p.carry["n"], p.carry["id"]])
+		log_msg(tr("%s dropped off %d %s") % [tr(str(p.spec["name"])), p.carry["n"],
+			tr(str(ItemData.ITEMS.get(p.carry["id"], {}).get("name", p.carry["id"])))])
 		p.carry = null
 	box.append(p)
 	box_pal(p)
@@ -3668,7 +3672,10 @@ func toggle_skill(p: Kin, sid: String) -> void:
 		return
 	else:
 		p.equipped.append(sid)
-	log_msg(tr("%s moves: %s") % [tr(str(p.spec["name"])), str(p.equipped)])
+	var eqt := []
+	for esid in p.equipped:
+		eqt.append(tr(str(SkillData.SKILLS.get(esid, {}).get("name", esid))))
+	log_msg(tr("%s moves: %s") % [tr(str(p.spec["name"])), ", ".join(eqt)])
 
 func tick_death_marks() -> void:
 	# reaching a tombstone retires it — the pack itself is handled by the drops
@@ -3748,7 +3755,7 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 		"self":
 			var heal := caster.max_hp * absf(sk.get("power", 20)) / 100.0
 			caster.hp = minf(caster.max_hp, caster.hp + heal)
-			floater(caster.pos, tr("+%d %s") % [int(heal), sk["name"]], "#a8e6a1")
+			floater(caster.pos, tr("+%d %s") % [int(heal), tr(str(sk["name"]))], "#a8e6a1")
 		"lunge":
 			var land: Vector2 = tpos + (caster.pos - tpos).normalized() * 0.9
 			# pass caster pos so elevation is actually checked — 2-arg blocked skips it
@@ -3973,7 +3980,7 @@ func update_projectiles(dt: float) -> void:
 
 func player_status(kind: String, dur: float) -> void:
 	player.statuses[kind] = t + dur
-	floater(player.pos, kind.to_upper(), "#e8963c")
+	floater(player.pos, tr(kind).to_upper(), "#e8963c")
 
 # ---------- save / load ----------
 func load_settings() -> void:
@@ -4677,9 +4684,9 @@ func cycle_work_mode() -> void:
 		return
 	work_mode = (work_mode + 1) % WORK_MODES.size()
 	var wm: Dictionary = WORK_MODES[work_mode]
-	floater(player.pos, tr("Work: %s") % wm["name"], "#e8d44d")
+	floater(player.pos, tr("Work: %s") % tr(str(wm["name"])), "#e8d44d")
 	log_msg(tr("Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)")
-		% [wm["name"], wm["prod"], wm["san"]])
+		% [tr(str(wm["name"])), wm["prod"], wm["san"]])
 
 var supply_t := 300.0 # wandering care package — lands near the player
 func tick_supply(dt: float) -> void:
@@ -4765,7 +4772,7 @@ func tick_migration(dt: float) -> void:
 			continue
 		floater(Vector2(x + 0.5, y + 0.5), tr("MIGRATION!"), "#ffd76e")
 		log_msg(tr("A herd of %s is migrating %s! (%d head)")
-			% [tr(str(sp.get("name", sid))), "ashore" if in_water else "inland", made.size()])
+			% [tr(str(sp.get("name", sid))), tr("ashore") if in_water else tr("inland"), made.size()])
 		return
 
 const RAID_WARN_T := 30.0 # seconds of horn before the wave lands
@@ -5112,7 +5119,7 @@ func egg_hint(pair) -> String:
 		if combo != "":
 			return str(tr(str(SpeciesData.species_of(combo).get("name", combo))))
 		var pn: String = tr(str(SpeciesData.species_of(str(pair[0])).get("name", str(pair[0]))))
-		return "%s line" % pn
+		return tr("%s line") % pn
 	return ""
 
 # Egg genetics stay mortal: legendaries are den bosses, and ironpact humans
@@ -5472,9 +5479,9 @@ func board_action_remote(pid: int) -> Dictionary:
 				"n": rng.int_range(2, 4), "got": 0, "day": day}
 	var qk: String = str(board_quest.get("kind", "supply"))
 	if qk == "hunt":
-		var sname: String = tr(str(SpeciesData.species_of(board_quest["sp"]).get("name", board_quest["sp"])))
-		note_remote(pid, "Notice board: cull %d %s (%d/%d) — kill or capture counts"
-			% [int(board_quest["n"]), sname, int(board_quest.get("got", 0)), int(board_quest["n"])])
+		var sname: String = str(SpeciesData.species_of(board_quest["sp"]).get("name", board_quest["sp"]))
+		note_remote(pid, "Notice board: cull %d %s (%d/%d) — kill or capture counts",
+			[int(board_quest["n"]), sname, int(board_quest.get("got", 0)), int(board_quest["n"])])
 		return {}
 	var qid: String = str(board_quest.get("id", ""))
 	if qid == "":
@@ -6024,7 +6031,7 @@ func spawn_legendary_den() -> void:
 			gp.setup(self, guard_pool[rng.int_range(0, guard_pool.size() - 1)],
 				rng.int_range(24, 32), Vector2(tx + 1.5 - i, ty + 1.5))
 			pals.append(gp)
-		log_msg(tr("A legendary %s den glows deep in the wilds") % sid)
+		log_msg(tr("A legendary %s den glows deep in the wilds") % tr(str(SpeciesData.species_of(sid).get("name", sid))))
 		return
 
 func regenerate(s: int) -> void:
@@ -6275,7 +6282,8 @@ func partner_skill() -> void:
 	var psk = PARTNER_SKILLS.get(p.species_id)
 	if psk != null and not partner_gear_ok(p.species_id):
 		log_msg(tr("%s's %s needs its kin gear — unlock %s in the tech tree")
-			% [tr(str(p.spec["name"])), tr(str(psk["name"])), PARTNER_GEAR[p.species_id]])
+			% [tr(str(p.spec["name"])), tr(str(psk["name"])),
+				tr(str(ItemData.ITEMS.get(PARTNER_GEAR[p.species_id], {}).get("name", PARTNER_GEAR[p.species_id])))])
 		psk = null # the pal falls back to its strongest learned move instead
 	if psk != null:
 		if p.skill_cd.get("partner", 0) > t:
@@ -6860,7 +6868,7 @@ func board_hunt_credit(sp: String, pid := 0) -> void:
 		_kill_loot(pid, "gold_coin", gold)
 		_kill_xp(pid, need * 15)
 		floater(peer_pos_of(pid) if pid > 0 else player.pos,
-			"HUNT FILLED +%dg" % gold, "#ffd76e")
+			tr("HUNT FILLED +%dg") % gold, "#ffd76e")
 		log_msg(tr("Hunt filled: %d %s → +%d gold") % [need, sname, gold])
 		board_quest["kind"] = "done"
 	else:
