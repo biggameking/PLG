@@ -1117,3 +1117,18 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   screen edge (clipped to column), nearest_heat memo staleness on
   place/raze (structures.size() invalidation).
 - Suite: 887/0/0.
+
+### S82 — touch slab & guest co-op parity (audit-36) — SHIPPED
+- Guest parity: own-ledger catch_credit RPC unstalls guest kindex/missions
+  (world book still counts all catches); owner_id in pal pack lets guests
+  recall/manage ONLY their own base rows; pause INVENTORY row routed (was
+  dead for every input); raid horn relays to guests; assign_remote answers
+  misses; cycle_field_pal refuses replica-orphaning on clients.
+- Touch: catch-odds preview ungated with facing-cone target; partner_skill
+  fires down the facing line; all 7 keyboard-phrased hints got touch
+  alternates; guide page scrolls (guide_scroll + range indicator).
+- Correctness: nearest_heat memo keyed on structure generation — same-size
+  raze+build swaps no longer serve stale distances (fixed a real flake
+  class seen in dusk/night hint tests).
+- 8 new assertions; 893/0/1skip; S81 live-play 0 failures; guide+kinbox
+  PNGs verified. Audit doc: docs/reviews/audit-36-touch-guest.md.
