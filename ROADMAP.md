@@ -960,3 +960,36 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   rides env_sync + state_snapshot — guests get the crown HUD and
   the sixth slot, join-time strips can't starve the cap. Sim grew
   catch-cost/TTK/kit/element gates. Smoke 790+/0.
+
+## S73 — the cataloger's seal: a full Kindex pays out
+  102 ownable species registered -> KINDEX COMPLETE banner + 3 legendary
+  orbs. Same ledger discipline as accord: catch_counts re-derives the
+  claim, a forged dex_claimed flag is refused. Smoke 798/0.
+
+## S74 — localization closure: the whole lexicon rides one csv
+  ~480 keys wrapped across log/floater/draw_string/menu/data surfaces
+  (help panel, mission texts, weather/altar, work abbrevs, names in
+  every dex/kinbox format line). Wire protocol reworked: note_remote
+  ships english key + raw args, receiver tr()s per-arg (a zh host no
+  longer broadcasts Chinese to en clients). locale/zh.csv loads at
+  RUNTIME via FileAccess (the headless csv_translation importer
+  silently produced nothing). zh.csv.import -> importer="keep" so the
+  raw bytes pack; --export-pack byte-probe proves it. 95 gen species
+  given real zh names; terminology unified on 精灵. Smoke 802/0.
+
+## audit-28 — i18n reaudit
+  Wire leaks (pretranslated args, preformatted strings), csv contract
+  lint (3 cols, unique msgids, placeholder parity, no lone %), fused-
+  row repair, keep-importer export fix, cross-line emit-site sweep.
+  Smoke 802/0.
+
+## audit-29 — multiplayer trust-boundary reaudit
+  H: keeper tags rode struct_sync broadcast while hello() treated
+  possession as proof — disconnect-then-impersonate stole rosters.
+  Tags stripped from the wire; hello binds first-write-wins.
+  M: guest sleep minted shared days (now is_night-gated); egg
+  parentage keyed on pids (now owner_tag); receipt echoes trusted
+  wire numbers (now settle against recorded holds + mirrored posting).
+  L: hit-flood buckets, ghostless take_drop fail-closed, live-lure
+  stomp refusal, NaN guards across every float-arg handler.
+  Rules 109-113. Smoke 816/0.
