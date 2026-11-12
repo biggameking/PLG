@@ -31,6 +31,11 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   （mesh 优选路）→ `post_kin.py`（posterize/ink/halftone→80×64+x4 预览）。
 - fenjelly 已是 Quaternius Sheep.blend（CC0 24 骨 Idle 动作采样）网格版，
   是当前质量标杆；primitive 栈只作 fallback。
+- 批量映射：`tools/art/mesh_map_gen.py` → `mesh_cfg_gen.py`（生成物，
+  勿手改），按 body 套源 mesh 模板+配色派生；`bash tools/art/
+  batch_mesh.sh` 全量重渲。当前覆盖 61/116（8 手调+52 生成+fenjelly）；
+  配饰种与 ghost/human/blob/hedgehog/monkey 仍走 primitive——mesh
+  路径暂无配饰层，勿为凑数丢身份标志。
 - S98 首批网格迁移落地 8 种（scalcrest→Eagle、scalfang→Wolf、
   branpurr→Cat、tidscale→Piranha、piplump→Cow、digsnout→Pig、
   dozantler→Horse、cindpaw→Dog，源见 PROVENANCE.md Vol.2+farm 包）。
