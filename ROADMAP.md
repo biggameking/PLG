@@ -1100,3 +1100,10 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - Economy verified: no dead-end chain; gold inflation + gacha→hatch→sell
   documented as accepted/deferred (bounded mint, needs a save field).
 - 5 new assertions; 883/0/0. Audit doc: docs/reviews/audit-35-economy-perf.md.
+
+### S80 — post-Accord gold sink — SHIPPED
+- Audit-35's deferred Medium closed: sealed Accord keepers get a standing
+  effigy order in every merchant stock (3 @ 160g) — surplus gold now feeds
+  soul_infuse (55 effigies maxes one kin), not a lottery line.
+- Guide vol IX "after the signature" paragraph documents it (en+zh).
+- 2 assertions (pre-accord absence + post-accord presence); 884/0/1skip.
