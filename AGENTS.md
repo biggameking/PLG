@@ -536,3 +536,16 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     Cousin defect: a second copy of a table with zero consumers
     (`SPECIES_LIST`) drifts silently against the live one — dead tables
     get deleted, never updated.
+102. **A widened bound needs its whole class swept — twice.** `party_cap()`
+    replaced a literal 5 at eleven sites and the audit still found four
+    guest lanes (`rebind_owner` slice, `r_send_out` stray-uid gate, guest
+    catch auto-join, guest box-full guard) plus `MAX_BENCH`'s formula and
+    the hotkey range. When a constant becomes a function, grep the literal
+    in EVERY file that touches the concept — host paths first, then the
+    remote/mirror twins, then the derived-const formulas, then the input
+    and copy surfaces.
+103. **A synced flag needs its disconnect+join story, not just its tick.**
+    A value carried by env_sync also needs: state_snapshot (join-time,
+    before any dependent strip), _on_server_disconnected (residue reset),
+    and the mirror's HUD read site named. A flag synced only on the tick
+    desyncs for up to a resend window at every join.

@@ -912,3 +912,51 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   ink floor over all 232 frames) — 762/0. Render dir left git;
   rules 97-100 record the process lessons (reproducible artifacts,
   authoritative accessors, retire old writers, never weaken tests).
+
+## S67 — roster faces: real sprites on every roster surface
+  Party strip, kinbox three lanes, sell-back rows, statue infuse
+  rows, boss bars, and the dex caught-column all render the species
+  sprite (was text glyphs). kin_tex guards ResourceLoader.exists —
+  stale mirror sids can't spam load errors. Party rows shed the
+  passive string (the [mv] panel already carries it) — no more
+  text/button collisions. Smoke 766/0.
+
+## S68 — legends earnable: the den's heir contract
+  legendary_orb was a dead item — 10 legend species were combat-only.
+  ownable() splits from acquirable() (pool filtering unchanged);
+  a killed den warden respawns as a catchable alpha heir from a
+  re-rolled LEGENDARY_DEN species — kill or catch re-summons the
+  next. Immunity lives in catchable(): legend + not alpha = immune
+  (phase adds/sigil raiders can't be sigil-farmed). Load/cage paths
+  gate ownable in roster scope only — wild ironpact humans still
+  load (the index-drift bug this gate nearly shipped).
+
+## S69 — audit-25 fix batch + crowned guidance
+  HUD crown line: SPIRES n/5 + DEN n/10 tracker with warden/heir/
+  stirs-eta states. Fixture hardening: lair alpha skips raid-flagged
+  alphas + tod pinned to species cycle; nocturnal corridor disarms
+  pull-in foes; tranq lane scans the dart's real step; floater
+  asserts read .back() (ring-buffer truth).
+
+## S70 — boss telegraphs: Pact Slam is dodgeable, guests eat it
+  Phase-2 slam: 5s charge -> rooted 0.8s "IT REARS UP" telegraph ->
+  ring lands on players, guest ghosts, and partner kin with the
+  spire's element ailment. Snapshot-iterated (kills mid-loop can't
+  skip targets). Guest symmetry: guests share the ring damage.
+
+## S71 — signature mechanics: fans, pierces, drains
+  Three real kinds: multi (fan volleys), pierce (hitset-scored
+  through-shots), drain (damage heals caster). All 95 gen species +
+  21 core species learn a lv20 signature from the third element
+  pool slot; gen_species.py preserves curated glyphs. .ts sources
+  patched in the same commit (provenance rule 101).
+
+## S72 — the Wildmere Accord: the island's last contract
+  crowned + all ten legend heirs caught + EX gauntlet sealed once
+  -> party_cap() widens the roster 5->6 permanently (banner, horn,
+  rumble, guest fanfare). Eleven hardcoded-5 sites unified under
+  party_cap(); gauntlet_ex save hole found + fixed (EX flag never
+  survived load). Campaign spine (crowned/accord/spire+den tallies)
+  rides env_sync + state_snapshot — guests get the crown HUD and
+  the sixth slot, join-time strips can't starve the cap. Sim grew
+  catch-cost/TTK/kit/element gates. Smoke 790+/0.

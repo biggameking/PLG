@@ -249,6 +249,9 @@ func state_snapshot() -> Dictionary:
 		# regrowth and footprint clear the island remembers
 		"decor": game.world.decor.duplicate(), "hp_map": game.world.hp.duplicate(),
 		"unlocked": game.unlocked.duplicate(), # the host's tech bounds the client's build bar
+		"cr": game.crowned, "acc": game.accord, # the campaign spine lands with
+		"sn": game.spires_done.size(), "dn": game.den_caught(), # its tallies too —
+		# the world — box_sync can follow immediately without starving the cap
 		"merch": mp, "stock": game.merchant_stock.duplicate()} # a joiner mid-visit still sees the trader
 
 @rpc("authority", "call_remote", "reliable")
@@ -281,6 +284,10 @@ func state_sync(d: Dictionary) -> void:
 		game.net_unlocked = d["unlocked"] # the host's tech bounds our build bar
 	game.tod = clampf(Game._f(d.get("tod", game.tod), game.tod), 0.0, 24.0) # an INF tod fast-forwards a day per frame — same clamp the save path runs
 	game.day = maxi(Game._i(d.get("day", game.day), game.day), 1)
+	game.crowned = d.get("cr") is bool and d["cr"] # the spine lands before
+	game.accord = d.get("acc") is bool and d["acc"] # any box_sync strip arrives
+	game.net_spires = clampi(Game._i(d.get("sn", 0)), 0, Game.SPIRE_DEFS.size())
+	game.net_den = clampi(Game._i(d.get("dn", 0)), 0, Game.LEGENDARY_DEN.size())
 	# drop the population our own regenerate() spawned — the host's wild/base
 	# kin replace it, otherwise clients see every kin twice
 	for p in game.pals.duplicate():
@@ -382,11 +389,15 @@ func pal_sync(arr: Array) -> void:
 @rpc("authority", "call_remote", "unreliable")
 func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 		bq: Dictionary = {}, merch: Dictionary = {}, wmode: int = -1,
-		unl: Array = [], cr: bool = false, acc: bool = false) -> void:
+		unl: Array = [], cr: bool = false, acc: bool = false,
+		sn: int = -1, dn: int = -1) -> void:
 	if is_host:
 		return
 	game.crowned = cr == true # campaign spine is host truth — the crown and
 	game.accord = acc == true # the accord gate party_cap + the HUD tally alike
+	if sn >= 0: # the spine counters ride the same packet — a guest's HUD
+		game.net_spires = mini(sn, Game.SPIRE_DEFS.size()) # tallies the host's
+		game.net_den = mini(dn, Game.LEGENDARY_DEN.size()) # ledger, not its own
 	game.tod = clampf(Game._f(tod, game.tod), 0.0, 24.0) # the host's clock owns the sky — a NaN/INF tod still can't reach it
 	game.day = maxi(Game._i(day), 1)
 	game.net_danger = danger == true # raids are host truth; the drone mirrors it
@@ -450,6 +461,10 @@ func _on_server_disconnected() -> void:
 	is_host = false
 	multiplayer.multiplayer_peer = null # a dead peer must not keep net_live() true
 	game.net_danger = false # the raid verdict belonged to the session — rejoin clean
+	game.crowned = false # the borrowed campaign spine leaves with the host —
+	game.accord = false # a residue world never fields the host's sixth slot
+	game.net_spires = 0 # nor tallies the host's spires/heirs as its own
+	game.net_den = 0
 	game.log_msg("Host disconnected")
 
 func spawn_ghost(id: int) -> void:
@@ -1384,7 +1399,8 @@ func _process(dt: float) -> void:
 				"sp": game.board_quest.get("sp", ""), "got": game.board_quest.get("got", 0)}
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
 				bq_send, mp2, game.work_mode, game.unlocked,
-				game.crowned, game.accord) # clock + sky + threat + posting + trader + orders + tech + the campaign spine are host truth — the holder's pid stays home
+				game.crowned, game.accord,
+				game.spires_done.size(), game.den_caught()) # clock + sky + threat + posting + trader + orders + tech + the campaign spine are host truth — the holder's pid stays home
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose

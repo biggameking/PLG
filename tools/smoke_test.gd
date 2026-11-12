@@ -128,7 +128,7 @@ func run() -> void:
 		if tgt.mode != "wild":
 			break
 	check("caught kin captured", tgt.mode in ["partner", "box", "bench"], "mode=%s" % tgt.mode)
-	check("catch box only if party full", tgt.mode != "box" or game.party.size() >= 5, "mode=%s party=%d" % [tgt.mode, game.party.size()])
+	check("catch box only if party full", tgt.mode != "box" or game.party.size() >= game.party_cap(), "mode=%s party=%d" % [tgt.mode, game.party.size()])
 	if tgt.mode in ["box", "bench"]:
 		check("caught kin leaves world", tgt.get_parent() != game.entity_layer)
 
@@ -390,7 +390,7 @@ func run() -> void:
 		var cap0: float = p.carry_cap()
 		var cm: Kin = game.gen_pal("puffmite", 5, p.pos)
 		cm.mode = "box"; game.box.append(cm); game.box_pal(cm)
-		while game.party.size() >= 5: # a full strip silently refuses the mule —
+		while game.party.size() >= game.party_cap(): # a full strip silently refuses the mule —
 			game.party_to_box(game.party[0]) # make room or the aura never fields
 		game.box_to_party(cm)
 		if game.party_pal() != cm: # box_to_party auto-fields an empty strip —
@@ -2281,7 +2281,7 @@ func run() -> void:
 	game.decor_sync([[dci, World.Decor.NONE], "junk"])
 	check("decor delta applies", game.world.decor[dci] == World.Decor.NONE)
 	# shared box: the host's roster ships as a compact mirror; ops relay back
-	while game.party.size() >= 5:
+	while game.party.size() >= game.party_cap():
 		game.party_to_box(game.party[0])
 	var nbp: Kin = game.gen_pal("fenjelly", 7, p.pos)
 	nbp.mode = "box"; nbp.uid = game.next_uid_v + 500000 # beyond every real uid — no collisions
@@ -2330,13 +2330,21 @@ func run() -> void:
 	# the campaign spine rides env_sync — a guest's roster cap must not
 	# truncate the host's sixth slot (env_sync runs client-side only)
 	var ac_cr2: bool = game.crowned
-	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], true, true)
+	var ac_acc2: bool = game.accord
+	var ac_sn2: int = game.net_spires
+	var ac_dn2: int = game.net_den
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], true, true, 5, 10)
 	check("env_sync carries crown + accord",
 		game.crowned and game.accord and game.party_cap() == 6)
-	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], false, false)
+	check("env_sync carries the spine tallies",
+		game.net_spires == 5 and game.net_den == 10)
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], false, false, 0, 0)
 	check("env_sync revokes on host truth",
-		not game.crowned and not game.accord)
+		not game.crowned and not game.accord and game.net_spires == 0)
 	game.crowned = ac_cr2
+	game.accord = ac_acc2
+	game.net_spires = ac_sn2
+	game.net_den = ac_dn2
 	game.drop_sync([[991, "wood", {"n": 9}, {"x": 1}, [2.0]]])
 	check("drop_sync hostile coords coerce", game.net_drops.has(991)
 		and game.net_drops[991]["n"] == 0 and game.net_drops[991]["pos"] == Vector2.ZERO)
@@ -2430,7 +2438,7 @@ func run() -> void:
 	game.box.append(sixth); game.box_pal(sixth)
 	guest_junk.append(sixth)
 	game.box_op_remote("box_to_party", sixth.uid, 7)
-	check("guest strip caps at 5", rp7.size() == 5 and sixth.mode == "box")
+	check("guest strip caps at the roster bound", rp7.size() == game.party_cap() and sixth.mode == "box")
 	# install-token rebind: a dropped peer orphans its kin — ops refuse until
 	# the same token says hello; a live claim can't be re-stolen by a stranger
 	for q in game.box + game.bench + game.pals:
@@ -3370,7 +3378,7 @@ func run() -> void:
 	over.mode = "box"
 	game.box.append(over)
 	game.box_to_party(over)
-	check("party overflow refused", game.party.size() == 5 and not game.pals.has(over) and game.box.has(over),
+	check("party overflow refused", game.party.size() == game.party_cap() and not game.pals.has(over) and game.box.has(over),
 		"mode=%s party=%d" % [over.mode, game.party.size()])
 	game.party_to_box(game.party[4]) # back to 4 for later checks
 	# non-mountable rejected
@@ -6366,6 +6374,26 @@ func run() -> void:
 		game.bench.erase(ac_k); game.party.erase(ac_k.uid)
 		if ac_k.get_parent(): ac_k.get_parent().remove_child(ac_k)
 		ac_k.free()
+	# the guest lane reaches six too — rebind/box_op use the same cap or a
+	# dropped sixth uid strands on the bench forever (audit-27 H)
+	var ac_gstaged: Array = []
+	for ac_i in range(6):
+		var ac_g: Kin = game.gen_pal("fenjelly", 3, game.player.pos)
+		ac_g.mode = "box"; ac_g.owner_id = 7; ac_g.owner_tag = "audit-tag"
+		game.box.append(ac_g); ac_gstaged.append(ac_g)
+	var ac_rp: Array = game.rparty_for(7)
+	ac_rp.clear()
+	for ac_i in range(5):
+		ac_rp.append(ac_gstaged[ac_i].uid)
+	game.box_op_remote("box_to_party", ac_gstaged[5].uid, 7)
+	check("a guest's sixth kin joins the accorded strip",
+		ac_rp.size() == 6, "rp=%d" % ac_rp.size())
+	game.remote_parties.erase(7)
+	for ac_g in ac_gstaged:
+		game.pals.erase(ac_g); game.box.erase(ac_g)
+		game.bench.erase(ac_g); game.party.erase(ac_g.uid)
+		if ac_g.get_parent(): ac_g.get_parent().remove_child(ac_g)
+		ac_g.free()
 	# the contract rides the save — and can't be forged on a bare flag
 	game.save_game()
 	game.accord = false

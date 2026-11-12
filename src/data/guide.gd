@@ -80,7 +80,8 @@ PARTY, BOX AND BENCH
 
 Five slots on the belt, the rest in the box. Keys 1-5 send a
 kin out; press again to recall. Only one ball on the field —
-that is the law of the islands.
+that is the law of the islands. Seal the Wildmere Accord and
+the belt grows a sixth slot (key 6).
 
 The deployed kin takes orders: v cycles AUTO / AGGRESSIVE /
 PASSIVE. It favors your mark — hit something and it presses
@@ -288,6 +289,7 @@ const PAGES_ZH: Array[String] = [
 队伍、箱子与候补
 
 腰带上五个槽，其余进箱子。按 1-5 放出精灵，再按收回。
+缔结荒野之约后腰带增至六槽（按 6）。
 场上同时只能有一只——这是群岛的规矩。
 
 放出的精灵听号令：v 键切换 自动 / 主动 / 被动。它跟着

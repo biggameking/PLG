@@ -325,9 +325,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			game.panel = "join"; join_buf = "" # K: type the host's IP, Enter to join
 		return
 	if event is InputEventKey and event.pressed and game.panel == "":
-		# the island party hotbar: 1-5 sends that slot's kin out (again recalls)
+		# the island party hotbar: 1..party_cap sends that slot's kin out (again recalls)
 		var k2: int = event.keycode
-		if k2 >= KEY_1 and k2 <= KEY_5:
+		if k2 >= KEY_1 and k2 < KEY_1 + game.party_cap():
 			var si2 := k2 - KEY_1
 			if game.net != null and game.net.is_client():
 				if si2 < game.net_party.size():
@@ -954,10 +954,12 @@ func _draw() -> void:
 		draw_string(font, Vector2(r.x - 212, hy), "» " + tr(htxt),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		hy += 17
-	if game.spires_done.size() > 0 or game.crowned: # the campaign spine's tally
+	var spire_n: int = game.net_spires if game.net != null and game.net.is_client() \
+		else game.spires_done.size() # a guest's tally mirrors the host's ledger
+	if spire_n > 0 or game.crowned: # the campaign spine's tally
 		Ink.tag(self, Rect2(r.x - 230, hy - 11, 222, 15))
 		draw_string(font, Vector2(r.x - 226, hy),
-			tr("SPIRES %d/%d") % [game.spires_done.size(), game.SPIRE_DEFS.size()]
+			tr("SPIRES %d/%d") % [spire_n, game.SPIRE_DEFS.size()]
 				+ (tr(" — CROWNED") if game.crowned else ""),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD)
 		hy += 17
@@ -965,10 +967,8 @@ func _draw() -> void:
 	# the collection count and whether one roams right now, or the chase
 	# dies at "CROWNED" with no next step
 	if game.crowned:
-		var legs := 0
-		for ls in Game.LEGENDARY_DEN:
-			if game.catch_counts.get(ls, 0) > 0:
-				legs += 1
+		var legs := game.net_den if game.net != null and game.net.is_client() \
+			else game.den_caught() # a guest's tally is the host's ledger
 		var den := ""
 		for q in game.pals:
 			if is_instance_valid(q) and q.mode == "wild" and q.species_id in Game.LEGENDARY_DEN:
@@ -1070,7 +1070,7 @@ func _draw() -> void:
 			"BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t",
 			"INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h",
 			"MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter",
-			"1-5 sends that party kin out (press again to recall) — one ball on the field",
+			"1-%d sends that party kin out (press again to recall) — one ball on the field" % game.party_cap(),
 			"v cycles the field kin's orders: auto / aggressive / passive",
 			"HOST j   JOIN k (type host IP, enter)  MERCHANT e (when visiting)",
 			"Glider descends cliffs. Sick kin need medicine in feed box/bag.",

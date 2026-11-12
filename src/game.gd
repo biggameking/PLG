@@ -31,9 +31,11 @@ var net_box := []            # client-side mirror of the host's box roster (dict
 var net_party := []          # client-side mirror of the host's party roster (dicts)
 var net_residue := false     # this world came down the wire — never write it over a real save
 var net_unlocked := []       # host's tech list mirror; empty = not a client / no constraint
+var net_spires := 0          # host's spire tally mirror — the HUD's spine counter
+var net_den := 0             # host's legend-heir tally mirror — the DEN counter
 var remote_parties := {}     # multiplayer: owner_tag -> [pal uids] — each guest's own party strip
 const MAX_REMOTE_TAGS := 32  # a roster row per keeper — enough guests for any sane co-op night
-const MAX_BENCH := 5 + MAX_REMOTE_TAGS * 5  # own strip plus every guest's — co-op saves legitimately reach ~165 orbs
+const MAX_BENCH := 6 + MAX_REMOTE_TAGS * 6  # own strip plus every guest's — an accorded co-op world legitimately reaches ~198 orbs
 var drops_wanted := {}       # did -> time asked; stops take_drop RPC spam
 var next_drop_id := 1        # host: wire key for drop_sync (never reused)
 var dirty_decor := {}        # decor cell idx -> value; host ships deltas to clients
@@ -410,7 +412,7 @@ func owns_pid(p: Kin, pid: int) -> bool:
 
 func rparty_by_tag(tag: String) -> Array:
 	# a guest's party strip keyed by their install token — stable across
-	# sessions (peer ids are not), capped at the same 5 slots as ours
+	# sessions (peer ids are not), bounded by the same party_cap() as ours
 	if not remote_parties.has(tag):
 		if remote_parties.size() >= MAX_REMOTE_TAGS:
 			# evict a cold keeper's row — their kin cold-store in the box and
@@ -491,7 +493,7 @@ func rebind_owner(pid: int, tag: String) -> void:
 			kept.push_front(p3.uid) # the field pal leads its keeper's strip
 	if not remote_parties.has(tag):
 		rparty_by_tag(tag) # a fresh tag's row goes through the cap/eviction lane — never a raw write past 32
-	remote_parties[tag] = kept.slice(0, 5)
+	remote_parties[tag] = kept.slice(0, party_cap())
 
 func box_op_remote(op: String, uid: int, pid: int, extra := "") -> void:
 	# a client's kinbox click, host-validated: only the kin's owner may move
@@ -548,7 +550,7 @@ func r_send_out(uid: int, pid: int) -> void:
 		return
 	r_retract(pid)
 	var rp := rparty_for(pid)
-	if not rp.has(uid) and rp.size() >= 5:
+	if not rp.has(uid) and rp.size() >= party_cap():
 		return # a stray bench uid must not overflow the guest's strip
 	rp.erase(uid)
 	rp.push_front(uid)
@@ -1184,6 +1186,14 @@ var accord := false     # the Wildmere Accord — crown + all ten legend heirs
 
 func party_cap() -> int:
 	return 6 if accord else 5
+
+func den_caught() -> int:
+	# legend heirs banked — the DEN tally the accord checks and the HUD shows
+	var n := 0
+	for ls in LEGENDARY_DEN:
+		if int(catch_counts.get(ls, 0)) > 0:
+			n += 1
+	return n
 var weather := "clear"  # "clear" | "rain" | "storm" | "drought" — rolls every couple of game hours
 var weather_t := 0.0
 var pray_cd := 0.0            # absolute t — shrine prayer cooldown
@@ -1245,12 +1255,19 @@ func tick_accord() -> void:
 	for ls in LEGENDARY_DEN:
 		if int(catch_counts.get(ls, 0)) <= 0:
 			return
-	accord = true
+	accord = true # every seal proven — the island signs in gold
 	floater(player.pos, tr("THE WILDMERE ACCORD"), "#ffd76e")
 	log_msg(tr("THE WILDMERE ACCORD — the island kneels to its keeper."))
 	log_msg(tr("Your party can field SIX kin from now on."))
 	sfx_play("horn")
 	rumble(0.5, 0.9, 0.6)
+	if net != null and multiplayer.multiplayer_peer != null:
+		# every keeper on the island signs it too — not just the host's screen
+		net.rpc("net_floater", player.pos.x, player.pos.y,
+			tr("THE WILDMERE ACCORD"), "#ffd76e")
+		for acp in multiplayer.get_peers():
+			note_remote(acp, tr("THE WILDMERE ACCORD — the island kneels to its keeper."))
+			note_remote(acp, tr("Your party can field SIX kin from now on."))
 
 func reveal_at(c: Vector2, r: float) -> void:
 	# the island fog of war: walking peels the dark back a sight-radius at a time
@@ -1866,7 +1883,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		var rp := rparty_for(pid)
 		# per-owner lane AND the global bound: one guest's roster can't push
 		# the shared box past what every local path already enforces
-		if rp.size() >= 5 and (box_count_of(pid) >= MAX_BOX or box.size() >= MAX_BOX):
+		if rp.size() >= party_cap() and (box_count_of(pid) >= MAX_BOX or box.size() >= MAX_BOX):
 			floater(target.pos, "BOX FULL", "#e8963c")
 			log_msg("Kinbox is full (%d) - %s got away" % [MAX_BOX, tr(str(target.spec["name"]))])
 			return
@@ -1891,7 +1908,7 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		_reden_legend(target)
 		target.owner_id = pid
 		target.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
-		if rp.size() < 5: # a catch joins the party until the strip is full
+		if rp.size() < party_cap(): # a catch joins the party until the strip is full
 			if _bench_add(target):
 				rp.append(target.uid)
 				if r_out_pal(pid) == null:
@@ -4282,8 +4299,13 @@ func load_game() -> bool:
 		if mission_flags.size() >= 64: # paranoia cap — same contract as every runtime set
 			mission_flags.clear()
 	# the accord rides the save but can't be forged without its seals —
-	# an uncrowned flag is the same lie as a crowned flag with no spires
-	accord = crowned and mission_flags.get("gauntlet_ex", false) and d.get("accord") is bool and d["accord"]
+	# crown + EX + every heir caught, same bar tick_accord() checks live
+	var heirs := 0
+	for ls in LEGENDARY_DEN:
+		if int(catch_counts.get(ls, 0)) > 0:
+			heirs += 1
+	accord = crowned and mission_flags.get("gauntlet_ex", false) \
+		and heirs >= LEGENDARY_DEN.size() and d.get("accord") is bool and d["accord"]
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
 		for slot in ["weapon", "armor", "acc1", "acc2"]:
@@ -4414,7 +4436,7 @@ func load_game() -> bool:
 				np.free() # over-cap baggage dies here — it never entered the tree
 				continue
 		elif np.mode == "bench":
-			if bench.size() < MAX_BENCH: # a co-op save's orbs are 5 own + 32×5 guest — 32 was freeing real kin
+			if bench.size() < MAX_BENCH: # a co-op save's orbs scale with party_cap() × guests — the +32 slack was freeing real kin
 				bench.append(np)
 				box_pal(np) # orbs rest in the same cold store
 			else:
