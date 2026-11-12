@@ -2384,6 +2384,7 @@ var HINTS := [
 	 "cond": func(g): return g.t > 30.0},
 	{"id": "eat", "once": 12.0,
 	 "text": "You're starving — eat berries or cooked food (I opens the bag)",
+	 "pad": "You're starving — eat berries or cooked food (dpad-up opens the bag)",
 	 "cond": func(g): return g.player != null and g.player.hunger < 25.0},
 	{"id": "dusk", "once": 18.0,
 	 "text": "Sun's dropping — B builds a campfire (6w 3s), a straw bed sleeps",
