@@ -49,3 +49,29 @@ accord arc in both languages.
 - Loads that bypass `place_pois` must repopulate non-structure POI state
   (`spire_pos`) from the save or by derivation — rule 25's checklist
   extended in practice.
+
+## audit-32 recheck (context-free review) — findings and fixes
+
+An independent pass over the diff surfaced four real defects plus fixture
+hygiene debt. All fixed and asserted:
+
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| R1 | Medium | `spos` wrote `Vector2i` values; the loader demanded `is Array` — every real save's markers were silently dropped (only live-guardian derivation hid it; broken-spire markers lost) | `save_game` serializes `{tag: [x, y]}`; assertion now round-trips the REAL writer's output with a guardian-impossible sentinel |
+| R3 | Medium | E-stockpile list missed six producing sites: apiary, fish_trap, sphere_factory, sphere_factory_2, compost_bin, expedition_post — they fell through to the kinbox panel | match arm extended; every site with a `store` output answers E |
+| R4 | Medium | relaxed + fallback passes never checked the door cell `(tx,ty+2)` — a sealed guardian could still spawn | both passes now run the real movement predicate `blocked(x, y, from)` on door cell AND approach; the suite's door invariant asserts the same predicate |
+| — | Low | a wave spawning zero raiders at `MAX_PALS` auto-advanced waves → free clear | `gauntlet_next_wave` rolls the wave back when nothing spawned — retries, never scores an empty wave |
+| — | Low | `spires_done`/`spire_pos` never reached clients → no hollow markers on guest maps | `env_sync` carries a spire bitmask (2Hz, covers join AND mid-run breaks); mask decode asserted + revoke asserted; disconnect clears replica marks |
+| — | Low | guests could buy `boss_sigil`/`gauntlet_sigil` — dead items in a guest bag | `buy_remote` refuses host-only items with a `note_remote` explanation |
+| — | Low | `bred_kin_egg` missing from `ITEM_WT` | 5.0 wt like its wild sibling |
+| — | Low | items.ts generator drift: 17 items existed only in items.gd (pre-existing, deepened by the egg split) | all 17 ported back to the .ts source + stale sigil desc synced |
+
+Fixture hygiene (P-class): ranch-stall check read the retired `kin_egg` id
+(vacuous post-rename → now reads `bred_kin_egg`); `egg_parents`/`mission_flags`
+/`is_host` mutations now snapshot + restore instead of blanket-wipe; the
+crafted-save fixture is complemented by a real `save_game()→load_game()`
+round-trip (a fixture dict shaped like nothing the writer emits certifies
+nothing — rule 28/114 in practice).
+
+Verified: **860 checks, 0 failures, 1 skipped** (worldgen-conditional
+grotto chamber, pre-existing); balance sim 0 failures.

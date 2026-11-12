@@ -709,7 +709,7 @@ const KIND_WT := {
 }
 const ITEM_WT := {
 	"stone": 3.0, "ore": 5.0, "ingot": 6.0, "coal": 4.0,
-	"kin_egg": 5.0, "huge_kin_egg": 8.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
+	"kin_egg": 5.0, "bred_kin_egg": 5.0, "huge_kin_egg": 8.0, "musket": 12.0, "gold_coin": 0.1, "nails": 1.0,
 }
 
 func item_wt(sid: String) -> float:
@@ -1174,7 +1174,10 @@ func gauntlet_next_wave() -> void:
 			np.set_meta("raid_t0", t)
 			pals.append(np)
 			gauntlet["left"] += 1
-	log_msg(tr("Gauntlet wave %d! %d foes") % [w, gauntlet["left"]])
+	if gauntlet["left"] == 0:
+		gauntlet["wave"] -= 1 # a field at the pal cap answers no questions — retry when there's room, never score an empty wave as cleared
+	else:
+		log_msg(tr("Gauntlet wave %d! %d foes") % [w, gauntlet["left"]])
 
 func tick_gauntlet() -> void:
 	if net != null and net.is_client():
@@ -4228,6 +4231,10 @@ func save_game() -> void:
 			"cap": st.get("captive") if st["id"] == "kin_cage" else null,
 			"by": str(st.get("placed_tag", "")) if str(st.get("placed_tag", "")) != "" else null,
 			"mimic": st.get("mimic") if st["id"] == "chest" else null}
+	var spos_sv := {}
+	for tk3 in spire_pos:
+		var vp3: Vector2i = spire_pos[tk3]
+		spos_sv[tk3] = [vp3.x, vp3.y] # arrays are the position schema — a raw Vector2i would fail the loader's `is Array` coercion
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
 		"raid_t": raid_t,
@@ -4261,7 +4268,7 @@ func save_game() -> void:
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed, "dex_full": dex_full,
 		"spires": spires_done.keys(), "crowned": crowned, "accord": accord,
-		"spos": spire_pos,
+		"spos": spos_sv,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
 		"board_quest": board_quest,
@@ -6033,7 +6040,7 @@ const SPIRE_DEFS := [
 	{"elem": "dragon", "lv": 50, "zone": 3},
 ]
 var spires_done := {} # tag -> true — persists with the save
-var spire_pos := {}   # tag -> Vector2i arena center — minimap pings (worldgen-deterministic,
+var spire_pos := {}   # tag -> Vector2i arena center — minimap pings (bounded by spire_tag_ok to SPIRE_DEFS.size() entries; worldgen-deterministic,
                       # but serialized anyway so a mid-run schema bump can't lose the trail)
 var crowned := false
 var has_save := false # cached file_exists for the title row — no per-frame stat syscall
@@ -6080,9 +6087,10 @@ func spawn_pact_spires() -> void:
 							if world.blocked(tx + dx, ty + dy) or structures.has(Vector2i(tx + dx, ty + dy)):
 								ok = false
 				# the south door must open onto ground you can walk in on —
-				# a cliff-face approach would gate the guardian behind gear
-				if world.blocked(tx, ty + 3) \
-						or world.elev_at(tx, ty + 3) != world.elev_at(tx, ty + 1):
+				# the door cell itself AND the approach must pass the real
+				# movement predicate (elevation step included)
+				if world.blocked(tx, ty + 2, tx + 0.5, ty + 1.5) \
+						or world.blocked(tx, ty + 3, tx + 0.5, ty + 2.5):
 					ok = false
 				if not ok:
 					continue
@@ -6107,8 +6115,8 @@ func spawn_pact_spires() -> void:
 			var ty2 := rng.int_range(4, World.WORLD_H - 6)
 			if world.blocked(tx2, ty2) or structures.has(Vector2i(tx2, ty2)):
 				continue
-			if world.blocked(tx2, ty2 + 3) \
-					or world.elev_at(tx2, ty2 + 3) != world.elev_at(tx2, ty2 + 1):
+			if world.blocked(tx2, ty2 + 2, tx2 + 0.5, ty2 + 1.5) \
+					or world.blocked(tx2, ty2 + 3, tx2 + 0.5, ty2 + 2.5):
 				continue
 			_place_spire(sd2, tx2, ty2, si)
 			done2 = true
@@ -7268,6 +7276,9 @@ func buy_remote(pid: int, idx: int) -> Dictionary:
 		return {"price": price, "kin": sid}
 	var iid := str(it.get("id", ""))
 	if not ItemData.ITEMS.has(iid):
+		return {}
+	if iid in ["boss_sigil", "gauntlet_sigil"]: # host-only verbs — a guest's sigil would be a dead item
+		note_remote(pid, "%s — only the keeper can use that", [str(ItemData.ITEMS[iid].get("name", iid))])
 		return {}
 	it["n"] -= 1
 	give_remote(pid, iid, 1)

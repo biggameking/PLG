@@ -1045,5 +1045,16 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   approach; spire_pos pings violet on charted minimap cells (spos
   serialized + guardian-derived self-heal); Guide Vol. IX documents
   the late arc. +16 checks. Smoke 858/0 (1 known worldgen skip).
-  Sim 0 failures. Rule 116. Shot: /tmp/plg-s76-map.png.
+  Sim 0 failures. Rule 116. Shot: /tmp/plg-s76-map.png. 59c74aa.
+## audit-32 recheck — context-free findings all landed
+  R1 spos wrote Vector2i vs loader's Array coercion → real saves dropped
+  every marker (sentinel round-trip now proves the real writer); R3 E-drain
+  missed 6 store producers (apiary/fish_trap/orb works/compost/expedition);
+  R4 door cell (tx,ty+2) unchecked in relaxed+fallback passes → movement
+  predicate on door AND approach, suite asserts the same; empty-wave
+  auto-clear at pal cap voided (wave rolls back); env_sync carries the
+  spire bitmask so guest maps draw hollow markers; guests refused on
+  host-only sigil buys; items.ts 17-entry drift ported back; fixture
+  hygiene: real-writer round-trip + snapshot/restore (rules 117).
+  Smoke 860/0 (1 known worldgen skip). Sim 0 failures.
 

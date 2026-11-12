@@ -630,3 +630,15 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     ride the save, not worldgen) must serialize AND self-heal — `spire_pos`
     merges validated `spos` rows then derives the rest from live guardian
     tags, so a pre-field save loses nothing.
+117. **A serialization contract is verified writer→reader, not reader-only.**
+    `spire_pos` serialized raw `Vector2i`s while the loader coerced
+    `is Array` — every real save's markers were silently dropped, and the
+    crafted-save fixture (which hand-wrote Array rows the writer never
+    emits) still passed. When a collection crosses a boundary (save, wire,
+    settings), the fixture must round-trip the REAL producer's output —
+    a hostile-input coercion check plus a sentinel the derivation path
+    can't fabricate. Same pattern bit twice this cycle: the E-stockpile
+    gate enumerated "automated sites" by hand and missed six producers —
+    match-arm lists that mirror a data property (`job.produces` /
+    `st["store"]` writers) should be derived from the data or audited
+    against the full writer set, not curated by memory.

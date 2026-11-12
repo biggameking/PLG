@@ -417,7 +417,7 @@ func pal_sync(arr: Array) -> void:
 func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 		bq: Dictionary = {}, merch: Dictionary = {}, wmode: int = -1,
 		unl: Array = [], cr: bool = false, acc: bool = false,
-		sn: int = -1, dn: int = -1) -> void:
+		sn: int = -1, dn: int = -1, sm: int = -1) -> void:
 	if is_host:
 		return
 	game.crowned = cr == true # campaign spine is host truth — the crown and
@@ -425,6 +425,13 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 	if sn >= 0: # the spine counters ride the same packet — a guest's HUD
 		game.net_spires = mini(sn, Game.SPIRE_DEFS.size()) # tallies the host's
 		game.net_den = mini(dn, Game.LEGENDARY_DEN.size()) # ledger, not its own
+	if sm >= 0: # broken-spire bits are replica truth — hollow map markers draw
+		for smi in Game.SPIRE_DEFS.size(): # from the tag set, never the count
+			var smt := "spire_%d" % smi
+			if sm & (1 << smi):
+				game.spires_done[smt] = true
+			else:
+				game.spires_done.erase(smt)
 	game.tod = clampf(Game._f(tod, game.tod), 0.0, 24.0) # the host's clock owns the sky — a NaN/INF tod still can't reach it
 	game.day = maxi(Game._i(day), 1)
 	game.net_danger = danger == true # raids are host truth; the drone mirrors it
@@ -490,6 +497,7 @@ func _on_server_disconnected() -> void:
 	game.net_danger = false # the raid verdict belonged to the session — rejoin clean
 	game.crowned = false # the borrowed campaign spine leaves with the host —
 	game.accord = false # a residue world never fields the host's sixth slot
+	game.spires_done.clear() # borrowed marks die with the session too
 	game.net_spires = 0 # nor tallies the host's spires/heirs as its own
 	game.net_den = 0
 	game.log_msg(tr("Host disconnected"))
@@ -1456,10 +1464,14 @@ func _process(dt: float) -> void:
 			var bq_send := {"kind": game.board_quest.get("kind", ""), "id": game.board_quest.get("id", ""),
 				"n": game.board_quest.get("n", 0), "day": game.board_quest.get("day", -1),
 				"sp": game.board_quest.get("sp", ""), "got": game.board_quest.get("got", 0)}
+			var spire_sm := 0 # WHICH spires fell rides too — a guest's map needs hollow markers, not just a tally
+			for smi in Game.SPIRE_DEFS.size():
+				if game.spires_done.has("spire_%d" % smi):
+					spire_sm |= 1 << smi
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
 				bq_send, mp2, game.work_mode, game.unlocked,
 				game.crowned, game.accord,
-				game.spires_done.size(), game.den_caught()) # clock + sky + threat + posting + trader + orders + tech + the campaign spine are host truth — the holder's pid stays home
+				game.spires_done.size(), game.den_caught(), spire_sm) # clock + sky + threat + posting + trader + orders + tech + the campaign spine are host truth — the holder's pid stays home
 			box_resend -= 0.5
 			var sig := box_fingerprint()
 			if sig != box_sig or box_resend <= 0.0: # box rosters ride diffs, not a 2Hz firehose

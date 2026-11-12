@@ -2000,7 +2000,7 @@ func run() -> void:
 		m_pal.job_site = st_r; f_pal.job_site = st_r
 		# the island rule: no cake, no breeding — the ranch stalls with a warning
 		game.tick_ranch(ranch_k, st_r, 61.0)
-		check("ranch stalls without cake", st_r["store"].get("kin_egg", 0) == 0 and st_r.get("cake_warned", false))
+		check("ranch stalls without cake", st_r["store"].get("bred_kin_egg", 0) == 0 and st_r.get("cake_warned", false))
 		# stock a cake: chest storage feeds the breeding loop
 		var chest_st = null
 		for kk in game.structures:
@@ -2333,18 +2333,25 @@ func run() -> void:
 	var ac_acc2: bool = game.accord
 	var ac_sn2: int = game.net_spires
 	var ac_dn2: int = game.net_den
-	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], true, true, 5, 10)
+	var ac_sd2: Dictionary = game.spires_done.duplicate()
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], true, true, 5, 10, 5) # mask 0b101 = spire_0 + spire_2 broken
 	check("env_sync carries crown + accord",
 		game.crowned and game.accord and game.party_cap() == 6)
 	check("env_sync carries the spine tallies",
 		game.net_spires == 5 and game.net_den == 10)
-	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], false, false, 0, 0)
+	check("env_sync carries the spire mask",
+		game.spires_done.get("spire_0", false) and game.spires_done.get("spire_2", false)
+		and not game.spires_done.has("spire_1"),
+		"done=%s" % str(game.spires_done.keys()))
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [], false, false, 0, 0, 0)
 	check("env_sync revokes on host truth",
-		not game.crowned and not game.accord and game.net_spires == 0)
+		not game.crowned and not game.accord and game.net_spires == 0
+		and game.spires_done.is_empty())
 	game.crowned = ac_cr2
 	game.accord = ac_acc2
 	game.net_spires = ac_sn2
 	game.net_den = ac_dn2
+	game.spires_done = ac_sd2
 	game.drop_sync([[991, "wood", {"n": 9}, {"x": 1}, [2.0]]])
 	check("drop_sync hostile coords coerce", game.net_drops.has(991)
 		and game.net_drops[991]["n"] == 0 and game.net_drops[991]["pos"] == Vector2.ZERO)
@@ -7686,6 +7693,8 @@ func run() -> void:
 	var ga_a32: Dictionary = game.gauntlet.duplicate()
 	var ms_a32: Array = game.merchant_stock.duplicate()
 	var spos_a32: Dictionary = game.spire_pos.duplicate()
+	var mf_a32: Dictionary = game.mission_flags.duplicate()
+	var host_a32: bool = game.net.is_host
 
 	# C1: a broken spire pays the gauntlet's first ticket — before this the
 	# sigil only spawned inside its own reward loop, a hard progression wall
@@ -7773,8 +7782,11 @@ func run() -> void:
 
 	# H2: parentage rides bred eggs only — a wild egg can never drain the
 	# ranch's bloodline queue (the old shared-id FIFO let it)
+	var ep_a32 := {}
 	for k78 in game.structures:
-		game.structures[k78].erase("egg_parents") # fixture isolation
+		if game.structures[k78].has("egg_parents"):
+			ep_a32[k78] = game.structures[k78]["egg_parents"]
+			game.structures[k78].erase("egg_parents") # fixture isolation — restored below
 	var inc78 := Vector2i(-1, -1)
 	for r78 in range(2, 40):
 		var done78 := false
@@ -7856,7 +7868,7 @@ func run() -> void:
 		check("a guest can't drain the replica store", ranch_st["store"].size() == 1
 			and game.item_count("gold_coin") == gold1_32,
 			"store=%s gold=%d" % [ranch_st["store"], game.item_count("gold_coin")])
-		game.net.is_host = true
+		game.net.is_host = host_a32
 		game.net.multiplayer.multiplayer_peer = pp_a32
 		peer_a32.close()
 		game.player.pos = ppos79
@@ -7867,6 +7879,9 @@ func run() -> void:
 				game.world.structures.erase(game.world.idx(cc79.x, cc79.y))
 		if is_instance_valid(ranch_st.get("node")):
 			ranch_st["node"].queue_free()
+	for k79 in ep_a32:
+		if game.structures.has(k79):
+			game.structures[k79]["egg_parents"] = ep_a32[k79]
 	game.items = items_a32
 
 	# spos: arena markers ride the save — real tags merge, forged cells die
@@ -7883,8 +7898,17 @@ func run() -> void:
 		and not game.spire_pos.has("spire_99") and not game.spire_pos.has("bogus")
 		and not game.spire_pos.has("spire_1") and not game.spire_pos.has("spire_2"),
 		"spos=%s" % game.spire_pos)
+	# and the REAL writer's output rides back too — a sentinel a guardian could
+	# never derive proves the spos schema, not the self-heal path
+	game.spire_pos = {"spire_0": Vector2i(11, 21)}
+	game.save_game()
+	var rload78: bool = game.load_game()
+	check("real save round-trips a spire marker", rload78
+		and game.spire_pos.get("spire_0") == Vector2i(11, 21),
+		"spos=%s" % game.spire_pos)
 	game.items = items_a32
 	game.spires_done = sd_a32
+	game.mission_flags = mf_a32
 
 	# L1: every arena's south door opens onto walkable same-elev ground — all
 	# three placement passes enforce it, so no guardian gates behind a cliff.
@@ -7894,13 +7918,14 @@ func run() -> void:
 	var door_bad := ""
 	for tag80 in game.spire_pos:
 		var sp80: Vector2i = game.spire_pos[tag80]
-		if game.world.blocked(sp80.x, sp80.y + 3) \
-				or game.world.elev_at(sp80.x, sp80.y + 3) != game.world.elev_at(sp80.x, sp80.y + 1):
+		if game.world.blocked(sp80.x, sp80.y + 2, sp80.x + 0.5, sp80.y + 1.5) \
+				or game.world.blocked(sp80.x, sp80.y + 3, sp80.x + 0.5, sp80.y + 2.5):
 			door_bad = tag80
 	check("every spire door opens onto walkable ground", door_bad == ""
 		and game.spire_pos.size() == game.SPIRE_DEFS.size(),
 		"bad=%s n=%d" % [door_bad, game.spire_pos.size()])
 	game.spire_pos = spos_a32
+	game.mission_flags = mf_a32
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

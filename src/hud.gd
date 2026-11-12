@@ -697,7 +697,7 @@ func interact() -> void:
 				game.craft_station = st["id"]
 				game.panel = "craft"
 				return
-			"furnace", "mill", "crusher", "logging_site", "stone_pit", "gathering_site", "ore_mine", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy", "generator", "ranch", "cooler":
+			"furnace", "mill", "crusher", "logging_site", "stone_pit", "gathering_site", "ore_mine", "berry_farm", "wheat_farm", "oil_extractor", "pharmacy", "generator", "ranch", "cooler", "apiary", "fish_trap", "sphere_factory", "sphere_factory_2", "compost_bin", "expedition_post":
 				# automated sites: E takes the stockpile — output shouldn't be
 				# hostage to a staffed hauler (audit-32). Bag overflow spills
 				# to the ground via add_item's own rule. Replica stores are the
