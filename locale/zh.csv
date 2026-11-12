@@ -957,3 +957,4 @@ You're starving — eat berries or cooked food (dpad-up opens the bag),You're st
 "%s gave up hauling","%s gave up hauling","%s放弃搬运"
 "%s couldn't reach a chest — goods dropped at its feet","%s couldn't reach a chest — goods dropped at its feet","%s够不到箱子——货物丢在脚边"
 "%s has nowhere to stash %s","%s has nowhere to stash %s","%s没地方存%s"
+"The island is too crowded for a raid boss","The island is too crowded for a raid boss","岛上太拥挤，突袭首领进不来"

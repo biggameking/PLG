@@ -189,6 +189,8 @@ func enter_phase_two() -> void:
 		m.aggro = 0
 		m.aggro_pid = aggro_pid
 		m.home = home
+		m.raid = true # entourage is a temporary invader — the sweep retires it
+		m.set_meta("raid_t0", game.t) # else legendary adds would stand forever
 		game.pals.append(m)
 		n += 1
 
@@ -933,6 +935,8 @@ func tick_statuses(dt: float) -> void:
 func take_dps(n: int) -> void:
 	hp -= n
 	hit_flash = 0.2
+	if boss and phase == 1 and hp > 0 and hp < max_hp * 0.5:
+		enter_phase_two() # symmetric damage rule: burn can't skip the pact slam
 	if hp <= 0:
 		game.kill_pal(self, false)
 

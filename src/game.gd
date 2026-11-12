@@ -1094,13 +1094,31 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 			gauntlet["left"] -= 1
 		if p.spire_tag != "":
 			record_spire(p.spire_tag)
+		elif p.boss and p.home != Vector2.ZERO:
+			# a guardian that lost its tag (pre-stag save, forged row) still
+			# guards a marked spire — derive it by proximity so the kill
+			# records instead of walling the campaign forever (audit-40)
+			for tg2 in spire_pos:
+				if not spires_done.has(str(tg2)) \
+						and Vector2(spire_pos[tg2]).distance_to(p.home) <= 8.0:
+					record_spire(str(tg2))
+					break
 		if (p.alpha or p.boss) and not p.raid and p.spire_tag == "" and p.home != Vector2.ZERO \
 				and boss_respawns.size() < MAX_RESPAWNS:
 			# the island dens refill: a slain boss returns to its anchor ~1.5 days
-			# on. Raid/gauntlet attackers have no den — they stay dead.
-			boss_respawns.append({"sid": p.species_id, "lv": p.level,
-				"pos": [p.home.x, p.home.y], "alpha": p.alpha, "boss": p.boss,
-				"at": t + DAY_LEN * 1.5})
+			# on. Raid/gauntlet attackers have no den — they stay dead. A den
+			# may only queue one heir: catch → KO-overflow → rewild → re-kill
+			# would otherwise stack doubles and spawn twins (audit-40)
+			var den_dup := false
+			for br in boss_respawns:
+				if br.get("sid") == p.species_id and br.get("pos") is Array \
+						and Vector2(br["pos"][0], br["pos"][1]).distance_to(p.home) <= 4.0:
+					den_dup = true
+					break
+			if not den_dup:
+				boss_respawns.append({"sid": p.species_id, "lv": p.level,
+					"pos": [p.home.x, p.home.y], "alpha": p.alpha, "boss": p.boss,
+					"at": t + DAY_LEN * 1.5})
 		p.queue_free()
 
 const MAX_RESPAWNS := 64 # scheduled den refills — bounded like every runtime set
@@ -1701,6 +1719,9 @@ func summon_raid() -> bool:
 	if kinbox_pos.x < 0:
 		log_msg(tr("Need a kinbox to summon the raid"))
 		return false
+	if pals.size() >= MAX_PALS:
+		log_msg(tr("The island is too crowded for a raid boss"))
+		return false # the cap binds attackers too — the horn refuses, sigil kept
 	var pool: Array = SpeciesGen.zone_pool(3)
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	var bp := preload("res://src/kin.gd").new()
@@ -2461,7 +2482,10 @@ func danger_active() -> bool:
 	if not gauntlet.is_empty():
 		return true
 	for q in pals:
-		if q.hp > 0 and (q.raid or (q.boss and q.phase == 2)):
+		if q.hp > 0 and (q.raid \
+				or (q.boss and q.phase == 2 and (q.aggro >= 0 or q.aggro_pid > 0))):
+			# a leashed home-walking phase-2 boss is dormant, not danger — the
+			# drone stands down until it re-engages (audit-40)
 			return true
 	return false
 
@@ -2603,14 +2627,22 @@ func _process(dt: float) -> void:
 		# base raid waves
 		tick_raid(dt)
 		tick_supply(dt)
-		for q in pals.duplicate(): # stale raiders wander off instead of stacking up
-			# gauntlet pals are exempt — a timeout that counts as a kill pays the
-			# trial for kiting laps. They aggro the keeper; they stay till it ends.
-			if q.mode == "wild" and q.raid and not q.boss and not q.has_meta("gauntlet") \
-					and t - q.get_meta("raid_t0", t) > 240.0:
-				pals.erase(q)
-				q.queue_free()
+		tick_raider_sweep()
 	tick_migration(dt) # deliberate local-fauna authority — see tick_migration
+
+func tick_raider_sweep() -> void:
+	# stale raiders wander off instead of stacking up. Gauntlet pals are
+	# exempt while the trial lives — a timeout that counts as a kill pays the
+	# trial for kiting laps; they aggro the keeper till it ends. With no live
+	# trial even a boss-flagged raider is a temporary invader: a mid-gauntlet
+	# save would otherwise strand it here forever — uncatchable, permanent,
+	# sleep-blocking (audit-40).
+	for q in pals.duplicate():
+		if q.mode == "wild" and q.raid and (gauntlet.is_empty() \
+				or (not q.boss and not q.has_meta("gauntlet"))) \
+				and t - q.get_meta("raid_t0", t) > 240.0:
+			pals.erase(q)
+			q.queue_free()
 
 # ---------- building / tech / crafting / base ----------
 
@@ -4491,7 +4523,7 @@ func load_game() -> bool:
 		log_msg(tr("Save layout predates the current world format - fresh terrain"))
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
 	day = maxi(_i(d["day"]), 1); tod = clampf(_f(d["tod"]), 0.0, 24.0) # typed vars — a foreign string would throw on assignment; tod>24 would fast-forward a day per frame until under 24
-	raid_t = _f(d.get("raid_t", raid_t))
+	raid_t = clampf(_f(d.get("raid_t", raid_t)), 0.0, 600.0) # a hostile timer can't pin raids forever or fire one mid-load
 	for dd0 in (d["drops"] if d.get("drops") is Array else []): # a scalar/null drops field aborts the loop itself — guard at the door
 		if dd0 is Dictionary and dd0.has("id") and dd0.has("x") and dd0.has("y") \
 				and ItemData.ITEMS.has(str(dd0["id"])) \
@@ -4551,7 +4583,9 @@ func load_game() -> bool:
 			var stg := str(tg)
 			if spire_tag_ok(stg):
 				spires_done[stg] = true
-	crowned = (d.get("crowned") is bool and d["crowned"]) and spires_done.size() >= SPIRE_DEFS.size() # the crown must be earned, not written — and "x" == true aborts like int({}) does
+	crowned = spires_done.size() >= SPIRE_DEFS.size() # the crown re-derives
+	# from the ruins themselves — a flag lost in a merged save re-mints, and a
+	# forged crowned:false can't dethrone a finished campaign (audit-40)
 	var spv2 = d.get("spos", {})
 	if spv2 is Dictionary: # arena markers: real tags, in-bounds ints only
 		for tk in spv2.keys():
@@ -4676,7 +4710,11 @@ func load_game() -> bool:
 		np.mode = m0 # already whitelisted above
 		if np.mode == "expedition":
 			np.visible = false # off-map until its post calls it home
-		np.hp = clampf(_f(pd.get("hp", np.max_hp)), 0.0, np.max_hp); np.talent = clampi(_i(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
+		var hp_saved := _f(pd.get("hp", -1.0)) # absolute under the OLD
+		# max_hp — clamping here against the un-multiplied base would shave an
+		# 8x guardian to 1/8 hp on every reload. The real clamp lands after
+		# apply_bonuses() re-derives max_hp below (audit-40).
+		np.talent = clampi(_i(pd.get("talent", np.talent)), 0, 100) # talent outside [0,100] flips stat_at's multiplier negative
 		if pd.get("sex") != null:
 			np.sex = "F" if str(pd["sex"]) == "F" else "M"
 		if pd.get("passives") is Array:
@@ -4723,10 +4761,16 @@ func load_game() -> bool:
 			np.sprite.scale = Vector2(1.5, 1.5)
 			np.sprite.position.y = -48.0
 		if np.raid:
-			np.set_meta("raid_t0", t - _f(pd.get("rt0", 0.0))) # preserve despawn countdown
+			np.set_meta("raid_t0", t - clampf(_f(pd.get("rt0", 0.0)), 0.0, 600.0)) # a negative rt0 would pin the raider past its 240s sweep forever
 		var rvs = pd.get("revive", 0.0)
 		np.revive_t = t + float(rvs) if _fin(rvs) and float(rvs) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
+		if hp_saved < 0.0:
+			np.hp = np.max_hp # a missing field heals full under the REAL max
+		else:
+			np.hp = clampf(hp_saved, 0.0, np.max_hp) # alpha/boss/star/soul/
+			# lucky multipliers landed — the saved absolute hp now clamps
+			# against the real max, not the setup-time base (audit-40)
 		if np.mode == "box":
 			if box.size() < MAX_BOX + 32: # same overflow lane the KO path uses
 				box.append(np)
@@ -5100,7 +5144,8 @@ func start_raid() -> void:
 			if world.blocked(tx, ty):
 				continue
 			var zone := world.zone_at(tx, ty)
-			# raiders stay catchable kin — ironpact humans included — but never legends
+			# raiders are kin species — ironpact humans stay UNcatchable
+			# (ownable=false) even though they ride the same wave — never legends
 			var pool: Array = (ZONE_SPECIES[zone] + SpeciesGen.zone_pool(zone)).filter(
 				func(s): return s not in LEGENDARY_DEN)
 			var hostile_pool := pool.filter(func(s): return SpeciesData.species_of(s).get("hostile", 0) >= 1)
@@ -5113,6 +5158,8 @@ func start_raid() -> void:
 				var themed := hostile_pool.filter(func(s): return raid_theme != "" and raid_theme in SpeciesData.species_of(s).get("elements", []))
 				pick_pool = themed if not themed.is_empty() else hostile_pool
 			var sid: String = pick_pool[rng.int_range(0, pick_pool.size() - 1)]
+			if pals.size() >= MAX_PALS:
+				break # the cap binds attackers too — a wave can't push past it
 			var rp := preload("res://src/kin.gd").new()
 			entity_layer.add_child(rp)
 			rp.setup(self, sid, rng.int_range(3 + zone * 3 + day_bonus, 6 + zone * 5 + day_bonus), Vector2(tx + 0.5, ty + 0.5))

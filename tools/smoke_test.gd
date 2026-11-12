@@ -7728,8 +7728,10 @@ func run() -> void:
 	check("the merchant's briefcase can carry a sigil", sig_seen)
 	game.merchant_stock = ms_a32
 
-	# H1: the 240s stale-raider sweep must spare gauntlet kin — a kited wave
-	# that times out would count as cleared and pay the trial for free
+	# H1: the 240s stale-raider sweep spares gauntlet kin ONLY while the trial
+	# lives — a kited wave that times out would count as cleared and pay the
+	# trial for free; with no live trial even a tagged raider is an orphan
+	# and the sweep retires it (audit-40)
 	var gk: Kin = game.gen_pal("fenlump", 1, Vector2(8, 8))
 	gk.mode = "wild"; gk.raid = true; gk.boss = false
 	gk.set_meta("gauntlet", true); gk.set_meta("raid_t0", game.t - 999.0)
@@ -7738,16 +7740,17 @@ func run() -> void:
 	rk78.mode = "wild"; rk78.raid = true; rk78.boss = false
 	rk78.set_meta("raid_t0", game.t - 999.0)
 	game.pals.append(rk78)
-	game.gauntlet = {} # empty: tick_gauntlet early-returns, the sweep is what runs
-	var st_a32: String = game.state
-	game.state = "play"
-	game._process(0.05)
+	game.gauntlet = {"wave": 1, "left": 2} # a live trial shields its raiders
+	game.tick_raider_sweep()
 	check("the stale-raider sweep spares gauntlet kin", game.pals.has(gk))
 	check("...but still clears a plain raider", not game.pals.has(rk78))
-	game.state = st_a32
-	game.pals.erase(gk)
-	if gk.get_parent(): gk.get_parent().remove_child(gk)
-	gk.free()
+	game.gauntlet = {} # trial over — the same tagged raider is now an orphan
+	game.tick_raider_sweep()
+	check("...and an orphaned gauntlet raider retires", not game.pals.has(gk))
+	if is_instance_valid(gk):
+		game.pals.erase(gk)
+		if gk.get_parent(): gk.get_parent().remove_child(gk)
+		gk.free()
 	if is_instance_valid(rk78):
 		if rk78.get_parent(): rk78.get_parent().remove_child(rk78)
 		rk78.free()
@@ -8368,6 +8371,140 @@ func run() -> void:
 	game.kill_pal(berk39, true)
 	check("a KO clears the rampage", berk39.berserk_t == 0.0 and berk39.mode == "box")
 	game.box.erase(berk39); berk39.get_parent().remove_child(berk39); berk39.free()
+
+	# --- audit-40: boss/endgame mechanics hardening ---
+	# F1: a flagged kin keeps its hp across save/load — the clamp lands AFTER
+	# apply_bonuses, so an 8x guardian doesn't reload at 1/8 health
+	var hpal40: Kin = game.gen_pal("loampuff", 12, p.pos)
+	hpal40.boss = true; hpal40.alpha = true
+	hpal40.apply_bonuses() # fold the multipliers — mirrors the load order
+	hpal40.hp = hpal40.max_hp * 0.6
+	hpal40.mode = "wild"
+	game.pals.append(hpal40)
+	game.save_game(); game.load_game()
+	var hback := false
+	for q in game.pals:
+		if q.species_id == "loampuff" and q.boss and q.alpha \
+				and absf(q.hp / q.max_hp - 0.6) < 0.05:
+			hback = true # old order clamps to the base max — ratio ~0.1, not 0.6
+	check("a flagged kin keeps its hp across the load", hback)
+	for q in game.pals.duplicate():
+		if q.species_id == "loampuff" and q.boss and q.alpha:
+			game.pals.erase(q); q.get_parent().remove_child(q); q.free()
+
+	# F2: burn/poison crossing the 50% line must fire the pact — the phase
+	# gate is shared by every damage path now
+	var dboss40: Kin = game.gen_pal("loampuff", 20, p.pos)
+	dboss40.boss = true; dboss40.apply_bonuses()
+	dboss40.phase = 1; dboss40.mode = "wild"
+	dboss40.hp = dboss40.max_hp * 0.6
+	game.pals.append(dboss40)
+	dboss40.take_dps(int(dboss40.max_hp * 0.2)) # DoT crosses the threshold
+	check("DoT triggers the phase gate", dboss40.phase == 2 and dboss40.hp > 0)
+	var db40_uid := dboss40.uid # capture before free — the pack follows it
+	game.pals.erase(dboss40)
+	if dboss40.get_parent(): dboss40.get_parent().remove_child(dboss40)
+	dboss40.free()
+	for q in game.pals.duplicate():
+		if q.get_meta("summoner", -1) == db40_uid:
+			game.pals.erase(q)
+			if q.get_parent(): q.get_parent().remove_child(q)
+			q.free()
+
+	# F3: the raider sweep is a callable rule — with no live trial even a
+	# boss-flagged raider retires; inside a trial it is exempt
+	var g40: Dictionary = game.gauntlet
+	game.gauntlet = {}
+	var swp40: Kin = game.gen_pal("fenjelly", 8, p.pos)
+	swp40.boss = true; swp40.raid = true; swp40.mode = "wild"
+	swp40.set_meta("raid_t0", game.t - 600.0)
+	game.pals.append(swp40)
+	game.tick_raider_sweep()
+	check("an orphaned raid boss is swept", not (swp40 in game.pals))
+	var swp41: Kin = game.gen_pal("fenjelly", 8, p.pos)
+	swp41.raid = true; swp41.mode = "wild"; swp41.set_meta("gauntlet", true)
+	swp41.set_meta("raid_t0", game.t - 600.0)
+	game.pals.append(swp41)
+	game.gauntlet = {"wave": 1, "left": 2}
+	game.tick_raider_sweep()
+	check("a live trial keeps its raiders", swp41 in game.pals)
+	game.pals.erase(swp41); swp41.get_parent().remove_child(swp41); swp41.free()
+	game.gauntlet = g40
+
+	# F4: a leashed phase-2 boss is dormant — it holds no danger flag until
+	# it re-engages; the assertion compares against the same world minus it
+	var dan40: Kin = game.gen_pal("loampuff", 15, p.pos)
+	dan40.boss = true; dan40.apply_bonuses()
+	dan40.phase = 2; dan40.mode = "wild"
+	dan40.aggro = -1; dan40.aggro_pid = 0; dan40.raid = false
+	game.pals.append(dan40)
+	var d_with: bool = game.danger_active()
+	dan40.hp = 0
+	check("a dormant phase-2 boss adds no danger", d_with == game.danger_active())
+	dan40.hp = 50.0; dan40.aggro = 0
+	check("an engaged phase-2 boss is danger", game.danger_active())
+	dan40.hp = 0
+	game.pals.erase(dan40); dan40.get_parent().remove_child(dan40); dan40.free()
+
+	# F5: the horn fails closed at the kin cap — attackers can't push past it
+	var kpos40 := game.kinbox_pos
+	game.kinbox_pos = Vector2i(int(p.pos.x), int(p.pos.y))
+	var dummies40 := []
+	while game.pals.size() < game.MAX_PALS:
+		var dum40: Kin = game.gen_pal("fenjelly", 1, p.pos)
+		game.pals.append(dum40); dummies40.append(dum40)
+	check("the horn refuses at MAX_PALS", game.summon_raid() == false
+		and game.pals.size() == game.MAX_PALS)
+	for d40 in dummies40:
+		game.pals.erase(d40); d40.get_parent().remove_child(d40); d40.free()
+	game.kinbox_pos = kpos40
+
+	# F6: a guardian that lost its spire_tag still records its kill — the
+	# position fallback keeps the campaign completable (pre-stag saves)
+	var stag40 := ""
+	for tg40 in game.spire_pos:
+		if not game.spires_done.has(str(tg40)):
+			stag40 = str(tg40); break
+	if stag40 != "":
+		var gboss40: Kin = game.gen_pal("loampuff", 25,
+			Vector2(game.spire_pos[stag40]))
+		gboss40.boss = true; gboss40.apply_bonuses()
+		gboss40.spire_tag = ""; gboss40.home = Vector2(game.spire_pos[stag40])
+		gboss40.mode = "wild"
+		game.pals.append(gboss40)
+		var sd40: Dictionary = game.spires_done.duplicate()
+		var cr40: bool = game.crowned
+		var sig40 := int(game.items.get("gauntlet_sigil", 0))
+		game.kill_pal(gboss40, true)
+		check("an untagged guardian still records its spire",
+			game.spires_done.has(stag40))
+		game.spires_done = sd40; game.crowned = cr40
+		if sig40 <= 0:
+			game.items.erase("gauntlet_sigil")
+		else:
+			game.items["gauntlet_sigil"] = sig40
+
+	# F7/F8: hostile timers coerce and the crown re-derives from the ruins —
+	# a forged save can't pin raids or dethrone a finished campaign
+	var sf40 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	sf40.store_var({"seed": game.world.seed, "day": 1, "tod": 8.0,
+		"tech_points": 0, "unlocked": [], "items": {}, "party": [],
+		"player": {"hp": 50.0, "level": 1, "xp": 0, "cap_lv": 1},
+		"kin": [{"sp": "fenjelly", "lv": 3, "hp": 10.0, "mode": "wild",
+				"raid": true, "rt0": -999.0,
+				"pos": [p.pos.x + 1, p.pos.y]}],
+		"structures": {}, "raid_t": -9999.0,
+		"spires": ["spire_0", "spire_1", "spire_2", "spire_3", "spire_4"],
+		"crowned": false})
+	sf40.close()
+	var sload40: bool = game.load_game()
+	check("hostile raid_t coerced on load", sload40 and game.raid_t >= 0.0)
+	var rt_ok40 := true
+	for q in game.pals:
+		if q.raid and q.get_meta("raid_t0", 0.0) > game.t + 0.5:
+			rt_ok40 = false
+	check("a negative rt0 can't pin a raider", rt_ok40)
+	check("the crown re-derives from the ruins", sload40 and game.crowned)
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
