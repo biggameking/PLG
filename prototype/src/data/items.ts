@@ -68,7 +68,7 @@ export const ITEMS: Record<string, ItemDef> = {
   fenjelly_mutton: { id: "fenjelly_mutton", name: "Fenjelly Mutton", glyph: "♦", color: "#e64533", kind: "food", stack: 999, food: 35, desc: "Mutton." },
   roast_mutton: { id: "roast_mutton", name: "Roast Mutton", glyph: "♦", color: "#b86a30", kind: "food", stack: 999, food: 60, price: 18, buff: { def: 0.1, t: 300 }, desc: "grilled fenjelly — +10% defense for a while." },
   fried_egg: { id: "fried_egg", name: "Fried Egg", glyph: "⊙", color: "#e8d44d", kind: "food", stack: 999, food: 40, buff: { spd: 0.1, t: 300 }, desc: "Cooked egg. +10% speed for a while." },
-  cake: { id: "cake", name: "Cake", glyph: "▒", color: "#f2a0b5", kind: "food", stack: 999, food: 80, san: 15, desc: "Raises SAN a lot." },
+  cake: { id: "cake", name: "Cake", glyph: "▒", color: "#f2a0b5", kind: "food", stack: 999, food: 80, price: 40, san: 15, desc: "Raises SAN a lot." },
 
   // seeds
   berry_seeds: { id: "berry_seeds", name: "Berry Seeds", glyph: "·", color: "#e64533", kind: "seed", stack: 999, desc: "Plant at a plantation." },
@@ -77,7 +77,7 @@ export const ITEMS: Record<string, ItemDef> = {
 
   // orbs (capture stat mirrors tiers)
   kin_orb: { id: "kin_orb", name: "Kin Orb", glyph: "◐", color: "#4d9de0", kind: "orb", stack: 50, spherePower: 26, desc: "Standard orb." },
-  mega_orb: { id: "mega_orb", name: "Mega Orb", glyph: "◐", color: "#4caf50", kind: "orb", stack: 50, spherePower: 42, desc: "Improved orb." },
+  mega_orb: { id: "mega_orb", name: "Mega Orb", glyph: "◐", color: "#4caf50", kind: "orb", stack: 50, price: 45, spherePower: 42, desc: "Improved orb." },
   giga_orb: { id: "giga_orb", name: "Giga Orb", glyph: "◐", color: "#e8d44d", kind: "orb", stack: 50, spherePower: 58, desc: "Strong orb." },
   ultra_orb: { id: "ultra_orb", name: "Ultra Orb", glyph: "◐", color: "#e8963c", kind: "orb", stack: 50, spherePower: 75, desc: "Very strong orb." },
   legendary_orb: { id: "legendary_orb", name: "Legendary Orb", glyph: "◐", color: "#e64533", kind: "orb", stack: 50, spherePower: 95, desc: "Best orb." },

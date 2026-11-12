@@ -553,7 +553,7 @@ IT GRINS.,IT GRINS.,它在狞笑。
 IT REARS UP,IT REARS UP,它人立而起
 Join failed,Join failed,加入失败
 Joining %s:%d ...,Joining %s:%d ...,正在加入 %s:%d ……
-Kin gacha: it wants 30 gold in the slot,Kin gacha: it wants 30 gold in the slot,精灵扭蛋机：投币口要 30 金
+Kin gacha: it wants %d gold in the slot,Kin gacha: it wants %d gold in the slot,精灵扭蛋机：投币口要 %d 金
 Kinbox full - make room first,Kinbox full - make room first,兽箱已满——先腾个位置
 Kinbox is full,Kinbox is full,兽箱已满
 Kinbox is full — the captive won't leave its cage,Kinbox is full — the captive won't leave its cage,兽箱已满——囚徒不肯离开笼子

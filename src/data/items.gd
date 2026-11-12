@@ -463,6 +463,7 @@ const ITEMS = {
   "kind": "food",
   "stack": 999,
   "food": 80,
+  "price": 40,
   "san": 15,
   "desc": "Raises SAN a lot."
  },
@@ -511,6 +512,7 @@ const ITEMS = {
   "color": "#4caf50",
   "kind": "orb",
   "stack": 50,
+  "price": 45,
   "spherePower": 42,
   "desc": "Improved orb."
  },

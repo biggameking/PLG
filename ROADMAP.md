@@ -1132,3 +1132,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   class seen in dusk/night hint tests).
 - 8 new assertions; 893/0/1skip; S81 live-play 0 failures; guide+kinbox
   PNGs verified. Audit doc: docs/reviews/audit-36-touch-guest.md.
+
+### S83 — economy-flow audit (audit-37) — SHIPPED
+- Closed two positive-EV mints by arithmetic, not vibes: gacha pull
+  (30→45 const + lv1 sell base 40→20 → EV 35.2 < cost) and the
+  merchant cake→ranch→bred-egg loop (cake 15-fallback → price 40).
+- mega_orb priced 45 (was unpriced 15-fallback); sleep now wakes kin at
+  hunger 60 instead of zeroing the food economy; merchant murders pay
+  drop/deaths with a persistent `mdeaths` save field.
+- Accord effigy sink uncapped (3→99 per visit) — the deepest
+  gold→power conversion the island offers is real, not time-gated.
+- 7 new assertions; 902/0/1skip. Audit doc: docs/reviews/audit-37-economy-flow.md.
+- Deferred: client bag-trust chest mint (LAN co-op threat model).

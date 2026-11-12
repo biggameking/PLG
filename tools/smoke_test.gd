@@ -1305,7 +1305,7 @@ func run() -> void:
 		game.add_item("gold_coin", 100)
 		game.gacha_pull()
 		gc_ok = game.item_count("kin_egg") + game.item_count("huge_kin_egg") == gc_eggs0 + 1 \
-			and game.item_count("gold_coin") == gc_gold0 + 70 # 100 in, 30 spent
+			and game.item_count("gold_coin") == gc_gold0 + 100 - Game.GACHA_COST # spend the slot price
 		game.add_item("gold_coin", -(game.item_count("gold_coin") - gc_gold0))
 		# the pulled egg must leave too — the incubator test counts its own eggs
 		game.add_item("kin_egg", gc_pe0 - game.item_count("kin_egg"))
@@ -8146,7 +8146,7 @@ func run() -> void:
 	game.gen_merchant_stock()
 	var eff36: Array = game.merchant_stock.filter(func(e): return e.get("id") == "sprigmelt_effigy")
 	check("a sealed accord stocks effigies every visit",
-		eff36.size() == 1 and int(eff36[0].get("n", 0)) == 3,
+		eff36.size() == 1 and int(eff36[0].get("n", 0)) == 99,
 		"rows=%d" % eff36.size())
 	game.accord = accord0
 
@@ -8210,6 +8210,45 @@ func run() -> void:
 	lv1_lk.free()
 	check("a lucky hatchling still resells below a huge egg",
 		lucky_worth < huge_price36, "sell=%d huge=%d" % [lucky_worth, huge_price36])
+	# S83 full-EV sweep: best-of(raw-sell, hatch-sell) per egg outcome must
+	# stay under the pull price, or the machine mints again
+	var kin_best := maxf(maxi(1, int(egg_price36 * 0.5)), float(lv1_worth))
+	var huge_best := maxf(maxi(1, int(huge_price36 * 0.5)), float(lucky_worth))
+	var pull_ev := 0.9 * kin_best + 0.1 * huge_best
+	check("the gacha EV stays below the slot", float(game.GACHA_COST) > pull_ev,
+		"cost=%d ev=%.1f" % [game.GACHA_COST, pull_ev])
+	# ranch catalyst must outprice whatever the egg pays back
+	var cake_price: int = int(ItemData.ITEMS.get("cake", {}).get("price", 0))
+	var bred_sell := maxf(int(ItemData.ITEMS.get("bred_kin_egg", {}).get("price", 0) * 0.5),
+		float(lv1_worth))
+	check("cake can't flip into a bred-egg mint", float(cake_price) > bred_sell,
+		"cake=%d pay=%.0f" % [cake_price, bred_sell])
+	# sleep feeds the morning, not erases the night — workers wake hungry
+	var day36 := game.day
+	var tod36 := game.tod
+	for p36 in game.pals:
+		p36.raid = false
+		if p36.mode == "wild":
+			p36.aggro = -1
+	var bed_pal := Kin.new()
+	bed_pal.setup(game, "puffmite", 4, game.player.pos)
+	bed_pal.mode = "base"; bed_pal.hunger = 95.0
+	game.pals.append(bed_pal)
+	game.entity_layer.add_child(bed_pal)
+	game.sleep_to_morning()
+	check("a sleeping kin wakes hungry, not fed",
+		bed_pal.hunger > 40.0 and bed_pal.hunger < 100.0,
+		"hunger=%.0f" % bed_pal.hunger)
+	game.day = day36; game.tod = tod36
+	game.pals.erase(bed_pal)
+	game.entity_layer.remove_child(bed_pal)
+	bed_pal.free()
+	# the Pact's tab survives a save — murder once, pay less forever
+	game.merchant_deaths = 3
+	game.save_game()
+	var sv36: Variant = FileAccess.open("user://savegame.plg", FileAccess.READ).get_var()
+	check("pact ledger rides the save", sv36 is Dictionary and int(sv36.get("mdeaths", 0)) == 3)
+	game.merchant_deaths = 0
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →

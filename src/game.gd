@@ -1679,11 +1679,11 @@ func sleep_to_morning() -> void:
 		if q.mode == "base" or q.mode == "partner":
 			q.hp = q.max_hp
 			q.san = 100.0
-			q.hunger = 0.0
+			q.hunger = 60.0 # a night's fast, not a reset — the feed loop must matter
 	for qb in bench: # orbs rest too — the island party pals wake fresh
 		qb.hp = qb.max_hp
 		qb.san = 100.0
-		qb.hunger = 0.0
+		qb.hunger = 60.0
 	log_msg(tr("You sleep until dawn. Day %d") % day)
 
 func summon_raid() -> bool:
@@ -4338,7 +4338,7 @@ func save_game() -> void:
 		spos_sv[tk3] = [vp3.x, vp3.y] # arrays are the position schema — a raw Vector2i would fail the loader's `is Array` coercion
 	var d := {
 		"seed": world.seed, "day": day, "tod": tod, "tech_points": tech_points,
-		"raid_t": raid_t,
+		"raid_t": raid_t, "mdeaths": merchant_deaths,
 		"unlocked": unlocked, "items": items, "party": party, "rparties": rparties_sv,
 		"party_idx": party.map(func(u):
 			var pp: Kin = find_pal(u)
@@ -4543,6 +4543,7 @@ func load_game() -> bool:
 				spire_pos[str(tk)] = Vector2i(_i(tp2[0]), _i(tp2[1]))
 	weather = str(d.get("weather", "clear")) if str(d.get("weather", "clear")) in ["clear", "rain", "storm", "drought"] else "clear"
 	weather_t = clampf(_f(d.get("wthr_t", 0.0)), 0.0, 120.0)
+	merchant_deaths = clampi(_i(d.get("mdeaths", 0)), 0, 100) # the Pact's ledger crosses saves
 	var gtv = d.get("grotto", []) # dungeon markers ride the save like everything else
 	grotto_pos = Vector2i(_i(gtv[0]), _i(gtv[1])) \
 		if gtv is Array and gtv.size() == 2 and _fin(gtv[0]) and _fin(gtv[1]) else Vector2i(-1, -1)
@@ -6425,6 +6426,7 @@ func regenerate(s: int) -> void:
 	catch_counts.clear(); catch_streak = 0 # fresh world, fresh ten-streak math
 	player.statuses.clear() # the old world's burns don't carry over
 	despawn_merchant() # new world, new route — the trader doesn't follow
+	merchant_deaths = 0 # a new keeper hasn't wronged the Pact yet
 	world.generate(s)
 	drawer.setup(world)
 	queue_redraw_decor() # the decor pool is keyed by cell — old-world sprites must be rebuilt
@@ -7170,13 +7172,15 @@ func notice_board_action() -> void:
 	log_msg(tr("Board request filled: %d %s → +%d gold") % [qn, iname, gold])
 	board_quest["id"] = "" # filled — the board stays quiet until tomorrow
 
+const GACHA_COST := 45 # must beat 0.9×lv1-sell + 0.1×huge-sell EV — else it's a mint
+
 func gacha_pull() -> void:
-	# feed the brass mouth 30 gold — the brass takes its cut: eggs resold
+	# feed the brass mouth — the brass takes its cut: eggs resold
 	# don't cover the pull, so the machine stays a sink not a mint
-	if item_count("gold_coin") < 30:
-		log_msg(tr("Kin gacha: it wants 30 gold in the slot"))
+	if item_count("gold_coin") < GACHA_COST:
+		log_msg(tr("Kin gacha: it wants %d gold in the slot") % GACHA_COST)
 		return
-	add_item("gold_coin", -30)
+	add_item("gold_coin", -GACHA_COST)
 	var eid: String = "huge_kin_egg" if rng.chance(0.1) else "kin_egg"
 	add_item(eid, 1)
 	floater(player.pos, tr("★ %s!") % tr(str(ItemData.ITEMS[eid]["name"])),
@@ -7235,9 +7239,10 @@ func gen_merchant_stock() -> void:
 	if rng.chance(0.10):
 		merchant_stock.append({"id": "gauntlet_sigil", "n": 1, "price": 120})
 	# the Accord's standing order: a sealed keeper can always buy effigies —
-	# a real gold sink plumbed into soul_infuse, not a lottery line
+	# a real gold sink plumbed into soul_infuse, not a lottery line. Uncapped:
+	# 55 per kin is the deepest gold→power conversion the island offers
 	if accord:
-		merchant_stock.append({"id": "sprigmelt_effigy", "n": 3, "price": 160})
+		merchant_stock.append({"id": "sprigmelt_effigy", "n": 99, "price": 160})
 	# black-market kin (the island): a few capturable-free specimens, priced by
 	# zone rarity — deep-zone species cost real money
 	for i in rng.int_range(2, 3):
@@ -7284,6 +7289,7 @@ func despawn_merchant() -> void:
 	log_msg(tr("The merchant moved on"))
 
 var merchant_wanted := false # one hit squad per visit — wanted loop
+var merchant_deaths := 0     # the Pact remembers every corpse — each one pays less
 var merchant_hp := 60          # Entity has no hp field — Kin/Player shadow it
 
 func net_merchant_apply(on: bool, x: float, y: float) -> void:
@@ -7331,7 +7337,8 @@ func hit_merchant(dmg: float, pid := 0) -> void:
 		log_msg(tr("WANTED! The Iron Pact answers violence with violence"))
 		floater(merchant.pos, tr("GUARDS!"), "#ff5544")
 	if merchant_hp <= 0:
-		var drops_n := rng.int_range(30, 60)
+		merchant_deaths += 1 # repeat murders pay a fraction — not a farm
+		var drops_n := maxi(4, rng.int_range(30, 60) / merchant_deaths)
 		spawn_drop("gold_coin", drops_n, merchant.pos)
 		floater(merchant.pos, tr("+%dg") % drops_n, "#ffd76e")
 		log_msg(tr("The merchant is dead. The Iron Pact remembers"))
