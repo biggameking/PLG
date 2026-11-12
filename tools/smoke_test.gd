@@ -4356,7 +4356,9 @@ func run() -> void:
 		"respawns": [{"pos": [game.player.pos.x, game.player.pos.y], "lv": {}, "alpha": {}, "boss": [], "at": 9999.0, "sid": "fenjelly"}],
 		"structures": {5: {"id": "chest"}, "5,5": {"id": "kin_cage", "cap": {"sp": "no_such_species", "lv": 5}},
 			"9,9": {"id": "incubator", "inc": {"pair": ["a", "b", {}, {}], "left": []},
-				"egg": [[5, 6, 7, 8]]}}}) # foreign tails + short entries both fail _norm_pair → wild genetics
+				"egg": [[5, 6, 7, 8], # foreign tails + short entries both fail _norm_pair → wild genetics
+					["lamball", "chikipi", 50, 40, [], [], [], [],
+						["a".repeat(500), {}, 99]]]}}}) # hostile owner tail — only the int survives
 	hf.close()
 	var hload: bool = game.load_game()
 	var hkin_ok := false
@@ -4380,7 +4382,8 @@ func run() -> void:
 		and game.treasure.is_empty()
 		and (hcap == null or not hcap.has("captive"))
 		and (hinc == null or hinc.get("egg_inc", {}).get("pair", "x") == null)
-		and (hinc == null or hinc.get("egg_parents", [1]).is_empty())
+		and (hinc == null or (hinc.get("egg_parents", []).size() == 1
+			and hinc["egg_parents"][0][8] == [99])) # owner tail coerced: 500-char tag, dict, junk — all dropped
 		and hr_ok
 		and game.player.meal_buff.size() == 1 and absf(game.player.meal_buff.get("def", 0.0) - 0.5) < 0.001
 		and game.items.get("wood", 0) == 0, "wood=%s" % str(game.items.get("wood")))

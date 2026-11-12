@@ -4603,7 +4603,22 @@ func load_game() -> bool:
 						st["store"][str(sk2)] = maxi(int(cv), 0) # negative stock would make chest math lie
 			st["timer"] = maxf(_f(sv.get("timer", 0.0)), 0.0) # negative timer fires production instantly; st["timer"] += dt arithmetic follows — a string would throw
 			if sv.get("egg") is Array: # tick_ranch size()/pop_fronts this — anything else errors per frame
-				st["egg_parents"] = sv["egg"].filter(func(e2): return _norm_pair(e2) is Array) # the head shape hatch actually needs
+				st["egg_parents"] = []
+				for e2 in sv["egg"]:
+					if _norm_pair(e2) is Array:
+						if e2.size() > 8: # owner column: tags or legacy pids — coerce, cap at 2
+							var own_ok := []
+							if e2[8] is Array:
+								for o in e2[8]:
+									if (o is String and o.length() <= 24) or o is int \
+											or (o is float and is_finite(o)):
+										own_ok.append(o)
+									if own_ok.size() >= 2:
+										break
+							e2 = e2.slice(0, 8) + [own_ok]
+						st["egg_parents"].append(e2)
+					if st["egg_parents"].size() >= MAX_EGG_QUEUE:
+						break # the runtime cap binds loaded rows too — a crafted save can't stuff it
 			if sv.get("exp") is Dictionary and sid == "expedition_post":
 				var exp_d: Dictionary = sv["exp"]
 				var left: float = _f(exp_d.get("left", 0.0))
