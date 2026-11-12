@@ -369,10 +369,16 @@ def main():
         # palette color, keep the mesh whole (no wool/skin split)
         objs = [src]
         pal = {name: mat(col, name) for name, col in cfg["mat_map"].items()}
+        slots = []
         for i, m in enumerate(src.data.materials):
             nm = m.name if m else ""
+            slots.append(nm)
             if nm in pal:
                 src.data.materials[i] = pal[nm]
+        dead = set(pal) - set(slots); bare = set(slots) - set(pal) - {""}
+        if dead or bare:
+            print("WARN mat_map: unused=%s uncolored=%s slots=%s" %
+                  (sorted(dead), sorted(bare), slots))
         smooth(src)
         subdiv(src, cfg["subd_wool"])
         d = cfg["displace"]
@@ -409,6 +415,8 @@ def main():
     # report head-bone world position POST-normalize — tune eye params off it
     head_bn = cfg.get("head_bone", "Head")
     hb = arm.pose.bones.get(head_bn)
+    if hb is None:
+        print("WARN head_bone '%s' missing — sprite will render EYELESS" % head_bn)
     if hb:
         wh = arm.matrix_world @ hb.head
         wt = arm.matrix_world @ hb.tail
@@ -428,6 +436,11 @@ def main():
     if act:
         arm.animation_data.action = act
         print("action %s range %s" % (act.name, act.frame_range))
+        if cfg["frames"][0] < act.frame_range[0] or cfg["frames"][1] > act.frame_range[1]:
+            print("WARN frames %s outside action range %s — f0==f1 possible"
+                  % (cfg["frames"], tuple(act.frame_range)))
+    else:
+        print("WARN action '%s' missing — f0==f1 static frames" % cfg["action"])
 
     light_rig()
     camera()

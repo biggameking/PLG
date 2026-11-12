@@ -18,11 +18,11 @@ OUT = os.path.join(HERE, "mesh_cfg_gen.py")
 HAND = {"fenjelly", "scalcrest", "scalfang", "branpurr", "tidscale",
         "piplump", "digsnout", "dozantler", "cindpaw"}
 
-# identity-mark species (rig_auto.ACCESSORY) — the mesh path has no accessory
-# layer yet, so these stay on the primitive renderer where crowns/halos/
-# horns/crests/wings render and the smoke pins verify them.
-ACCESSORY_SIDS = {"scalbeak", "snovstride", "nibhand", "shadekin",
-                  "wyrmhoof", "cindchew", "flarbeak", "vermtrot"}
+# identity-mark species — the mesh path has no accessory layer yet, so they
+# stay on the primitive renderer where marks render and smoke pins verify.
+# (scalcrest/tidscale are in HAND with hand-accepted mark loss — documented.)
+import rig_auto
+ACCESSORY_SIDS = set(rig_auto.ACCESSORY) - HAND
 
 VOL2 = "animal_pack2/Animal Pack Vol.2 by @Quaternius/Blends/"
 FARM = "farm_animals/Farm Animals by @Quaternius/Blends/"
