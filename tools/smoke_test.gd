@@ -7115,8 +7115,20 @@ func run() -> void:
 	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — but the first fix must
 	# still land where a join materializes: spawn, or a pad beside it
 	var spfx := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
-	game.net.sync_pos(spfx.x + 3.0, spfx.y, 0.0)
-	check("first fix lands at spawn", g0.net_pos == Vector3(spfx.x + 3.0, spfx.y, 0))
+	# hunt a standable cell beside spawn — the gate rejects claims anchored
+	# inside solid rock, and some seeds wall spawn+3 off entirely
+	var spfix := Vector2.ZERO
+	for off in [Vector2(3, 0), Vector2(-3, 0), Vector2(0, 3), Vector2(0, -3),
+			Vector2(2, 2), Vector2(-2, 2), Vector2(2, -2), Vector2(-2, -2),
+			Vector2(1, 0), Vector2(0, 1)]:
+		var c: Vector2 = spfx + off
+		if not (game.world.blocked(int(c.x), int(c.y))
+				and game.world.tile_at(int(c.x), int(c.y)) != World.Tile.WATER):
+			spfix = c
+			break
+	check("first-fix target open", spfix != Vector2.ZERO)
+	game.net.sync_pos(spfix.x, spfix.y, 0.0)
+	check("first fix lands at spawn", g0.net_pos == Vector3(spfix.x, spfix.y, 0))
 	g0.net_pos = Vector3(-1, -1, 0) # a recycled ghost gets no second free blink
 	var ffx := Vector2.ZERO
 	for fcand in [Vector2(200, 200), Vector2(20, 20), Vector2(400, 400), Vector2(150, 180)]:

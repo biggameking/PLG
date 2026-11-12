@@ -172,32 +172,86 @@ def displace(ob, scale, strength, detail):
     m.texture_coords = 'LOCAL'
 
 
+def eval_verts(o):
+    """World-space vertex positions AFTER modifiers (armature deform).
+
+    bound_box only sees undeformed mesh data — rigs whose rendered shape
+    differs from bind-space (Skeleton, Yeti) normalized wrong from it.
+    """
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = o.evaluated_get(dg)
+    try:
+        me = ev.to_mesh()
+        pts = [ev.matrix_world @ v.co for v in me.vertices]
+    finally:
+        ev.to_mesh_clear()
+    if not pts:
+        pts = [o.matrix_world @ mathutils.Vector(v) for v in o.bound_box]
+    return pts
+
+
+def _loc_fcurves(act):
+    """Yield fcurves across Blender versions — 5.x nests them under
+    layers->strips->channelbags, 4.x kept act.fcurves."""
+    for lay in getattr(act, "layers", []):
+        for st in lay.strips:
+            for cb in getattr(st, "channelbags", []):
+                for fc in cb.fcurves:
+                    yield fc
+    for fc in getattr(act, "fcurves", []):
+        yield fc
+
+
 def normalize(objs, target_h):
-    """Uniform-scale the rig so the mesh stands target_h units, feet on z=0."""
-    lo, hi = 1e9, -1e9
-    for o in objs:
-        for v in o.bound_box:
-            w = o.matrix_world @ mathutils.Vector(v)
-            lo = min(lo, w.z); hi = max(hi, w.z)
-    k = target_h / max(hi - lo, 0.001)
-    for o in bpy.data.objects:
-        if o.parent is None:
-            o.scale = tuple(s * k for s in o.scale)
-    bpy.context.view_layer.update()
-    # audit-51: an Armature modifier deforms in BONE-DATA space — object
-    # scale alone leaves the render unnormalized (Dog was 4x too big).
-    # Bake it in: apply scale on every selected rig object.
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in objs + [oa for oa in bpy.data.objects if oa.type == 'ARMATURE']:
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = objs[0]
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    bpy.context.view_layer.update()
+    """Uniform-scale the rig so the mesh stands target_h units, feet on z=0.
+
+    Iterates: armature rigs deform in bone-data space and the deform
+    output is not linear in either input alone (Dog resisted 4x→1.4x
+    for several passes; Skeleton diverged when child location was also
+    scaled). Each pass measures EVALUATED bounds and bakes the residual
+    factor into bone rest matrices AND mesh verts — both sides of the
+    deform conjugation. Object scale is NEVER used: an armature-child
+    mesh's modifier round-trip cancels the parent's object scale.
+    """
+    k = 1.0
+    for _ in range(10):
+        lo, hi = 1e9, -1e9
+        for o in objs:
+            for w in eval_verts(o):
+                lo = min(lo, w.z); hi = max(hi, w.z)
+        kk = target_h / max(hi - lo, 0.001)
+        print("PASS ext=%.2f kk=%.3f" % (hi - lo, kk))
+        if abs(kk - 1.0) < 0.02:
+            break
+        k *= kk
+        S = mathutils.Matrix.Scale(kk, 4)
+        for o in bpy.data.objects:
+            if o.type == 'ARMATURE':
+                o.data.transform(S)
+        for o in objs:
+            o.data.transform(S)
+        # audit-51: pose-bone location F-curves are stored in bone-local
+        # units — they do NOT scale with the baked data, and for rigs whose
+        # deform is pose-dominated (Cat converged to a 2.0 skeleton no
+        # matter how small the verts) the ACTION'S positions ARE the
+        # output. Scale every location channel by this pass's kk.
+        for act in bpy.data.actions:
+            for fc in _loc_fcurves(act):
+                if fc.data_path.endswith("location"):
+                    for kp in fc.keyframe_points:
+                        kp.co[1] *= kk
+                        kp.handle_left[1] *= kk
+                        kp.handle_right[1] *= kk
+        bpy.context.view_layer.update()
+    else:
+        # 10 passes without converging — sprite ships at whatever residual
+        # scale remains; make it loud instead of silently mis-sized
+        print("WARN normalize unconverged after 10 passes kk=%.3f" % kk)
     # drop feet to the floor
     lo2 = 1e9
     for o in objs:
-        for v in o.bound_box:
-            lo2 = min(lo2, (o.matrix_world @ mathutils.Vector(v)).z)
+        for w in eval_verts(o):
+            lo2 = min(lo2, w.z)
     for o in bpy.data.objects:
         if o.parent is None:
             o.location.z -= lo2
@@ -205,8 +259,7 @@ def normalize(objs, target_h):
     # out of frame; without this only in-origin meshes framed right
     cx2, cy2, n2 = 0.0, 0.0, 0
     for o in objs:
-        for v in o.bound_box:
-            w = o.matrix_world @ mathutils.Vector(v)
+        for w in eval_verts(o):
             cx2 += w.x; cy2 += w.y; n2 += 1
     for o in bpy.data.objects:
         if o.parent is None:
@@ -226,7 +279,7 @@ def bone_attach(arm, bone_name, ob, world_m):
     ob.matrix_world = world_m
 
 
-def add_eyes(arm, bone_name, cfg, m):
+def add_eyes(arm, bone_name, cfg, m, zcap=None):
     """Ink beads auto-placed from the head bone: muzzle dir (head→tail) +
     lateral cross gives both eye sockets — works on any quadruped rig.
     All targets use POSE-space coords (pb.head/tail) so they match the
@@ -236,11 +289,21 @@ def add_eyes(arm, bone_name, cfg, m):
     t = arm.matrix_world @ pb.tail
     fwd = (t - h)
     fwd.z = 0
-    if fwd.length < 1e-6:
-        fwd = t - h
+    if fwd.length < 1e-6 or fwd.length < 0.3 * (t - h).length:
+        # near-vertical head bone (humanoid rigs like Skeleton): there is no
+        # muzzle direction — use the model's authored -Y facing instead of a
+        # collapsed lateral that strands eyes off-frame
+        fwd = mathutils.Vector((0.0, -1.0, 0.0))
     fwd = fwd.normalized()
     lat = mathutils.Vector((-fwd.y, fwd.x, 0.0))
     center = t + fwd * cfg["eye_fwd"] + mathutils.Vector((0, 0, cfg["eye_up"]))
+    if zcap is not None:
+        # stylized rigs' head bones can extend far above the visible mesh
+        # (Skeleton head-bone tail sat at 3.0 on a 1.5-tall model) — never
+        # let eyes float beyond the rendered silhouette
+        lo_z, hi_z = zcap
+        center.z = min(max(center.z, lo_z + 0.35 * (hi_z - lo_z)),
+                       hi_z + 0.05 * (hi_z - lo_z))
     for sgn in (-1, 1):
         bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12,
                                              radius=cfg["eye_r"])
@@ -257,6 +320,8 @@ def add_eyes(arm, bone_name, cfg, m):
         e.data.materials.append(m)
         p = t + fwd * (cfg["eye_fwd"] + 0.04) + mathutils.Vector(
             (0, 0, cfg["nose_up"]))
+        if zcap is not None:
+            p.z = min(max(p.z, zcap[0]), zcap[1] + 0.05 * (zcap[1] - zcap[0]))
         bone_attach(arm, bone_name, e,
                     mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
                         (1.15, 1.0, 0.8, 1)))
@@ -336,7 +401,10 @@ def camera():
 
 def render(sid, fi):
     s = bpy.context.scene
-    s.render.engine = 'BLENDER_EEVEE'
+    try:
+        s.render.engine = 'BLENDER_EEVEE_NEXT'  # Blender ≥4.2
+    except TypeError:
+        s.render.engine = 'BLENDER_EEVEE'       # older enum id
     s.render.resolution_x = s.render.resolution_y = 512
     s.render.resolution_percentage = 100
     s.render.film_transparent = True
@@ -356,7 +424,13 @@ def main():
     s = bpy.context.scene
 
     arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
-    src = next(o for o in bpy.data.objects if o.type == 'MESH')
+    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+    src = meshes[0]
+    if len(meshes) > 1:
+        # only the first mesh is recolored/normalized — siblings still render
+        # at original scale and can poison the sprite (audit-52)
+        print("WARN %d mesh objects — only '%s' is processed" %
+              (len(meshes), src.name))
     for o in bpy.data.objects:
         o.hide_render = False
 
@@ -415,7 +489,9 @@ def main():
     # report head-bone world position POST-normalize — tune eye params off it
     head_bn = cfg.get("head_bone", "Head")
     hb = arm.pose.bones.get(head_bn)
-    if hb is None:
+    if cfg.get("no_eyes"):
+        hb = None
+    if hb is None and not cfg.get("no_eyes"):
         print("WARN head_bone '%s' missing — sprite will render EYELESS" % head_bn)
     if hb:
         wh = arm.matrix_world @ hb.head
@@ -425,7 +501,13 @@ def main():
 
     em = mat(INK, "ink")
     if hb:
-        add_eyes(arm, head_bn, cfg, em)
+        zlo = zhi = None
+        for o in objs:
+            for w in eval_verts(o):
+                zlo = w.z if zlo is None else min(zlo, w.z)
+                zhi = w.z if zhi is None else max(zhi, w.z)
+        add_eyes(arm, head_bn, cfg, em,
+                 (zlo, zhi) if zlo is not None else None)
     if cfg.get("puffs"):
         fluff_shell(arm, objs[0], cfg["puffs"], wm)
 

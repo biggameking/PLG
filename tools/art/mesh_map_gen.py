@@ -26,6 +26,8 @@ ACCESSORY_SIDS = set(rig_auto.ACCESSORY) - HAND
 
 VOL2 = "animal_pack2/Animal Pack Vol.2 by @Quaternius/Blends/"
 FARM = "farm_animals/Farm Animals by @Quaternius/Blends/"
+CUTE = "cute_monsters/Cute Animated Monsters - Aug 2020/Blends/"
+MBASIC = "monsters_basic/Animated Monster Pack by @Quaternius/Blend/"
 
 # body -> (blend, head_bone, target_h, mat_map builder)
 # builder(c, dark, lite) returns {material_name: (r,g,b)}
@@ -48,6 +50,16 @@ TEMPLATES = {
              lambda c, dark, lite: {"Material.003": c, "Material.006": dark}),
     "boar": (FARM + "Pig.blend", "Head", 1.30,
              lambda c, dark, lite: {"Material.003": dark, "Material": c}),
+    "ghost": (CUTE + "Ghost.blend", "Head", 1.30,
+              lambda c, dark, lite: {"Texture": c}),
+    "human": (CUTE + "Alien_Tall.blend", "Head", 1.50,
+              lambda c, dark, lite: {"Texture": c}),
+    "blob": (MBASIC + "Slime.blend", "Head", 1.10,
+             lambda c, dark, lite: {"Body": c, "Eyes": (0.09, 0.08, 0.14)}),
+    "hedgehog": (CUTE + "Cactus.blend", "Head", 1.15,
+                 lambda c, dark, lite: {"Texture": c}),
+    "monkey": (CUTE + "Yeti.blend", "Head", 1.45,
+               lambda c, dark, lite: {"Texture": c}),
     "serpent": (VOL2 + "Piranha.blend", "Bone", 0.80,
                 lambda c, dark, lite: {"Brown": c, "LightYellow": lite,
                                        "Black": dark, "White": (0.92, 0.92, 0.88)}),
@@ -77,18 +89,28 @@ def main():
         blend, head_bone, th, mk = TEMPLATES[body]
         c = hex2rgb(d["color"])
         mats = mk(c, shade(c, 0.45), shade(c, 1.25))
-        rot = 285.0 if body == "bird" else (-90.0 if body == "serpent" else 0.0)
+        rot = {"bird": 90.0, "serpent": -90.0,
+               "human": 35.0, "monkey": 35.0}.get(body, 0.0)
+        action = {"blob": "Slime_Idle"}.get(body, "Idle")
         mats_s = "{" + ", ".join(
             '"%s": (%.3f, %.3f, %.3f)' % (k, *v) for k, v in mats.items()) + "}"
-        eye_fwd = 0.10 if body == "serpent" else (-0.14 if body == "deer" else -0.12)
         nose = ('"nose_r": 0.045, "nose_up": 0.02, ' if body in
                 ("quadruped", "kitty", "cow", "deer", "boar", "mouse") else '')
+        no_eyes = ', "no_eyes": True' if body == "blob" else ''
+        # head-bone tail = muzzle tip on quadrupeds (eyes trail it: fwd<0),
+        # but skull top on upright/round rigs (eyes drop below + face -Y:
+        # fwd>0, up<0)
+        eye_fwd, eye_up = {
+            "human": (0.06, -0.14), "ghost": (0.06, -0.10),
+            "monkey": (0.06, -0.12), "hedgehog": (0.06, -0.10),
+            "serpent": (0.10, 0.10), "deer": (-0.14, 0.10),
+        }.get(body, (-0.12, 0.10))
         entry = (f'    "{sid}": {{"blend": "{blend}", "mat_map": {mats_s}, {nose}\n'
                  f'        "head_bone": "{head_bone}", "rot_z": {rot},\n'
-                 f'        "action": "Idle", "frames": (5, 25),\n'
+                 f'        "action": "{action}", "frames": (5, 25),\n'
                  f'        "eye_r": 0.05, "eye_gap": 0.11, '
-                 f'"eye_fwd": {eye_fwd}, "eye_up": 0.10, "target_h": {th},\n'
-                 f'        "subd_wool": 2, "displace": None}},')
+                 f'"eye_fwd": {eye_fwd}, "eye_up": {eye_up}, "target_h": {th},\n'
+                 f'        "subd_wool": 2, "displace": None{no_eyes}}},')
         out.append(entry)
         n += 1
     out.append("}")

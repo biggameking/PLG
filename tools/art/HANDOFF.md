@@ -33,9 +33,27 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   是当前质量标杆；primitive 栈只作 fallback。
 - 批量映射：`tools/art/mesh_map_gen.py` → `mesh_cfg_gen.py`（生成物，
   勿手改），按 body 套源 mesh 模板+配色派生；`bash tools/art/
-  batch_mesh.sh` 全量重渲。当前覆盖 61/116（8 手调+52 生成+fenjelly）；
-  配饰种与 ghost/human/blob/hedgehog/monkey 仍走 primitive——mesh
-  路径暂无配饰层，勿为凑数丢身份标志。
+  batch_mesh.sh` 全量重渲。当前覆盖 108/116（9 手调含 fenjelly
+  +99 生成条目）；仅 8 个配饰种
+  （crown/halo/horns/crest/wings，ACCESSORY_SIDS）走
+  primitive——mesh 路径暂无配饰层，勿为凑数丢身份标志。
+- S99 扩批补源：cute_monsters 包（CC0）供 Ghost→ghost、
+  Alien_Tall→human、Yeti→monkey、Cactus→hedgehog；monsters_basic
+  包供 Slime→blob（no_eyes，自带眼材质）。注意该包是 Q 版大头
+  风格——human/monkey 用 rot_z≈35° 露出手臂/犄角剪影，正对镜头
+  只剩一张脸。Skeleton/Cyclops/Demon 试过不合用（骨头碎片/同样
+  大头）；Bat/Dragon 留作未来源。
+- 归一化教训（S98c 实战）：bound_box 看不见 modifier 变形——必须用
+  evaluated 顶点；烘缩放要**两侧共轭**（骨 rest 矩阵+顶点同烘 k，
+  只烘骨骼在 rest-pose 下输出零变化）；子 mesh 的 location 不要动；
+  动作 location F-curve 必须**每 pass 同步 ×k**（放循环外会让
+  Cat/Dog 类姿态主导 rig 反向发散——姿态位移把网格拉糖稀；
+  Blender 5.x 动作结构是 layers→strips→channelbags→fcurves，
+  4.x 是 act.fcurves，`_loc_fcurves()` 两侧兼容）；直立头骨
+  （Skeleton）侧向向量退化——前向改取模型 -Y；眼位 z 向钳在
+  evaluated 包围盒内（风格化 rig 的骨坐标可远超网格；X/Y 暂无钳，
+  新源 mesh 接入后必须 x4 目测眼位）。
+  迭代归一上限 10 pass，Dog 类强变形 rig 收敛最慢。
 - S98 首批网格迁移落地 8 种（scalcrest→Eagle、scalfang→Wolf、
   branpurr→Cat、tidscale→Piranha、piplump→Cow、digsnout→Pig、
   dozantler→Horse、cindpaw→Dog，源见 PROVENANCE.md Vol.2+farm 包）。
