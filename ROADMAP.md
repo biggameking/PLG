@@ -1360,3 +1360,43 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   player f1 amplitude missed the bump; net_join silent-skip closed;
   fixture hygiene (raze not dict-erase, job_site scrub, pocket relocate);
   3 one-off tools archived; ledger gap closed. Doc: audit-50-cold-review.md.
+
+### S98 — licensed-mesh migration — SHIPPED (bae8121 / 522b320 / c3a318a / 2b1804a)
+- Owner's top complaint (ellipsoid stacks) addressed: species render via
+  CC0 Quaternius .blend meshes through render_src_asset.py — real
+  armature-animated anatomy, not primitive rigs.
+- S98: 8 hand-tuned species (Eagle/Wolf/Cat/Piranha/Cow/Pig/Horse/Dog +
+  fenjelly Sheep). Armature-object scale does nothing to modifier output —
+  scale is baked into bone+vert data (transform_apply → data.transform).
+- S98b: mesh_map_gen.py → mesh_cfg_gen.py batch mapping by body archetype
+  (mat_map multi-material recolor, head_bone naming, action+frames);
+  58 species rendered zero-fail; accessory species stayed primitive
+  (identity marks > coverage count).
+- S98c audit-51 hardening: batch_mesh.sh gained --python-exit-code +
+  post step (was reporting crashes as ok); ACCESSORY derives from
+  rig_auto; pack License.txt files in-tree. Doc: audit-51-mesh-art.md.
+
+### S99 — mesh expansion to 108/116 — SHIPPED (1b0c130)
+- Two more CC0 packs close the last source-less bodies: cute_monsters
+  (Ghost→ghost, Alien_Tall→human, Yeti→monkey, Cactus→hedgehog) and
+  monsters_basic (Slime→blob, no_eyes). Skeleton/Cyclops/Demon probed
+  and rejected — detached-bone/same-head silhouettes.
+- normalize() rebuilt: iterative evaluated-geometry residual baking
+  (mesh verts + armature bones, ≤10 passes), child locations untouched,
+  action location F-curves scaled EVERY pass via _loc_fcurves()
+  (Blender 4.x + 5.x channelbag layouts) — fixing Cat-class
+  pose-dominated rigs that diverged when scaled once at the end.
+- Eye placement: z-clamped to evaluated bounds; near-vertical head
+  bones fall back to a stable -Y facing vector.
+- human/monkey rendered at rot_z=35 — chibi-pack heads hide the arms
+  front-on. Bird rot_z=90 shows the eagle's wing silhouette.
+- audit-52 (context-free, NEEDS-FIX→all fixed): batch post-exit-code +
+  non-zero exit, per-species WARN surfacing, normalize unconverged WARN,
+  multi-mesh guard, EEVEE_NEXT, probe_* PCK leftovers deleted,
+  PROVENANCE drift corrected.
+- Evidence committed: docs/reviews/s99-sheet108.png (all 108 mesh
+  species), s99-ingame.png, audit-52-mesh-expansion.md.
+- Gates: smoke 968-971/0 across 3 runs (grotto room-2 skip gone too),
+  audit_data ALL CLEAN, check_ip CLEAN.
+- Remaining: 8 accessory species still primitive until a mesh accessory
+  layer exists; unused Bat/Dragon/Cyclops/Demon kept for future bodies.
