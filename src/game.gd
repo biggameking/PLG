@@ -7426,8 +7426,10 @@ func buy_remote(pid: int, idx: int) -> Dictionary:
 	return {"price": price}
 
 func pal_sell_price(bp: Kin) -> int:
-	# black-market buyback: worth less than the sticker price, more if rare
-	return 40 + bp.level * 8 + (60 if bp.lucky else 0) + (80 if bp.alpha else 0) \
+	# black-market buyback: worth less than the sticker price, more if rare.
+	# base 20 not 40: a lv1 hatchling sells for 28 < a 30g kin_egg — else the
+	# merchant's own eggs hatch into a +60% money printer (audit-36/S83)
+	return 20 + bp.level * 8 + (60 if bp.lucky else 0) + (80 if bp.alpha else 0) \
 		+ bp.star * 50
 
 func sell_pal_to_merchant(uid: int) -> void:

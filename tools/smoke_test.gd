@@ -8193,6 +8193,23 @@ func run() -> void:
 	var gamesrc := FileAccess.get_file_as_string("res://src/game.gd")
 	check("the raid horn relays to guests", "RAID INCOMING — %s!" in gamesrc)
 	check("assign_remote answers a miss", "No kin of yours nearby" in gamesrc)
+	# S83 economy: a hatched lv1 must never resell above its egg's sticker —
+	# else the merchant's gacha prints money (buy 30 → hatch → sell 48 was +60%)
+	var egg_price36: int = int(ItemData.ITEMS.get("kin_egg", {}).get("price", 30))
+	var lv1_e := Kin.new()
+	lv1_e.setup(game, "puffmite", 1, Vector2.ZERO)
+	var lv1_worth: int = game.pal_sell_price(lv1_e)
+	lv1_e.free()
+	check("a lv1 hatchling resells below its egg price",
+		lv1_worth < egg_price36, "sell=%d egg=%d" % [lv1_worth, egg_price36])
+	var huge_price36: int = int(ItemData.ITEMS.get("huge_kin_egg", {}).get("price", 200))
+	var lv1_lk := Kin.new()
+	lv1_lk.setup(game, "puffmite", 1, Vector2.ZERO)
+	lv1_lk.lucky = true
+	var lucky_worth: int = game.pal_sell_price(lv1_lk)
+	lv1_lk.free()
+	check("a lucky hatchling still resells below a huge egg",
+		lucky_worth < huge_price36, "sell=%d huge=%d" % [lucky_worth, huge_price36])
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------
 	# title → new game → pause → settings toggle → resume → save → continue →
