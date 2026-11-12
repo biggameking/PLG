@@ -33,6 +33,80 @@ CFG = {
                   "shrink": 0.85, "z_lo": 0.45, "seed": 5, "bone": "Body"},
         "target_h": 1.45,
     },
+    # ---- audit-51: pack Vol.2 + farm leftovers — real anatomy per archetype.
+    # head_bone: the neck→head bone whose TAIL is the snout/beak tip.
+    # mat_map recolors named material slots; single-mat meshes get one key.
+    "scalcrest": {   # Eagle.blend — royal bird
+        "mat_map": {"Wings": (0.42, 0.52, 0.78), "Head": (0.60, 0.66, 0.86),
+                    "Beak": (0.90, 0.72, 0.30), "Claws": (0.28, 0.24, 0.30)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 285.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Bone.003",
+        "eye_r": 0.05, "eye_gap": 0.09, "eye_fwd": -0.10, "eye_up": 0.10,
+        "target_h": 1.35,
+    },
+    "scalfang": {    # Wolf.blend — fire-fang canine
+        "mat_map": {"Wolf": (0.76, 0.44, 0.18)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Bone.003",
+        "eye_r": 0.05, "eye_gap": 0.12, "eye_fwd": -0.12, "eye_up": 0.12,
+        "nose_r": 0.045, "nose_up": 0.02,
+        "target_h": 1.45,
+    },
+    "branpurr": {    # Cat.blend — ember cat
+        "mat_map": {"Grey": (0.72, 0.20, 0.26), "White": (0.93, 0.88, 0.82), "Pink": (0.95, 0.62, 0.66)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Bone.003",
+        "eye_r": 0.05, "eye_gap": 0.10, "eye_fwd": -0.10, "eye_up": 0.10,
+        "nose_r": 0.04, "nose_up": 0.01,
+        "target_h": 1.30,
+    },
+    "tidscale": {    # Piranha.blend — tide serpent reads as a fish-kin
+        "mat_map": {"Brown": (0.20, 0.34, 0.52), "LightYellow": (0.55, 0.62, 0.72), "Black": (0.10, 0.12, 0.20), "White": (0.92, 0.92, 0.88)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": -90.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Bone",
+        "eye_r": 0.055, "eye_gap": 0.10, "eye_fwd": 0.10, "eye_up": 0.06,
+        "target_h": 0.80,
+    },
+    "piplump": {     # Cow.blend — dairy kin
+        "mat_map": {"White": (0.90, 0.84, 0.72), "Black": (0.24, 0.22, 0.28), "Pink": (0.95, 0.62, 0.66)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Head",
+        "eye_r": 0.05, "eye_gap": 0.13, "eye_fwd": -0.12, "eye_up": 0.12,
+        "nose_r": 0.05, "nose_up": 0.02,
+        "target_h": 1.5,
+    },
+    "digsnout": {    # Pig.blend — boar digger
+        "mat_map": {"Material.003": (0.50, 0.44, 0.38), "Material": (0.62, 0.52, 0.44)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Head",
+        "eye_r": 0.05, "eye_gap": 0.12, "eye_fwd": -0.10, "eye_up": 0.10,
+        "nose_r": 0.06, "nose_up": 0.01,
+        "target_h": 1.35,
+    },
+    "dozantler": {   # Horse.blend — antlered draft kin (antlers via accessory later)
+        "mat_map": {"Material.003": (0.78, 0.66, 0.38), "Material.006": (0.42, 0.32, 0.20)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Head",
+        "eye_r": 0.05, "eye_gap": 0.12, "eye_fwd": -0.14, "eye_up": 0.14,
+        "nose_r": 0.05, "nose_up": 0.02,
+        "target_h": 1.6,
+    },
+    "cindpaw": {     # Dog.blend — ember pup
+        "mat_map": {"Dog": (0.74, 0.30, 0.16)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Bone.003",
+        "eye_r": 0.05, "eye_gap": 0.11, "eye_fwd": -0.11, "eye_up": 0.11,
+        "nose_r": 0.045, "nose_up": 0.02,
+        "target_h": 1.4,
+    },
 }
 
 INK = (0.11, 0.10, 0.18)
@@ -100,6 +174,15 @@ def normalize(objs, target_h):
         if o.parent is None:
             o.scale = tuple(s * k for s in o.scale)
     bpy.context.view_layer.update()
+    # audit-51: an Armature modifier deforms in BONE-DATA space — object
+    # scale alone leaves the render unnormalized (Dog was 4x too big).
+    # Bake it in: apply scale on every selected rig object.
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objs + [oa for oa in bpy.data.objects if oa.type == 'ARMATURE']:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.context.view_layer.update()
     # drop feet to the floor
     lo2 = 1e9
     for o in objs:
@@ -108,6 +191,17 @@ def normalize(objs, target_h):
     for o in bpy.data.objects:
         if o.parent is None:
             o.location.z -= lo2
+    # audit-51: center X/Y too — off-origin rigs (Dog.blend) were cropping
+    # out of frame; without this only in-origin meshes framed right
+    cx2, cy2, n2 = 0.0, 0.0, 0
+    for o in objs:
+        for v in o.bound_box:
+            w = o.matrix_world @ mathutils.Vector(v)
+            cx2 += w.x; cy2 += w.y; n2 += 1
+    for o in bpy.data.objects:
+        if o.parent is None:
+            o.location.x -= cx2 / max(n2, 1)
+            o.location.y -= cy2 / max(n2, 1)
     bpy.context.view_layer.update()
     return k
 
@@ -260,33 +354,51 @@ def main():
     arm.rotation_euler.z = math.radians(cfg.get("rot_z", 0.0))
     bpy.context.view_layer.update()
 
-    # split wool/skin, upgrade surfaces
-    wool_idx = cfg["wool_mat_idx"]
-    wool = split_by_material(src, wool_idx, "wool")
-    skin_idx = 1 - wool_idx if len(src.data.materials) > 1 else wool_idx
-    skin = split_by_material(src, skin_idx, "skin")
-    src.hide_render = True
-    src.hide_viewport = True
+    if cfg.get("mat_map"):
+        # audit-51: multi-material meshes — recolor every named slot to a
+        # palette color, keep the mesh whole (no wool/skin split)
+        objs = [src]
+        pal = {name: mat(col, name) for name, col in cfg["mat_map"].items()}
+        for i, m in enumerate(src.data.materials):
+            nm = m.name if m else ""
+            if nm in pal:
+                src.data.materials[i] = pal[nm]
+        smooth(src)
+        subdiv(src, cfg["subd_wool"])
+        d = cfg["displace"]
+        if d:
+            displace(src, d["scale"], d["strength"], d["detail"])
+        wm = sm = None
+    else:
+        # split wool/skin, upgrade surfaces
+        wool_idx = cfg["wool_mat_idx"]
+        wool = split_by_material(src, wool_idx, "wool")
+        skin_idx = 1 - wool_idx if len(src.data.materials) > 1 else wool_idx
+        skin = split_by_material(src, skin_idx, "skin")
+        src.hide_render = True
+        src.hide_viewport = True
 
-    smooth(wool); smooth(skin)
-    subdiv(wool, cfg["subd_wool"])
-    subdiv(skin, cfg["subd_skin"])
-    d = cfg["displace"]
-    if d:
-        displace(wool, d["scale"], d["strength"], d["detail"])
+        smooth(wool); smooth(skin)
+        subdiv(wool, cfg["subd_wool"])
+        subdiv(skin, cfg["subd_skin"])
+        d = cfg["displace"]
+        if d:
+            displace(wool, d["scale"], d["strength"], d["detail"])
 
-    # palette
-    wm = mat(cfg["mats"][0], "wool")
-    sm = mat(cfg["mats"][1], "skin")
-    wool.data.materials.clear(); wool.data.materials.append(wm)
-    skin.data.materials.clear(); skin.data.materials.append(sm)
+        # palette
+        wm = mat(cfg["mats"][0], "wool")
+        sm = mat(cfg["mats"][1], "skin")
+        wool.data.materials.clear(); wool.data.materials.append(wm)
+        skin.data.materials.clear(); skin.data.materials.append(sm)
+        objs = [wool, skin]
 
-    k = normalize([wool, skin], cfg["target_h"])
-    print("scale k=%.4f faces: wool=%d skin=%d (pre-subd)" %
-          (k, len(wool.data.polygons), len(skin.data.polygons)))
+    k = normalize(objs, cfg["target_h"])
+    print("scale k=%.4f faces: %s" %
+          (k, {o.name: len(o.data.polygons) for o in objs}))
 
     # report head-bone world position POST-normalize — tune eye params off it
-    hb = arm.pose.bones.get("Head")
+    head_bn = cfg.get("head_bone", "Head")
+    hb = arm.pose.bones.get(head_bn)
     if hb:
         wh = arm.matrix_world @ hb.head
         wt = arm.matrix_world @ hb.tail
@@ -295,9 +407,9 @@ def main():
 
     em = mat(INK, "ink")
     if hb:
-        add_eyes(arm, "Head", cfg, em)
+        add_eyes(arm, head_bn, cfg, em)
     if cfg.get("puffs"):
-        fluff_shell(arm, wool, cfg["puffs"], wm)
+        fluff_shell(arm, objs[0], cfg["puffs"], wm)
 
     # drive the source rig's own action
     if not arm.animation_data:

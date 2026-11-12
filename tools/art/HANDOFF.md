@@ -31,6 +31,14 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   （mesh 优选路）→ `post_kin.py`（posterize/ink/halftone→80×64+x4 预览）。
 - fenjelly 已是 Quaternius Sheep.blend（CC0 24 骨 Idle 动作采样）网格版，
   是当前质量标杆；primitive 栈只作 fallback。
+- S98 首批网格迁移落地 8 种（scalcrest→Eagle、scalfang→Wolf、
+  branpurr→Cat、tidscale→Piranha、piplump→Cow、digsnout→Pig、
+  dozantler→Horse、cindpaw→Dog，源见 PROVENANCE.md Vol.2+farm 包）。
+  render_src_asset.py 现支持 `mat_map` 多材质、`head_bone` 指定、
+  armature 缩放烘焙（transform_apply——不改骨骼数据空间的缩放在
+  modifier 下无效）。扩批方法：在 CFG 加条目（材质名映射物种
+  palette、头骨、rot_z、action+frames、target_h），渲+post 后必看
+  x4 预览再扩。
 - 传说种配饰（冠/环/面具/角/冠饰/鳍/背扇）在 rig 配饰层，10 种
   ACCESSORY 表在 rig_auto.py。
 - `gen_assets.py` 的 kin 写盘已门控 `--kin-legacy`——不要恢复默认。
