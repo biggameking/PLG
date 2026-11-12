@@ -109,13 +109,9 @@ Fixes shipped in `c775b20`; the authority contract is AGENTS.md rules 25–34.
 Deferred honestly: pad rumble, panel-gate coverage now complete but
 hold-to-repeat not implemented, Android preset unverified (local SDK lacks
 build-tools/apksigner).
-- S22 touch layer + placed_by persistence — DONE: on-screen stick (rim-push =
-  sprint, multi-touch index-tracked) + ATK/AIM/ROLL/E/ORB/☰ verb buttons;
-  `settings["touch"]` auto/on/off resolved in `apply_settings` against
-  `DisplayServer.is_touchscreen_available()`; touch taps no longer double-fire
-  as emulated LMB strikes; `placed_by` structure ownership now serializes
-  (`"by"` key) so guest demolition rights survive save/reload. 9 new smoke
-  checks, suite 533–537 / 0 failures ×6.
+- S17 guest biting + pad polish — DONE (`f988b5b`): wild projectiles bite
+  guests through the relay; gamepad layer polished. Ledger entry restored
+  post-hoc (audit-47 review found it missing).
 - S18 MP parity + reactive danger layer — DONE: wild projectiles now bite
   guests (`update_projectiles` checks `net.ghosts`, relayed per-guest);
   third procedural pad `music_danger` swallows the
@@ -227,6 +223,14 @@ build-tools/apksigner).
   `owner_tag`; `_legit_blink` scans a cached travel-cell set (rebuild on
   count change or 3s TTL); `chat_last` prunes on disconnect. Smoke +4
   (spawn first-fix accept/reject, expedition orphan, zero-claim no-op).
+- S22 touch layer + placed_by persistence — DONE: on-screen stick (rim-push =
+  sprint, multi-touch index-tracked) + ATK/AIM/ROLL/E/ORB/☰ verb buttons;
+  `settings["touch"]` auto/on/off resolved in `apply_settings` against
+  `DisplayServer.is_touchscreen_available()`; touch taps no longer double-fire
+  as emulated LMB strikes; `placed_by` structure ownership now serializes
+  (`"by"` key) so guest demolition rights survive save/reload (later replaced
+  by `placed_tag` at S24 — pids die with the session). 9 new smoke checks,
+  suite 533–537 / 0 failures ×6.
 - S22b guest damage ceiling — DONE: `pal_hit`'s claim bound derives from
   the real ceiling (top weapon ×2 transmog + 60-level attack + perks 0.4
   + trinkets 0.24 + partner aura 0.1 + meal) ≈ 775 instead of a flat
@@ -400,13 +404,6 @@ S36 (guest interact parity): swept every remaining interact branch —
   own bag, client-authoritative — already correct. deposit_egg/soul_infuse/
   start_gauntlet stay host-only by design (hatch ownership + roster trust
   bounds documented). Smoke 657-658/0 x2.
-S37 (guest incubation): deposit_egg was the last core-loop verb locked —
-  guests couldn't hatch. _free_incubator extracted; egg_req whitelists the
-  claimed egg kind, claims the nearest free slot by ghost reach, and the
-  egg_inc slot carries own_pid so hatch_incubated owner-tags the newborn
-  into the depositor's roster slice. egg_done pays the bag on acceptance.
-  Known bound: occupied-state (egg_inc) isn't wire-mirrored — a busy
-  incubator answers through the honest refusal note. Smoke 659-660/0 x2.
 S37 (guest incubation): deposit_egg was the last core-loop verb locked —
   guests couldn't hatch. _free_incubator extracted; egg_req whitelists the
   claimed egg kind, claims the nearest free slot by ghost reach, and the

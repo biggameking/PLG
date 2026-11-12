@@ -7504,6 +7504,19 @@ const MERCH_POOL := ["kin_orb", "mega_orb", "low_medical", "medical_supplies",
 	"skill_fruit_electric", "skill_fruit_ice", "skill_fruit_ground", "skill_fruit_dark",
 	"skill_fruit_dragon", "cake", "kin_egg", "memory_wipe", "treasure_map"]
 
+# economy formulas live here so the sim gates on the shipped math, not a
+# mirror (rule 28 — a probe over a local copy gates nothing)
+static func merchant_stock_price(id: String) -> int:
+	var price: int = ItemData.ITEMS.get(id, {}).get("price", 15)
+	return price if price > 0 else 25 # priceless items trade at a markup
+
+static func merchant_kin_price(lv: int, z: int) -> int:
+	return 90 + lv * 12 + z * 80
+
+static func sell_value(id: String) -> int:
+	var price: int = int(ItemData.ITEMS.get(id, {}).get("price", 0))
+	return 0 if price <= 0 else maxi(1, int(price * 0.5))
+
 func gen_merchant_stock() -> void:
 	merchant_stock.clear()
 	var pool := MERCH_POOL.duplicate()
@@ -7512,10 +7525,8 @@ func gen_merchant_stock() -> void:
 		var idx := rng.int_range(0, pool.size() - 1)
 		var id: String = pool[idx]
 		pool.remove_at(idx)
-		var price: int = ItemData.ITEMS.get(id, {}).get("price", 15)
-		if price <= 0:
-			price = 25 # priceless items still trade — at a markup
-		merchant_stock.append({"id": id, "n": rng.int_range(1, 4), "price": price})
+		merchant_stock.append({"id": id, "n": rng.int_range(1, 4),
+			"price": merchant_stock_price(id)})
 	# black-market rarity: the odd huge egg slips into the briefcase, marked up
 	if rng.chance(0.2):
 		var hp_price: int = ItemData.ITEMS.get("huge_kin_egg", {}).get("price", 200)
@@ -7544,7 +7555,7 @@ func gen_merchant_stock() -> void:
 		var sid: String = ppool[rng.int_range(0, ppool.size() - 1)]
 		var plv := rng.int_range(5 + z * 6, 14 + z * 8)
 		merchant_stock.append({"kin": sid, "lv": plv, "n": 1,
-			"price": 90 + plv * 12 + z * 80})
+			"price": merchant_kin_price(plv, z)})
 
 func spawn_merchant() -> void:
 	if merchant != null or pals.size() >= MAX_PALS - 1:
@@ -7774,10 +7785,9 @@ func butcher_pal(uid: int) -> void:
 func sell_to_merchant(id: String) -> void:
 	if merchant == null or item_count(id) <= 0:
 		return
-	var price: int = int(ItemData.ITEMS.get(id, {}).get("price", 0))
-	if price <= 0:
+	var unit := sell_value(id)
+	if unit <= 0:
 		return # unpriced goods never leave for gold — a 1g pity floor is farmable
-	var unit: int = maxi(1, int(price * 0.5))
 	add_item(id, -1)
 	add_item("gold_coin", unit)
 	log_msg(tr("Sold %s (+%dg)") % [tr(str(ItemData.ITEMS.get(id, {}).get("name", id))), unit])

@@ -28,10 +28,7 @@ func price_of(id: String) -> int: # the data-level sticker the economy reads
 	return int(ItemData.ITEMS.get(id, {}).get("price", 0))
 
 func sell_v(id: String) -> int:
-	# projection of sell_to_merchant's gate: unpriced goods refuse, priced sell
-	# at half. A lane can never exit above this — it's the honest ceiling.
-	var p := price_of(id)
-	return 0 if p <= 0 else maxi(1, int(p * 0.5))
+	return GameScript.sell_value(id) # the shipped formula — a mirror would gate nothing
 
 func pal_price(lv: int, lucky := false, alpha := false, star := 0) -> int:
 	var k: Node = KinScript.new()
@@ -50,7 +47,7 @@ func _init() -> void:
 	var pool_sellable := 0
 	for id in POOL:
 		var iid := str(id)
-		var buy := maxi(price_of(iid), 25) # stock fallback marks the priceless to 25
+		var buy := GameScript.merchant_stock_price(iid) # shipped sticker incl. 25 markup
 		var exit_v := sell_v(iid)
 		if exit_v > 0:
 			pool_sellable += 1
@@ -108,7 +105,7 @@ func _init() -> void:
 	print("== merchant kin: buyback can never beat the black-market sticker ==")
 	for z in range(4):
 		for lv in range(5 + z * 6, 14 + z * 8 + 1):
-			var buy: int = 90 + lv * 12 + z * 80
+			var buy: int = GameScript.merchant_kin_price(lv, z)
 			var worst_sell := pal_price(lv, true) # even a lucky unit stays under
 			if not (buy > worst_sell):
 				gate("merchant kin z%d lv%d loses" % [z, lv], false,

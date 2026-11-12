@@ -35,25 +35,29 @@ func _boot() -> void:
 	if fo: # WRITE truncates — the file is this run's verdict, not a history log
 		fo.store_line("==== %d checks, %d failures, %d skipped ====" % [results.size(), fails, skips])
 		fo.close()
+	if _slog:
+		_slog.close()
 	quit()
+
+var _slog: FileAccess # crash-marker handle: opened once, flushed per check
 
 func check(name: String, ok: bool, detail: String = "") -> void:
 	results.append("%s %s  %s" % ["PASS" if ok else "FAIL", name, detail])
 	print(results[-1])
-	# append immediately: a runtime error aborts run() mid-way and a buffered
-	# file hides which check died last — the on-disk tail is the crash marker
-	var fo := FileAccess.open("res://tools/smoke_out.txt", FileAccess.READ_WRITE)
-	if fo == null:
-		fo = FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE)
-	if fo:
-		fo.seek_end()
-		fo.store_line(results[-1])
-		fo.close()
+	# a runtime error aborts run() mid-way — the on-disk tail must hold the
+	# last check that ran, so flush every line (persistent handle: ~1000
+	# open/close cycles was the old shape, audit-47 review)
+	if _slog:
+		_slog.store_line(results[-1])
+		_slog.flush()
 
 func run() -> void:
 	# suite hygiene: the log truncates per run (it appended forever), and the
 	# dev's real savegame gets backed up — several tests write user:// saves
 	FileAccess.open("res://tools/smoke_out.txt", FileAccess.WRITE).close()
+	_slog = FileAccess.open("res://tools/smoke_out.txt", FileAccess.READ_WRITE)
+	if _slog:
+		_slog.seek_end()
 	var save_backup := FileAccess.get_file_as_bytes("user://savegame.plg") \
 		if FileAccess.file_exists("user://savegame.plg") else PackedByteArray()
 	results.append("main=%s" % main)
