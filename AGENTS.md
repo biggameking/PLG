@@ -549,3 +549,13 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
     before any dependent strip), _on_server_disconnected (residue reset),
     and the mirror's HUD read site named. A flag synced only on the tick
     desyncs for up to a resend window at every join.
+104. **Wire text carries the english key + raw args; the receiver tr()s.**
+    Never tr() before an rpc — a zh host would broadcast Chinese to en
+    clients. `note_remote(pid, key, args)` and `net_floater` translate at
+    the receiving end; string args ride as data keys and get tr()d one by
+    one (`tr_args`). New RPC text channels follow the same shape.
+105. **locale/zh.csv is loaded at runtime** (`load_csv_translations`) —
+    the headless csv_translation importer scans the file and silently
+    produces nothing; a stale `.translation` binary hid an entire i18n
+    batch behind a green suite. Do not commit `.translation` binaries or
+    trust `--import` for locale work: edit the csv, run the suite.

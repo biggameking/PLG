@@ -119,7 +119,7 @@ func hit(dmg: int, mult: float, by_player: bool, provoked_pid: int = 0) -> void:
 	hit_flash = 0.4
 	if hp > 0 and rage_mult() > 1.0 and not _enraged:
 		_enraged = true
-		game.floater(pos, "ENRAGED!", "#ff5544")
+		game.floater(pos, tr("ENRAGED!"), "#ff5544")
 	if boss and phase == 1 and hp > 0 and hp < max_hp * 0.5:
 		enter_phase_two()
 	game.floater(pos, str(dmg) + ("!" if mult >= 2 else ("·" if mult <= 0.6 else "")),
@@ -159,7 +159,7 @@ var spire_tag := "" # non-empty on Pact-spire guardians; game.record_spire reads
 func enter_phase_two() -> void:
 	phase = 2
 	game.screen_shake(0.6)
-	game.floater(pos, "IT CALLS THE PACK", "#ff9966")
+	game.floater(pos, tr("IT CALLS THE PACK"), "#ff9966")
 	game.sfx_play("horn")
 	game.cry_for(species_id) # the boss roars in its own voice
 	# two loyal adds answer the roar — capped per boss, capped by MAX_PALS
@@ -184,7 +184,7 @@ func pact_slam() -> int:
 	# Pact spire the ring carries the shrine's element, so each guardian's
 	# slam asks a different question of the roster you brought. Returns the
 	# victim count so tests can see the zone hit who it should.
-	game.floater(pos, "PACT SLAM", "#ff5544")
+	game.floater(pos, tr("PACT SLAM"), "#ff5544")
 	var hits := 0
 	var ail := ""
 	if game.spire_tag_ok(spire_tag): # int() eats garbage→0; the validator doesn't
@@ -373,7 +373,7 @@ func wild_ai(dt: float) -> void:
 				if summon_t >= 5.0:
 					summon_t = 0.0
 					slam_windup = 0.8
-					game.floater(pos, "IT REARS UP", "#ffcc44") # the tell
+					game.floater(pos, tr("IT REARS UP"), "#ffcc44") # the tell
 					if game.net != null and game.net.ghosts.size() > 0 \
 							and game.net_live(): # a ghost can outlive its peer by a frame
 						game.net.rpc("net_floater", pos.x, pos.y,
@@ -577,7 +577,7 @@ func partner_ai(dt: float) -> void:
 			step_toward(grab["pos"], dt)
 		elif grab in game.drops: # a hauler may have beaten us to it
 			game.give_remote(owner_id, grab["id"], grab["n"])
-			game.floater(grab["pos"], "+%d %s" % [grab["n"],
+			game.floater(grab["pos"], tr("+%d %s") % [grab["n"],
 				tr(str(ItemData.ITEMS.get(grab["id"], {}).get("name", grab["id"])))], "#ffe08a")
 			game.take_drop(grab)
 		return
@@ -618,8 +618,8 @@ func base_ai(dt: float) -> void:
 				step_toward(Vector2(bk.x + 0.5, bk.y + 0.5), dt)
 		if berserk_t <= 0.0:
 			ailment = "weakened" # the fit passes — but it leaves the pal wrung out
-			game.log_msg("%s burned out — now weakened" % spec["name"])
-			game.floater(pos, "burned out", "#a8a8a8")
+			game.log_msg(tr("%s burned out — now weakened") % spec["name"])
+			game.floater(pos, tr("burned out"), "#a8a8a8")
 		sync_screen()
 		return
 	# bed_seek re-arms on every sleep instead — a fixed daytime reset would
@@ -678,7 +678,7 @@ func base_ai(dt: float) -> void:
 				var dur: float = 600.0 * (1.0 - 0.05 * mini(glv, 4))
 				job_site["exp_end"] = game.t + maxf(dur, 240.0)
 				job_site["exp_pal"] = self
-				game.log_msg("%s sets off on an expedition" % tr(str(spec.get("name", species_id))))
+				game.log_msg(tr("%s sets off on an expedition") % tr(str(spec.get("name", species_id))))
 				return
 			step_toward(sp2, dt)
 	elif spec.get("work", {}).get("transporting", 0) > 0:
@@ -790,7 +790,7 @@ func tick_needs(dt: float) -> void:
 			low_san_t += 1.0
 			if low_san_t > 60.0:
 				ailment = AILMENTS[game.rng.int_range(0, AILMENTS.size() - 1)]
-				game.log_msg("%s developed %s! Give it medicine." % [spec["name"], ailment])
+				game.log_msg(tr("%s developed %s! Give it medicine.") % [spec["name"], ailment])
 				game.floater(pos, ailment.to_upper(), "#d06a6a")
 				low_san_t = 0.0
 		else:
@@ -801,14 +801,14 @@ func tick_needs(dt: float) -> void:
 		elif game.take_medicine(mode == "partner"):
 			ailment = ""
 			san = minf(100.0, san + 30.0)
-			game.log_msg("%s took medicine - recovered" % spec["name"])
-			game.floater(pos, "cured!", "#a8e6a1")
+			game.log_msg(tr("%s took medicine - recovered") % spec["name"])
+			game.floater(pos, tr("cured!"), "#a8e6a1")
 		elif ailment == "depressed" and san <= 0.5 and mode == "base" and berserk_t <= 0.0:
 			# no medicine in reach and nothing left in the tank — it snaps
 			berserk_t = 15.0
 			job_site = null # storm off the shift
-			game.log_msg("%s is going BERSERK — keep medicine stocked!" % spec["name"])
-			game.floater(pos, "BERSERK!", "#e8452f")
+			game.log_msg(tr("%s is going BERSERK — keep medicine stocked!") % spec["name"])
+			game.floater(pos, tr("BERSERK!"), "#e8452f")
 	if hunger > 70:
 		var ate := 0
 		if mode == "base" and game.has_structure("feed_box"):

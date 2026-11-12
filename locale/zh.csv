@@ -381,3 +381,332 @@ Your party can field SIX kin from now on.,Your party can field SIX kin from now 
 ACCORD SEALED ✦,ACCORD SEALED ✦,誓约已成 ✦
 KINDEX COMPLETE,KINDEX COMPLETE,图鉴全册
 KINDEX COMPLETE — every kin on record. +3 legendary orbs,KINDEX COMPLETE — every kin on record. +3 legendary orbs,图鉴全册——全物种已记录。+3 传说球
+♥,♥,♥
+ — %s, — %s, ——%s
+★ %s!,★ %s!,★ %s！
+★ CAUGHT!,★ CAUGHT!,★ 抓到了！
+☆ LUCKY ☆,☆ LUCKY ☆,☆ 走运 ☆
+-,-,-
+-%d,-%d,-%d
+!,!,！
+!! RAID: %d hostile kin approach your base !!,!! RAID: %d hostile kin approach your base !!,！！突袭：%d 只敌对契约兽逼近基地！！
+[friend] ,[friend] ,[友方] 
+[you] ,[you] ,[你] 
+* hatched! *,* hatched! *,* 孵化了！*
+%d boss lairs marked deep in the world,%d boss lairs marked deep in the world,%d 处首领巢穴标记在世界深处
+%d food spoiled,%d food spoiled,%d 份食物腐坏了
+%d perishable item%s turned — staff an ice box,%d perishable item%s turned — staff an ice box,%d 件易腐物品变质了——给冰柜配个工兽
+%d waypoints hum out in the wilds,%d waypoints hum out in the wilds,%d 座路标在野外嗡鸣
+%dth %s caught - bonus XP!,%dth %s caught - bonus XP!,第 %d 只 %s 捕获——奖励经验！
+%s -> %s,%s -> %s,%s → %s
+%s -> box,%s -> box,%s → 箱子
+%s (HP %d),%s (HP %d),%s（HP %d）
+%s + %s produced an egg!,%s + %s produced an egg!,%s 和 %s 产下了一颗蛋！
+%s already knows every %s move,%s already knows every %s move,%s 已学会全部 %s 系招式
+%s answers to its keeper,%s answers to its keeper,%s 只听从主人
+%s broke free (%d%%),%s broke free (%d%%),%s 挣脱了（%d%）
+%s broke free from player %d's orb,%s broke free from player %d's orb,%s 挣脱了玩家 %d 的兽球
+%s broke!,%s broke!,%s 坏掉了！
+%s burned out — now weakened,%s burned out — now weakened,%s 烧尽了——陷入虚弱
+%s casts %s!,%s casts %s!,%s 施展 %s！
+%s condensed to star %d!,%s condensed to star %d!,%s 凝聚至 %d 星！
+%s developed %s! Give it medicine.,%s developed %s! Give it medicine.,%s 患上了%s！快喂药。
+%s dropped off %d %s,%s dropped off %d %s,%s 放下了 %d 个%s
+%s grew to Lv%d!,%s grew to Lv%d!,%s 升到 Lv%d！
+%s has no usable partner skill,%s has no usable partner skill,%s 没有可用的伙伴技能
+%s has recovered,%s has recovered,%s 已恢复
+%s incubating - ready in 90s%s%s,%s incubating - ready in 90s%s%s,%s 孵化中——90 秒后出壳%s%s
+%s is already max star,%s is already max star,%s 已满星
+%s is caught in the snare!,%s is caught in the snare!,%s 被陷阱逮住了！
+%s is going BERSERK — keep medicine stocked!,%s is going BERSERK — keep medicine stocked!,%s 正在狂暴化——备好药！
+%s is heart-locked,%s is heart-locked,%s 心有所属
+%s is KO'd - it will recover in the box,%s is KO'd - it will recover in the box,%s 倒下了——会在箱子里恢复
+%s is KO'd - the full kinbox can't take it; it limps back to the wild,%s is KO'd - the full kinbox can't take it; it limps back to the wild,%s 倒下了——兽箱已满进不去，它一瘸一拐回了野外
+%s is KO'd - wait for it to recover,%s is KO'd - wait for it to recover,%s 倒下了——等它恢复
+%s is reloading,%s is reloading,%s 装填中
+%s isn't in the box,%s isn't in the box,%s 不在箱子里
+%s joined the bench (%d/%d),%s joined the bench (%d/%d),%s 进入候补席（%d/%d）
+%s joins your party (%d/%d),%s joins your party (%d/%d),%s 加入你的队伍（%d/%d）
+%s learned %s!,%s learned %s!,%s 学会了 %s！
+%s learns %s!,%s learns %s!,%s 学会了 %s！
+%s left your hands,%s left your hands,%s 离开了你的手
+%s moves: %s,%s moves: %s,%s 的招式：%s
+%s recalled,%s recalled,%s 已收回
+%s returns from expedition: %s,%s returns from expedition: %s,%s 远征归来：%s
+%s sent out!,%s sent out!,%s 出战！
+%s sets off on an expedition,%s sets off on an expedition,%s 出发远征
+%s stores: %s%s,%s stores: %s%s,%s 存货：%s%s
+%s surges for five minutes,%s surges for five minutes,%s 增产五分钟
+%s taught %s %s,%s taught %s %s,%s 教会了 %s 的 %s
+%s took medicine - recovered,%s took medicine - recovered,%s 服了药——康复了
+%s unassigned,%s unassigned,%s 已下工
+%s was destroyed in the raid!,%s was destroyed in the raid!,%s 在突袭中被毁了！
+%s wins the bout!,%s wins the bout!,%s 赢下对决！
+"%s: %d workers, nothing stored","%s: %d workers, nothing stored",%s：%d 名工兽，无存货
+%s: %s,%s: %s,%s：%s
+%s: %s!,%s: %s!,%s：%s！
+%s's %s found no target,%s's %s found no target,%s 的 %s 没找到目标
+%s's %s needs its kin gear — unlock %s in the tech tree,%s's %s needs its kin gear — unlock %s in the tech tree,%s 的 %s 需要兽装——先在科技树解锁 %s
+%s's loadout is full — unslot a move first,%s's loadout is full — unslot a move first,%s 的招式栏已满——先卸下一个
+%s's soul burns brighter (+%d),%s's soul burns brighter (+%d),%s 的魂火烧得更亮（+%d）
++ skill!,+ skill!,+ 新技能！
++%d,+%d,+%d
++%d %s,+%d %s,+%d %s
++%d ancient parts,+%d ancient parts,+%d 个古代零件
++%d food,+%d food,+%d 食物
++%d gold,+%d gold,+%d 金
++%d HP,+%d HP,+%d HP
++%dg,+%dg,+%d 金
++%s,+%s,+%s
+~splash~,~splash~,～哗啦～
+A dropped session's world can't be saved,A dropped session's world can't be saved,掉线会话的世界无法保存
+A gauntlet is already running,A gauntlet is already running,一场试炼已在进行
+A herd of %s is migrating %s! (%d head),A herd of %s is migrating %s! (%d head),一群 %s 正在迁徙%s！（%d 头）
+A legend roams the old den — this one can be caught!,A legend roams the old den — this one can be caught!,旧巢里有传说游荡——这只可以抓！
+A legendary %s den glows deep in the wilds,A legendary %s den glows deep in the wilds,一座 %s 传说巢穴在野地深处发光
+A sealed grotto echoes in the deep wilds,A sealed grotto echoes in the deep wilds,一座封印石窟在野地深处回响
+A sealed grotto echoes in the deep wilds — it sounds deep,A sealed grotto echoes in the deep wilds — it sounds deep,一座封印石窟在野地深处回响——听起来很深
+A sealed grotto echoes in the deep wilds — something huge breathes within,A sealed grotto echoes in the deep wilds — something huge breathes within,一座封印石窟在野地深处回响——里面有什么巨物在呼吸
+A supply crate lands nearby — grab it before the locals do,A supply crate lands nearby — grab it before the locals do,一箱补给落在附近——抢在本地人之前拿到
+A thunderstorm rolls in — electric kin crackle,A thunderstorm rolls in — electric kin crackle,雷雨滚滚而来——电系契约兽噼啪作响
+A wandering merchant has arrived! (E to trade),A wandering merchant has arrived! (E to trade),流浪商人到了！（按 E 交易）
+Alpha %s down! Bonus orb.,Alpha %s down! Bonus orb.,头目 %s 倒下！奖励兽球。
+an egg!,an egg!,一颗蛋！
+ANCHORED,ANCHORED,已锚定
+APEX CLEARED!,APEX CLEARED!,巅峰通过！
+APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper,APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper,巅峰试炼通过——高塔向加冕之主俯首
+ARMOR BROKE!,ARMOR BROKE!,护甲碎了！
+Bag full - %s x%d dropped,Bag full - %s x%d dropped,背包已满——%s x%d 掉落了
+Bait tossed — something hungry will smell it,Bait tossed — something hungry will smell it,诱饵抛出去了——饥饿的家伙会闻到
+Base established! Assign kin with F.,Base established! Assign kin with F.,基地落成！按 F 给契约兽分工。
+Base level %d! +2 workforce slots,Base level %d! +2 workforce slots,基地 Lv%d！+2 个工位
+Base level maxed,Base level maxed,基地已满级
+Base mission: ,Base mission: ,基础任务：
+Bench is full - %s stays in the box,Bench is full - %s stays in the box,候补席已满——%s 留在箱子里
+BERSERK!,BERSERK!,狂暴！
+blink!,blink!,闪现！
+Blocked: something already built there,Blocked: something already built there,被挡住：那里已经有建筑了
+blocked!,blocked!,被挡住了！
+Board request filled — +%d gold,Board request filled — +%d gold,告示委托完成——+%d 金
+Board request filled: %d %s → +%d gold,Board request filled: %d %s → +%d gold,告示委托完成：%d 个 %s → +%d 金
+Bought %s (%dg),Bought %s (%dg),买下了 %s（%d 金）
+Bought a Lv%d %s! (%dg),Bought a Lv%d %s! (%dg),买下了 Lv%d %s！（%d 金）
+BOUNTY +%dg,BOUNTY +%dg,赏金 +%d 金
+Bounty claimed on %s: +%d gold,Bounty claimed on %s: +%d gold,收下 %s 的赏金：+%d 金
+BOX FULL,BOX FULL,箱子已满
+…broke free,…broke free,……挣脱了
+BROKE!,BROKE!,坏掉了！
+Build limit reached (%d),Build limit reached (%d),已达建造上限（%d）
+Built %s,Built %s,建成了 %s
+burned out,burned out,烧尽
+Can't build across a ledge,Can't build across a ledge,不能隔着崖沿建造
+Can't build off the map,Can't build off the map,不能建到地图外
+Can't build on exposed rock,Can't build on exposed rock,不能建在裸岩上
+Can't build on water,Can't build on water,不能建在水面上
+Can't build there,Can't build there,那里不能建
+Can't sleep - hostiles are after you!,Can't sleep - hostiles are after you!,睡不着——有敌人盯上你了！
+Cast at the water's edge,Cast at the water's edge,得到水边甩竿
+Catch streak ends at %d,Catch streak ends at %d,连捕纪录止于 %d
+CATCH x%d! +%dxp,CATCH x%d! +%dxp,捕获 x%d！+%d 经验
+Caught %s Lv%d!,Caught %s Lv%d!,抓到了 %s Lv%d！
+Chest full - %d item(s) kept in bag,Chest full - %d item(s) kept in bag,箱子已满——%d 件物品留在背包
+cold…,cold…,好冷…
+Connected to host,Connected to host,已连上房主
+Craft queue is full,Craft queue is full,制作队列已满
+Crafted %s x%d,Crafted %s x%d,做出了 %s x%d
+Crafting %s… (%ds),Crafting %s… (%ds),制作 %s……（%d 秒）
+cured!,cured!,治好了！
+Demolished %s (50%% refund),Demolished %s (50%% refund),拆除了 %s（返还 50%）
+Dismounted,Dismounted,已下马
+dream chaser!,dream chaser!,逐梦！
+Egg hatched: %s%s (talent %d)!,Egg hatched: %s%s (talent %d)!,蛋孵化了：%s%s（资质 %d）！
+Egg in the incubator — 90s to hatch,Egg in the incubator — 90s to hatch,蛋进孵化器了——90 秒孵化
+Egg!,Egg!,是蛋！
+ENRAGED!,ENRAGED!,暴怒！
+Equipped ,Equipped ,已装备 
+EXPEDITION!,EXPEDITION!,远征！
+fertilized!,fertilized!,已施肥！
+Fertilizer spread — five minutes of surge,Fertilizer spread — five minutes of surge,肥料撒好了——增产五分钟
+Fossil dug: %d ancient parts%s,Fossil dug: %d ancient parts%s,挖出化石：%d 个古代零件%s
+Found a %s!,Found a %s!,捡到了 %s！
+Found a Boss Sigil!,Found a Boss Sigil!,捡到了一枚首领徽记！
+Freed %s Lv%d — it scurries into your kinbox,Freed %s Lv%d — it scurries into your kinbox,解救了 %s Lv%d——它窜进了你的兽箱
+FREED!,FREED!,获救！
+FROZEN SOLID,FROZEN SOLID,冻成冰块
+GAUNTLET CLEARED!,GAUNTLET CLEARED!,试炼通过！
+GAUNTLET CLEARED! Legendary orbs + effigies + gold,GAUNTLET CLEARED! Legendary orbs + effigies + gold,试炼通过！传说球+图腾+金币
+Gauntlet wave %d! %d foes,Gauntlet wave %d! %d foes,试炼第 %d 波！%d 个敌人
+GUARDS!,GUARDS!,卫兵！
+Guests connected — end the session before loading,Guests connected — end the session before loading,有来客在线——先结束会话再读档
+heat…,heat…,好热…
+Host disconnected,Host disconnected,房主已断开
+Host failed: port %d busy,Host failed: port %d busy,开房失败：端口 %d 被占用
+Hosting on port %d — friends join with K,Hosting on port %d — friends join with K,已在端口 %d 开房——朋友按 K 加入
+HP already full,HP already full,HP 已满
+Hunt filled: %d %s → +%d gold,Hunt filled: %d %s → +%d gold,狩猎委托完成：%d 只 %s → +%d 金
+Hunt: %s %d/%d,Hunt: %s %d/%d,狩猎：%s %d/%d
+IMMUNE,IMMUNE,免疫
+ISLAND CROWNED,ISLAND CROWNED,岛屿加冕
+ISLAND CROWNED — every spire lies broken. The Wildmere is yours.,ISLAND CROWNED — every spire lies broken. The Wildmere is yours.,岛屿加冕——尖塔尽碎。荒野泽属于你。
+IT CALLS THE PACK,IT CALLS THE PACK,它在呼唤兽群
+IT GRINS.,IT GRINS.,它在狞笑。
+IT REARS UP,IT REARS UP,它人立而起
+Join failed,Join failed,加入失败
+Joining %s:%d ...,Joining %s:%d ...,正在加入 %s:%d ……
+Kin gacha: it wants 30 gold in the slot,Kin gacha: it wants 30 gold in the slot,契约兽扭蛋机：投币口要 30 金
+Kinbox full - make room first,Kinbox full - make room first,兽箱已满——先腾个位置
+Kinbox is full,Kinbox is full,兽箱已满
+Kinbox is full — the captive won't leave its cage,Kinbox is full — the captive won't leave its cage,兽箱已满——囚徒不肯离开笼子
+Kinbox is full (%d) - %s got away,Kinbox is full (%d) - %s got away,兽箱已满（%d）——%s 跑掉了
+Kinbox is full (%d) - can't store %s,Kinbox is full (%d) - can't store %s,兽箱已满（%d）——存不下 %s
+Kindex mastery: %s +10%%,Kindex mastery: %s +10%%,图鉴精通：%s +10%
+KINDEX MILESTONE,KINDEX MILESTONE,图鉴里程碑
+KINDEX: %d species caught! +%d tech,KINDEX: %d species caught! +%d tech,图鉴：已捕获 %d 种！+%d 技术点
+Lead kin is down,Lead kin is down,领头契约兽倒下了
+"Level up! Lv%d (+2 tech, +1 stat)","Level up! Lv%d (+2 tech, +1 stat)",升级！Lv%d（+2 技术点，+1 属性点）
+Lightning bites the rod — banked an electric organ,Lightning bites the rod — banked an electric organ,雷电咬上避雷针——存进一枚电器官
+Lucky %s dropped gold!,Lucky %s dropped gold!,幸运的 %s 掉出了金币！
+Max %d kinboxes (base + outposts),Max %d kinboxes (base + outposts),兽箱最多 %d 座（基地+哨站）
+Memory wiped: %d stat points returned,Memory wiped: %d stat points returned,记忆已洗：返还 %d 属性点
+Merchant!,Merchant!,商人来了！
+MIGRATION!,MIGRATION!,大迁徙！
+milk x2!,milk x2!,双倍奶！
+milk!,milk!,挤奶了！
+Missing materials,Missing materials,材料不足
+MISSION DONE,MISSION DONE,任务完成
+MISSION: %s — done! +%dg +%d tech,MISSION: %s — done! +%dg +%d tech,任务：%s——完成！+%d 金 +%d 技术点
+Monitoring stand: %s pace,Monitoring stand: %s pace,监视台：%s 节奏
+"Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)","Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)",监视台：%s 节奏（产出 x%.2f，SAN 消耗 x%.1f）
+Need %d %s,Need %d %s,需要 %d 个%s
+Need %d ancient parts,Need %d ancient parts,需要 %d 个古代零件
+Need %d effigies or a stat point (have %d),Need %d effigies or a stat point (have %d),需要 %d 个图腾或 1 属性点（现有 %d）
+Need %d effigies to infuse %s,Need %d effigies to infuse %s,灌注 %s 需要 %d 个图腾
+Need %d gold,Need %d gold,需要 %d 金
+Need %d same-species kin for star %d (have %d),Need %d same-species kin for star %d (have %d),升到 %d 星需要 %d 只同种契约兽（现有 %d）
+Need %d tech points,Need %d tech points,需要 %d 技术点
+Need %s in the bag,Need %s in the bag,背包里需要有 %s
+Need a free incubator nearby,Need a free incubator nearby,附近需要一台空闲孵化器
+Need a kinbox to summon the raid,Need a kinbox to summon the raid,需要一座兽箱来召来突袭
+Need to be at a %s,Need to be at a %s,需要站在 %s 旁
+needs cake!,needs cake!,要蛋糕！
+No active kin to condense,No active kin to condense,没有出战契约兽可凝聚
+No active kin to teach,No active kin to teach,没有出战契约兽可传授
+No base kin nearby,No base kin nearby,附近没有驻扎的契约兽
+No host answered — check the address,No host answered — check the address,无人应答——检查地址
+No kin in the line of fire,No kin in the line of fire,射线上没有契约兽
+No mountable kin nearby (right saddle in pack?),No mountable kin nearby (right saddle in pack?),附近没有可骑乘的契约兽（鞍具带对了吗？）
+No orbs loaded!,No orbs loaded!,没有装填兽球！
+No orbs! Craft kin_orb at a workbench.,No orbs! Craft kin_orb at a workbench.,没有兽球！去工作台做几颗 kin_orb。
+No party kin,No party kin,队伍里没有契约兽
+No perks to forget,No perks to forget,没有可遗忘的特质
+No workplace nearby,No workplace nearby,附近没有工位
+Nothing to demolish,Nothing to demolish,没有可拆除的东西
+Notice board: bring %d %s (have %d),Notice board: bring %d %s (have %d),告示板：交纳 %d 个 %s（现有 %d）
+Notice board: cull %d %s (%d/%d) — kill or capture counts,Notice board: cull %d %s (%d/%d) — kill or capture counts,告示板：清缴 %d 只 %s（%d/%d）——击杀或捕获都算
+Notice board: the goods weren't in your pack,Notice board: the goods weren't in your pack,告示板：货不在你背包里
+Notice board: the posting was already gone,Notice board: the posting was already gone,告示板：委托已经不在了
+Notice board: today's request is filled — come back at dawn,Notice board: today's request is filled — come back at dawn,告示板：今天的委托已完成——天亮再来
+Only the host can change the island,Only the host can change the island,只有房主能改变这座岛
+Out of ,Out of ,用光了 
+Outpost kinbox online — shared box network,Outpost kinbox online — shared box network,哨站兽箱上线——箱子网络共享
+Outpost promoted to primary base,Outpost promoted to primary base,哨站已升格为主基地
+PACT SLAM,PACT SLAM,铁誓坠击
+Pact spire broken! %d of %d,Pact spire broken! %d of %d,铁誓尖塔已破！%d/%d
+Party full (%d) - send someone to the box first,Party full (%d) - send someone to the box first,队伍已满（%d）——先把谁送进箱子
+PENGUIN CANNON!,PENGUIN CANNON!,企鹅加农炮！
+Player %d built %s,Player %d built %s,玩家 %d 建成了 %s
+Player %d caught %s Lv%d — into their kinbox,Player %d caught %s Lv%d — into their kinbox,玩家 %d 抓到了 %s Lv%d——进了他的兽箱
+Player %d joined,Player %d joined,玩家 %d 加入了
+Player %d razed %s,Player %d razed %s,玩家 %d 拆掉了 %s
+Press E again to consume %d %s -> star %d,Press E again to consume %d %s -> star %d,再按 E 消耗 %d 只 %s -> 升到 %d 星
+RAID BOSS: %s Lv45 approaches your base!,RAID BOSS: %s Lv45 approaches your base!,突袭首领：%s Lv45 逼近基地！
+RAID CLEARED! Legendary orb + loot!,RAID CLEARED! Legendary orb + loot!,突袭击退！传说球+战利品！
+RAID INCOMING,RAID INCOMING,突袭来袭
+Raid party spotted — a %s is coming for the kinbox!,Raid party spotted — a %s is coming for the kinbox!,突袭队现身——一只 %s 冲着兽箱来了！
+Rain sweeps over the island,Rain sweeps over the island,雨幕扫过小岛
+Ranch needs a cake (chest/feed box) to breed,Ranch needs a cake (chest/feed box) to breed,牧场需要蛋糕（箱子/食槽里放）才能繁殖
+Reach Lv%d to unlock %s,Reach Lv%d to unlock %s,达到 Lv%d 解锁 %s
+Repaired %s,Repaired %s,修好了 %s
+Request refused — goods returned,Request refused — goods returned,委托被退回——货物已返还
+Riding %s,Riding %s,骑乘 %s
+ROLY POLY!,ROLY POLY!,滚滚撞击！
+safe travels…,safe travels…,一路平安……
+Save file corrupt - starting fresh,Save file corrupt - starting fresh,存档损坏——重新开始
+Save has wrong field types - starting fresh,Save has wrong field types - starting fresh,存档字段类型不对——重新开始
+Save is from a newer build - not loading,Save is from a newer build - not loading,存档来自更新的版本——无法读取
+Save layout predates the current world format - fresh terrain,Save layout predates the current world format - fresh terrain,存档布局早于当前世界格式——重新生成地形
+Save missing field '%s' - starting fresh,Save missing field '%s' - starting fresh,存档缺少字段 '%s'——重新开始
+Send out a kin first,Send out a kin first,先放出一只契约兽
+SHATTERED,SHATTERED,粉碎
+Skipped unknown species in save: %s,Skipped unknown species in save: %s,跳过存档中的未知物种：%s
+Skipped unknown structure in save: %s,Skipped unknown structure in save: %s,跳过存档中的未知建筑：%s
+Skipped unownable rostered species in save: %s,Skipped unownable rostered species in save: %s,跳过存档中不可拥有的名册物种：%s
+Snared!,Snared!,逮住了！
+Sold %s (+%dg),Sold %s (+%dg),卖出了 %s（+%d 金）
+Sold %s for %dg,Sold %s for %dg,%s 卖了 %d 金
+SPLASH!,SPLASH!,扑通！
+Stand by a farm plot to spread it,Stand by a farm plot to spread it,站到田边才能撒
+Statue maxed,Statue maxed,雕像已满级
+Statue upgraded: %s Lv%d,Statue upgraded: %s Lv%d,雕像升级：%s Lv%d
+STREAK x%d!,STREAK x%d!,连捕 x%d！
+STRIKE!,STRIKE!,好球！
+SUPPLY DROP!,SUPPLY DROP!,补给空投！
+"Synced %d structures, %d kin","Synced %d structures, %d kin",已同步 %d 座建筑、%d 只契约兽
+Synced world seed %d,Synced world seed %d,已同步世界种子 %d
+The altar drinks lumenite — thunder answers,The altar drinks lumenite — thunder answers,祭坛饮下流明石——雷霆作答
+The altar drinks your lumenite — the sky shifts,The altar drinks your lumenite — the sky shifts,祭坛饮下流明石——天色变幻
+The bait came back — the island didn't hear it,The bait came back — the island didn't hear it,诱饵弹回来了——岛没有听见
+The cage holds something that can't be kept,The cage holds something that can't be kept,笼子里关着无法收留的东西
+The cage is empty,The cage is empty,笼子是空的
+The chart is illegible here — nothing to mark,The chart is illegible here — nothing to mark,海图在这里读不出东西——无可标记
+The chart marks a spot — check your map,The chart marks a spot — check your map,海图标出了一个位置——看地图
+The chest was a %s — it was never a chest!,The chest was a %s — it was never a chest!,那箱子是只 %s——根本不是箱子！
+The den will call a new legend,The den will call a new legend,巢穴会唤来新的传说
+The egg hatched… but there was no room for the chick,The egg hatched… but there was no room for the chick,蛋孵化了……但没地方安放幼兽
+The gacha rattles — out rolls a %s,The gacha rattles — out rolls a %s,扭蛋机咔咔作响——滚出了一只 %s
+The gauntlet needs a kinbox to answer to,The gauntlet needs a kinbox to answer to,试炼需要一座兽箱来应答
+The Iron Pact raised %d spires across the Wildmere — break them all,The Iron Pact raised %d spires across the Wildmere — break them all,铁誓团在荒野泽立起了 %d 座尖塔——全部砸碎
+The merchant is dead. The Iron Pact remembers,The merchant is dead. The Iron Pact remembers,商人死了。铁誓团记下了这笔账
+The merchant moved on,The merchant moved on,商人离开了
+The offering burns — a soul burns brighter,The offering burns — a soul burns brighter,祭品燃烧——一道魂灵烧得更亮
+The sky is still settling (%.0fs),The sky is still settling (%.0fs),天色尚未平静（%.0f 秒）
+The waypoint hums… but there's nowhere to go yet,The waypoint hums… but there's nowhere to go yet,路标嗡嗡作响……但还没有可去的地方
+The waypoint net pulls you across the island,The waypoint net pulls you across the island,路标网把你拉到了岛的另一端
+The world lives on the host — nothing to load locally,The world lives on the host — nothing to load locally,世界在房主那里——本地没有可读的档
+thwack,thwack,砰
+Too many open offers — try again in a breath,Too many open offers — try again in a breath,挂出的委托太多——稍后再试
+TREASURE!,TREASURE!,宝藏！
+Unearthed a cache: %d gold and a keepsake,Unearthed a cache: %d gold and a keepsake,挖出了秘藏：%d 金和一件纪念品
+Unequipped ,Unequipped ,已卸下 
+Unlock %s in the tech tree first,Unlock %s in the tech tree first,先在科技树解锁 %s
+Unlocked %s,Unlocked %s,解锁了 %s
+WANTED! The Iron Pact answers violence with violence,WANTED! The Iron Pact answers violence with violence,通缉！铁誓团以暴制暴
+Work: %s,Work: %s,工作：%s
+You butchered %s… it dropped its goods,You butchered %s… it dropped its goods,你宰了 %s……它掉出了货物
+You dropped %d items where you fell!,You dropped %d items where you fell!,你在倒下的地方掉了 %d 件物品！
+You need a Meat Cleaver for that,You need a Meat Cleaver for that,那需要一把切肉刀
+You offer lumenite — rain answers,You offer lumenite — rain answers,你献上流明石——雨作答
+You pet %s,You pet %s,你摸了摸 %s
+You sleep until dawn. Day %d,You sleep until dawn. Day %d,你一觉睡到天亮。第 %d 天
+You wake up battered at base…,You wake up battered at base…,你遍体鳞伤地在基地醒来…
+yum!,yum!,好吃！
+zzz,zzz,呼噜
+%s deployed at base,%s deployed at base,%s 已在基地就位
+%s joined your party (%d/%d),%s joined your party (%d/%d),%s 加入了你的队伍（%d/%d）
+%s won't carry a rider,%s won't carry a rider,%s 驮不了骑手
+"A corked bottle — inside, a faded treasure chart!","A corked bottle — inside, a faded treasure chart!",一个塞着软木塞的瓶子——里面是一张褪色的藏宝图！
+A soggy coin purse!,A soggy coin purse!,一只湿透的钱袋！
+A wild %s took the bait!,A wild %s took the bait!,一只野生 %s 咬钩了！
+Base is full (%d kin — level up for more slots),Base is full (%d kin — level up for more slots),基地已满（%d 只契约兽——升级解锁更多栏位）
+Can't sleep — hostiles are after someone,Can't sleep — hostiles are after someone,睡不着——有人被敌人盯上了
+Caught kin fluids x%d,Caught kin fluids x%d,契约兽体液 x%d
+Just weeds and berries.,Just weeds and berries.,只有水草和浆果。
+Need a kinbox to deploy kin,Need a kinbox to deploy kin,需要一座兽箱才能派驻契约兽
+Notice board: give another keeper a turn,Notice board: give another keeper a turn,告示板：让别的管家也来一轮
+Notice board: someone's filling it — give it a moment,Notice board: someone's filling it — give it a moment,告示板：有人正在交委托——稍等
+Party full (%d),Party full (%d),队伍已满（%d）
+That keeper tag is already claimed,That keeper tag is already claimed,这个管家名号已被占用
+Too far to mount,Too far to mount,太远，骑不上去
+You caught %s Lv%d,You caught %s Lv%d,你抓到了 %s Lv%d
+[ deposit all ],[ deposit all ],[ 全部存入 ]
+[ take all ],[ take all ],[ 全部取出 ]

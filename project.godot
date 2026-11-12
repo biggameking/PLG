@@ -89,4 +89,3 @@ guide={
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://locale/zh.zh.translation")

@@ -318,7 +318,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if game.net and game.net.multiplayer.multiplayer_peer == null:
 			game.net.host() # J: host on :7777 — refused mid-session:
 		elif game.net:                    # a guest re-hosting severs its own
-			game.log_msg("End the session first (quit to title)") # replica world
+			game.log_msg(tr("End the session first (quit to title)")) # replica world
 		return
 	if event.is_action_pressed("join_net"):
 		if game.net and game.panel == "" and game.net.multiplayer.multiplayer_peer == null:
@@ -381,7 +381,7 @@ func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked
 func _chat_submit() -> void:
 	if chat_buf.strip_edges() != "" and game.net:
 		game.net.rpc("chat", chat_buf, multiplayer.get_unique_id())
-		game.log_msg("[you] " + chat_buf)
+		game.log_msg(tr("[you] ") + chat_buf)
 	chat_buf = ""; game.panel = ""
 
 func _join_submit() -> void:
@@ -418,7 +418,7 @@ func run_click(cr: Dictionary) -> void:
 			game.repair_armor()
 		"tech":
 			if game.net != null and game.net.is_client():
-				game.log_msg("Research is the host's to direct")
+				game.log_msg(tr("Research is the host's to direct"))
 			else:
 				game.unlock(cr["arg"])
 		"box_out":
@@ -455,9 +455,9 @@ func run_click(cr: Dictionary) -> void:
 				var rw: Dictionary = game.merchant_stock[int(cr["arg"])] \
 					if int(cr["arg"]) >= 0 and int(cr["arg"]) < game.merchant_stock.size() else {}
 				if rw.is_empty():
-					game.log_msg("Nothing on the stand")
+					game.log_msg(tr("Nothing on the stand"))
 				elif game.item_count("gold_coin") < int(rw.get("price", 0)):
-					game.log_msg("Not enough gold — %dg asked" % int(rw.get("price", 0)))
+					game.log_msg(tr("Not enough gold — %dg asked") % int(rw.get("price", 0)))
 				else:
 					if game.net.pay("buy", {"gold_coin": int(rw.get("price", 0))}):
 						game.net.rpc("buy_req", float(cr["arg"]))
@@ -522,12 +522,12 @@ func run_click(cr: Dictionary) -> void:
 			game.equip(cr["arg"])
 		"perk":
 			if game.net != null and game.net.is_client():
-				game.log_msg("The statue answers the island's keeper") # perks are the host keeper's own
+				game.log_msg(tr("The statue answers the island's keeper")) # perks are the host keeper's own
 			else:
 				game.upgrade_perk(cr["arg"])
 		"base_up":
 			if game.net != null and game.net.is_client():
-				game.log_msg("The stand answers the island's keeper") # base level is the host's claim
+				game.log_msg(tr("The stand answers the island's keeper")) # base level is the host's claim
 			else:
 				game.upgrade_base()
 		"infuse":
@@ -538,7 +538,7 @@ func run_click(cr: Dictionary) -> void:
 						sb = q.soul_boost
 						break
 				if game.item_count("sprigmelt_effigy") < 1 + sb:
-					game.log_msg("Needs %d effigies" % (1 + sb))
+					game.log_msg(tr("Needs %d effigies") % (1 + sb))
 				else:
 					if game.net.pay("infuse", {"sprigmelt_effigy": 1 + sb}):
 						game.net.rpc("infuse_req", float(cr["arg"])) # your kin, host truth
@@ -645,9 +645,9 @@ func chest_bulk(act: String) -> void:
 			game.net.rpc("chest_req", "wd", float(cc.x), float(cc.y), {})
 		return
 	if act == "chest_dep":
-		game.log_msg("Stored %d items" % game.chest_deposit_all(st))
+		game.log_msg(tr("Stored %d items") % game.chest_deposit_all(st))
 	else:
-		game.log_msg("Took %d items" % game.chest_withdraw_all(st))
+		game.log_msg(tr("Took %d items") % game.chest_withdraw_all(st))
 
 func interact() -> void:
 	if game.merchant != null and game.player.pos.distance_to(game.merchant.pos) < 2.4:
@@ -687,16 +687,16 @@ func interact() -> void:
 				var sdef: Dictionary = StructureData.STRUCTURES.get(st["id"], {})
 				var eggs: String = "  %d egg(s)" % st["store"].get("kin_egg", 0) if st["id"] == "ranch" and st.get("store", {}).get("kin_egg", 0) > 0 else ""
 				if st.get("store", {}).is_empty():
-					game.log_msg("%s: %d workers, nothing stored" % [tr(str(sdef.get("name", st["id"]))), st["workers"].size()])
+					game.log_msg(tr("%s: %d workers, nothing stored") % [tr(str(sdef.get("name", st["id"]))), st["workers"].size()])
 				else:
-					game.log_msg("%s stores: %s%s" % [tr(str(sdef.get("name", st["id"]))), str(st["store"]), eggs])
+					game.log_msg(tr("%s stores: %s%s") % [tr(str(sdef.get("name", st["id"]))), str(st["store"]), eggs])
 				return
 			"feed_box":
 				game.chest_ref = st # pals eat out of it; it's still a container
 				game.panel = "chest"
 				return
 			"kin_bed":
-				game.log_msg("Kin bed: base kin resting here recover SAN")
+				game.log_msg(tr("Kin bed: base kin resting here recover SAN"))
 				return
 			"kinbox":
 				game.panel = "kinbox"
@@ -734,7 +734,7 @@ func interact() -> void:
 						if game.net.pay("shrine", {"lumenite": 3}):
 							game.net.rpc("shrine_req")
 					else:
-						game.log_msg("The shrine wants 3 lumenite")
+						game.log_msg(tr("The shrine wants 3 lumenite"))
 				else:
 					game.pray_weather()
 				return
@@ -771,7 +771,7 @@ func interact() -> void:
 				var inc = st.get("egg_inc")
 				if inc is Dictionary:
 					var hint: String = game.egg_hint(inc.get("pair"))
-					game.log_msg("Incubating %s: %ds left" % [hint if hint != "" else "egg",
+					game.log_msg(tr("Incubating %s: %ds left") % [hint if hint != "" else "egg",
 						int(maxi(0.0, float(inc.get("ready_t", 0.0)) - game.t))])
 				elif game.item_count("kin_egg") > 0 or game.item_count("huge_kin_egg") > 0:
 					if game.net != null and game.net.is_client():
@@ -781,15 +781,15 @@ func interact() -> void:
 					else:
 						game.deposit_egg()
 				else:
-					game.log_msg("Incubator empty - bring a kin egg")
+					game.log_msg(tr("Incubator empty - bring a kin egg"))
 				return
 			"wooden_wall", "spikes":
-				game.log_msg("%s (HP %d)" % [StructureData.STRUCTURES[st["id"]]["name"], int(st.get("hp", 0))])
+				game.log_msg(tr("%s (HP %d)") % [StructureData.STRUCTURES[st["id"]]["name"], int(st.get("hp", 0))])
 				return
 	if game.has_structure("kinbox"):
 		game.panel = "kinbox"
 		return
-	game.log_msg("Nothing to interact with")
+	game.log_msg(tr("Nothing to interact with"))
 
 func mouse_tile() -> Vector2:
 	var m := get_global_mouse_position()
@@ -1236,7 +1236,7 @@ func _map_toggle() -> void:
 
 func _demolish_verb(tw: Vector2) -> void: # one reach contract for cursor AND slab
 	if game.player.pos.distance_to(tw + Vector2(0.5, 0.5)) > game.DEMOLISH_REACH:
-		game.log_msg("Too far to demolish")
+		game.log_msg(tr("Too far to demolish"))
 		return
 	game.demolish_at(tw)
 
@@ -1250,7 +1250,7 @@ func _touch_demolish() -> void: # no cursor on a slab — raze the nearest struc
 	if bd < game.DEMOLISH_REACH:
 		game.demolish_at(bt)
 	else:
-		game.log_msg("Nothing close enough to demolish")
+		game.log_msg(tr("Nothing close enough to demolish"))
 
 func touch_verb(b: String) -> void:
 	var pl := game.player
@@ -1607,8 +1607,8 @@ func draw_chest(r: Vector2) -> void:
 	var rect2 := Rect2(rr.position.x + 230, y - 12, 190, 20)
 	click_rects.append({"rect": rect1, "act": "chest_dep", "arg": null})
 	click_rects.append({"rect": rect2, "act": "chest_wd", "arg": null})
-	draw_string(font, rect1.position, "[ deposit all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
-	draw_string(font, rect2.position, "[ take all ]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
+	draw_string(font, rect1.position, tr("[ deposit all ]"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
+	draw_string(font, rect2.position, tr("[ take all ]"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL)
 	y += 28
 	var skeys: Array = st.get("store", {}).keys()
 	chest_scroll = clampi(chest_scroll, 0, maxi(0, skeys.size() - 12))
@@ -2023,12 +2023,12 @@ func use_item(k: String) -> void:
 	match k:
 		"boss_sigil":
 			if game.net != null and game.net.is_client():
-				game.log_msg("The horn is the host's to sound")
+				game.log_msg(tr("The horn is the host's to sound"))
 			elif game.summon_raid():
 				game.add_item(k, -1)
 		"gauntlet_sigil":
 			if game.net != null and game.net.is_client():
-				game.log_msg("The gauntlet answers the host, not guests")
+				game.log_msg(tr("The gauntlet answers the host, not guests"))
 			elif game.start_gauntlet():
 				game.add_item(k, -1)
 		"kin_egg", "huge_kin_egg":
@@ -2046,7 +2046,7 @@ func use_item(k: String) -> void:
 				game.cast_line()
 		"memory_wipe":
 			if game.net != null and game.net.is_client():
-				game.log_msg("The statue only answers the island's keeper")
+				game.log_msg(tr("The statue only answers the island's keeper"))
 			elif game.respec():
 				game.add_item(k, -1)
 		"fertilizer":
@@ -2071,18 +2071,18 @@ func use_item(k: String) -> void:
 			var it: Dictionary = ItemData.ITEMS.get(k, {})
 			if it.get("heal", 0) > 0:
 				if game.player.hp >= game.player.max_hp:
-					game.log_msg("HP already full")
+					game.log_msg(tr("HP already full"))
 					return # don't burn the medicine
 				game.player.hp = mini(game.player.max_hp, game.player.hp + it["heal"])
 				game.add_item(k, -1)
-				game.log_msg("+%d HP" % it["heal"])
+				game.log_msg(tr("+%d HP") % it["heal"])
 			elif it.get("food", 0) > 0:
 				if game.player.hunger >= 100.0:
-					game.log_msg("Not hungry")
+					game.log_msg(tr("Not hungry"))
 					return # don't waste the food at full satiety
 				game.player.hunger = minf(100.0, game.player.hunger + it["food"])
 				game.add_item(k, -1)
-				game.log_msg("+%d food" % it["food"])
+				game.log_msg(tr("+%d food") % it["food"])
 				var bf: Dictionary = it.get("buff", {})
 				if not bf.is_empty(): # the island meal bonus: one timed buff at a time
 					game.player.eat_buff(bf)
@@ -2090,7 +2090,7 @@ func use_item(k: String) -> void:
 					for bk in bf:
 						if bk != "t":
 							bstr += ("+" if bstr == "" else ",+") + str(bk).to_upper()
-					game.log_msg("Meal buff: %s for %ds" % [bstr, int(bf.get("t", 300))])
+					game.log_msg(tr("Meal buff: %s for %ds") % [bstr, int(bf.get("t", 300))])
 			else:
 				game.log_msg(tr("Can't use ") + tr(str(k)))
 

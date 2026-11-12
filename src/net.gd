@@ -38,7 +38,7 @@ func pay(tag: String, cost: Dictionary) -> bool:
 		# beat", never "the oldest hold evaporates"
 		for k in debited:
 			game.add_item(str(k), int(debited[k]))
-		game.log_msg("Too many open offers — try again in a breath")
+		game.log_msg(tr("Too many open offers — try again in a breath"))
 		return false
 	pending_pays.append({"tag": tag, "cost": debited})
 	return true
@@ -55,7 +55,7 @@ func pay_rej(tag: String) -> void:
 	if is_host:
 		return
 	pay_settle(str(tag), true)
-	game.log_msg("Request refused — goods returned")
+	game.log_msg(tr("Request refused — goods returned"))
 # host-side: every refused paid verb owes the asker a refund echo
 func _pay_rej(pid: int, tag: String) -> void:
 	if multiplayer.multiplayer_peer != null \
@@ -80,25 +80,25 @@ func host() -> void:
 	# the host relays what they need (peer_pos/peer_joined/chat), and a guest's
 	# broadcast reaching other guests prints every chat line twice in a trio
 	if peer.create_server(PORT, MAX_PEERS) != OK:
-		game.log_msg("Host failed: port %d busy" % PORT)
+		game.log_msg(tr("Host failed: port %d busy") % PORT)
 		return
 	_close_peer() # never swap a live peer — that leaks the session and
 	# flips is_client() off, which would open the save gates on a guest
 	multiplayer.multiplayer_peer = peer
 	is_host = true
-	game.log_msg("Hosting on port %d — friends join with K" % PORT)
+	game.log_msg(tr("Hosting on port %d — friends join with K") % PORT)
 
 func join(ip: String) -> void:
 	if game.state != "title": # world_sync razes this world — an unsaved solo run would evaporate
 		game.save_game() # clients self-refuse inside save_game — safe from every state
 	var peer := ENetMultiplayerPeer.new()
 	if peer.create_client(ip, PORT) != OK:
-		game.log_msg("Join failed")
+		game.log_msg(tr("Join failed"))
 		return
 	_close_peer()
 	is_host = false
 	multiplayer.multiplayer_peer = peer
-	game.log_msg("Joining %s:%d ..." % [ip, PORT])
+	game.log_msg(tr("Joining %s:%d ...") % [ip, PORT])
 
 func _close_peer() -> void:
 	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
@@ -134,7 +134,7 @@ func _on_peer_connected(id: int) -> void:
 func _on_connected_to_server() -> void:
 	spawn_ghost(1)  # host
 	rpc("hello", my_tag()) # our install token claims our pals on their world
-	game.log_msg("Connected to host")
+	game.log_msg(tr("Connected to host"))
 
 func my_tag() -> String:
 	# one random token per install — lets a guest's kin find their keeper
@@ -185,14 +185,25 @@ func hello(tag: String) -> void:
 	rpc_id(pid, "box_sync", box_state_pack(pid), game.rparty_for(pid).duplicate(), party_state_pack(pid))
 
 @rpc("authority", "call_remote", "reliable")
-func net_note(msg: String) -> void:
-	game.log_msg(str(msg).substr(0, 120)) # a host whisper in the guest's log
+func net_note(msg: Variant, args: Variant = []) -> void:
+	# a host whisper in the guest's log — the key + raw args travel; we translate
+	var a := []
+	if args is Array:
+		for x in args:
+			if a.size() >= 6:
+				break
+			if x is String:
+				a.append(tr(str(x).substr(0, 48)))
+			elif x is int or x is float or x is bool:
+				a.append(x)
+	var t := tr(str(msg).substr(0, 120))
+	game.log_msg(t % a if a.size() else t)
 
 @rpc("authority", "call_remote", "reliable")
 func net_floater(x: float, y: float, txt: String, col: String) -> void:
 	if not is_finite(x) or not is_finite(y):
 		return
-	game.floater(Vector2(float(x), float(y)), str(txt).substr(0, 24), str(col))
+	game.floater(Vector2(float(x), float(y)), tr(str(txt).substr(0, 24)), str(col))
 
 @rpc("authority", "call_remote", "reliable")
 func guest_hit(dmg: float) -> void:
@@ -315,7 +326,7 @@ func state_sync(d: Dictionary) -> void:
 		Game._f(md.get("x", 0.0)), Game._f(md.get("y", 0.0)))
 	stock_sync(d.get("stock", []) if d.get("stock") is Array else [])
 	var nst: int = d["structures"].size() if d.get("structures") is Array else 0
-	game.log_msg("Synced %d structures, %d kin" % [nst, np])
+	game.log_msg(tr("Synced %d structures, %d kin") % [nst, np])
 
 # Live kin population: host rebroadcasts positions/health at 2Hz so replicas
 # don't just sit where the join snapshot left them. Replicas are keyed by
@@ -435,7 +446,7 @@ func _on_connection_failed() -> void:
 	mount_pending_uid = -1
 	unbind_retry_t = 0.0
 	board_paid_out = ""
-	game.log_msg("No host answered — check the address")
+	game.log_msg(tr("No host answered — check the address"))
 
 func _on_server_disconnected() -> void:
 	for gid in ghosts.keys(): # frozen ghosts shouldn't outlive the session
@@ -465,7 +476,7 @@ func _on_server_disconnected() -> void:
 	game.accord = false # a residue world never fields the host's sixth slot
 	game.net_spires = 0 # nor tallies the host's spires/heirs as its own
 	game.net_den = 0
-	game.log_msg("Host disconnected")
+	game.log_msg(tr("Host disconnected"))
 
 func spawn_ghost(id: int) -> void:
 	if ghosts.has(id):
@@ -476,13 +487,13 @@ func spawn_ghost(id: int) -> void:
 	g.game = game
 	entity_layer.add_child(g)
 	ghosts[id] = g
-	game.log_msg("Player %d joined" % id)
+	game.log_msg(tr("Player %d joined") % id)
 
 @rpc("authority", "call_remote", "reliable")
 func world_sync(s: int) -> void:
 	game.regenerate(int(s))
 	game.net_residue = true # this world came down the wire — a dropped session must not save it
-	game.log_msg("Synced world seed %d" % int(s))
+	game.log_msg(tr("Synced world seed %d") % int(s))
 	_arrive_guest()
 
 func _arrive_guest() -> void: # a title-screen join lands IN the world, not on the menu
@@ -691,7 +702,7 @@ func got_loot(id: String, n: int) -> void:
 		return
 	var ln := clampi(n, 0, 999) # a negative echo drains the bag — loot only ever adds
 	game.add_item(str(id), ln)
-	game.floater(game.player.pos, "+%d %s" % [ln, tr(str(it.get("name", id)))], "#ffe08a")
+	game.floater(game.player.pos, tr("+%d %s") % [ln, tr(str(it.get("name", id)))], "#ffe08a")
 
 # Shared-world editing: clients ask, the host validates + mutates, everyone
 # converges on the next broadcast. Same trust rules as take_drop — the
@@ -802,7 +813,7 @@ func chest_grant(_tx: int, _ty: int, items: Dictionary) -> void:
 		var c := clampi(Game._i(items[id]), 0, 999)
 		game.add_item(iid, c)
 		n += c
-	game.log_msg("Took %d items" % n)
+	game.log_msg(tr("Took %d items") % n)
 
 @rpc("authority", "call_remote", "reliable")
 func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
@@ -821,7 +832,7 @@ func chest_took(_tx: int, _ty: int, items: Dictionary) -> void:
 	var n := 0
 	for id in items:
 		n += maxi(Game._i(items[id]), 0)
-	game.log_msg("Stored %d items" % n)
+	game.log_msg(tr("Stored %d items") % n)
 
 @rpc("any_peer", "call_remote", "reliable")
 func bait_req() -> void:
@@ -842,7 +853,7 @@ func bait_done(ok: bool) -> void:
 		return
 	pay_settle("bait", not ok) # a landed pile keeps the bait; a miss refunds the hold
 	if not ok:
-		game.log_msg("The bait came back — the island didn't hear it")
+		game.log_msg(tr("The bait came back — the island didn't hear it"))
 
 @rpc("any_peer", "call_remote", "reliable")
 func fish_req() -> void:
@@ -883,7 +894,7 @@ func fert_done() -> void:
 	if is_host:
 		return
 	pay_settle("fert", false) # the fertilizer left the bag at request time
-	game.log_msg("Fertilizer spread — five minutes of surge")
+	game.log_msg(tr("Fertilizer spread — five minutes of surge"))
 
 @rpc("any_peer", "call_remote", "reliable")
 func shrine_req() -> void:
@@ -907,7 +918,7 @@ func shrine_done(nw: String) -> void:
 	if w2 in ["clear", "rain", "storm", "drought"]: # a forged echo can't paint junk skies
 		game.weather = w2 # the offering lands; state_sync would catch up anyway
 	pay_settle("shrine", false) # the lumenite left the bag at request time
-	game.log_msg("The altar drinks your lumenite — the sky shifts")
+	game.log_msg(tr("The altar drinks your lumenite — the sky shifts"))
 
 @rpc("any_peer", "call_remote", "reliable")
 func work_req() -> void:
@@ -926,7 +937,7 @@ func work_done(wm: int) -> void:
 		return
 	game.work_mode = clampi(int(wm), 0, game.WORK_MODES.size() - 1)
 	var d: Dictionary = game.WORK_MODES[game.work_mode]
-	game.log_msg("Monitoring stand: %s pace" % d["name"])
+	game.log_msg(tr("Monitoring stand: %s pace") % d["name"])
 
 @rpc("any_peer", "call_remote", "reliable")
 func sleep_req() -> void:
@@ -986,7 +997,7 @@ func board_done(res: Dictionary) -> void:
 	if qid == board_paid_out:
 		return # already asserted — a re-shown ask can't double-deduct while the gold echo flies
 	if game.item_count(qid) < qn:
-		game.log_msg("Notice board: the goods weren't in your pack")
+		game.log_msg(tr("Notice board: the goods weren't in your pack"))
 		rpc("board_release", qid) # a leaf client's only remote is the host — an honest miss frees the board early
 		return
 	game.add_item(qid, -qn)
@@ -1023,7 +1034,7 @@ func board_rej(qid: String) -> void:
 		return
 	if str(qid) == board_paid_out:
 		board_paid_out = "" # the hold died host-side — the ask may claim it fresh
-		game.log_msg("Notice board: the posting was already gone")
+		game.log_msg(tr("Notice board: the posting was already gone"))
 
 @rpc("authority", "call_remote", "reliable")
 func board_pay(gold: int, xp: int) -> void:
@@ -1032,7 +1043,7 @@ func board_pay(gold: int, xp: int) -> void:
 	board_paid_out = "" # the settlement landed — the next ask may deduct again
 	game.add_item("gold_coin", maxi(gold, 0)) # a negative bounty can't drain the purse
 	game.gain_xp(maxi(int(xp), 0)) # same bounty math the keeper's own fill pays
-	game.log_msg("Board request filled — +%d gold" % maxi(int(gold), 0))
+	game.log_msg(tr("Board request filled — +%d gold") % maxi(int(gold), 0))
 
 @rpc("authority", "call_remote", "reliable")
 func xp_gain(n: int) -> void:
@@ -1074,13 +1085,13 @@ func mount_done(uid: int, state: int) -> void:
 		if p != null and game.player.mount == null: # a stale bind can't unseat the saddle we already hold
 			game.player.mount = p
 			p.visible = false # the kin hides — the rider's sprite carries the ride
-			game.log_msg("Riding %s" % tr(str(p.spec["name"])))
+			game.log_msg(tr("Riding %s") % tr(str(p.spec["name"])))
 	elif int(state) == 2 and game.player._mount_guard() and game.player.mount.net_id == wid:
 		# host confirms the release — drop the saddle AND show the kin now;
 		# a state-0 refusal owns only the handshake, never the saddle
 		game.player.mount.visible = true
 		game.player.mount = null
-		game.log_msg("Dismounted")
+		game.log_msg(tr("Dismounted"))
 
 # self-heal: host truth says WE ride this kin while our local ref says we
 # don't — an earlier unbind died on the wire (throttle/drop). Ask again,
@@ -1126,7 +1137,7 @@ func egg_done(egg_id: String) -> void:
 	if is_host:
 		return
 	pay_settle("egg", false) # the egg left the bag at request time
-	game.log_msg("Egg in the incubator — 90s to hatch")
+	game.log_msg(tr("Egg in the incubator — 90s to hatch"))
 
 @rpc("any_peer", "call_remote", "reliable")
 func infuse_req(uid: float) -> void:
@@ -1152,7 +1163,7 @@ func infuse_done(uid: float, cost: int) -> void:
 	var p: Kin = game.find_net_pal(int(uid))
 	if p != null:
 		p.soul_boost = mini(p.soul_boost + 1, 10) # the mirror learns what the wire doesn't carry — capped like the real verb
-	game.log_msg("The offering burns — a soul burns brighter")
+	game.log_msg(tr("The offering burns — a soul burns brighter"))
 
 @rpc("any_peer", "call_remote", "reliable")
 func fruit_req(item_id: String) -> void:
@@ -1306,7 +1317,7 @@ func bought(res: Dictionary) -> void:
 		return
 	pay_settle("buy", true) # refund the mirrored price…
 	game.add_item("gold_coin", -maxi(Game._i(res.get("price", 0)), 0)) # …then pay the host's truth — a negative price would mint gold
-	game.log_msg("Bought %s (%dg)" % ["a kin" if res.has("kin") else "goods",
+	game.log_msg(tr("Bought %s (%dg)") % ["a kin" if res.has("kin") else "goods",
 		Game._i(res.get("price", 0))])
 
 @rpc("authority", "call_remote", "reliable")
@@ -1374,7 +1385,7 @@ func chat(t: String, from_id: int = 0) -> void:
 		if now - float(chat_last.get(real_from, -9.0)) < 0.25:
 			return # a spamming peer gets one relay per beat — and no log line either
 		chat_last[real_from] = now
-	game.log_msg("[friend] " + line)
+	game.log_msg(tr("[friend] ") + line)
 	if multiplayer.is_server():
 		rpc("chat", line, int(real_from)) # ENet is a star: relay to other clients
 

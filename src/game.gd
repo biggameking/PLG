@@ -343,7 +343,7 @@ func unequip_if_gone(id: String) -> void:
 	for slot in ["weapon", "armor", "acc1", "acc2"]:
 		if player.equipment.get(slot) == id and item_count(id) <= 0:
 			player.equipment[slot] = ""
-			log_msg("%s left your hands" % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))
+			log_msg(tr("%s left your hands") % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))
 
 func add_item(id: String, n: int) -> void:
 	items[id] = items.get(id, 0) + n
@@ -360,7 +360,7 @@ func add_item(id: String, n: int) -> void:
 					spawn_drop(id, spill, player.pos)
 					if not drops.is_empty():
 						drops.back()["cool"] = 3.0 # don't vacuum it straight back up
-					log_msg("Bag full - %s x%d dropped" % [tr(str(ItemData.ITEMS.get(id, {}).get("name", id))), spill])
+					log_msg(tr("Bag full - %s x%d dropped") % [tr(str(ItemData.ITEMS.get(id, {}).get("name", id))), spill])
 				else:
 					items[id] += spill # pre-player init: keep the overflow
 	if items[id] <= 0:
@@ -380,12 +380,20 @@ func give_remote(pid: int, id: String, n: int) -> void:
 	else:
 		add_item(id, n)
 
-func note_remote(pid: int, msg: String) -> void:
+func tr_args(args: Array) -> Array:
+	# wire args arrive as raw english/data keys — the receiving client localizes
+	var a := []
+	for x in args:
+		a.append(tr(str(x)) if x is String else x)
+	return a
+
+func note_remote(pid: int, msg: String, args: Array = []) -> void:
+	# wire protocol: the english key + raw args travel; the far end translates
 	if pid > 0 and net != null and multiplayer.multiplayer_peer != null \
 			and multiplayer.get_peers().has(pid):
-		net.rpc_id(pid, "net_note", msg)
+		net.rpc_id(pid, "net_note", msg, args)
 	else:
-		log_msg(msg)
+		log_msg(tr(msg) % tr_args(args) if args.size() else tr(msg))
 
 # kill rewards answer to the killer's keeper — a guest's loot rides the
 # loot wire, their xp the xp wire; the host's bag stays the fallback
@@ -542,7 +550,7 @@ func r_retract(pid: int) -> void:
 	var rc_name: String = tr(str(cur.spec["name"])) # capture before the overflow lane can free it
 	if not _bench_add(cur):
 		rparty_for(pid).erase(cur.uid) # saturated lanes boxed/freed it — the strip can't keep a ghost uid
-	note_remote(pid, "%s recalled" % rc_name)
+	note_remote(pid, "%s recalled", [rc_name])
 
 func r_send_out(uid: int, pid: int) -> void:
 	var bp := bench_pal_of(uid)
@@ -561,7 +569,7 @@ func r_send_out(uid: int, pid: int) -> void:
 	bp.pos = nearest_free(anchor.x + 1.2, anchor.y)
 	unbox_pal(bp)
 	cry_for(bp.species_id)
-	note_remote(pid, "%s sent out!" % tr(str(bp.spec["name"])))
+	note_remote(pid, "%s sent out!", [bp.spec["name"]])
 
 func r_make_active(uid: int, pid: int) -> void:
 	var cur := r_out_pal(pid)
@@ -575,17 +583,17 @@ func r_box_to_party(bp: Kin, pid: int) -> void:
 		return
 	var rp := rparty_for(pid)
 	if rp.size() >= party_cap():
-		note_remote(pid, "Party full (%d)" % party_cap())
+		note_remote(pid, "Party full (%d)", [party_cap()])
 		return
 	box.erase(bp)
 	rp.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	if _bench_add(bp): # saturated bench lands it back in the box, mode corrected
 		rp.append(bp.uid)
-		note_remote(pid, "%s joined your party (%d/%d)" % [tr(str(bp.spec["name"])), rp.size(), party_cap()])
+		note_remote(pid, "%s joined your party (%d/%d)", [bp.spec["name"], rp.size(), party_cap()])
 		if r_out_pal(pid) == null:
 			r_send_out(bp.uid, pid)
 	else:
-		note_remote(pid, "Bench is full - %s stays in the box" % tr(str(bp.spec["name"])))
+		note_remote(pid, "Bench is full - %s stays in the box", [bp.spec["name"]])
 
 func r_party_to_box(p: Kin, pid: int) -> void:
 	if box.size() >= MAX_BOX: # full box refuses BEFORE the unbind/job drop — the kin stays put whole
@@ -607,7 +615,7 @@ func r_party_to_box(p: Kin, pid: int) -> void:
 	if p not in box:
 		box.append(p)
 	box_pal(p)
-	note_remote(pid, "%s -> box" % tr(str(p.spec["name"])))
+	note_remote(pid, "%s -> box", [p.spec["name"]])
 
 func r_base_to_box(p: Kin, pid: int) -> void:
 	# a guest recalls their own worker — job dropped, cargo goes to their bag
@@ -627,7 +635,7 @@ func r_base_to_box(p: Kin, pid: int) -> void:
 	if p not in box:
 		box.append(p)
 	box_pal(p)
-	note_remote(pid, "%s -> box" % tr(str(p.spec["name"])))
+	note_remote(pid, "%s -> box", [p.spec["name"]])
 
 func r_butcher(p: Kin, pid: int) -> void:
 	# the cleaver is host-side property, but a guest's own kin is theirs to
@@ -642,7 +650,7 @@ func r_butcher(p: Kin, pid: int) -> void:
 	for dr in p.spec.get("drops", []):
 		spawn_drop(dr[0], rng.int_range(dr[1], dr[2]) * mult, peer_pos_of(pid))
 	p.free() # box-holder path — same teardown as condense/sell
-	note_remote(pid, "You butchered %s… it dropped its goods" % tr(str(p.spec["name"])))
+	note_remote(pid, "You butchered %s… it dropped its goods", [p.spec["name"]])
 
 func r_sell_pal(p: Kin, pid: int) -> void:
 	if p.mode != "box" or p.fav or merchant == null \
@@ -653,7 +661,7 @@ func r_sell_pal(p: Kin, pid: int) -> void:
 	box.erase(p)
 	p.free()
 	give_remote(pid, "gold_coin", gain)
-	note_remote(pid, "Sold %s for %dg" % [tr(str(p.spec["name"])), gain])
+	note_remote(pid, "Sold %s for %dg", [p.spec["name"], gain])
 
 func assign_remote(pid: int, at: Vector2) -> void:
 	# a guest's F: nearest of THEIR base kin toggles its post — the shared
@@ -753,7 +761,7 @@ func client_locked() -> bool:
 	# items or mutate structure/world state belong to the host. One helper,
 	# every world-mutating interaction routes through it.
 	if net != null and net.is_client():
-		log_msg("Only the host can change the island")
+		log_msg(tr("Only the host can change the island"))
 		return true
 	return false
 
@@ -802,7 +810,7 @@ func spawn_wild() -> void:
 		entity_layer.add_child(p)
 		p.setup(self, sid, lv + (6 if p.alpha else 0) + (3 if p.lucky else 0), Vector2(x + 0.5, y + 0.5))
 		if p.lucky:
-			floater(p.pos, "☆ LUCKY ☆", "#ffd76e")
+			floater(p.pos, tr("☆ LUCKY ☆"), "#ffd76e")
 			if player.pos.distance_to(p.pos) < 24.0:
 				sfx_play("lucky") # shiny jingle — rare luck within earshot
 		if p.alpha and rng.chance(0.4):
@@ -959,23 +967,23 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 		var mult := 4 if p.alpha else (3 if p.lucky else 1)
 		if p.lucky:
 			_kill_loot(pid, "gold_coin", rng.int_range(3, 8)) # lucky pals bleed money
-			log_msg("Lucky %s dropped gold!" % tr(str(p.spec["name"])))
+			log_msg(tr("Lucky %s dropped gold!") % tr(str(p.spec["name"])))
 		if p.boss:
 			_kill_loot(pid, "legendary_orb", 1)
 			_kill_loot(pid, "sprigmelt_effigy", 3)
 			_kill_loot(pid, "gold_coin", 10)
-			log_msg("RAID CLEARED! Legendary orb + loot!")
+			log_msg(tr("RAID CLEARED! Legendary orb + loot!"))
 		if p.alpha or p.boss:
 			mission_flags["elite"] = true
 		if p.bounty > 0:
 			_kill_loot(pid, "gold_coin", p.bounty)
-			floater(p.pos, "BOUNTY +%dg" % p.bounty, "#ffd76e")
-			log_msg("Bounty claimed on %s: +%d gold" % [tr(str(p.spec["name"])), p.bounty])
+			floater(p.pos, tr("BOUNTY +%dg") % p.bounty, "#ffd76e")
+			log_msg(tr("Bounty claimed on %s: +%d gold") % [tr(str(p.spec["name"])), p.bounty])
 		for d in p.spec.get("drops", []):
 			spawn_drop(d[0], rng.int_range(d[1], d[2]) * mult, p.pos)
 		if p.alpha:
 			_kill_loot(pid, "kin_orb", 1)
-			log_msg("Alpha %s down! Bonus orb." % tr(str(p.spec["name"])))
+			log_msg(tr("Alpha %s down! Bonus orb.") % tr(str(p.spec["name"])))
 			_kill_loot(pid, "sprigmelt_effigy", 2)
 			_kill_loot(pid, "ancient_part", rng.int_range(1, 2)) # ancient tech currency
 			if rng.chance(0.15):
@@ -983,14 +991,14 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 			if rng.chance(0.08): # the island schematics drop off elites
 				var sch: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
 				_kill_loot(pid, sch, 1)
-				log_msg("Found a %s!" % tr(str(ItemData.ITEMS[sch]["name"])))
+				log_msg(tr("Found a %s!") % tr(str(ItemData.ITEMS[sch]["name"])))
 			if rng.chance(0.15): # alphas carry the odd boss sigil — a dare in your pocket
 				_kill_loot(pid, "boss_sigil", 1)
-				log_msg("Found a Boss Sigil!")
+				log_msg(tr("Found a Boss Sigil!"))
 		if p.boss and rng.chance(0.3): # bosses teach the good blueprints
 			var sch2: String = "schematic_bow" if rng.chance(0.5) else "schematic_musket"
 			_kill_loot(pid, sch2, 1)
-			log_msg("Found a %s!" % tr(str(ItemData.ITEMS[sch2]["name"])))
+			log_msg(tr("Found a %s!") % tr(str(ItemData.ITEMS[sch2]["name"])))
 		if p.boss:
 			_kill_loot(pid, "ancient_part", rng.int_range(2, 4))
 		if by_player or pid > 0: # a guest's kill is still a keeper's kill
@@ -1017,7 +1025,7 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 			box.append(p)             # catch cap — losing a downed partner to an
 			box_pal(p)                # off-by-one box eviction is not a feature
 			sfx_play("ko")
-			log_msg("%s is KO'd - it will recover in the box" % tr(str(p.spec["name"])))
+			log_msg(tr("%s is KO'd - it will recover in the box") % tr(str(p.spec["name"])))
 		else: # even the overflow lane is full — the wild reclaims it, KO'd
 			p.mode = "wild"
 			p.owner_id = 0
@@ -1025,7 +1033,7 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 			p.revive_t = 0.0 # the KO clock dies with ownership — a later catch+box must not fire it
 			p.hp = 1
 			pals.append(p) # pals.erase ran above — re-enter or it orphans in-tree
-			log_msg("%s is KO'd - the full kinbox can't take it; it limps back to the wild" % tr(str(p.spec["name"])))
+			log_msg(tr("%s is KO'd - the full kinbox can't take it; it limps back to the wild") % tr(str(p.spec["name"])))
 	else:
 		if p.has_meta("gauntlet") and not gauntlet.is_empty():
 			gauntlet["left"] -= 1
@@ -1073,7 +1081,7 @@ func tick_boss_respawns() -> void:
 		np.setup(self, sid, clampi(int(br.get("lv", 30)), 1, 60), at)
 		np.home = at
 		pals.append(np)
-		log_msg("A legend roams the old den — this one can be caught!" if legend
+		log_msg(tr("A legend roams the old den — this one can be caught!") if legend
 			else "A boss stirs again at its den")
 
 # ---------- gauntlet trial ----------
@@ -1085,10 +1093,10 @@ func start_gauntlet() -> bool:
 	if client_locked():
 		return false
 	if not gauntlet.is_empty():
-		log_msg("A gauntlet is already running")
+		log_msg(tr("A gauntlet is already running"))
 		return false
 	if kinbox_pos.x < 0:
-		log_msg("The gauntlet needs a kinbox to answer to")
+		log_msg(tr("The gauntlet needs a kinbox to answer to"))
 		return false
 	gauntlet = {"wave": 0, "left": 0}
 	gauntlet_next_wave()
@@ -1129,7 +1137,7 @@ func gauntlet_next_wave() -> void:
 			np.set_meta("raid_t0", t)
 			pals.append(np)
 			gauntlet["left"] += 1
-	log_msg("Gauntlet wave %d! %d foes" % [w, gauntlet["left"]])
+	log_msg(tr("Gauntlet wave %d! %d foes") % [w, gauntlet["left"]])
 
 func tick_gauntlet() -> void:
 	if net != null and net.is_client():
@@ -1149,10 +1157,10 @@ func tick_gauntlet() -> void:
 	if ex:
 		add_item("ancient_part", 6)
 		add_item("huge_kin_egg", 2)
-		log_msg("APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper")
+		log_msg(tr("APEX GAUNTLET CLEARED — the tower kneels to its crowned keeper"))
 	else:
-		log_msg("GAUNTLET CLEARED! Legendary orbs + effigies + gold")
-	floater(player.pos, "APEX CLEARED!" if ex else "GAUNTLET CLEARED!", "#ffd76e")
+		log_msg(tr("GAUNTLET CLEARED! Legendary orbs + effigies + gold"))
+	floater(player.pos, tr("APEX CLEARED!") if ex else tr("GAUNTLET CLEARED!"), "#ffd76e")
 	mission_flags["gauntlet"] = true
 	if ex:
 		mission_flags["gauntlet_ex"] = true
@@ -1251,8 +1259,8 @@ func tick_dex(dt: float) -> void:
 	var tier := catch_counts.size() / 10 # unique species caught, floored to 10s
 	if tier > dex_claimed:
 		tech_points += (tier - dex_claimed) * 2
-		log_msg("KINDEX: %d species caught! +%d tech" % [catch_counts.size(), (tier - dex_claimed) * 2])
-		floater(player.pos, "KINDEX MILESTONE", "#c08cff")
+		log_msg(tr("KINDEX: %d species caught! +%d tech") % [catch_counts.size(), (tier - dex_claimed) * 2])
+		floater(player.pos, tr("KINDEX MILESTONE"), "#c08cff")
 		dex_claimed = tier
 	if not dex_full and catch_counts.size() >= ownable_species_count():
 		# the cataloger's seal — every catchable species on record. Pays the
@@ -1265,7 +1273,7 @@ func tick_dex(dt: float) -> void:
 		sfx_play("horn")
 		if net != null and multiplayer.multiplayer_peer != null:
 			net.rpc("net_floater", player.pos.x, player.pos.y,
-				tr("KINDEX COMPLETE"), "#c08cff")
+				"KINDEX COMPLETE", "#c08cff")
 	tick_accord()
 
 func tick_accord() -> void:
@@ -1286,10 +1294,10 @@ func tick_accord() -> void:
 	if net != null and multiplayer.multiplayer_peer != null:
 		# every keeper on the island signs it too — not just the host's screen
 		net.rpc("net_floater", player.pos.x, player.pos.y,
-			tr("THE WILDMERE ACCORD"), "#ffd76e")
+			"THE WILDMERE ACCORD", "#ffd76e")
 		for acp in multiplayer.get_peers():
-			note_remote(acp, tr("THE WILDMERE ACCORD — the island kneels to its keeper."))
-			note_remote(acp, tr("Your party can field SIX kin from now on."))
+			note_remote(acp, "THE WILDMERE ACCORD — the island kneels to its keeper.")
+			note_remote(acp, "Your party can field SIX kin from now on.")
 
 func reveal_at(c: Vector2, r: float) -> void:
 	# the island fog of war: walking peels the dark back a sight-radius at a time
@@ -1314,7 +1322,7 @@ func tick_weather(dt: float) -> void:
 	var next := "storm" if roll < 0.15 else ("rain" if roll < 0.45 else ("drought" if roll < 0.60 else "clear"))
 	if next != weather:
 		weather = next
-		log_msg({"rain": "Rain sweeps over the island", "storm": "A thunderstorm rolls in — electric kin crackle",
+		log_msg({"rain": tr("Rain sweeps over the island"), "storm": tr("A thunderstorm rolls in — electric kin crackle"),
 			"drought": "A drought settles in — the fields thirst", "clear": "The sky clears"}.get(weather, "The sky clears"))
 
 func tick_missions(dt: float) -> void:
@@ -1329,8 +1337,8 @@ func tick_missions(dt: float) -> void:
 		mission_idx += 1
 		add_item("gold_coin", int(m["gold"]))
 		tech_points += int(m["tp"])
-		log_msg("MISSION: %s — done! +%dg +%d tech" % [m["text"], int(m["gold"]), int(m["tp"])])
-		floater(player.pos, "MISSION DONE", "#8ef0ff")
+		log_msg(tr("MISSION: %s — done! +%dg +%d tech") % [m["text"], int(m["gold"]), int(m["tp"])])
+		floater(player.pos, tr("MISSION DONE"), "#8ef0ff")
 
 var shake := 0.0 # camera kick — decays to nothing, main.gd turns it into a pixel offset
 func screen_shake(amt: float) -> void:
@@ -1355,7 +1363,7 @@ func apply_player_damage(dmg_before_armor: int) -> int:
 	player.hit_flash = 0.4
 	screen_shake(0.35)
 	rumble(0.0, 0.45, 0.15) # getting bit should thump, not just flash
-	floater(player.pos, "-" + str(final), "#e64533")
+	floater(player.pos, tr("-") + str(final), "#e64533")
 	player.wear_armor() # the island: the plate takes the wear, not the skin
 	if player.hp <= 0:
 		respawn_player()
@@ -1433,7 +1441,7 @@ func chest_deposit_all(st) -> int:
 			items.erase(iid)
 			unequip_if_gone(iid)
 	if skipped > 0:
-		log_msg("Chest full - %d item(s) kept in bag" % skipped)
+		log_msg(tr("Chest full - %d item(s) kept in bag") % skipped)
 	return n
 
 func chest_withdraw_all(st) -> int:
@@ -1504,7 +1512,7 @@ func respawn_player() -> void:
 				items.erase(id) # don't leave ghost "x0" rows in the bag
 				unequip_if_gone(id)
 	if dropped > 0:
-		log_msg("You dropped %d items where you fell!" % dropped)
+		log_msg(tr("You dropped %d items where you fell!") % dropped)
 		death_marks.append(player.pos) # the island tombstone: the map remembers the spill
 		if death_marks.size() > 3:
 			death_marks.pop_front() # only the freshest few spills earn a mark
@@ -1530,7 +1538,7 @@ func respawn_player() -> void:
 		player.pos = nearest_free(nb.x + 0.5, nb.y + 2.5)
 	else: # no base yet: back to the landing point, not back into the jaws
 		player.pos = nearest_free(world.spawn.x + 0.5, world.spawn.y + 0.5)
-	log_msg("You wake up battered at base…")
+	log_msg(tr("You wake up battered at base…"))
 
 func travel_nodes() -> Array:
 	# every waypoint stone + every kinbox terminal is a node on the net
@@ -1546,7 +1554,7 @@ func travel_nodes() -> Array:
 func use_waypoint() -> void:
 	# the island fast travel: touched stone opens the travel net
 	if travel_nodes().size() < 2:
-		log_msg("The waypoint hums… but there's nowhere to go yet")
+		log_msg(tr("The waypoint hums… but there's nowhere to go yet"))
 		return
 	panel = "travel"
 
@@ -1559,8 +1567,8 @@ func travel_to(k: Vector2i) -> void:
 	player.pos = nearest_free(k.x + 0.5, k.y + 2.5)
 	player.sync_screen()
 	panel = ""
-	floater(player.pos, "blink!", "#7fc8f8")
-	log_msg("The waypoint net pulls you across the island")
+	floater(player.pos, tr("blink!"), "#7fc8f8")
+	log_msg(tr("The waypoint net pulls you across the island"))
 
 func is_night() -> bool:
 	return tod >= 21.0 or tod < 5.0
@@ -1570,7 +1578,7 @@ func sleep_to_morning() -> void:
 		return
 	for q in pals:
 		if q.hp > 0 and (q.raid or (q.mode == "wild" and q.aggro >= 0)):
-			log_msg("Can't sleep - hostiles are after you!")
+			log_msg(tr("Can't sleep - hostiles are after you!"))
 			return
 	day += 1
 	tod = 6.0
@@ -1584,13 +1592,13 @@ func sleep_to_morning() -> void:
 		qb.hp = qb.max_hp
 		qb.san = 100.0
 		qb.hunger = 0.0
-	log_msg("You sleep until dawn. Day %d" % day)
+	log_msg(tr("You sleep until dawn. Day %d") % day)
 
 func summon_raid() -> bool:
 	if net != null and net.is_client():
 		return false # the horn is the host's to sound
 	if kinbox_pos.x < 0:
-		log_msg("Need a kinbox to summon the raid")
+		log_msg(tr("Need a kinbox to summon the raid"))
 		return false
 	var pool: Array = SpeciesGen.zone_pool(3)
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
@@ -1606,7 +1614,7 @@ func summon_raid() -> bool:
 	bp.raid = true
 	bp.set_meta("raid_t0", t)
 	pals.append(bp)
-	log_msg("RAID BOSS: %s Lv45 approaches your base!" % tr(str(bp.spec["name"])))
+	log_msg(tr("RAID BOSS: %s Lv45 approaches your base!") % tr(str(bp.spec["name"])))
 	return true
 
 var assist_t := 0.0
@@ -1635,7 +1643,7 @@ func tick_shadelump() -> void:
 	var datk := Combat.stat_at(d.spec["atk"], d.level, d.talent)
 	tgt.hit(Combat.damage(datk, 14, Combat.stat_at(tgt.spec["def"],
 		tgt.level, tgt.talent) * tgt.def_bonus * tgt.def_mult(), 1.0, rng), 1.0, true)
-	floater(tgt.pos, "dream chaser!", "#b06ee8")
+	floater(tgt.pos, tr("dream chaser!"), "#b06ee8")
 
 func use_treasure_map() -> void:
 	if not items.get("treasure_map", 0):
@@ -1651,13 +1659,13 @@ func use_treasure_map() -> void:
 			spot = Vector2(ix + 0.5, iy + 0.5)
 			break
 	if spot.x < 0:
-		log_msg("The chart is illegible here — nothing to mark")
+		log_msg(tr("The chart is illegible here — nothing to mark"))
 		return # map stays in the pack
 	items["treasure_map"] -= 1
 	if items["treasure_map"] <= 0:
 		items.erase("treasure_map")
 	treasure = {"pos": spot}
-	log_msg("The chart marks a spot — check your map")
+	log_msg(tr("The chart marks a spot — check your map"))
 	sfx_play("drop")
 
 func dig_check() -> void: # called on the frame tick — standing on the X digs
@@ -1679,8 +1687,8 @@ func dig_check() -> void: # called on the frame tick — standing on the X digs
 		add_item("ingot", 3)
 	else:
 		add_item("mega_orb", 2)
-	floater(player.pos, "TREASURE!", "#ffd76e")
-	log_msg("Unearthed a cache: %d gold and a keepsake" % coin)
+	floater(player.pos, tr("TREASURE!"), "#ffd76e")
+	log_msg(tr("Unearthed a cache: %d gold and a keepsake") % coin)
 	sfx_play("level")
 
 func pray_weather() -> void:
@@ -1689,17 +1697,17 @@ func pray_weather() -> void:
 	# the island weather-shrine: offer lumenite, cycle the sky. One altar's mood
 	# is everyone's sky — the cooldown is global, not per building
 	if t < pray_cd:
-		log_msg("The sky is still settling (%.0fs)" % (pray_cd - t))
+		log_msg(tr("The sky is still settling (%.0fs)") % (pray_cd - t))
 		return
 	if int(items.get("lumenite", 0)) < 3:
-		log_msg("The shrine wants 3 lumenite")
+		log_msg(tr("The shrine wants 3 lumenite"))
 		return
 	var nxt: String = {"clear": "rain", "rain": "storm", "storm": "drought", "drought": "clear"}.get(weather, "rain")
 	add_item("lumenite", -3)
 	weather = nxt
 	weather_t = 0.0 # the forced sky holds until the next natural roll
 	pray_cd = t + 600.0
-	log_msg({"rain": "You offer lumenite — rain answers", "storm": "The altar drinks lumenite — thunder answers",
+	log_msg({"rain": tr("You offer lumenite — rain answers"), "storm": tr("The altar drinks lumenite — thunder answers"),
 		"drought": "The altar drinks lumenite — a dry wind answers",
 		"clear": "The offering burns off — the sky clears"}.get(nxt, "The sky shifts"))
 	sfx_play("level")
@@ -1712,14 +1720,14 @@ func throw_bait() -> void:
 		# ghost it saw, and bait_done settles the hold either way
 		if net.pay("bait", {"kin_bait": 1}):
 			net.rpc("bait_req")
-			log_msg("Bait tossed — something hungry will smell it")
+			log_msg(tr("Bait tossed — something hungry will smell it"))
 			sfx_play("drop")
 		return
 	items["kin_bait"] -= 1
 	if items["kin_bait"] <= 0:
 		items.erase("kin_bait")
 	lure = {"pos": player.pos + player.facing * 3.0, "till": t + 25.0}
-	log_msg("Bait tossed — something hungry will smell it")
+	log_msg(tr("Bait tossed — something hungry will smell it"))
 	sfx_play("drop")
 
 func throw_bait_remote(pid: int) -> bool:
@@ -1736,7 +1744,7 @@ func throw_bait_remote(pid: int) -> bool:
 func lure_take(p: Kin) -> void: # first snout to the pile eats it
 	lure = {}
 	p.hp = mini(p.max_hp, p.hp + int(p.max_hp * 0.1))
-	floater(p.pos, "yum!", "#d8b84a")
+	floater(p.pos, tr("yum!"), "#d8b84a")
 
 func fertilize() -> void:
 	if client_locked():
@@ -1754,12 +1762,12 @@ func fertilize() -> void:
 		if d < bd:
 			bd = d; best = k
 	if best.x < 0:
-		log_msg("Stand by a farm plot to spread it")
+		log_msg(tr("Stand by a farm plot to spread it"))
 		return
 	structures[best]["fert"] = t + 300.0
 	add_item("fertilizer", -1)
-	floater(Vector2(best.x + 0.5, best.y + 0.5), "fertilized!", "#a8c84a")
-	log_msg("%s surges for five minutes" % StructureData.STRUCTURES[structures[best]["id"]]["name"])
+	floater(Vector2(best.x + 0.5, best.y + 0.5), tr("fertilized!"), "#a8c84a")
+	log_msg(tr("%s surges for five minutes") % StructureData.STRUCTURES[structures[best]["id"]]["name"])
 
 func cap_power_of(target: Kin) -> float:
 	return Combat.cap_power(float(target.spec["capturePower"]), target.level, target.lucky)
@@ -1775,10 +1783,10 @@ func resolve_sphere(sp) -> void:
 			sign(player.pos.x - target.pos.x) == -target.dir, player.capture_level)
 		return
 	if target.boss:
-		floater(target.pos, "IMMUNE", "#e8452f")
+		floater(target.pos, tr("IMMUNE"), "#e8452f")
 		return
 	if not catchable(target):
-		floater(target.pos, "IMMUNE", "#e8452f")
+		floater(target.pos, tr("IMMUNE"), "#e8452f")
 		return
 	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
 	var hp_frac := maxf(0, target.hp) / target.max_hp
@@ -1787,28 +1795,28 @@ func resolve_sphere(sp) -> void:
 		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
 	if randf() < chance:
 		if party.size() >= party_cap() and box.size() >= MAX_BOX: # backstop: an over-stuffed box is real memory
-			floater(target.pos, "BOX FULL", "#e8963c")
-			log_msg("Kinbox is full (%d) - can't store %s" % [MAX_BOX, tr(str(target.spec["name"]))])
+			floater(target.pos, tr("BOX FULL"), "#e8963c")
+			log_msg(tr("Kinbox is full (%d) - can't store %s") % [MAX_BOX, tr(str(target.spec["name"]))])
 			target.aggro = -1
 			return
-		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
+		floater(target.pos, tr("★ CAUGHT!"), "#4dd0e1")
 		sfx_play("catch")
 		rumble(0.2, 0.7, 0.3) # a catch lands in the hand, not just the log
 		cry_for(target.species_id) # a new friend announces itself
-		log_msg("Caught %s Lv%d!" % [tr(str(target.spec["name"])), target.level])
+		log_msg(tr("Caught %s Lv%d!") % [tr(str(target.spec["name"])), target.level])
 		gain_xp(catch_xp(target.level))
 		if catch_streak >= 3:
-			floater(target.pos, "STREAK x%d!" % catch_streak, "#ffd76e")
+			floater(target.pos, tr("STREAK x%d!") % catch_streak, "#ffd76e")
 		# the island catch-count bonus: every 10th of a species pays a fat bonus
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		board_hunt_credit(target.species_id) # a boxed pal still thins the herd
 		if catch_counts[target.species_id] % 10 == 0:
 			var bonus := target.level * 8
 			gain_xp(bonus)
-			floater(target.pos, "CATCH x%d! +%dxp" % [catch_counts[target.species_id], bonus], "#ffd76e")
-			log_msg("%dth %s caught - bonus XP!" % [catch_counts[target.species_id], tr(str(target.spec["name"]))])
+			floater(target.pos, tr("CATCH x%d! +%dxp") % [catch_counts[target.species_id], bonus], "#ffd76e")
+			log_msg(tr("%dth %s caught - bonus XP!") % [catch_counts[target.species_id], tr(str(target.spec["name"]))])
 		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
-			log_msg("Kindex mastery: %s +10%%" % tr(str(target.spec["name"])))
+			log_msg(tr("Kindex mastery: %s +10%%") % tr(str(target.spec["name"])))
 			for mp in pals:
 				if mp.mode != "wild" and mp.species_id == target.species_id:
 					mp.apply_bonuses()
@@ -1819,7 +1827,7 @@ func resolve_sphere(sp) -> void:
 		if party.size() < party_cap(): # the island rule: catch joins the party until it's full
 			if _bench_add(target): # orbs ride in the same cold store as the box — a saturated bench overflows there too
 				party.append(target.uid)
-				log_msg("%s joins your party (%d/%d)" % [tr(str(target.spec["name"])), party.size(), party_cap()])
+				log_msg(tr("%s joins your party (%d/%d)") % [tr(str(target.spec["name"])), party.size(), party_cap()])
 				if party_pal() == null:
 					send_out(target.uid) # an empty slot means the new catch takes the field
 			# false → the overflow lane already boxed or freed it — no double add
@@ -1832,9 +1840,9 @@ func resolve_sphere(sp) -> void:
 			else:
 				target.queue_free() # every store capped — dies clean, no unbound kin
 	else:
-		floater(target.pos, "…broke free", "#e8963c")
+		floater(target.pos, tr("…broke free"), "#e8963c")
 		sfx_play("fail")
-		log_msg("%s broke free (%d%%)" % [tr(str(target.spec["name"])), int(chance * 100)])
+		log_msg(tr("%s broke free (%d%%)") % [tr(str(target.spec["name"])), int(chance * 100)])
 		catch_fail()
 		target.aggro = 0 if target.hostile() >= 1 else -1
 		target.aggro_pid = 0 # the local keeper threw the orb — the heat is his
@@ -1855,7 +1863,7 @@ func _reden_legend(c: Kin) -> void:
 		boss_respawns.append({"sid": c.species_id, "lv": c.level,
 			"pos": [c.home.x, c.home.y], "alpha": true, "boss": false,
 			"at": t + DAY_LEN * 1.5})
-		log_msg("The den will call a new legend")
+		log_msg(tr("The den will call a new legend"))
 
 func release_event_flags(p: Kin) -> void:
 	# a caught kin stops being an invader: raid/gauntlet metas mark a
@@ -1877,7 +1885,7 @@ func catch_xp(lv: float) -> int:
 
 func catch_fail() -> void:
 	if catch_streak >= 3:
-		log_msg("Catch streak ends at %d" % catch_streak)
+		log_msg(tr("Catch streak ends at %d") % catch_streak)
 	catch_streak = 0
 
 func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> void:
@@ -1906,21 +1914,21 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 		# per-owner lane AND the global bound: one guest's roster can't push
 		# the shared box past what every local path already enforces
 		if rp.size() >= party_cap() and (box_count_of(pid) >= MAX_BOX or box.size() >= MAX_BOX):
-			floater(target.pos, "BOX FULL", "#e8963c")
-			log_msg("Kinbox is full (%d) - %s got away" % [MAX_BOX, tr(str(target.spec["name"]))])
+			floater(target.pos, tr("BOX FULL"), "#e8963c")
+			log_msg(tr("Kinbox is full (%d) - %s got away") % [MAX_BOX, tr(str(target.spec["name"]))])
 			return
-		floater(target.pos, "★ CAUGHT!", "#4dd0e1")
+		floater(target.pos, tr("★ CAUGHT!"), "#4dd0e1")
 		cry_for(target.species_id)
 		if net != null and multiplayer.multiplayer_peer != null \
 				and multiplayer.get_peers().has(pid):
 			net.rpc_id(pid, "net_floater", target.pos.x, target.pos.y, "★ CAUGHT!", "#4dd0e1")
-		log_msg("Player %d caught %s Lv%d — into their kinbox" % [pid, tr(str(target.spec["name"])), target.level])
-		note_remote(pid, "You caught %s Lv%d" % [tr(str(target.spec["name"])), target.level])
+		log_msg(tr("Player %d caught %s Lv%d — into their kinbox") % [pid, tr(str(target.spec["name"])), target.level])
+		note_remote(pid, "You caught %s Lv%d", [target.spec["name"], target.level])
 		board_hunt_credit(target.species_id, pid) # a boxed pal still thins the herd — theirs counts too
 		_kill_xp(pid, int(round(target.level * 3.0))) # flat rate — catch_xp would feed the HOST'S streak
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		if catch_counts[target.species_id] == 10: # kindex mastery unlocks — sharpen the whole line
-			log_msg("Kindex mastery: %s +10%%" % tr(str(target.spec["name"])))
+			log_msg(tr("Kindex mastery: %s +10%%") % tr(str(target.spec["name"])))
 			for mp in pals:
 				if mp.mode != "wild" and mp.species_id == target.species_id:
 					mp.apply_bonuses()
@@ -1945,8 +1953,8 @@ func net_catch(nid: int, sid: String, behind: bool, cap_lv: int, pid: int) -> vo
 			else:
 				target.queue_free() # every store capped — dies clean, no unbound kin
 	else:
-		floater(target.pos, "…broke free", "#e8963c")
-		log_msg("%s broke free from player %d's orb" % [tr(str(target.spec["name"])), pid])
+		floater(target.pos, tr("…broke free"), "#e8963c")
+		log_msg(tr("%s broke free from player %d's orb") % [tr(str(target.spec["name"])), pid])
 		target.aggro = 0 if target.hostile() >= 1 else -1
 		target.aggro_pid = pid if target.aggro == 0 else 0
 
@@ -1970,7 +1978,7 @@ func harvest_cell(tx: int, ty: int) -> void:
 		return
 	var i := world.idx(tx, ty)
 	world.hp[i] = max(0, world.hp[i] - 10)
-	floater(Vector2(tx + 0.5, ty + 0.5), "thwack", "#c8d3d5")
+	floater(Vector2(tx + 0.5, ty + 0.5), tr("thwack"), "#c8d3d5")
 	if world.hp[i] == 0:
 		var loot: String = {World.Decor.TREE_A: "wood", World.Decor.TREE_B: "wood",
 			World.Decor.ROCK: "stone", World.Decor.ORE_GOLD: "ore",
@@ -2066,7 +2074,7 @@ const CONDENSE_COST := [4, 16, 32, 64]
 
 func condense_active() -> void:
 	if party.is_empty():
-		log_msg("No active kin to condense")
+		log_msg(tr("No active kin to condense"))
 		return
 	var ap0: Kin = lead_pal()
 	if ap0 != null and ap0.star < CONDENSE_COST.size():
@@ -2078,14 +2086,14 @@ func condense_active() -> void:
 		if have0 >= need0:
 			if t > condense_arm: # first E previews; second E within 4s commits
 				condense_arm = t + 4.0
-				log_msg("Press E again to consume %d %s -> star %d" % [need0, tr(str(ap0.spec["name"])), ap0.star + 1])
+				log_msg(tr("Press E again to consume %d %s -> star %d") % [need0, tr(str(ap0.spec["name"])), ap0.star + 1])
 				return
 			condense_arm = 0.0
 	var ap: Kin = lead_pal()
 	if ap == null:
 		return
 	if ap.star >= CONDENSE_COST.size():
-		log_msg("%s is already max star" % tr(str(ap.spec["name"])))
+		log_msg(tr("%s is already max star") % tr(str(ap.spec["name"])))
 		return
 	var need: int = CONDENSE_COST[ap.star]
 	# fodder = same-species kin in the box (weakest first, active excluded)
@@ -2095,14 +2103,14 @@ func condense_active() -> void:
 			fodder.append(bp) # heart-locked pals are never fodder — nor are guests'
 	fodder.sort_custom(func(a, b): return a.level < b.level)
 	if fodder.size() < need:
-		log_msg("Need %d same-species kin for star %d (have %d)" % [need, ap.star + 1, fodder.size()])
+		log_msg(tr("Need %d same-species kin for star %d (have %d)") % [need, ap.star + 1, fodder.size()])
 		return
 	for i in need:
 		var fp: Kin = fodder[i]
 		box.erase(fp)
 		fp.free() # already erased — free() on the in-tree node is legal and immediate
 	ap.condense()
-	log_msg("%s condensed to star %d!" % [tr(str(ap.spec["name"])), ap.star])
+	log_msg(tr("%s condensed to star %d!") % [tr(str(ap.spec["name"])), ap.star])
 
 func eat_food_item() -> int:
 	# feed-box rule: kin eat the cheapest stored food — feed_box store
@@ -2402,7 +2410,7 @@ func _process(dt: float) -> void:
 				continue
 			if player.pos.distance_squared_to(d["pos"]) < 0.55:
 				add_item(d["id"], d["n"])
-				floater(d["pos"], "+%d %s" % [d["n"], tr(str(ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])))], "#ffe08a")
+				floater(d["pos"], tr("+%d %s") % [d["n"], tr(str(ItemData.ITEMS.get(d["id"], {}).get("name", d["id"])))], "#ffe08a")
 				if "egg" in d["id"]:
 					anger_nesters(d["pos"]) # the island: parents guard their nests — egg thieves get swarmed
 				take_drop(d)
@@ -2518,12 +2526,12 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		# shared world: pay locally, the host validates + plants it, and it
 		# lands on our screen with the next struct_sync broadcast
 		if not can_place(sid, tx, ty):
-			log_msg("Can't build there")
+			log_msg(tr("Can't build there"))
 			return false
 		var cost := {}
 		for c in s.get("cost", []):
 			if item_count(c[0]) < c[1]:
-				log_msg("Need %d %s" % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))])
+				log_msg(tr("Need %d %s") % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))])
 				return false
 			cost[str(c[0])] = int(c[1])
 		if not net.pay("build", cost): # ledger full — the click resolves as a refusal, not a silent send
@@ -2531,36 +2539,36 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		net.rpc("build_req", sid, tx, ty) # ledger pays the debit — every deny path refunds the hold, not the price table
 		return true
 	if sid == "kinbox" and kinbox_count() >= 1 + MAX_EXTRA_BOXES:
-		log_msg("Max %d kinboxes (base + outposts)" % (1 + MAX_EXTRA_BOXES))
+		log_msg(tr("Max %d kinboxes (base + outposts)") % (1 + MAX_EXTRA_BOXES))
 		return false
 	var seen_st := []
 	for k in structures:
 		if structures[k] not in seen_st:
 			seen_st.append(structures[k]) # dedupe footprint cells → true count
 	if seen_st.size() >= MAX_STRUCTURES:
-		log_msg("Build limit reached (%d)" % MAX_STRUCTURES)
+		log_msg(tr("Build limit reached (%d)") % MAX_STRUCTURES)
 		return false
 	for c in s.get("cost", []):
 		if item_count(c[0]) < c[1]:
-			log_msg("Need %d %s" % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))])
+			log_msg(tr("Need %d %s") % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))])
 			return false
 	var e0: int = world.elev_at(tx, ty)
 	for dy0 in range(s.get("h", 2)):
 		for dx0 in range(s.get("w", 2)):
 			if not world.in_bounds(tx + dx0, ty + dy0):
-				log_msg("Can't build off the map")
+				log_msg(tr("Can't build off the map"))
 				return false
 			if structures.has(Vector2i(tx + dx0, ty + dy0)):
-				log_msg("Blocked: something already built there")
+				log_msg(tr("Blocked: something already built there"))
 				return false
 			if world.decor[world.idx(tx + dx0, ty + dy0)] in [World.Decor.ROCK, World.Decor.ORE_GOLD, World.Decor.ORE_COAL]:
-				log_msg("Can't build on exposed rock")
+				log_msg(tr("Can't build on exposed rock"))
 				return false # ore/rock outcrops are terrain — clear trees but not these
 			if world.tile_at(tx + dx0, ty + dy0) == World.Tile.WATER:
-				log_msg("Can't build on water")
+				log_msg(tr("Can't build on water"))
 				return false
 			if world.elev_at(tx + dx0, ty + dy0) != e0:
-				log_msg("Can't build across a ledge")
+				log_msg(tr("Can't build across a ledge"))
 				return false
 	for c in s.get("cost", []):
 		add_item(c[0], -c[1])
@@ -2592,11 +2600,11 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 	if sid == "kinbox":
 		if kinbox_pos.x < 0:
 			kinbox_pos = Vector2i(tx, ty)
-			log_msg("Base established! Assign kin with F.")
+			log_msg(tr("Base established! Assign kin with F."))
 		else:
 			extra_boxes.append(Vector2i(tx, ty))
-			log_msg("Outpost kinbox online — shared box network")
-	log_msg("Built %s" % s["name"])
+			log_msg(tr("Outpost kinbox online — shared box network"))
+	log_msg(tr("Built %s") % s["name"])
 	sfx_play("build")
 	return true
 
@@ -2653,11 +2661,11 @@ func place_free(sid: String, tx: int, ty: int, store: Dictionary = {}) -> bool:
 func demolish_at(at: Vector2) -> bool:
 	var st = structure_at(at)
 	if not st:
-		log_msg("Nothing to demolish")
+		log_msg(tr("Nothing to demolish"))
 		return false
 	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false):
 		if st.get("pos") == kinbox_pos and extra_boxes.is_empty():
-			log_msg("The kinbox anchors the base — nobody razes it")
+			log_msg(tr("The kinbox anchors the base — nobody razes it"))
 			return false # the LAST anchor seals the box and the respawn point
 		# backups exist or this IS a backup — the box network survives the raze
 	if net != null and net.is_client():
@@ -2696,10 +2704,10 @@ func demolish_at(at: Vector2) -> bool:
 		if origin == kinbox_pos:
 			kinbox_pos = extra_boxes.pop_front() if not extra_boxes.is_empty() else Vector2i(-1, -1)
 			if kinbox_pos.x >= 0:
-				log_msg("Outpost promoted to primary base")
+				log_msg(tr("Outpost promoted to primary base"))
 		else:
 			extra_boxes.erase(origin)
-	log_msg("Demolished %s (50%% refund)" % StructureData.STRUCTURES[sid]["name"])
+	log_msg(tr("Demolished %s (50%% refund)") % StructureData.STRUCTURES[sid]["name"])
 	return true
 
 # raiders chew on the base itself (the island): structures carry hp and drop
@@ -2738,10 +2746,10 @@ func hit_structure(cell: Vector2i, dmg: int) -> void:
 	var anchor: bool = StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false)
 	if anchor: # the kinbox holds every stored pal — losing it would orphan the box
 		st["hp"] = maxf(1.0, st.get("hp", 4000) - dmg)
-		floater(Vector2(cell.x + 0.5, cell.y + 0.5), "ANCHORED", "#4dd0e1")
+		floater(Vector2(cell.x + 0.5, cell.y + 0.5), tr("ANCHORED"), "#4dd0e1")
 		return
 	st["hp"] = st.get("hp", 200) - dmg
-	floater(Vector2(cell.x + 0.5, cell.y + 0.5), "-%d" % dmg, "#e8963c")
+	floater(Vector2(cell.x + 0.5, cell.y + 0.5), tr("-%d") % dmg, "#e8963c")
 	if st["hp"] <= 0:
 		raze_structure(st)
 
@@ -2773,7 +2781,7 @@ func raze_structure(st) -> void:
 		chest_ref = null
 	if sid == "kinbox":
 		kinbox_pos = Vector2i(-1, -1)
-	log_msg("%s was destroyed in the raid!" % tr(str(StructureData.STRUCTURES.get(sid, {}).get("name", sid))))
+	log_msg(tr("%s was destroyed in the raid!") % tr(str(StructureData.STRUCTURES.get(sid, {}).get("name", sid))))
 
 func tech_node(sid: String) -> Dictionary:
 	for t in StructureData.TECH:
@@ -2790,19 +2798,19 @@ func unlock(sid: String) -> void:
 	if t.is_empty():
 		return
 	if player.level < t.get("tier", 0):
-		log_msg("Reach Lv%d to unlock %s" % [t.get("tier", 0), tr(str(t.get("name", sid)))])
+		log_msg(tr("Reach Lv%d to unlock %s") % [t.get("tier", 0), tr(str(t.get("name", sid)))])
 		return
 	if tech_points < t.get("cost", 0):
-		log_msg("Need %d tech points" % t.get("cost", 0))
+		log_msg(tr("Need %d tech points") % t.get("cost", 0))
 		return
 	if item_count("ancient_part") < t.get("parts", 0): # ancient-tech nodes eat boss drops
-		log_msg("Need %d ancient parts" % t.get("parts", 0))
+		log_msg(tr("Need %d ancient parts") % t.get("parts", 0))
 		return
 	if int(t.get("parts", 0)) > 0:
 		add_item("ancient_part", -int(t["parts"]))
 	tech_points -= t.get("cost", 0)
 	unlocked.append(sid)
-	log_msg("Unlocked %s" % tr(str(t.get("name", sid))))
+	log_msg(tr("Unlocked %s") % tr(str(t.get("name", sid))))
 
 func recipe(rid: String) -> Dictionary:
 	for r in ItemData.RECIPES:
@@ -2823,26 +2831,26 @@ func craft(recipe_id: String) -> void:
 				near = true
 				break
 		if not near:
-			log_msg("Need to be at a %s" % stn)
+			log_msg(tr("Need to be at a %s") % stn)
 			return
 	var techs: Array = net_unlocked if (net != null and net.is_client()
 		and not net_unlocked.is_empty()) else unlocked
 	if r.get("tech", "") != "" and r["tech"] not in techs:
-		log_msg("Unlock %s in the tech tree first" % r["tech"])
+		log_msg(tr("Unlock %s in the tech tree first") % r["tech"])
 		return
 	var req: String = r.get("req", "")
 	if req != "" and item_count(req) < 1:
-		log_msg("Need %s in the bag" % tr(str(ItemData.ITEMS.get(req, {}).get("name", req))))
+		log_msg(tr("Need %s in the bag") % tr(str(ItemData.ITEMS.get(req, {}).get("name", req))))
 		return
 	for c in r.get("cost", []):
 		if item_count(c[0]) < c[1]:
-			log_msg("Missing materials")
+			log_msg(tr("Missing materials"))
 			return
 	if queue_crafts and stn != "hand":
 		# the island bench rule: station crafts take real time; idle handy base
 		# kin pitch in and hurry the queue along
 		if craft_queue.size() >= MAX_CRAFT_QUEUE:
-			log_msg("Craft queue is full")
+			log_msg(tr("Craft queue is full"))
 			return
 		for c in r.get("cost", []):
 			add_item(c[0], -c[1])
@@ -2851,14 +2859,14 @@ func craft(recipe_id: String) -> void:
 			costs.append([c[0], c[1]])
 		craft_queue.append({"out": r["out"][0], "n": r["out"][1],
 			"left": float(r.get("work", 20)) / 10.0, "cost": costs})
-		log_msg("Crafting %s… (%ds)" % [ItemData.ITEMS[r["out"][0]]["name"],
+		log_msg(tr("Crafting %s… (%ds)") % [ItemData.ITEMS[r["out"][0]]["name"],
 			int(craft_queue.back()["left"])])
 		return
 	for c in r.get("cost", []):
 		add_item(c[0], -c[1])
 	add_item(r["out"][0], r["out"][1])
 	note_crafted(r["out"][0])
-	log_msg("Crafted %s x%d" % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
+	log_msg(tr("Crafted %s x%d") % [ItemData.ITEMS[r["out"][0]]["name"], r["out"][1]])
 
 func repair_quote() -> Dictionary:
 	return repair_quote_for("weapon")
@@ -2901,24 +2909,24 @@ func repair_weapon() -> void:
 	if rep.is_empty():
 		return
 	if not rep["afford"]:
-		log_msg("Missing materials")
+		log_msg(tr("Missing materials"))
 		return
 	for c in rep["cost"]:
 		add_item(c[0], -c[1])
 	player.weapon_wear = float(rep["max"])
-	log_msg("Repaired %s" % ItemData.ITEMS[player.equipment["weapon"]]["name"])
+	log_msg(tr("Repaired %s") % ItemData.ITEMS[player.equipment["weapon"]]["name"])
 
 func repair_armor() -> void:
 	var rep := repair_quote_armor()
 	if rep.is_empty():
 		return
 	if not rep["afford"]:
-		log_msg("Missing materials")
+		log_msg(tr("Missing materials"))
 		return
 	for c in rep["cost"]:
 		add_item(c[0], -c[1])
 	player.armor_wear = float(rep["max"])
-	log_msg("Repaired %s" % ItemData.ITEMS[player.equipment["armor"]]["name"])
+	log_msg(tr("Repaired %s") % ItemData.ITEMS[player.equipment["armor"]]["name"])
 
 func tick_crafts(dt: float) -> void:
 	if craft_queue.is_empty():
@@ -2937,7 +2945,7 @@ func tick_crafts(dt: float) -> void:
 		if cq["left"] <= 0:
 			add_item(cq["out"], cq["n"])
 			note_crafted(cq["out"])
-			log_msg("Crafted %s x%d" % [ItemData.ITEMS[cq["out"]]["name"], cq["n"]])
+			log_msg(tr("Crafted %s x%d") % [ItemData.ITEMS[cq["out"]]["name"], cq["n"]])
 			craft_queue.remove_at(i)
 
 func pal_gain_xp(q: Kin, n: int) -> void:
@@ -2952,7 +2960,7 @@ func pal_gain_xp(q: Kin, n: int) -> void:
 		q.level += 1
 		q.apply_bonuses() # recompute max_hp incl star/alpha/boss
 		q.hp = q.max_hp
-		log_msg("%s grew to Lv%d!" % [tr(str(q.spec["name"])), q.level])
+		log_msg(tr("%s grew to Lv%d!") % [tr(str(q.spec["name"])), q.level])
 
 func gain_xp(n: int) -> void:
 	n = int(n * (1.0 + perks["xp"] * 0.08))
@@ -2972,7 +2980,7 @@ func gain_xp(n: int) -> void:
 		player.hp = player.max_hp
 		tech_points += 2
 		stat_pts += 1 # the island: every level banks a stat point for the statue
-		log_msg("Level up! Lv%d (+2 tech, +1 stat)" % player.level)
+		log_msg(tr("Level up! Lv%d (+2 tech, +1 stat)") % player.level)
 		sfx_play("level")
 
 func tick_box(dt: float) -> void: # the island kinbox is a clinic — wounds mend inside
@@ -2981,7 +2989,7 @@ func tick_box(dt: float) -> void: # the island kinbox is a clinic — wounds men
 			if t > bp.revive_t:
 				bp.revive_t = 0
 				bp.hp = int(bp.max_hp * 0.3)
-				log_msg("%s has recovered" % tr(str(bp.spec["name"])))
+				log_msg(tr("%s has recovered") % tr(str(bp.spec["name"])))
 		elif bp.hp < bp.max_hp:
 			bp.hp = minf(bp.max_hp, bp.hp + bp.max_hp * 0.03 * dt)
 	for bp in bench: # orbs rest in the same clinic light
@@ -3017,8 +3025,8 @@ func tick_spoilage() -> void:
 		add_item("spoiled_food", gone)
 		rot += gone
 	if rot > 0:
-		floater(player.pos, "%d food spoiled" % rot, "#8a7a50")
-		log_msg("%d perishable item%s turned — staff an ice box" % [rot, "s" if rot != 1 else ""])
+		floater(player.pos, tr("%d food spoiled") % rot, "#8a7a50")
+		log_msg(tr("%d perishable item%s turned — staff an ice box") % [rot, "s" if rot != 1 else ""])
 
 var spoil_t := 0.0
 
@@ -3107,8 +3115,8 @@ func tick_production(dt: float) -> void:
 			if snared != null:
 				snared.stun_t = 4.0
 				snared.hit(4, 1.0, false)
-				floater(Vector2(key.x + 0.5, key.y + 0.5), "Snared!", "#ffd76e")
-				log_msg("%s is caught in the snare!" % tr(str(snared.spec.get("name", snared.species_id))))
+				floater(Vector2(key.x + 0.5, key.y + 0.5), tr("Snared!"), "#ffd76e")
+				log_msg(tr("%s is caught in the snare!") % tr(str(snared.spec.get("name", snared.species_id))))
 				st["snare"] = false # spent — disarm now, remove after the tick (no mid-iteration erase)
 				call_deferred("net_remove_structure", st) # one bite and the trap is spent
 		if st["id"] == "lightning_rod":
@@ -3117,8 +3125,8 @@ func tick_production(dt: float) -> void:
 				if st["timer"] >= 45.0:
 					st["timer"] = 0.0
 					add_item("electric_organ", 1)
-					floater(Vector2(key.x + 0.5, key.y + 0.5), "STRIKE!", "#f0e060")
-					log_msg("Lightning bites the rod — banked an electric organ")
+					floater(Vector2(key.x + 0.5, key.y + 0.5), tr("STRIKE!"), "#f0e060")
+					log_msg(tr("Lightning bites the rod — banked an electric organ"))
 			else:
 				st["timer"] = 0.0
 		if st["id"] == "spyglass":
@@ -3226,8 +3234,8 @@ func return_expedition(p: Kin, st: Dictionary, key: Vector2i) -> void:
 		got[pick] = int(got.get(pick, 0)) + 1 + p.level / 15
 	for k in got:
 		st["store"][k] = int(st["store"].get(k, 0)) + int(got[k])
-	log_msg("%s returns from expedition: %s" % [tr(str(p.spec.get("name", p.species_id))), str(got)])
-	floater(Vector2(key.x + 0.5, key.y + 0.5), "EXPEDITION!", "#ffe08a")
+	log_msg(tr("%s returns from expedition: %s") % [tr(str(p.spec.get("name", p.species_id))), str(got)])
+	floater(Vector2(key.x + 0.5, key.y + 0.5), tr("EXPEDITION!"), "#ffe08a")
 
 func consume_ready(cons: Array) -> bool:
 	for cn in cons:
@@ -3322,7 +3330,7 @@ func cast_line() -> bool:
 	var c := Vector2i(int(player.pos.x), int(player.pos.y))
 	var wc := _water_cell(c)
 	if wc.x < 0:
-		log_msg("Cast at the water's edge")
+		log_msg(tr("Cast at the water's edge"))
 		return false
 	return _fish_roll(wc, 0)
 
@@ -3365,12 +3373,12 @@ func _fish_roll(wc: Vector2i, pid: int) -> bool:
 		fp.setup(self, sid, rng.int_range(1 + zone * 3, 4 + zone * 5), Vector2(wc.x + 0.5, wc.y + 0.5))
 		fp.home = fp.pos
 		pals.append(fp)
-		note_remote(pid, "A wild %s took the bait!" % tr(str(fp.spec["name"])))
-		floater(fp.pos, "SPLASH!", "#4d9de0")
+		note_remote(pid, "A wild %s took the bait!", [fp.spec["name"]])
+		floater(fp.pos, tr("SPLASH!"), "#4d9de0")
 	elif roll < 0.7:
 		var n := rng.int_range(1, 2)
 		give_remote(pid, "kin_fluid", n)
-		note_remote(pid, "Caught kin fluids x%d" % n)
+		note_remote(pid, "Caught kin fluids x%d", [n])
 	elif roll < 0.9:
 		var n2 := rng.int_range(4, 12)
 		give_remote(pid, "gold_coin", n2)
@@ -3381,7 +3389,7 @@ func _fish_roll(wc: Vector2i, pid: int) -> bool:
 	else: # the sea keeps the odd corked promise
 		give_remote(pid, "treasure_map", 1)
 		note_remote(pid, "A corked bottle — inside, a faded treasure chart!")
-	floater(Vector2(wc.x + 0.5, wc.y + 0.5), "~splash~", "#9fd8ff")
+	floater(Vector2(wc.x + 0.5, wc.y + 0.5), tr("~splash~"), "#9fd8ff")
 	return true
 
 func anger_nesters(at: Vector2) -> void:
@@ -3446,7 +3454,7 @@ func cycle_stance(uid: int) -> void:
 	if p == null:
 		return
 	p.stance = STANCES[(STANCES.find(p.stance) + 1) % STANCES.size()]
-	log_msg("%s: %s" % [tr(str(p.spec["name"])), p.stance])
+	log_msg(tr("%s: %s") % [tr(str(p.spec["name"])), p.stance])
 
 func bench_pal_of(uid: int) -> Kin:
 	for bp in bench:
@@ -3464,7 +3472,7 @@ func retract_out() -> void:
 	var rc_name2: String = tr(str(cur.spec["name"]))
 	if not _bench_add(cur):
 		party.erase(cur.uid) # the box/freed lane already claimed it — no ghost uid on the strip
-	log_msg("%s recalled" % rc_name2)
+	log_msg(tr("%s recalled") % rc_name2)
 
 func send_out(uid: int) -> void:
 	# the island send-out: the chosen party member takes the field; whoever was
@@ -3485,24 +3493,24 @@ func send_out(uid: int) -> void:
 	bp.pos = nearest_free(player.pos.x + 1.2, player.pos.y)
 	unbox_pal(bp)
 	cry_for(bp.species_id)
-	log_msg("%s sent out!" % tr(str(bp.spec["name"])))
+	log_msg(tr("%s sent out!") % tr(str(bp.spec["name"])))
 
 func box_to_party(bp: Kin) -> void:
 	if bp.hp <= 0 or bp.mode != "box": # the remote twin gates the same way — a field pal isn't box cargo
-		log_msg("%s is KO'd - wait for it to recover" % tr(str(bp.spec["name"])) if bp.hp <= 0 else "%s isn't in the box" % tr(str(bp.spec["name"])))
+		log_msg(tr("%s is KO'd - wait for it to recover") % tr(str(bp.spec["name"])) if bp.hp <= 0 else tr("%s isn't in the box") % tr(str(bp.spec["name"])))
 		return
 	if party.size() >= party_cap():
-		log_msg("Party full (%d) - send someone to the box first" % party_cap())
+		log_msg(tr("Party full (%d) - send someone to the box first") % party_cap())
 		return
 	box.erase(bp)
 	party.erase(bp.uid) # a stale mirror or double-promote must not dup the slot
 	if _bench_add(bp): # the island: new members wait in their ball until sent out
 		party.append(bp.uid)
-		log_msg("%s joined the bench (%d/%d)" % [tr(str(bp.spec["name"])), party.size(), party_cap()])
+		log_msg(tr("%s joined the bench (%d/%d)") % [tr(str(bp.spec["name"])), party.size(), party_cap()])
 		if party_pal() == null:
 			send_out(bp.uid)
 	else:
-		log_msg("Bench is full - %s stays in the box" % tr(str(bp.spec["name"])))
+		log_msg(tr("Bench is full - %s stays in the box") % tr(str(bp.spec["name"])))
 
 const MAX_BASE_PALS := 20 # absolute workforce cap — more mouths than this starve the loop anyway
 
@@ -3524,14 +3532,14 @@ func base_mission_done(lv: int) -> bool:
 
 func upgrade_base() -> void:
 	if base_level >= BASE_LEVEL_MAX:
-		log_msg("Base level maxed")
+		log_msg(tr("Base level maxed"))
 		return
 	if not base_mission_done(base_level):
-		log_msg("Base mission: " + BASE_MISSION_TEXT[base_level])
+		log_msg(tr("Base mission: ") + BASE_MISSION_TEXT[base_level])
 		return
 	base_level += 1
 	sfx_play("level")
-	log_msg("Base level %d! +2 workforce slots" % base_level)
+	log_msg(tr("Base level %d! +2 workforce slots") % base_level)
 
 func max_base_pals() -> int:
 	# the island kinbox growth: workforce slots scale with the player's level
@@ -3541,13 +3549,13 @@ func max_base_pals() -> int:
 func deploy_to_base(p: Kin) -> void:
 	# the island: drop a kin at the kinbox and it joins the base workforce
 	if p.hp <= 0:
-		_deploy_note(p, "%s is KO'd - wait for it to recover" % tr(str(p.spec["name"])))
+		_deploy_note(p, "%s is KO'd - wait for it to recover", [p.spec["name"]])
 		return
 	if kinbox_pos.x < 0:
 		_deploy_note(p, "Need a kinbox to deploy kin")
 		return
 	if base_pals_of(p.owner_id).size() >= max_base_pals() and p.mode != "base":
-		_deploy_note(p, "Base is full (%d kin — level up for more slots)" % max_base_pals())
+		_deploy_note(p, "Base is full (%d kin — level up for more slots)", [max_base_pals()])
 		return
 	player.dismount_if(p)
 	_unbind_mount(p) # a mount taking a base post leaves the saddle for good
@@ -3564,19 +3572,19 @@ func deploy_to_base(p: Kin) -> void:
 	p.job_site = null
 	var db := nearest_kinbox(p.pos)
 	p.pos = nearest_free(db.x + 2.0, db.y + 2.5)
-	_deploy_note(p, "%s deployed at base" % tr(str(p.spec["name"])))
+	_deploy_note(p, "%s deployed at base", [p.spec["name"]])
 
 # a remote caller's kin owns pid > 0 — its owner gets the notice, not the host
-func _deploy_note(p: Kin, msg: String) -> void:
+func _deploy_note(p: Kin, msg: String, args: Array = []) -> void:
 	if p.owner_id > 0:
-		note_remote(p.owner_id, msg)
+		note_remote(p.owner_id, msg, args)
 	else:
-		log_msg(msg)
+		log_msg(tr(msg) % tr_args(args) if args.size() else tr(msg))
 
 func base_to_box(p: Kin) -> void:
 	# recall a worker into cold storage — job and cargo are dropped first
 	if box.size() >= MAX_BOX:
-		log_msg("Kinbox is full")
+		log_msg(tr("Kinbox is full"))
 		return
 	_unbind_mount(p)
 	if p.job_site:
@@ -3590,7 +3598,7 @@ func base_to_box(p: Kin) -> void:
 	p.mode = "box"
 	box.append(p)
 	box_pal(p)
-	log_msg("%s -> box" % tr(str(p.spec["name"])))
+	log_msg(tr("%s -> box") % tr(str(p.spec["name"])))
 
 func party_to_box(uid: int) -> void:
 	var p := find_pal(uid)
@@ -3599,7 +3607,7 @@ func party_to_box(uid: int) -> void:
 	if p == null:
 		return
 	if box.size() >= MAX_BOX: # refusal precedes the unbind/job drop — a full box keeps the kin put
-		log_msg("Kinbox is full")
+		log_msg(tr("Kinbox is full"))
 		return
 	player.dismount_if(p)
 	_unbind_mount(p)
@@ -3613,11 +3621,11 @@ func party_to_box(uid: int) -> void:
 	p.mode = "box"
 	if p.carry != null: # hauling cargo doesn't vanish into the box
 		add_item(p.carry["id"], p.carry["n"])
-		log_msg("%s dropped off %d %s" % [tr(str(p.spec["name"])), p.carry["n"], p.carry["id"]])
+		log_msg(tr("%s dropped off %d %s") % [tr(str(p.spec["name"])), p.carry["n"], p.carry["id"]])
 		p.carry = null
 	box.append(p)
 	box_pal(p)
-	log_msg("%s -> box" % tr(str(p.spec["name"])))
+	log_msg(tr("%s -> box") % tr(str(p.spec["name"])))
 
 func assign_worker() -> void:
 	# toggle nearest base kin between wander and assigned to nearest workplace
@@ -3629,24 +3637,24 @@ func assign_worker() -> void:
 			bd = d
 			best = p
 	if not best:
-		log_msg("No base kin nearby")
+		log_msg(tr("No base kin nearby"))
 		return
 	if best.job_site != null:
 		best.job_site["workers"].erase(best)
 		best.job_site = null
-		log_msg("%s unassigned" % tr(str(best.spec["name"])))
+		log_msg(tr("%s unassigned") % tr(str(best.spec["name"])))
 		return
 	if best.owner_id != 0:
-		log_msg("%s answers to its keeper" % tr(str(best.spec["name"])))
+		log_msg(tr("%s answers to its keeper") % tr(str(best.spec["name"])))
 		return # the host's yard, the host's call: evict is allowed, posting is not
 	var site: Variant = find_work_site(best, 6.0)
 	if site:
 		if best not in site["workers"]:
 			site["workers"].append(best) # idempotent — a stale entry must not duplicate
 		best.job_site = site
-		log_msg("%s -> %s" % [tr(str(best.spec["name"])), StructureData.STRUCTURES[site["id"]]["name"]])
+		log_msg(tr("%s -> %s") % [tr(str(best.spec["name"])), StructureData.STRUCTURES[site["id"]]["name"]])
 	else:
-		log_msg("No workplace nearby")
+		log_msg(tr("No workplace nearby"))
 
 var skill_target: Kin = null # kinbox move-loadout panel's subject
 func toggle_skill(p: Kin, sid: String) -> void:
@@ -3656,11 +3664,11 @@ func toggle_skill(p: Kin, sid: String) -> void:
 	if sid in p.equipped:
 		p.equipped.erase(sid)
 	elif p.equipped.size() >= 3:
-		log_msg("%s's loadout is full — unslot a move first" % tr(str(p.spec["name"])))
+		log_msg(tr("%s's loadout is full — unslot a move first") % tr(str(p.spec["name"])))
 		return
 	else:
 		p.equipped.append(sid)
-	log_msg("%s moves: %s" % [tr(str(p.spec["name"])), str(p.equipped)])
+	log_msg(tr("%s moves: %s") % [tr(str(p.spec["name"])), str(p.equipped)])
 
 func tick_death_marks() -> void:
 	# reaching a tombstone retires it — the pack itself is handled by the drops
@@ -3676,8 +3684,8 @@ func pet_pal(p: Kin) -> bool:
 		return false
 	p.petted_t = t + 60.0
 	p.san = minf(100.0, p.san + 8.0)
-	floater(p.pos, "♥", "#ff8ab0")
-	log_msg("You pet %s" % tr(str(p.spec["name"])))
+	floater(p.pos, tr("♥"), "#ff8ab0")
+	log_msg(tr("You pet %s") % tr(str(p.spec["name"])))
 	return true
 
 func find_work_site(p: Kin, reach: float) -> Variant:
@@ -3740,7 +3748,7 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 		"self":
 			var heal := caster.max_hp * absf(sk.get("power", 20)) / 100.0
 			caster.hp = minf(caster.max_hp, caster.hp + heal)
-			floater(caster.pos, "+%d %s" % [int(heal), sk["name"]], "#a8e6a1")
+			floater(caster.pos, tr("+%d %s") % [int(heal), sk["name"]], "#a8e6a1")
 		"lunge":
 			var land: Vector2 = tpos + (caster.pos - tpos).normalized() * 0.9
 			# pass caster pos so elevation is actually checked — 2-arg blocked skips it
@@ -3759,14 +3767,14 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 				for p in pals.duplicate():
 					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius:
 						skill_hit(caster, p, sk)
-			floater(caster.pos, sk["name"] + "!", "#ffd76e")
+			floater(caster.pos, sk["name"] + tr("!"), "#ffd76e")
 		"multi": # a fan of shots — pack-clearing signature
 			var n2: int = maxi(2, int(sk.get("shots", 3)))
 			var spread := deg_to_rad(float(sk.get("spread_deg", 14.0)))
 			var aim := (tpos - caster.pos).normalized()
 			for i in n2:
 				spawn_shot(caster, aim.rotated(spread * (i - (n2 - 1) / 2.0)), sk)
-			floater(caster.pos, sk["name"] + "!", "#ffd76e")
+			floater(caster.pos, sk["name"] + tr("!"), "#ffd76e")
 		_: # projectile
 			spawn_shot(caster, (tpos - caster.pos).normalized(), sk)
 
@@ -3815,7 +3823,7 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			var back0 := minf(caster.max_hp - caster.hp, final * dr0) # the bite
 			if back0 > 0.0: # feeds its biter — same +N the kin path shows
 				caster.hp += back0
-				floater(caster.pos, "+%d" % int(back0), "#a8e6a1")
+				floater(caster.pos, tr("+%d") % int(back0), "#a8e6a1")
 		var st = sk.get("status")
 		if st and rng.chance(st.get("chance", 1.0)):
 			player_status(st["kind"], st.get("dur", 3))
@@ -3842,7 +3850,7 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			# doesn't shatter in the same instant
 			mult *= 1.5
 			tp.statuses.erase("freeze")
-			floater(tp.pos, "SHATTERED", "#7fc8f8")
+			floater(tp.pos, tr("SHATTERED"), "#7fc8f8")
 		if tp.has_status("soak"):
 			# the island element combos: a wet target takes the hit differently —
 			# electricity arcs through, ice locks solid, fire just boils off
@@ -3851,7 +3859,7 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			elif elem == "ice":
 				tp.statuses.erase("soak")
 				tp.add_status("freeze", 2.5)
-				floater(tp.pos, "FROZEN SOLID", "#7fc8f8")
+				floater(tp.pos, tr("FROZEN SOLID"), "#7fc8f8")
 			elif elem == "fire":
 				tp.statuses.erase("soak")
 		var d := Combat.damage(Combat.stat_at(caster.spec["atk"], caster.level, caster.talent) * caster.atk_bonus * caster.atk_mult(),
@@ -3864,7 +3872,7 @@ func skill_hit(caster: Kin, target_ent, sk: Dictionary) -> void:
 			var back := minf(caster.max_hp - caster.hp, maxf(1.0, d * dr))
 			if back > 0.0:
 				caster.hp += back
-				floater(caster.pos, "+%d" % int(back), "#a8e6a1")
+				floater(caster.pos, tr("+%d") % int(back), "#a8e6a1")
 		if caster.mode == "partner":
 			gain_xp(maxi(1, d / 4))
 
@@ -3982,7 +3990,26 @@ func load_settings() -> void:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:
 				settings[k] = clampf(float(v) if _fin(v) else settings[k], 0.0, 1.0) # NaN is not a volume
+	load_csv_translations()
 	apply_settings()
+
+func load_csv_translations() -> void:
+	# the csv is the source of truth — the editor's csv_translation importer is
+	# flaky headless, so we build the Translation resource at runtime instead
+	var f := FileAccess.open("res://locale/zh.csv", FileAccess.READ)
+	if f == null:
+		return
+	var t := Translation.new()
+	t.locale = "zh"
+	var first := true
+	while not f.eof_reached():
+		var row := f.get_csv_line()
+		if first:
+			first = false
+			continue
+		if row.size() >= 3 and row[0] != "":
+			t.add_message(row[0], row[2])
+	TranslationServer.add_translation(t)
 
 func save_settings() -> void:
 	var cf := ConfigFile.new()
@@ -4023,7 +4050,7 @@ func save_game() -> void:
 		log_msg(tr("The world lives on the host — nothing to save locally"))
 		return # a client's replica snapshot must never clobber the solo save
 	if net_residue:
-		log_msg("A dropped session's world can't be saved")
+		log_msg(tr("A dropped session's world can't be saved"))
 		return # host gone ≠ yours — the Frankenstein snapshot would eat the real save
 	var pals_data := []
 	for p in pals:
@@ -4143,7 +4170,7 @@ func save_game() -> void:
 	}
 	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 	if f == null:
-		log_msg(tr("SAVE FAILED") + " — %s" % error_string(FileAccess.get_open_error()))
+		log_msg(tr("SAVE FAILED") + tr(" — %s") % error_string(FileAccess.get_open_error()))
 		return
 	f.store_var(d)
 	f.close()
@@ -4152,10 +4179,10 @@ func save_game() -> void:
 
 func load_game() -> bool:
 	if net != null and net.is_client():
-		log_msg("The world lives on the host — nothing to load locally")
+		log_msg(tr("The world lives on the host — nothing to load locally"))
 		return false # a solo save must never rebuild a replica world
 	if multiplayer.multiplayer_peer != null and multiplayer.get_peers().size() > 0:
-		log_msg("Guests connected — end the session before loading")
+		log_msg(tr("Guests connected — end the session before loading"))
 		return false # reloading under guests desyncs their world for good
 	if not FileAccess.file_exists("user://savegame.plg"):
 		return false
@@ -4165,20 +4192,20 @@ func load_game() -> bool:
 	var dv = f.get_var()
 	f.close()
 	if dv is not Dictionary or not dv.has("seed"):
-		log_msg("Save file corrupt - starting fresh")
+		log_msg(tr("Save file corrupt - starting fresh"))
 		return false
 	var d: Dictionary = Migrate.save_dict(dv) # pre-rename saves keep working under new ids
 	if _i(d.get("v", 0)) > SAVE_VER:
-		log_msg("Save is from a newer build - not loading")
+		log_msg(tr("Save is from a newer build - not loading"))
 		return false # a future schema misreads silently as v2 — refuse it
 	for req in ["day", "tod", "tech_points", "unlocked", "items", "party", "player", "kin", "structures"]:
 		if not d.has(req):
-			log_msg("Save missing field '%s' - starting fresh" % req)
+			log_msg(tr("Save missing field '%s' - starting fresh") % req)
 			return false # below this point every field is assumed present
 	if d["player"] is not Dictionary or d["kin"] is not Array or d["structures"] is not Dictionary \
 			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array \
 			or not _fin(d["seed"]):
-		log_msg("Save has wrong field types - starting fresh")
+		log_msg(tr("Save has wrong field types - starting fresh"))
 		return false # seed reaches a typed int parameter — refusing here beats a mid-load abort
 	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
 	despawn_merchant() # the trader's stock and node don't cross a load
@@ -4227,7 +4254,7 @@ func load_game() -> bool:
 		world.decor = d["decor"]
 		world.hp = d["hp_map"]
 	else: # world size/type changed since this save — keep fresh terrain, skip stale layout
-		log_msg("Save layout predates the current world format - fresh terrain")
+		log_msg(tr("Save layout predates the current world format - fresh terrain"))
 	queue_redraw_decor() # decor pool still holds the pre-load world's sprites
 	day = maxi(_i(d["day"]), 1); tod = clampf(_f(d["tod"]), 0.0, 24.0) # typed vars — a foreign string would throw on assignment; tod>24 would fast-forward a day per frame until under 24
 	raid_t = _f(d.get("raid_t", raid_t))
@@ -4378,13 +4405,13 @@ func load_game() -> bool:
 		if pd is not Dictionary:
 			continue # corrupt entry — keep loading the rest
 		if SpeciesData.species_of(str(pd.get("sp", ""))).is_empty():
-			log_msg("Skipped unknown species in save: %s" % pd.get("sp", "?"))
+			log_msg(tr("Skipped unknown species in save: %s") % pd.get("sp", "?"))
 			continue # corrupt entry — don't crash on spec lookups
 		var m0 := str(pd.get("mode", "wild"))
 		if m0 not in ["wild", "partner", "base", "box", "bench", "expedition"]:
 			m0 = "wild" # foreign strings would poison every mode check
 		if m0 != "wild" and not ownable(str(pd.get("sp", ""))):
-			log_msg("Skipped unownable rostered species in save: %s" % pd.get("sp", "?"))
+			log_msg(tr("Skipped unownable rostered species in save: %s") % pd.get("sp", "?"))
 			continue # a forged row can't smuggle a human into a roster lane — wild Iron Pact mobs are legit world fauna and load as wild
 		var ppos2 = pd.get("pos", [player.pos.x, player.pos.y])
 		if ppos2 is not Array or ppos2.size() < 2 or not _fin(ppos2[0]) or not _fin(ppos2[1]):
@@ -4517,7 +4544,7 @@ func load_game() -> bool:
 		var sv = d["structures"][ks]
 		var sid: String = str(sv.get("id", "")) if sv is Dictionary else str(sv)
 		if not StructureData.STRUCTURES.has(sid):
-			log_msg("Skipped unknown structure in save: %s" % sid)
+			log_msg(tr("Skipped unknown structure in save: %s") % sid)
 			continue # structure type removed in a newer build — don't brick the load
 		var s: Dictionary = StructureData.STRUCTURES[sid]
 		var tx := int(parts[0]); var ty := int(parts[1])
@@ -4650,8 +4677,8 @@ func cycle_work_mode() -> void:
 		return
 	work_mode = (work_mode + 1) % WORK_MODES.size()
 	var wm: Dictionary = WORK_MODES[work_mode]
-	floater(player.pos, "Work: %s" % wm["name"], "#e8d44d")
-	log_msg("Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)"
+	floater(player.pos, tr("Work: %s") % wm["name"], "#e8d44d")
+	log_msg(tr("Monitoring stand: %s pace (output x%.2f, SAN drain x%.1f)")
 		% [wm["name"], wm["prod"], wm["san"]])
 
 var supply_t := 300.0 # wandering care package — lands near the player
@@ -4677,8 +4704,8 @@ func tick_supply(dt: float) -> void:
 			var li: Array = loot[i]
 			spawn_drop(str(li[0]), int(li[1]),
 				Vector2(tx + 0.5 + (i % 2) * 0.8, ty + 0.5 + (i / 2) * 0.8))
-		floater(Vector2(tx + 0.5, ty + 0.5), "SUPPLY DROP!", "#ffd76e")
-		log_msg("A supply crate lands nearby — grab it before the locals do")
+		floater(Vector2(tx + 0.5, ty + 0.5), tr("SUPPLY DROP!"), "#ffd76e")
+		log_msg(tr("A supply crate lands nearby — grab it before the locals do"))
 		return
 
 var mig_t := 300.0 # passing herds — a deeper zone's species crosses the map
@@ -4736,8 +4763,8 @@ func tick_migration(dt: float) -> void:
 				pals.erase(mp2)
 				mp2.queue_free()
 			continue
-		floater(Vector2(x + 0.5, y + 0.5), "MIGRATION!", "#ffd76e")
-		log_msg("A herd of %s is migrating %s! (%d head)"
+		floater(Vector2(x + 0.5, y + 0.5), tr("MIGRATION!"), "#ffd76e")
+		log_msg(tr("A herd of %s is migrating %s! (%d head)")
 			% [tr(str(sp.get("name", sid))), "ashore" if in_water else "inland", made.size()])
 		return
 
@@ -4767,9 +4794,9 @@ func tick_raid(dt: float) -> void:
 			("" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)])
 		var howl := "Iron Pact squad" if raid_theme == "Iron Pact" else \
 			(("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob")
-		log_msg("Raid party spotted — a %s is coming for the kinbox!" % howl)
+		log_msg(tr("Raid party spotted — a %s is coming for the kinbox!") % howl)
 		sfx_play("horn")
-		floater(player.pos, "RAID INCOMING", "#e8452f")
+		floater(player.pos, tr("RAID INCOMING"), "#e8452f")
 	if raid_t <= 0:
 		raid_t = 240.0 + rng.next() * 180.0
 		raid_warned = false # next wave gets its own warning
@@ -4830,7 +4857,7 @@ func start_raid() -> void:
 			placed = true
 			break
 	if spawned > 0:
-		log_msg("!! RAID: %d hostile kin approach your base !!" % spawned)
+		log_msg(tr("!! RAID: %d hostile kin approach your base !!") % spawned)
 
 # ---------- breeding ----------
 func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
@@ -4848,7 +4875,7 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 		if acc >= float(fm.get("per", 60)):
 			acc = 0.0
 			st["store"][fm["item"]] = st["store"].get(fm["item"], 0) + 1
-			floater(Vector2(key.x + 0.5, key.y + 0.5), "+%s" % fm["item"], "#a8e6a1")
+			floater(Vector2(key.x + 0.5, key.y + 0.5), tr("+%s") % fm["item"], "#a8e6a1")
 		ft[w.uid] = acc
 	for u2 in ft.keys(): # keep the ledger tight — workers come and go
 		var still := false
@@ -4873,8 +4900,8 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 	if not consume_ready([["cake", 1]]):
 		if not st.get("cake_warned", false):
 			st["cake_warned"] = true
-			floater(Vector2(key.x + 0.5, key.y + 0.5), "needs cake!", "#f2a0b5")
-			log_msg("Ranch needs a cake (chest/feed box) to breed")
+			floater(Vector2(key.x + 0.5, key.y + 0.5), tr("needs cake!"), "#f2a0b5")
+			log_msg(tr("Ranch needs a cake (chest/feed box) to breed"))
 		st["timer"] = 0.0
 		return
 	st["cake_warned"] = false
@@ -4908,8 +4935,8 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 		a.passives.duplicate(), b.passives.duplicate(),
 		a.learned_skills(), b.learned_skills(), owners])
 	st["store"]["kin_egg"] = st["store"].get("kin_egg", 0) + 1 # lays AT the ranch; haulers collect
-	floater(Vector2(key.x + 0.5, key.y + 0.5), "Egg!", "#f5e6c8")
-	log_msg("%s + %s produced an egg!" % [tr(str(a.spec["name"])), tr(str(b.spec["name"]))])
+	floater(Vector2(key.x + 0.5, key.y + 0.5), tr("Egg!"), "#f5e6c8")
+	log_msg(tr("%s + %s produced an egg!") % [tr(str(a.spec["name"])), tr(str(b.spec["name"]))])
 
 func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> void:
 	# kinbox lesson: a posted veteran drills one pupil per bell —
@@ -4950,8 +4977,8 @@ func tick_dojo(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 	pupil.extra_skills.append(sid)
 	pal_gain_xp(teacher, 4) # drilling others keeps the veteran's own claws sharp
 	var sname: String = tr(str(SkillData.SKILLS.get(sid, {}).get("name", sid)))
-	floater(center, "%s learns %s!" % [tr(str(pupil.spec.get("name", pupil.species_id))), sname], "#ffd97a")
-	log_msg("%s taught %s %s" % [tr(str(teacher.spec.get("name", teacher.species_id))),
+	floater(center, tr("%s learns %s!") % [tr(str(pupil.spec.get("name", pupil.species_id))), sname], "#ffd97a")
+	log_msg(tr("%s taught %s %s") % [tr(str(teacher.spec.get("name", teacher.species_id))),
 		tr(str(pupil.spec.get("name", pupil.species_id))), sname])
 
 func tick_spar(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> void:
@@ -4979,7 +5006,7 @@ func tick_spar(key: Vector2i, st: Dictionary, job: Dictionary, dt: float) -> voi
 	pal_gain_xp(loser, 4)
 	for w in [a, b]:
 		w.san = maxf(0.0, w.san - 4.0) # a bout costs spirit, not blood
-	floater(Vector2(key.x + 0.5, key.y + 0.5), "%s wins the bout!" % tr(str(champ.spec.get("name", champ.species_id))), "#ffd97a")
+	floater(Vector2(key.x + 0.5, key.y + 0.5), tr("%s wins the bout!") % tr(str(champ.spec.get("name", champ.species_id))), "#ffd97a")
 
 func pull_from_storage(id: String, need: int) -> int:
 	# shared consumer: production inputs and cake come out of chests/feed boxes
@@ -5010,7 +5037,7 @@ func deposit_egg() -> void:
 		return
 	var site: Vector2i = _free_incubator(player.pos)
 	if site.x < 0:
-		log_msg("Need a free incubator nearby")
+		log_msg(tr("Need a free incubator nearby"))
 		return
 	add_item(egg_id, -1)
 	var pair = _claim_egg_parent(0)
@@ -5023,7 +5050,7 @@ func deposit_egg() -> void:
 	structures[site]["egg_inc"] = {"pair": pair, "ready_t": t + 90.0,
 		"huge": egg_id == "huge_kin_egg"}
 	var hint := egg_hint(pair)
-	log_msg("%s incubating - ready in 90s%s%s"
+	log_msg(tr("%s incubating - ready in 90s%s%s")
 		% ["Huge egg" if egg_id == "huge_kin_egg" else "Egg",
 			"" if warm_hint else " (a campfire would hurry it)",
 			" — " + hint if hint != "" else ""])
@@ -5184,11 +5211,11 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 		box_pal(np)
 	else:
 		np.queue_free() # double-cap: the chick dies clean rather than break rule 1
-		log_msg("The egg hatched… but there was no room for the chick")
+		log_msg(tr("The egg hatched… but there was no room for the chick"))
 	if pair is Array:
 		mission_flags["egg"] = true # a bred egg — wild nest finds don't count
-	floater(at, "* hatched! *", "#4dd0e1")
-	log_msg("Egg hatched: %s%s (talent %d)!" % ["LUCKY " if huge else "",
+	floater(at, tr("* hatched! *"), "#4dd0e1")
+	log_msg(tr("Egg hatched: %s%s (talent %d)!") % ["LUCKY " if huge else "",
 		tr(str(np.spec["name"])), talent_v])
 
 func spawn_camps() -> void:
@@ -5233,21 +5260,21 @@ func free_captive(st: Dictionary) -> void:
 	# prize the lock — the caged kin joins your box like any catch
 	var cap = st.get("captive")
 	if not (cap is Dictionary) or str(cap.get("sp", "")) == "":
-		log_msg("The cage is empty")
+		log_msg(tr("The cage is empty"))
 		return
 	if box.size() >= MAX_BOX:
-		log_msg("Kinbox is full — the captive won't leave its cage")
+		log_msg(tr("Kinbox is full — the captive won't leave its cage"))
 		return
 	if not ownable(str(cap["sp"])):
-		log_msg("The cage holds something that can't be kept")
+		log_msg(tr("The cage holds something that can't be kept"))
 		return # the ownable gate — worldgen cages can't hold this anyway
 	var bp := gen_pal(str(cap["sp"]), int(cap["lv"]), player.pos)
 	bp.mode = "box"
 	box.append(bp)
 	box_pal(bp)
 	gain_xp(15)
-	floater(player.pos, "FREED!", "#8ef0a8")
-	log_msg("Freed %s Lv%d — it scurries into your kinbox" % [tr(str(bp.spec["name"])), bp.level])
+	floater(player.pos, tr("FREED!"), "#8ef0a8")
+	log_msg(tr("Freed %s Lv%d — it scurries into your kinbox") % [tr(str(bp.spec["name"])), bp.level])
 	net_remove_structure(st)
 
 func spawn_fossils() -> void:
@@ -5276,8 +5303,8 @@ func dig_fossil(st: Dictionary) -> void:
 	var shard := rng.chance(0.25)
 	if shard:
 		add_item("lumenite", 1)
-	floater(pos, "+%d ancient parts" % n, "#ffd76e")
-	log_msg("Fossil dug: %d ancient parts%s" % [n, " and a lumenite shard" if shard else ""])
+	floater(pos, tr("+%d ancient parts") % n, "#ffd76e")
+	log_msg(tr("Fossil dug: %d ancient parts%s") % [n, " and a lumenite shard" if shard else ""])
 	sfx_play("catch")
 
 func open_mimic(st: Dictionary, opener_pid := 0) -> void:
@@ -5295,8 +5322,8 @@ func open_mimic(st: Dictionary, opener_pid := 0) -> void:
 	m.aggro = 0 # the mimic picks its fight before you pick yours
 	m.aggro_pid = opener_pid # chest-opening is a keeper verb — the opener is the mark
 	pals.append(m)
-	floater(m.pos, "IT GRINS.", "#e8452f")
-	log_msg("The chest was a %s — it was never a chest!" % tr(str(m.spec["name"])))
+	floater(m.pos, tr("IT GRINS."), "#e8452f")
+	log_msg(tr("The chest was a %s — it was never a chest!") % tr(str(m.spec["name"])))
 	sfx_play("fail")
 
 # host-side guest probe: clients can't see the mimic flag (the trap stays
@@ -5425,8 +5452,8 @@ func cage_req_remote(pid: int, cell: Vector2i) -> bool:
 	bp.owner_tag = str(net.peer_tags.get(pid, "")) if net != null else ""
 	box.append(bp)
 	box_pal(bp)
-	note_remote(pid, "Freed %s Lv%d — it scurries into your kinbox"
-		% [tr(str(bp.spec["name"])), bp.level])
+	note_remote(pid, "Freed %s Lv%d — it scurries into your kinbox",
+		[bp.spec["name"], bp.level])
 	net_remove_structure(st)
 	return true
 
@@ -5520,7 +5547,7 @@ func mount_req_remote(pid: int, uid: int) -> int: # 0 refuse / 1 mount / 2 dismo
 				note_remote(pid, "Too far to mount")
 				return 0
 			if not SpeciesData.mountable(p2.species_id) and SpeciesData.body_of(p2.species_id) != "bird":
-				note_remote(pid, "%s won't carry a rider" % tr(str(p2.spec["name"])))
+				note_remote(pid, "%s won't carry a rider", [p2.spec["name"]])
 				return 0
 			# validate first, unbind second — a refused swap can't orphan the
 			# saddle: the old mount stays claimed until the new one passes
@@ -5549,7 +5576,7 @@ func condense_remote(pid: int) -> bool:
 	if ap == null:
 		return false
 	if ap.star >= CONDENSE_COST.size():
-		note_remote(pid, "%s is already max star" % tr(str(ap.spec["name"])))
+		note_remote(pid, "%s is already max star", [ap.spec["name"]])
 		return false
 	var need: int = CONDENSE_COST[ap.star]
 	var fodder: Array = []
@@ -5559,15 +5586,15 @@ func condense_remote(pid: int) -> bool:
 			fodder.append(bp)
 	fodder.sort_custom(func(a, b): return a.level < b.level)
 	if fodder.size() < need:
-		note_remote(pid, "Need %d same-species kin for star %d (have %d)"
-			% [need, ap.star + 1, fodder.size()])
+		note_remote(pid, "Need %d same-species kin for star %d (have %d)",
+			[need, ap.star + 1, fodder.size()])
 		return false
 	for i in need:
 		var fp: Kin = fodder[i]
 		box.erase(fp)
 		fp.free() # already erased — free() on the in-tree node is legal and immediate
 	ap.condense()
-	note_remote(pid, "%s condensed to star %d!" % [tr(str(ap.spec["name"])), ap.star])
+	note_remote(pid, "%s condensed to star %d!", [ap.spec["name"], ap.star])
 	return true
 
 func spawn_lairs() -> void:
@@ -5629,7 +5656,7 @@ func spawn_lairs() -> void:
 	spawn_pact_spires()
 	spawn_nests()
 	spawn_waypoints()
-	log_msg("%d boss lairs marked deep in the world" % placed)
+	log_msg(tr("%d boss lairs marked deep in the world") % placed)
 
 func spawn_waypoints() -> void:
 	# a fast-travel stones: a few fixed waypoints out in the world,
@@ -5652,7 +5679,7 @@ func spawn_waypoints() -> void:
 		if place_free("waypoint", tx, ty):
 			placed += 1
 	if placed > 0:
-		log_msg("%d waypoints hum out in the wilds" % placed)
+		log_msg(tr("%d waypoints hum out in the wilds") % placed)
 
 func spawn_nests() -> void:
 	# Wild egg nests (the island): stealable kin_egg drops scattered past zone 1
@@ -5742,7 +5769,7 @@ func spawn_grotto() -> void:
 				door_c = Vector2i(tx + dir2.x * 4, ty + dir2.y * 4)
 				break
 		if bx < 0:
-			log_msg("A sealed grotto echoes in the deep wilds")
+			log_msg(tr("A sealed grotto echoes in the deep wilds"))
 			return
 		for dy in range(-2, 3):
 			for dx in range(-2, 3):
@@ -5829,9 +5856,9 @@ func spawn_grotto() -> void:
 						"boss_sigil": 1,
 						"skill_fruit_" + ["neutral", "fire", "water", "grass", "electric",
 						"ice", "ground", "dark", "dragon"][rng.int_range(0, 8)]: 1}
-			log_msg("A sealed grotto echoes in the deep wilds — something huge breathes within")
+			log_msg(tr("A sealed grotto echoes in the deep wilds — something huge breathes within"))
 			return
-		log_msg("A sealed grotto echoes in the deep wilds — it sounds deep")
+		log_msg(tr("A sealed grotto echoes in the deep wilds — it sounds deep"))
 		return
 
 # World bosses that only appear as den guardians — legendary tier.
@@ -5903,7 +5930,7 @@ func spawn_pact_spires() -> void:
 	if placed < SPIRE_DEFS.size():
 		push_warning("only %d of %d pact spires placed — campaign uncompletable on this map" % [placed, SPIRE_DEFS.size()])
 	if placed > 0:
-		log_msg("The Iron Pact raised %d spires across the Wildmere — break them all" % placed)
+		log_msg(tr("The Iron Pact raised %d spires across the Wildmere — break them all") % placed)
 
 func _place_spire(sd: Dictionary, tx: int, ty: int, placed: int) -> void:
 	# rock ring, door facing south — a proper arena, not a field bump
@@ -5945,15 +5972,15 @@ func record_spire(tag: String) -> void:
 		# writer validates, and the choke point re-checks regardless
 	spires_done[tag] = true
 	var n := spires_done.size()
-	log_msg("Pact spire broken! %d of %d" % [n, SPIRE_DEFS.size()])
+	log_msg(tr("Pact spire broken! %d of %d") % [n, SPIRE_DEFS.size()])
 	if n >= SPIRE_DEFS.size() and not crowned:
 		crowned = true
 		add_item("legendary_orb", 3)
 		add_item("gold_coin", 300)
 		add_item("ancient_part", 10)
-		log_msg("ISLAND CROWNED — every spire lies broken. The Wildmere is yours.")
+		log_msg(tr("ISLAND CROWNED — every spire lies broken. The Wildmere is yours."))
 		if player != null:
-			floater(player.pos, "ISLAND CROWNED", "#ffd76e")
+			floater(player.pos, tr("ISLAND CROWNED"), "#ffd76e")
 
 func spawn_legendary_den() -> void:
 	# one per world: bigger ring, an orb-immune giant, elite honour guard.
@@ -5997,7 +6024,7 @@ func spawn_legendary_den() -> void:
 			gp.setup(self, guard_pool[rng.int_range(0, guard_pool.size() - 1)],
 				rng.int_range(24, 32), Vector2(tx + 1.5 - i, ty + 1.5))
 			pals.append(gp)
-		log_msg("A legendary %s den glows deep in the wilds" % sid)
+		log_msg(tr("A legendary %s den glows deep in the wilds") % sid)
 		return
 
 func regenerate(s: int) -> void:
@@ -6093,7 +6120,7 @@ var stat_pts := 0 # level-up banked points — the statue spends these before ef
 func upgrade_perk(k: String) -> void:
 	var lvl: int = perks[k]
 	if lvl >= 5:
-		log_msg("Statue maxed")
+		log_msg(tr("Statue maxed"))
 		return
 	var cost := PERK_COST + lvl * 2
 	if stat_pts > 0:
@@ -6101,7 +6128,7 @@ func upgrade_perk(k: String) -> void:
 	elif item_count("sprigmelt_effigy") >= cost:
 		add_item("sprigmelt_effigy", -cost)
 	else:
-		log_msg("Need %d effigies or a stat point (have %d)" % [cost, item_count("sprigmelt_effigy")])
+		log_msg(tr("Need %d effigies or a stat point (have %d)") % [cost, item_count("sprigmelt_effigy")])
 		return
 	perks[k] = lvl + 1
 	if k == "capture":
@@ -6109,7 +6136,7 @@ func upgrade_perk(k: String) -> void:
 	if k == "hp":
 		player.max_hp = 100 + (player.level - 1) * 10 + perks["hp"] * 12 # level hp + perk hp
 		player.hp = player.max_hp
-	log_msg("Statue upgraded: %s Lv%d" % [k, perks[k]])
+	log_msg(tr("Statue upgraded: %s Lv%d") % [k, perks[k]])
 
 func respec() -> bool:
 	# memory-wiping medicine: every perk rank folds back into
@@ -6118,7 +6145,7 @@ func respec() -> bool:
 	for k in perks:
 		total += int(perks[k])
 	if total == 0:
-		log_msg("No perks to forget")
+		log_msg(tr("No perks to forget"))
 		return false
 	for k in perks:
 		perks[k] = 0
@@ -6126,7 +6153,7 @@ func respec() -> bool:
 	player.capture_level = 1 + perks["capture"]
 	player.max_hp = 100 + (player.level - 1) * 10 + perks["hp"] * 12
 	player.hp = minf(player.hp, player.max_hp) # forgot the hp ranks — max shrank
-	log_msg("Memory wiped: %d stat points returned" % total)
+	log_msg(tr("Memory wiped: %d stat points returned") % total)
 	return true
 
 func soul_infuse(uid: int) -> void:
@@ -6147,12 +6174,12 @@ func soul_infuse(uid: int) -> void:
 		return
 	var cost := 1 + target.soul_boost
 	if item_count("sprigmelt_effigy") < cost:
-		log_msg("Need %d effigies to infuse %s" % [cost, tr(str(target.spec["name"]))])
+		log_msg(tr("Need %d effigies to infuse %s") % [cost, tr(str(target.spec["name"]))])
 		return
 	add_item("sprigmelt_effigy", -cost)
 	target.soul_boost += 1
 	target.apply_bonuses()
-	log_msg("%s's soul burns brighter (+%d)" % [tr(str(target.spec["name"])), target.soul_boost])
+	log_msg(tr("%s's soul burns brighter (+%d)") % [tr(str(target.spec["name"])), target.soul_boost])
 
 # host-side guest infusion: the uid must resolve to the ASKER's kin —
 # you can't burn effigies into someone else's soul. Cost echoes back.
@@ -6203,12 +6230,12 @@ func fruit_req_remote(pid: int, item_id: String) -> bool:
 			pool.append(sid)
 	pool = pool.filter(func(s): return s not in p.learned_skills())
 	if pool.is_empty():
-		note_remote(pid, "%s already knows every %s move" % [tr(str(p.spec["name"])), tr(str(elem))])
+		note_remote(pid, "%s already knows every %s move", [p.spec["name"], elem])
 		return false
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	p.extra_skills.append(sid)
-	note_remote(pid, "%s learned %s!" % [tr(str(p.spec["name"])), tr(str(SkillData.SKILLS[sid].get("name", sid)))])
-	floater(p.pos, "+ skill!", "#a8e6a1")
+	note_remote(pid, "%s learned %s!", [p.spec["name"], SkillData.SKILLS[sid].get("name", sid)])
+	floater(p.pos, tr("+ skill!"), "#a8e6a1")
 	return true
 
 # the island signature partner skills: a few species get bespoke actives
@@ -6237,28 +6264,28 @@ func partner_gear_ok(sid: String) -> bool:
 
 func partner_skill() -> void:
 	if party.is_empty():
-		log_msg("No party kin")
+		log_msg(tr("No party kin"))
 		return
 	var p := party_pal()
 	if p == null or p.hp <= 0:
-		log_msg("Send out a kin first")
+		log_msg(tr("Send out a kin first"))
 		return
 	var m := player.get_global_mouse_position()
 	var tw0: Vector2 = Iso.from_screen(m.x, m.y, player.elev())
 	var psk = PARTNER_SKILLS.get(p.species_id)
 	if psk != null and not partner_gear_ok(p.species_id):
-		log_msg("%s's %s needs its kin gear — unlock %s in the tech tree"
+		log_msg(tr("%s's %s needs its kin gear — unlock %s in the tech tree")
 			% [tr(str(p.spec["name"])), tr(str(psk["name"])), PARTNER_GEAR[p.species_id]])
 		psk = null # the pal falls back to its strongest learned move instead
 	if psk != null:
 		if p.skill_cd.get("partner", 0) > t:
-			log_msg("%s is reloading" % tr(str(p.spec["name"])))
+			log_msg(tr("%s is reloading") % tr(str(p.spec["name"])))
 			return
 		if not run_partner_skill(p, tw0, psk):
-			log_msg("%s's %s found no target" % [tr(str(p.spec["name"])), tr(str(psk["name"]))])
+			log_msg(tr("%s's %s found no target") % [tr(str(p.spec["name"])), tr(str(psk["name"]))])
 			return
 		p.skill_cd["partner"] = t + float(psk["cd"])
-		log_msg("%s: %s!" % [tr(str(p.spec["name"])), tr(str(psk["name"]))])
+		log_msg(tr("%s: %s!") % [tr(str(p.spec["name"])), tr(str(psk["name"]))])
 		return
 	var tw: Vector2 = tw0
 	var best: Dictionary = {}
@@ -6273,11 +6300,11 @@ func partner_skill() -> void:
 		if best.is_empty() or sk.get("power", 0) > best.get("power", 0):
 			best = sk # strongest usable skill — skills key damage as "power"
 	if best.is_empty():
-		log_msg("%s has no usable partner skill" % tr(str(p.spec["name"])))
+		log_msg(tr("%s has no usable partner skill") % tr(str(p.spec["name"])))
 		return
 	p.skill_cd[best["id"]] = t + best.get("cooldown", 2)
 	cast_skill(p, tw, best)
-	log_msg("%s casts %s!" % [tr(str(p.spec["name"])), tr(str(best["name"]))])
+	log_msg(tr("%s casts %s!") % [tr(str(p.spec["name"])), tr(str(best["name"]))])
 
 func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 	# bespoke actives — returns false when nothing in the cone/aim was worth
@@ -6326,24 +6353,24 @@ func run_partner_skill(p: Kin, tw: Vector2, psk) -> bool:
 						q.add_status("freeze", 2.5)
 					boom = true
 			if boom:
-				floater(tw, "PENGUIN CANNON!", "#7ec8e3")
+				floater(tw, tr("PENGUIN CANNON!"), "#7ec8e3")
 			return boom
 		"nibjelly": # a squeeze of cream, straight into the bag
 			add_item("milk", 1)
-			floater(p.pos, "milk!", "#f8f4f0")
+			floater(p.pos, tr("milk!"), "#f8f4f0")
 			return true
 		"piplump": # the big jersey — two bottles per squeeze
 			add_item("milk", 2)
-			floater(p.pos, "milk x2!", "#f8f4f0")
+			floater(p.pos, tr("milk x2!"), "#f8f4f0")
 			return true
 		"fenjelly": # Roly Poly: the plush ball rolls under you — an 8s absorb bubble
 			player.shield_t = t + 8.0
 			player.shield_n = 40.0 + p.level * 2.0
-			floater(player.pos, "ROLY POLY!", "#a8d8ff")
+			floater(player.pos, tr("ROLY POLY!"), "#a8d8ff")
 			return true
 		"fenlump": # it lays, you pocket
 			add_item("egg", 1)
-			floater(p.pos, "an egg!", "#f0e0a8")
+			floater(p.pos, tr("an egg!"), "#f0e0a8")
 			return true
 	return false
 
@@ -6389,7 +6416,7 @@ func net_place(sid: String, tx: int, ty: int, pid: int) -> bool:
 			# the keeper tag, not the pid — pids die with the session, the tag
 			# survives a rejoin (same identity model as remote_parties)
 			st2["placed_tag"] = str(net.peer_tags.get(pid, ""))
-		log_msg("Player %d built %s" % [pid, tr(str(s.get("name", sid)))])
+		log_msg(tr("Player %d built %s") % [pid, tr(str(s.get("name", sid)))])
 		return true
 	return false
 
@@ -6400,7 +6427,7 @@ func apply_sleep_claim(p: Kin, dur: float) -> void:
 		return
 	p.statuses["sleep"] = t + dur
 	p.set_meta("slp_immune", t + dur + 5.0)
-	floater(p.pos, "zzz", "#9ad8ff")
+	floater(p.pos, tr("zzz"), "#9ad8ff")
 
 func orphan_guest_kin(pid: int) -> void:
 	# a leaving keeper's roster waits under its tag — same -1 orphan contract
@@ -6463,11 +6490,11 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 		return
 	var t := str(net.peer_tags.get(pid, ""))
 	if t == "" or str(st.get("placed_tag", "")) != t:
-		note_remote(pid, tr("That's not your build — guests raze only what they placed"))
+		note_remote(pid, "That's not your build — guests raze only what they placed")
 		return # guests raze only what THEY built — tags outlive pids
 	if StructureData.STRUCTURES.get(st["id"], {}).get("anchor", false) \
 			and st.get("pos", Vector2i(tx, ty)) == kinbox_pos:
-		note_remote(pid, tr("The kinbox anchors the base — nobody razes it"))
+		note_remote(pid, "The kinbox anchors the base — nobody razes it")
 		return # the LIVE anchor holds every stored pal — a self-built backup is yours to raze
 	var gp = net.ghosts.get(pid)
 	if gp == null or Vector2(gp.net_pos.x, gp.net_pos.y).distance_to(Vector2(tx + 0.5, ty + 0.5)) > 6.0:
@@ -6478,7 +6505,7 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 		spawn_drop(str(it), int(st["store"][it]), Vector2(tx + 0.5, ty + 0.5))
 	st["store"] = {}
 	net_remove_structure(st)
-	log_msg("Player %d razed %s" % [pid, st["id"]])
+	log_msg(tr("Player %d razed %s") % [pid, st["id"]])
 
 func net_remove_structure(st: Dictionary) -> void:
 	var cells := []
@@ -6702,26 +6729,26 @@ func equip(k: String) -> void:
 			player.weapon_wear = -1.0
 		elif slot == "armor":
 			player.armor_wear = -1.0
-		log_msg("Unequipped " + it["name"])
+		log_msg(tr("Unequipped ") + it["name"])
 	else:
 		player.equipment[slot] = k
 		if slot == "weapon":
 			player.weapon_wear = float(it["weapon"].get("dur", -1)) # fresh tool, fresh count
 		elif slot == "armor":
 			player.armor_wear = float(it["armor"].get("dur", -1)) # fresh plate, fresh count
-		log_msg("Equipped " + it["name"])
+		log_msg(tr("Equipped ") + it["name"])
 
 func break_weapon(id: String) -> void:
-	log_msg("%s broke!" % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))
+	log_msg(tr("%s broke!") % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))
 	sfx_play("break")
-	floater(player.pos, "BROKE!", "#e64533")
+	floater(player.pos, tr("BROKE!"), "#e64533")
 	player.weapon_wear = -1.0
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
 func break_armor(id: String) -> void:
-	log_msg("%s broke!" % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))
+	log_msg(tr("%s broke!") % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))
 	sfx_play("break")
-	floater(player.pos, "ARMOR BROKE!", "#e64533")
+	floater(player.pos, tr("ARMOR BROKE!"), "#e64533")
 	player.armor_wear = -1.0
 	add_item(id, -1) # count hits zero → unequip_if_gone clears the slot
 
@@ -6730,11 +6757,11 @@ func teach_skill_fruit(item_id: String) -> void:
 		return
 	# Skill fruit (the island): teaches the active kin a move of that element
 	if party.is_empty():
-		log_msg("No active kin to teach")
+		log_msg(tr("No active kin to teach"))
 		return
 	var p := lead_pal() # a benched lead can still study a fruit
 	if p == null or p.hp <= 0:
-		log_msg("Lead kin is down")
+		log_msg(tr("Lead kin is down"))
 		return
 	var elem: String = ItemData.ITEMS.get(item_id, {}).get("elem", "")
 	var pool := []
@@ -6744,13 +6771,13 @@ func teach_skill_fruit(item_id: String) -> void:
 			pool.append(sid)
 	pool = pool.filter(func(s): return s not in p.learned_skills())
 	if pool.is_empty():
-		log_msg("%s already knows every %s move" % [tr(str(p.spec["name"])), tr(str(elem))])
+		log_msg(tr("%s already knows every %s move") % [tr(str(p.spec["name"])), tr(str(elem))])
 		return
 	var sid: String = pool[rng.int_range(0, pool.size() - 1)]
 	add_item(item_id, -1)
 	p.extra_skills.append(sid)
-	log_msg("%s learned %s!" % [tr(str(p.spec["name"])), tr(str(SkillData.SKILLS[sid].get("name", sid)))])
-	floater(p.pos, "+ skill!", "#a8e6a1")
+	log_msg(tr("%s learned %s!") % [tr(str(p.spec["name"])), tr(str(SkillData.SKILLS[sid].get("name", sid)))])
+	floater(p.pos, tr("+ skill!"), "#a8e6a1")
 
 # ---------- wandering merchant ----------
 # A trader visits for the day every so often — buys junk, sells goods for
@@ -6784,38 +6811,38 @@ func notice_board_action() -> void:
 	var qk: String = str(board_quest.get("kind", "supply"))
 	if qk == "hunt":
 		var sname: String = tr(str(SpeciesData.species_of(board_quest["sp"]).get("name", board_quest["sp"])))
-		log_msg("Notice board: cull %d %s (%d/%d) — kill or capture counts" % \
+		log_msg(tr("Notice board: cull %d %s (%d/%d) — kill or capture counts") % \
 			[int(board_quest["n"]), sname, int(board_quest.get("got", 0)), int(board_quest["n"])])
 		return
 	var qid: String = str(board_quest.get("id", ""))
 	if qid == "":
-		log_msg("Notice board: today's request is filled — come back at dawn")
+		log_msg(tr("Notice board: today's request is filled — come back at dawn"))
 		return
 	var qn: int = board_quest["n"]
 	var iname: String = tr(str(ItemData.ITEMS.get(qid, {}).get("name", qid)))
 	if item_count(qid) < qn:
-		log_msg("Notice board: bring %d %s (have %d)" % [qn, iname, item_count(qid)])
+		log_msg(tr("Notice board: bring %d %s (have %d)") % [qn, iname, item_count(qid)])
 		return
 	add_item(qid, -qn)
 	var gold: int = qn * maxi(2, int(ItemData.ITEMS.get(qid, {}).get("price", 2)))
 	add_item("gold_coin", gold)
 	gain_xp(qn * 3)
-	floater(player.pos, "+%d gold" % gold, "#ffd76e")
-	log_msg("Board request filled: %d %s → +%d gold" % [qn, iname, gold])
+	floater(player.pos, tr("+%d gold") % gold, "#ffd76e")
+	log_msg(tr("Board request filled: %d %s → +%d gold") % [qn, iname, gold])
 	board_quest["id"] = "" # filled — the board stays quiet until tomorrow
 
 func gacha_pull() -> void:
 	# feed the brass mouth 30 gold — the brass takes its cut: eggs resold
 	# don't cover the pull, so the machine stays a sink not a mint
 	if item_count("gold_coin") < 30:
-		log_msg("Kin gacha: it wants 30 gold in the slot")
+		log_msg(tr("Kin gacha: it wants 30 gold in the slot"))
 		return
 	add_item("gold_coin", -30)
 	var eid: String = "huge_kin_egg" if rng.chance(0.1) else "kin_egg"
 	add_item(eid, 1)
-	floater(player.pos, "★ %s!" % tr(str(ItemData.ITEMS[eid]["name"])),
+	floater(player.pos, tr("★ %s!") % tr(str(ItemData.ITEMS[eid]["name"])),
 		"#ffd76e" if eid == "huge_kin_egg" else "#e8f0f2")
-	log_msg("The gacha rattles — out rolls a %s" % tr(str(ItemData.ITEMS[eid]["name"])))
+	log_msg(tr("The gacha rattles — out rolls a %s") % tr(str(ItemData.ITEMS[eid]["name"])))
 	sfx_play("catch")
 
 func board_hunt_credit(sp: String, pid := 0) -> void:
@@ -6834,10 +6861,10 @@ func board_hunt_credit(sp: String, pid := 0) -> void:
 		_kill_xp(pid, need * 15)
 		floater(peer_pos_of(pid) if pid > 0 else player.pos,
 			"HUNT FILLED +%dg" % gold, "#ffd76e")
-		log_msg("Hunt filled: %d %s → +%d gold" % [need, sname, gold])
+		log_msg(tr("Hunt filled: %d %s → +%d gold") % [need, sname, gold])
 		board_quest["kind"] = "done"
 	else:
-		log_msg("Hunt: %s %d/%d" % [sname, int(board_quest["got"]), need])
+		log_msg(tr("Hunt: %s %d/%d") % [sname, int(board_quest["got"]), need])
 
 const MERCH_POOL := ["kin_orb", "mega_orb", "low_medical", "medical_supplies",
 	"bread", "jam_bun", "berry_seeds", "wheat_seeds", "arrow", "musket_ball",
@@ -6895,19 +6922,19 @@ func spawn_merchant() -> void:
 	merchant_hp = 60
 	if net != null and multiplayer.multiplayer_peer != null:
 		net.rpc("stock_sync", merchant_stock) # guests see the same briefcase
-	log_msg("A wandering merchant has arrived! (E to trade)")
-	floater(at, "Merchant!", "#e8d44d")
+	log_msg(tr("A wandering merchant has arrived! (E to trade)"))
+	floater(at, tr("Merchant!"), "#e8d44d")
 
 func despawn_merchant() -> void:
 	if merchant == null:
 		return
 	if is_instance_valid(merchant):
-		floater(merchant.pos, "safe travels…", "#c8d3d5")
+		floater(merchant.pos, tr("safe travels…"), "#c8d3d5")
 		merchant.queue_free()
 	merchant = null
 	merchant_stock.clear()
 	merchant_wanted = false
-	log_msg("The merchant moved on")
+	log_msg(tr("The merchant moved on"))
 
 var merchant_wanted := false # one hit squad per visit — wanted loop
 var merchant_hp := 60          # Entity has no hp field — Kin/Player shadow it
@@ -6954,13 +6981,13 @@ func hit_merchant(dmg: float, pid := 0) -> void:
 			thug.mode = "wild"; thug.aggro = 0; thug.aggro_pid = pid; thug.home = at0
 			pals.append(thug)
 		merchant_tgt = merchant.pos + (merchant.pos - at0).normalized() * 20.0
-		log_msg("WANTED! The Iron Pact answers violence with violence")
-		floater(merchant.pos, "GUARDS!", "#ff5544")
+		log_msg(tr("WANTED! The Iron Pact answers violence with violence"))
+		floater(merchant.pos, tr("GUARDS!"), "#ff5544")
 	if merchant_hp <= 0:
 		var drops_n := rng.int_range(30, 60)
 		spawn_drop("gold_coin", drops_n, merchant.pos)
-		floater(merchant.pos, "+%dg" % drops_n, "#ffd76e")
-		log_msg("The merchant is dead. The Iron Pact remembers")
+		floater(merchant.pos, tr("+%dg") % drops_n, "#ffd76e")
+		log_msg(tr("The merchant is dead. The Iron Pact remembers"))
 		despawn_merchant()
 
 func tick_merchant(dt: float) -> void:
@@ -6992,7 +7019,7 @@ func buy_from_merchant(idx: int) -> void:
 	if it["n"] <= 0:
 		return
 	if item_count("gold_coin") < it["price"]:
-		log_msg("Need %d gold" % it["price"])
+		log_msg(tr("Need %d gold") % it["price"])
 		return
 	if it.has("kin"):
 		var sid := str(it["kin"])
@@ -7000,7 +7027,7 @@ func buy_from_merchant(idx: int) -> void:
 			it["n"] = 0 # corrupted stock — retire the slot, never sell a ghost
 			return
 		if box.size() >= MAX_BOX:
-			log_msg("Kinbox full - make room first")
+			log_msg(tr("Kinbox full - make room first"))
 			return
 		var np := gen_pal(sid, int(it["lv"]), player.pos)
 		np.mode = "box"
@@ -7008,12 +7035,12 @@ func buy_from_merchant(idx: int) -> void:
 		box_pal(np) # bought straight into the box — never a loose node
 		add_item("gold_coin", -it["price"])
 		it["n"] -= 1
-		log_msg("Bought a Lv%d %s! (%dg)" % [np.level, tr(str(np.spec["name"])), it["price"]])
+		log_msg(tr("Bought a Lv%d %s! (%dg)") % [np.level, tr(str(np.spec["name"])), it["price"]])
 		return
 	add_item("gold_coin", -it["price"])
 	add_item(it["id"], 1)
 	it["n"] -= 1
-	log_msg("Bought %s (%dg)" % [tr(str(ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]))), it["price"]])
+	log_msg(tr("Bought %s (%dg)") % [tr(str(ItemData.ITEMS.get(it["id"], {}).get("name", it["id"]))), it["price"]])
 
 # host-side guest buy: the stock is the island's — decrementing a mirror
 # would just resync and never run out. Items land via give_remote; a kin
@@ -7057,14 +7084,14 @@ func sell_pal_to_merchant(uid: int) -> void:
 	for bp in box:
 		if bp.uid == uid:
 			if bp.fav:
-				log_msg("%s is heart-locked" % tr(str(bp.spec["name"])))
+				log_msg(tr("%s is heart-locked") % tr(str(bp.spec["name"])))
 				return
 			var gain := pal_sell_price(bp)
 			var nm: String = tr(str(bp.spec["name"]))
 			box.erase(bp)
 			bp.free() # box pals live under box_holder — free() is the teardown path
 			add_item("gold_coin", gain)
-			log_msg("Sold %s for %dg" % [nm, gain])
+			log_msg(tr("Sold %s for %dg") % [nm, gain])
 			return
 
 func toggle_fav(uid: int) -> void:
@@ -7077,12 +7104,12 @@ func toggle_fav(uid: int) -> void:
 func butcher_pal(uid: int) -> void:
 	# meat cleaver: sacrifice a boxed kin, it spills its drops
 	if item_count("meat_cleaver") <= 0:
-		log_msg("You need a Meat Cleaver for that")
+		log_msg(tr("You need a Meat Cleaver for that"))
 		return
 	for bp in box:
 		if bp.uid == uid:
 			if bp.fav:
-				log_msg("%s is heart-locked" % tr(str(bp.spec["name"])))
+				log_msg(tr("%s is heart-locked") % tr(str(bp.spec["name"])))
 				return
 			var nm: String = tr(str(bp.spec["name"]))
 			var mult := 3 if bp.lucky else 1
@@ -7090,7 +7117,7 @@ func butcher_pal(uid: int) -> void:
 			for dr in bp.spec.get("drops", []):
 				spawn_drop(dr[0], rng.int_range(dr[1], dr[2]) * mult, player.pos)
 			bp.free() # box-holder path — same teardown as condense/sell
-			log_msg("You butchered %s… it dropped its goods" % nm)
+			log_msg(tr("You butchered %s… it dropped its goods") % nm)
 			return
 
 func sell_to_merchant(id: String) -> void:
@@ -7099,4 +7126,4 @@ func sell_to_merchant(id: String) -> void:
 	var unit: int = maxi(1, int(ItemData.ITEMS.get(id, {}).get("price", 0) * 0.5))
 	add_item(id, -1)
 	add_item("gold_coin", unit)
-	log_msg("Sold %s (+%dg)" % [tr(str(ItemData.ITEMS.get(id, {}).get("name", id))), unit])
+	log_msg(tr("Sold %s (+%dg)") % [tr(str(ItemData.ITEMS.get(id, {}).get("name", id))), unit])

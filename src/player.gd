@@ -21,7 +21,7 @@ func absorb_hit(final: int) -> int:
 	shield_n -= got
 	if shield_n <= 0.0:
 		shield_t = 0.0 # the bubble pops once it's spent
-	game.floater(pos, "blocked!", "#a8d8ff")
+	game.floater(pos, tr("blocked!"), "#a8d8ff")
 	return final - got
 var max_hp := 100.0
 var level := 1
@@ -137,7 +137,7 @@ func launch_sphere(wd: Dictionary) -> void:
 	# wild kin nearest the facing line — long-range catch, no stealth crawl
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
-		game.log_msg("No orbs loaded!")
+		game.log_msg(tr("No orbs loaded!"))
 		return
 	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
 	var sid: String = tiers[sphere_sel]
@@ -155,7 +155,7 @@ func launch_sphere(wd: Dictionary) -> void:
 		if dot > best_dot:
 			best_dot = dot; best = p
 	if best == null:
-		game.log_msg("No kin in the line of fire")
+		game.log_msg(tr("No kin in the line of fire"))
 		return
 	atk_cd = wd.get("cd", 1.0)
 	wear_tick()
@@ -165,7 +165,7 @@ func launch_sphere(wd: Dictionary) -> void:
 func throw_sphere(use_facing := false) -> void:
 	var tiers := game.sphere_tiers()
 	if tiers.is_empty():
-		game.log_msg("No orbs! Craft kin_orb at a workbench.")
+		game.log_msg(tr("No orbs! Craft kin_orb at a workbench."))
 		aiming = false
 		return
 	sphere_sel = clampi(sphere_sel, 0, tiers.size() - 1)
@@ -350,7 +350,7 @@ func _physics_process(dt: float) -> void:
 		if cold_t >= 4.0:
 			cold_t = 0.0
 			hp = maxf(max_hp * 0.3, hp - 2.0)
-			game.floater(pos, "heat…" if scorching else "cold…",
+			game.floater(pos, tr("heat…") if scorching else tr("cold…"),
 				"#ff9a4a" if scorching else "#9fd8ff")
 	else:
 		cold_t = 0.0
@@ -415,7 +415,7 @@ func try_mount() -> void:
 		game._unbind_mount(mount)
 		mount.mode = "partner"
 		mount = null
-		game.log_msg("Dismounted")
+		game.log_msg(tr("Dismounted"))
 		return
 	var best: Kin = null
 	var bd := 1.4
@@ -443,14 +443,14 @@ func try_mount() -> void:
 		mount = best
 		best.visible = false
 		best.mounted_by = 1 # the host's saddle claims the kin too — replicas hide it for every watcher, not just us
-		game.log_msg("Riding %s" % tr(str(best.spec["name"])))
+		game.log_msg(tr("Riding %s") % tr(str(best.spec["name"])))
 	else:
-		game.log_msg("No mountable kin nearby (right saddle in pack?)")
+		game.log_msg(tr("No mountable kin nearby (right saddle in pack?)"))
 
 func shoot_weapon(wd: Dictionary) -> void:
 	var ammo_id: String = wd.get("ammo", "")
 	if ammo_id != "" and game.item_count(ammo_id) <= 0:
-		game.log_msg("Out of " + ammo_id)
+		game.log_msg(tr("Out of ") + ammo_id)
 		return
 	atk_cd = wd.get("cd", 0.7)
 	if ammo_id != "":

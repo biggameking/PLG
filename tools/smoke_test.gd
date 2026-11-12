@@ -6717,6 +6717,19 @@ func run() -> void:
 	check("tr zh", tr("SETTINGS") == "设置")
 	check("tr zh covers new rows", tr("JOIN SESSION") == "加入会话" and tr("TOUCH CONTROLS") == "触屏控制"
 		and tr("Say: ") == "说：")
+	check("tr zh covers the log batch", tr("Kinbox is full") == "兽箱已满"
+		and tr("IT REARS UP") == "它人立而起")
+	# the wire carries english keys + raw args — each client translates locally
+	game.net.net_note("Caught %s Lv%d!", ["Fenjelly", 5])
+	check("net_note localizes key + args",
+		game.messages[-1] == "抓到了 沼冻灵 Lv5！", "tail=%s" % game.messages[-1])
+	game.net.net_note("%s %s", "not-an-array")
+	check("net_note hostile args coerce", game.messages[-1] == "%s %s")
+	game.net.net_floater(1.0, 2.0, "IMMUNE", "#ffffff")
+	check("net_floater localizes", game.floaters[-1].get("t") == "免疫")
+	game.note_remote(0, "You caught %s Lv%d", ["Fenjelly", 3])
+	check("note_remote local path formats", game.messages[-1] == "你抓到了 沼冻灵 Lv3",
+		"tail=%s" % game.messages[-1])
 	check("tr fallback", tr("NO_SUCH_KEY_XYZ") == "NO_SUCH_KEY_XYZ")
 	game.settings["lang"] = "bogus"; game.apply_settings()
 	check("bad lang falls back", TranslationServer.get_locale().begins_with("en") or tr("SETTINGS") == "SETTINGS")
