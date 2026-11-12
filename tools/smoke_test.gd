@@ -6714,7 +6714,9 @@ func run() -> void:
 	wb.boss = true; wb.phase = 2; wb.mode = "wild"
 	wb.aggro = 0; wb.aggro_pid = 99
 	game.pals.append(wb)
-	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 1.5, wb.pos.y, 0)
+	game.net.ghosts[99].net_pos = Vector3(wb.pos.x + 0.5, wb.pos.y, 0) # inside the
+	# ring AND on a sight-clear lane — audit-43's slam gate refuses victims
+	# behind decor, so the fixture's ghost hugs close like a real guest
 	var wpp := Vector2(game.net.ghosts[99].net_pos.x, game.net.ghosts[99].net_pos.y)
 	for i in 54: # charge 5.0s → the tell lands ~tick 50; 54 sits mid-windup
 		wb.wild_ai(0.1)
@@ -6771,6 +6773,7 @@ func run() -> void:
 	# lone % inside a zh template that gets % formatted downstream
 	var csv_ok := true
 	var csv_seen := {}
+	var csv_zh := {}
 	var csv_re := RegEx.create_from_string("%[-+0-9.*]*[sdxfov]")
 	var csv_f := FileAccess.open("res://locale/zh.csv", FileAccess.READ)
 	var csv_first := true
@@ -6792,6 +6795,7 @@ func run() -> void:
 				print("csv dup msgid: ", row[0].substr(0, 50))
 				csv_ok = false
 			csv_seen[row[0]] = true
+			csv_zh[row[0]] = row[2]
 			var en_sig := []
 			for pm in csv_re.search_all(row[0].replace("%%", "")):
 				en_sig.append(pm.get_string())
@@ -6808,6 +6812,49 @@ func run() -> void:
 					print("csv zh lone-%: ", row[0].substr(0, 50))
 					csv_ok = false
 	check("zh.csv structural lint", csv_ok)
+	# call-site coverage lint (audit-44): every literal tr("key") under src/
+	# must ship a zh.csv row — a missing key renders raw English in zh
+	var lit_re := RegEx.create_from_string("tr\\(\\s*\"([^\"]*)\"")
+	var src_paths := []
+	for d44 in ["res://src", "res://src/data"]:
+		var dir44 := DirAccess.open(d44)
+		if dir44:
+			for fn44 in dir44.get_files():
+				if fn44.ends_with(".gd"):
+					src_paths.append(d44 + "/" + fn44)
+	var src_corpus := ""
+	var lit_missing := []
+	for sp44 in src_paths:
+		var src_txt := FileAccess.get_file_as_string(sp44)
+		src_corpus += src_txt
+		for m44 in lit_re.search_all(src_txt):
+			var lit44: String = m44.get_string(1)
+			if not csv_seen.has(lit44) and not lit_missing.has(lit44):
+				lit_missing.append(lit44)
+	check("every literal tr key ships a zh row", lit_missing.is_empty(),
+		"missing=%s" % [lit_missing.slice(0, 6)])
+	# dead-key lint: a zh row no call site can produce — literal tr("k") or
+	# tr(str(data_name)) both leave the key text inside src/ — is CSV drift
+	var dead44 := []
+	for k44 in csv_seen:
+		if not (k44 in src_corpus):
+			dead44.append(k44)
+	check("no dead zh rows", dead44.is_empty(), "dead=%s" % [dead44.slice(0, 8)])
+	# zh≠en lint: identical columns are fine for formats and the brand —
+	# not for prose (a row someone forgot to translate ships raw English)
+	var untrans44 := []
+	var en_run := RegEx.create_from_string("[A-Za-z]{4,}")
+	for k44 in csv_zh:
+		var z44: String = csv_zh[k44]
+		if z44 == k44 and en_run.search(z44) != null \
+				and z44 not in ["Kinbound"]:
+			untrans44.append(k44)
+	check("no untranslated zh rows", untrans44.is_empty(),
+		"untranslated=%s" % [untrans44.slice(0, 8)])
+	# the guide keeps parallel pages — they must stay the same length
+	check("guide page parity",
+		GuideData.PAGES.size() == GuideData.PAGES_ZH.size(),
+		"%d vs %d" % [GuideData.PAGES.size(), GuideData.PAGES_ZH.size()])
 	check("tr fallback", tr("NO_SUCH_KEY_XYZ") == "NO_SUCH_KEY_XYZ")
 	game.settings["lang"] = "bogus"; game.apply_settings()
 	check("bad lang falls back", TranslationServer.get_locale().begins_with("en") or tr("SETTINGS") == "SETTINGS")

@@ -998,7 +998,7 @@ func work_done(wm: int) -> void:
 		return
 	game.work_mode = clampi(int(wm), 0, game.WORK_MODES.size() - 1)
 	var d: Dictionary = game.WORK_MODES[game.work_mode]
-	game.log_msg(tr("Monitoring stand: %s pace") % d["name"])
+	game.log_msg(tr("Monitoring stand: %s pace") % tr(str(d["name"])))
 
 @rpc("any_peer", "call_remote", "reliable")
 func sleep_req() -> void:

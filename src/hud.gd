@@ -2038,7 +2038,7 @@ func draw_shop(r: Vector2) -> void:
 		var nm: String
 		if it.has("kin"):
 			var sp: Dictionary = SpeciesData.species_of(str(it["kin"]))
-			nm = "Lv%d %s" % [it["lv"], tr(str(sp.get("name", it["kin"])))]
+			nm = tr("Lv%d %s") % [it["lv"], tr(str(sp.get("name", it["kin"])))]
 		else:
 			nm = tr(str(ItemData.ITEMS.get(it["id"], {}).get("name", it["id"])))
 		var rect := Rect2(rr.position.x + 16, y - 12, 270, 16)
@@ -2212,7 +2212,7 @@ func _text_btns(rr: Rect2, ok_act: String) -> void:
 	var cx := Rect2(ok.end.x + 6, rr.position.y, 34, rr.size.y)
 	draw_rect(ok, Ink.PAPER)
 	draw_rect(ok, Ink.GREEN, false, 1.5)
-	draw_string(font, ok.position + Vector2(11, rr.size.y - 10), "OK", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN)
+	draw_string(font, ok.position + Vector2(11, rr.size.y - 10), tr("OK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN)
 	draw_rect(cx, Ink.PAPER)
 	draw_rect(cx, Ink.RED, false, 1.5)
 	draw_string(font, cx.position + Vector2(11, rr.size.y - 10), "X", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.RED)
@@ -2325,8 +2325,7 @@ func passive_str(p: Kin) -> String:
 		s += "[" + tr(str(pv["name"])) + "]"
 	return s
 
-const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "Attack",
- "hp": "Max HP", "work": "Work Speed", "xp": "XP Gain"}
+const PERK_LABEL := Game.PERK_LABEL
 
 func _eq_line() -> String:
 	var wn: String = tr(str(ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "Fists")))

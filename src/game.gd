@@ -9,6 +9,8 @@ var player: Player
 var net = null
 var hud = null # UILayer/HUD — main.gd wires it; touch routing needs the zone map
 var perks := {"capture": 0, "speed": 0, "atk": 0, "hp": 0, "work": 0, "xp": 0}
+const PERK_LABEL := {"capture": "Capture Power", "speed": "Move Speed", "atk": "Attack",
+	"hp": "Max HP", "work": "Work Speed", "xp": "XP Gain"}
 var pals: Array[Kin] = []
 var items := {}            # item_id -> count
 var party: Array[int] = [] # pal uids
@@ -396,7 +398,9 @@ func give_remote(pid: int, id: String, n: int) -> void:
 		add_item(id, n)
 
 func tr_args(args: Array) -> Array:
-	# wire args arrive as raw english/data keys — the receiving client localizes
+	# wire args arrive as raw english/data keys — the receiving client localizes.
+	# INVARIANT: callers pass untranslated names/ids only — feeding an already-
+	# localized string back through tr() double-translates (audit-44)
 	var a := []
 	for x in args:
 		a.append(tr(str(x)) if x is String else x)
@@ -1180,7 +1184,7 @@ func tick_boss_respawns() -> void:
 		np.home = at
 		pals.append(np)
 		log_msg(tr("A legend roams the old den — this one can be caught!") if legend
-			else "A boss stirs again at its den")
+			else tr("A boss stirs again at its den"))
 
 # ---------- gauntlet trial ----------
 # tower fights, distilled: a sigil starts a 3-wave escalating
@@ -2846,7 +2850,7 @@ func place_structure(sid: String, tx: int, ty: int) -> bool:
 		else:
 			extra_boxes.append(Vector2i(tx, ty))
 			log_msg(tr("Outpost kinbox online — shared box network"))
-	log_msg(tr("Built %s") % s["name"])
+	log_msg(tr("Built %s") % tr(str(s["name"])))
 	sfx_play("build")
 	return true
 
@@ -2950,7 +2954,7 @@ func demolish_at(at: Vector2) -> bool:
 		chest_ref = null # the panel's container just died — stop referencing it
 	if sid == "kinbox" and not cells.is_empty():
 		_kinbox_anchor_gone(cells)
-	log_msg(tr("Demolished %s (50%% refund)") % StructureData.STRUCTURES[sid]["name"])
+	log_msg(tr("Demolished %s (50%% refund)") % tr(str(StructureData.STRUCTURES[sid]["name"])))
 	return true
 
 func _kinbox_anchor_gone(cells: Array) -> void:
@@ -3096,12 +3100,17 @@ func craft(recipe_id: String) -> void:
 				near = true
 				break
 		if not near:
-			log_msg(tr("Need to be at a %s") % stn)
+			log_msg(tr("Need to be at a %s") % tr(str(StructureData.STRUCTURES.get(stn, {}).get("name", stn))))
 			return
 	var techs: Array = net_unlocked if (net != null and net.is_client()
 		and not net_unlocked.is_empty()) else unlocked
 	if r.get("tech", "") != "" and r["tech"] not in techs:
-		log_msg(tr("Unlock %s in the tech tree first") % r["tech"])
+		var tn44: String = r["tech"]
+		for t44 in StructureData.TECH:
+			if t44["id"] == r["tech"]:
+				tn44 = tr(str(t44["name"]))
+				break
+		log_msg(tr("Unlock %s in the tech tree first") % tn44)
 		return
 	var req: String = r.get("req", "")
 	if req != "" and item_count(req) < 1:
@@ -3850,7 +3859,7 @@ func upgrade_base() -> void:
 		log_msg(tr("Base level maxed"))
 		return
 	if not base_mission_done(base_level):
-		log_msg(tr("Base mission: ") + BASE_MISSION_TEXT[base_level])
+		log_msg(tr("Base mission: ") + tr(str(BASE_MISSION_TEXT[base_level])))
 		return
 	base_level += 1
 	sfx_play("level")
@@ -4095,14 +4104,14 @@ func cast_skill(caster: Kin, target_ent, sk: Dictionary) -> void:
 					if p.mode == "wild" and p.hp > 0 and caster.pos.distance_to(p.pos) <= radius \
 							and world.los_clear(caster.pos, p.pos):
 						skill_hit(caster, p, sk)
-			floater(caster.pos, sk["name"] + tr("!"), "#ffd76e")
+			floater(caster.pos, tr(str(sk["name"])) + tr("!"), "#ffd76e")
 		"multi": # a fan of shots — pack-clearing signature
 			var n2: int = maxi(2, int(sk.get("shots", 3)))
 			var spread := deg_to_rad(float(sk.get("spread_deg", 14.0)))
 			var aim := (tpos - caster.pos).normalized()
 			for i in n2:
 				spawn_shot(caster, aim.rotated(spread * (i - (n2 - 1) / 2.0)), sk)
-			floater(caster.pos, sk["name"] + tr("!"), "#ffd76e")
+			floater(caster.pos, tr(str(sk["name"])) + tr("!"), "#ffd76e")
 		_: # projectile
 			spawn_shot(caster, (tpos - caster.pos).normalized(), sk)
 
@@ -5203,8 +5212,8 @@ func tick_raid(dt: float) -> void:
 		# signature raid: the Iron Pact sends humans, not kin
 		raid_theme = "Iron Pact" if rng.chance(0.15) else \
 			("" if rng.chance(0.25) else themes[rng.int_range(0, themes.size() - 1)])
-		var howl := "Iron Pact squad" if raid_theme == "Iron Pact" else \
-			(("%s pack" % raid_theme.capitalize()) if raid_theme != "" else "wild mob")
+		var howl := tr("Iron Pact squad") if raid_theme == "Iron Pact" else \
+			((tr("%s pack") % tr(str(raid_theme))) if raid_theme != "" else tr("wild mob"))
 		log_msg(tr("Raid party spotted — a %s is coming for the kinbox!") % howl)
 		sfx_play("horn")
 		floater(player.pos, tr("RAID INCOMING"), "#e8452f")
@@ -5292,7 +5301,8 @@ func tick_ranch(key: Vector2i, st: Dictionary, dt: float) -> void:
 		if acc >= float(fm.get("per", 60)):
 			acc = 0.0
 			st["store"][fm["item"]] = st["store"].get(fm["item"], 0) + 1
-			floater(Vector2(key.x + 0.5, key.y + 0.5), tr("+%s") % fm["item"], "#a8e6a1")
+			floater(Vector2(key.x + 0.5, key.y + 0.5),
+				tr("+%s") % tr(str(ItemData.ITEMS.get(fm["item"], {}).get("name", fm["item"]))), "#a8e6a1")
 		ft[w.uid] = acc
 	for u2 in ft.keys(): # keep the ledger tight — workers come and go
 		var still := false
@@ -5662,7 +5672,7 @@ func hatch_incubated(key: Vector2i, st: Dictionary) -> void:
 	if pair is Array:
 		mission_flags["egg"] = true # a bred egg — wild nest finds don't count
 	floater(at, tr("* hatched! *"), "#4dd0e1")
-	log_msg(tr("Egg hatched: %s%s (talent %d)!") % ["LUCKY " if huge else "",
+	log_msg(tr("Egg hatched: %s%s (talent %d)!") % [tr("LUCKY ") if huge else "",
 		tr(str(np.spec["name"])), talent_v])
 	sfx_play("hatch")
 
@@ -5754,7 +5764,7 @@ func dig_fossil(st: Dictionary) -> void:
 	if shard:
 		add_item("lumenite", 1)
 	floater(pos, tr("+%d ancient parts") % n, "#ffd76e")
-	log_msg(tr("Fossil dug: %d ancient parts%s") % [n, " and a lumenite shard" if shard else ""])
+	log_msg(tr("Fossil dug: %d ancient parts%s") % [n, tr(" and a lumenite shard") if shard else ""])
 	sfx_play("catch")
 
 func open_mimic(st: Dictionary, opener_pid := 0) -> void:
@@ -6686,7 +6696,7 @@ func upgrade_perk(k: String) -> void:
 	if k == "hp":
 		player.max_hp = 100 + (player.level - 1) * 10 + perks["hp"] * 12 # level hp + perk hp
 		player.hp = player.max_hp
-	log_msg(tr("Statue upgraded: %s Lv%d") % [k, perks[k]])
+	log_msg(tr("Statue upgraded: %s Lv%d") % [tr(str(PERK_LABEL.get(k, k))), perks[k]])
 
 func respec() -> bool:
 	# memory-wiping medicine: every perk rank folds back into
@@ -7073,7 +7083,8 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 		_return_egg_parent(inc_gd.get("pair"), Vector2(tx + 0.5, ty + 0.5))
 	st["store"] = {}
 	net_remove_structure(st)
-	log_msg(tr("Player %d razed %s") % [pid, st["id"]])
+	log_msg(tr("Player %d razed %s") % [pid,
+		tr(str(StructureData.STRUCTURES.get(st["id"], {}).get("name", st["id"])))])
 
 func net_remove_structure(st: Dictionary) -> void:
 	var cells := []
@@ -7290,14 +7301,14 @@ func equip(k: String) -> void:
 		elif slot == "armor":                  # not a free repair (audit-41)
 			wear_by_id[k] = player.armor_wear
 			player.armor_wear = -1.0
-		log_msg(tr("Unequipped ") + it["name"])
+		log_msg(tr("Unequipped ") + tr(str(it["name"])))
 	else:
 		player.equipment[slot] = k
 		if slot == "weapon":
 			player.weapon_wear = float(wear_by_id.get(k, it["weapon"].get("dur", -1)))
 		elif slot == "armor":
 			player.armor_wear = float(wear_by_id.get(k, it["armor"].get("dur", -1)))
-		log_msg(tr("Equipped ") + it["name"])
+		log_msg(tr("Equipped ") + tr(str(it["name"])))
 
 func break_weapon(id: String) -> void:
 	log_msg(tr("%s broke!") % tr(str(ItemData.ITEMS.get(id, {}).get("name", id))))

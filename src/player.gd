@@ -456,7 +456,7 @@ func try_mount() -> void:
 func shoot_weapon(wd: Dictionary) -> void:
 	var ammo_id: String = wd.get("ammo", "")
 	if ammo_id != "" and game.item_count(ammo_id) <= 0:
-		game.log_msg(tr("Out of ") + ammo_id)
+		game.log_msg(tr("Out of ") + tr(str(ItemData.ITEMS.get(ammo_id, {}).get("name", ammo_id))))
 		return
 	atk_cd = wd.get("cd", 0.7)
 	if ammo_id != "":

@@ -25,7 +25,6 @@ Welcome to Kinbound. Press H for help.,Welcome to Kinbound. Press H for help.,�
 B builds — a workbench turns wood + stone into gear,B builds — a workbench turns wood + stone into gear,按 B 建造——工作台把木头和石头变成装备
 Back builds — a workbench turns wood + stone into gear,Back builds — a workbench turns wood + stone into gear,按 Back 建造——工作台把木头和石头变成装备
 You're starving — eat berries or cooked food (I opens the bag),You're starving — eat berries or cooked food (I opens the bag),你快饿死了——吃点浆果或熟食（按 I 打开背包）
-Night bites cold — carry a torch or stand by a fire,Night bites cold — carry a torch or stand by a fire,夜晚寒冷刺骨——带上火把或站在火边
 A kin is flagging — feed it and let it rest,A kin is flagging — feed it and let it rest,有只精灵蔫了——喂喂它，让它歇会儿
 SPIRES %d/%d,SPIRES %d/%d,尖塔 %d/%d
  — CROWNED, — CROWNED, — 已加冕
@@ -39,7 +38,6 @@ SAVE FAILED,SAVE FAILED,保存失败
 JOIN SESSION,JOIN SESSION,加入会话
 TOUCH CONTROLS,TOUCH CONTROLS,触屏控制
 AUTO,AUTO,自动
-OFF,OFF,关
 Join IP (blank=localhost): ,Join IP (blank=localhost): ,主机 IP（留空=本机）：
 Say: ,Say: ,说：
 The kinbox anchors the base — nobody razes it,The kinbox anchors the base — nobody razes it,精灵箱是基地的锚点——谁也不能拆
@@ -70,7 +68,6 @@ EFFIGIES,EFFIGIES,祭像
 End the session first (quit to title),End the session first (quit to title),先结束会话（退回标题）
 Esc/n close · ←/→ turn the page · %d / %d,Esc/n close · ←/→ turn the page · %d / %d,Esc/n 关闭 · ←/→ 翻页 · %d / %d
 Fists,Fists,空手
-Glider descends cliffs. Sick kin need medicine in feed box/bag.,Glider descends cliffs. Sick kin need medicine in feed box/bag.,滑翔翼可下悬崖。生病的精灵需要喂食箱/背包里的药。
 Incubating %s: %ds left,Incubating %s: %ds left,孵化中 %s：剩 %d 秒
 Incubator empty - bring a kin egg,Incubator empty - bring a kin egg,孵化器空着——放一枚精灵蛋
 INV,INV,背包
@@ -435,7 +432,6 @@ KINDEX COMPLETE — every kin on record. +3 legendary orbs,KINDEX COMPLETE — e
 %s returns from expedition: %s,%s returns from expedition: %s,%s 远征归来：%s
 %s sent out!,%s sent out!,%s 出战！
 %s sets off on an expedition,%s sets off on an expedition,%s 出发远征
-%s stores: %s%s,%s stores: %s%s,%s 存货：%s%s
 %s surges for five minutes,%s surges for five minutes,%s 增产五分钟
 %s taught %s %s,%s taught %s %s,%s 教会了 %s 的 %s
 %s took medicine - recovered,%s took medicine - recovered,%s 服了药——康复了
@@ -828,7 +824,6 @@ v cycles the field kin's orders: auto / aggressive / passive,v cycles the field 
 %s x%d  <-  %s,%s x%d  <-  %s,%s x%d  ←  %s
 "%s%s  (%d,%d)  %dm","%s%s  (%d,%d)  %dm","%s%s  （%d,%d） %dm"
 %s%s %s Lv%d T%d %s%s,%s%s %s Lv%d T%d %s%s,%s%s %s Lv%d T%d %s%s
-%s%s%s %s%s Lv%d T%d %sHP%d/%d,%s%s%s %s%s Lv%d T%d %sHP%d/%d,%s%s%s %s%s Lv%d T%d %sHP%d/%d
 %s%s×%d,%s%s×%d,%s%s×%d
 ?  ?????,?  ?????,？ ?????
 BASE (%d/%d) — click to recall,BASE (%d/%d) — click to recall,基地（%d/%d）——点击召回
@@ -856,8 +851,6 @@ Defeat an alpha or boss,Defeat an alpha or boss,击败一只头目或首领
 Hatch a bred egg,Hatch a bred egg,孵化一颗繁育蛋
 Clear the gauntlet sigil,Clear the gauntlet sigil,通关徽记试炼
 DEF,DEF,防御
-SPD,SPD,速度
-GLOW,GLOW,发光
 KI,KI,薪
 WA,WA,浇
 PL,PL,种
@@ -872,7 +865,6 @@ ME,ME,医
 EL,EL,电
   %s x%d  %.0fs,  %s x%d  %.0fs,  %s x%d  %.0fs
 "BUILD — tap/1-9 pick, tap again to cancel","BUILD — tap/1-9 pick, tap again to cancel",建造——点按/1-9 选件，再点取消
-  (placing: %s),  (placing: %s),（放置：%s）
 %s %s Lv%d%s,%s %s Lv%d%s,%s %s Lv%d%s
  ☠%dg, ☠%dg, ☠%d金
 %s %s,%s %s,%s %s
@@ -958,3 +950,18 @@ You're starving — eat berries or cooked food (dpad-up opens the bag),You're st
 "%s couldn't reach a chest — goods dropped at its feet","%s couldn't reach a chest — goods dropped at its feet","%s够不到箱子——货物丢在脚边"
 "%s has nowhere to stash %s","%s has nowhere to stash %s","%s没地方存%s"
 "The island is too crowded for a raid boss","The island is too crowded for a raid boss","岛上太拥挤，突袭首领进不来"
+"A boss stirs again at its den","A boss stirs again at its den","有首领又在旧巢骚动"
+"LUCKY ","LUCKY ","走运 "
+" and a lumenite shard"," and a lumenite shard","，还有一块流明石"
+"clink!","clink!","铛！"
+"%s can't see a line to that mark","%s can't see a line to that mark","%s 看不到那道标记"
+"Iron Pact squad","Iron Pact squad","铁誓团小队"
+"%s pack","%s pack","%s群"
+"wild mob","wild mob","野怪帮"
+"Normal","Normal","普通"
+"Hard","Hard","刻苦"
+"Overdrive","Overdrive","超载"
+"OK","OK","好"
+", ",", ","，"
+"%d-%d / %d","%d-%d / %d","%d-%d / %d"
+"%s%s%s %s%s Lv%d T%d %s%d/%d","%s%s%s %s%s Lv%d T%d %s%d/%d","%s%s%s %s%s Lv%d T%d %s%d/%d"

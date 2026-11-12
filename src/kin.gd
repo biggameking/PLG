@@ -643,7 +643,7 @@ func base_ai(dt: float) -> void:
 				step_toward(Vector2(bk.x + 0.5, bk.y + 0.5), dt)
 		if berserk_t <= 0.0:
 			ailment = "weakened" # the fit passes — but it leaves the pal wrung out
-			game.log_msg(tr("%s burned out — now weakened") % spec["name"])
+			game.log_msg(tr("%s burned out — now weakened") % tr(str(spec["name"])))
 			game.floater(pos, tr("burned out"), "#a8a8a8")
 		sync_screen()
 		return
@@ -878,13 +878,13 @@ func tick_needs(dt: float) -> void:
 		elif game.take_medicine(mode == "partner"):
 			ailment = ""
 			san = minf(100.0, san + 30.0)
-			game.log_msg(tr("%s took medicine - recovered") % spec["name"])
+			game.log_msg(tr("%s took medicine - recovered") % tr(str(spec["name"])))
 			game.floater(pos, tr("cured!"), "#a8e6a1")
 		elif ailment == "depressed" and san <= 0.5 and mode == "base" and berserk_t <= 0.0:
 			# no medicine in reach and nothing left in the tank — it snaps
 			berserk_t = 15.0
 			job_site = null # storm off the shift
-			game.log_msg(tr("%s is going BERSERK — keep medicine stocked!") % spec["name"])
+			game.log_msg(tr("%s is going BERSERK — keep medicine stocked!") % tr(str(spec["name"])))
 			game.floater(pos, tr("BERSERK!"), "#e8452f")
 	if hunger > 70:
 		var ate := 0

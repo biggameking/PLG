@@ -1256,3 +1256,17 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   BEFORE the rock and keep the target alive through the positive control.
 - 952-955 checks / 0 failures across four consecutive seeded runs.
   Audit doc: docs/reviews/audit-43-combat-spatial-integrity.md.
+
+### S91 — localization completeness lens (audit-44) — SHIPPED
+- Verdict on plumbing: correct by design — single zh.csv locale source,
+  persisted setting + live re-render, key+raw-args wire protocol, parallel
+  guide pages, font fallback chain.
+- HIGH×7 + MED×12 fixed — the whole defect class was arg-localization:
+  format strings translated but the nouns interpolated into them (structure/
+  skill/item/perk/tech/species names, ids, howl fragments) leaked English
+  into zh. PERK_LABEL moved to Game (one source for log + panel).
+- LOW: OK/joiner/pager/Lv-rows keyed; tr_args invariant pinned.
+- 4 guard lints now hold the class: literal-tr-key ⊆ CSV coverage, dead-key
+  (8 stale rows pruned), zh≠en prose, guide page parity.
+- Deferred: bundled CJK font for export targets (desktop fallback correct).
+- 958/0/0. Audit doc: docs/reviews/audit-44-localization.md.
