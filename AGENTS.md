@@ -661,3 +661,21 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
      verb's bindings per layer (`InputMap.action_get_events`), so an
      action added without a pad/touch route fails the suite, not a
      store review.
+
+120. **A "dedupe scan" inside a per-element loop is a hidden O(n²).**
+     `cell_of` looked like a 6-line helper; inside `tick_production`'s
+     per-cell loop it was 1.3M compares/frame at cap. When the element
+     already stores its key (`structures.*["pos"]` is the anchor), the
+     scan is a lie — read the field, and grep EVERY call site of the
+     helper before shipping (hud.gd had 4 more in draw paths).
+121. **Skipped-needs containers must reset the skipped accumulator on
+     exit.** Box kin don't run `tick_needs`, so `hunger=100` froze
+     forever — every revive replayed the same KO 50s later. Any mode
+     that suspends a decaying stat needs the transition-out to clamp it
+     (or the suspension is a softlock dressed as mercy). And log the
+     real cause — "KO'd" hid "starved" from the player entirely.
+122. **Batch linear-in-dt ticks; cache stationary targets.** If a tick
+     only does `x += dt * f(...)` work, an accumulator running it at
+     4Hz is mathematically identical and drops every nested O(cells)
+     helper to a quarter of the cost. AI that re-scans for a target
+     which can't move (chests) should rescan on a clock, not per frame.

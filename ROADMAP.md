@@ -1089,3 +1089,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - Landscape lock (sensor) + PWA orientation, web mobile VRAM
   compression on, fog bake gated on explored_n dirty key.
 - 7 new assertions; 878/0/0. Rules +119 (input verbs ship on all layers).
+
+### S79 — economy/perf cold audit (audit-35) — SHIPPED
+- High closed: `cell_of` O(structures²) per frame — 11 call sites read
+  `pos` (the anchor) directly; helper deleted.
+- `tick_production` batched to ~4Hz (dt-linear), `nearest_heat` memoized,
+  base_ai reads `job_site.pos`, haul_ai rescans at ~2.5Hz with cached leg.
+- Starvation KO-loop broken: revive clamps hunger to 50, starvation KO
+  logs "starved out … build a feed box!" (zh synced).
+- Economy verified: no dead-end chain; gold inflation + gacha→hatch→sell
+  documented as accepted/deferred (bounded mint, needs a save field).
+- 5 new assertions; 883/0/0. Audit doc: docs/reviews/audit-35-economy-perf.md.
