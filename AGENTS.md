@@ -7,6 +7,7 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 # tail of output: "==== N checks, F failures, S skipped ====" must be 0 failures.
 
 # offline probes (run when touching their lane):
+#   tools/audit_data.py   — id cross-reference (species/items/recipes/tech): "ALL CLEAN"
 #   tools/sim_balance.gd  — capture/raid/xp formulas: "SIM: 0 failures"
 #   tools/sim_economy.gd  — every gold→transform→gold lane audited: "SIM-ECO: 0 failures"
 #   tools/perf_probe.gd   — frame-budget gates incl. stress scenes: exits non-zero on budget breach
