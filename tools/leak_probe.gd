@@ -14,6 +14,9 @@ func _boot() -> void:
 	var base_n := int(Performance.get_monitor(Performance.OBJECT_COUNT))
 	print("=== baseline objects=%d kin=%d drops=%d nodes(el)=%d ==="
 		% [base_n, game.pals.size(), game.drops.size(), game.entity_layer.get_child_count()])
+	# audit-50: the soak saves/loads for real — preserve the player's file
+	# (save is a store_var binary — copy BYTES, get_as_text corrupts it)
+	var save_bak: PackedByteArray = FileAccess.get_file_as_bytes("user://savegame.plg")
 
 	for round in 3:
 		# 1) spawn + kill churn: wild kin live, drop loot, get collected
@@ -66,6 +69,12 @@ func _boot() -> void:
 
 	var end_n := int(Performance.get_monitor(Performance.OBJECT_COUNT))
 	print("=== LEAK? baseline=%d end=%d delta=%d ===" % [base_n, end_n, end_n - base_n])
+	if not save_bak.is_empty():
+		var wf := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+		wf.store_buffer(save_bak)
+		wf.close()
+	else:
+		DirAccess.remove_absolute("user://savegame.plg")
 	quit(0)
 func _initialize() -> void:
 	call_deferred("_boot")

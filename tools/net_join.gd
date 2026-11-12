@@ -7,6 +7,7 @@ func _boot() -> void:
 	for i in 8:
 		await process_frame
 	var game = main.get_node("Game")
+	DirAccess.remove_absolute("user://plg_net.cfg") # audit-50: no session tag residue
 	var host_seed := -1
 	# wait for the host marker
 	for i in 300:
@@ -35,7 +36,7 @@ func _boot() -> void:
 		if l.size() >= 2:
 			host_day = int(l[0])
 		fr2.close()
-	check("day synced", host_day < 0 or game.day == host_day, "day=%d host=%d" % [game.day, host_day])
+	check("day synced", host_day >= 0 and game.day == host_day, "day=%d host=%d" % [game.day, host_day])
 	# drop loot so host's state_sync snapshot isn't needed for kin — they spawn locally
 	var fails := results.filter(func(r): return r.begins_with("FAIL")).size()
 	var fo := FileAccess.open("res://tools/net_join_out.txt", FileAccess.WRITE)

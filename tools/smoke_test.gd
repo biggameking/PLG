@@ -2123,6 +2123,7 @@ func run() -> void:
 				# a structure-proximity check, walkability is irrelevant here
 				var ck2: Vector2i = inc_k + Vector2i(3, 0)
 				if game.world.in_bounds(ck2.x, ck2.y):
+					game.raze_structure(Vector2(ck2.x + 0.5, ck2.y + 0.5)) # full teardown, not dict-shallow (audit-50)
 					game.structures.erase(ck2)
 					fire_k = ck2
 			if fire_k.x >= 0:
@@ -2881,7 +2882,7 @@ func run() -> void:
 	# outpost kinbox: a second box joins the shared network, nearest answers
 	var ob_ok := false
 	var pbx0 := int(game.kinbox_pos.x); var pby0 := int(game.kinbox_pos.y)
-	# audit-49: scan all four directions, then force-clear a spot if needed
+	# audit-49: scan all four directions for the 2x2 footprint — honest skip if none
 	for dir3 in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
 		for r3 in range(4, 40) if game.kinbox_pos.x >= 0 else []:
 			var cc := Vector2i(pbx0 + r3 * dir3.x, pby0 + r3 * dir3.y)
@@ -3709,7 +3710,7 @@ func run() -> void:
 	# hostile kin aggros and damages player — spawn on a LoS-clear walkable
 	# lane (audit-47: a decor cell between them on some seeds starved the
 	# attack the same way the wall fixtures prove it should)
-	var foe_at := p.pos + Vector2(1.0, 0)
+	var foe_at := Vector2(-1, -1)
 	for ox in [1.0, -1.0, 0.0]:
 		for oy in [0.0, 1.0, -1.0]:
 			if ox == 0.0 and oy == 0.0:
@@ -3719,6 +3720,30 @@ func run() -> void:
 					and game.world.los_clear(p.pos, c):
 				foe_at = c
 				break
+	if foe_at.x < 0:
+		# audit-50: player sits in a walled pocket — relocate to any cell that
+		# has a walkable LoS-clear neighbor instead of hugging +1,0 blind
+		for ry2 in range(1, 10):
+			var settled := false
+			for rx2 in range(-8, 9):
+				var hx2: int = clampi(int(p.pos.x) + rx2, 2, World.WORLD_W - 3)
+				var hy2: int = clampi(int(p.pos.y) + ry2 * (-1 if ry2 % 2 else 1), 2, World.WORLD_H - 3)
+				if game.world.blocked(hx2, hy2):
+					continue
+				var np2 := Vector2(hx2 + 0.5, hy2 + 0.5)
+				for ox2 in [1.0, -1.0, 0.0]:
+					for oy2 in [0.0, 1.0, -1.0]:
+						if ox2 == 0.0 and oy2 == 0.0:
+							continue
+						var c2 := np2 + Vector2(ox2, oy2)
+						if not game.world.blocked(int(c2.x), int(c2.y)) \
+								and game.world.los_clear(np2, c2):
+							p.pos = np2; foe_at = c2; settled = true; break
+					if settled: break
+				if settled: break
+			if settled: break
+	if foe_at.x < 0:
+		foe_at = p.pos + Vector2(1.0, 0) # unreachable in practice — keep a defined value
 	var foe: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(foe)
 	foe.setup(game, "shadesmith", 30, foe_at)
@@ -7738,6 +7763,8 @@ func run() -> void:
 			for q78b in game.pals.duplicate():
 				if game.party.has(q78b.uid) or game.bench.has(q78b):
 					continue
+				if q78b.job_site != Vector2i(-1, -1) and game.structures.has(q78b.job_site):
+					game.structures[q78b.job_site]["workers"].erase(q78b.uid) # audit-50: scrub the crew row too
 				if q78b.get_parent():
 					q78b.get_parent().remove_child(q78b)
 				game.pals.erase(q78b); q78b.free(); ring_ok = true; break

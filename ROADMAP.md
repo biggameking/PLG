@@ -1333,3 +1333,30 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - Known-benign noted: one put_packet stderr line from the post-disconnect
   broadcast race (ghost pruned a frame after ENet drops the peer).
 - Doc: docs/reviews/audit-49-live-net.md.
+- S96b: de-flaked the seed-lottery checks — one degenerate seed cascaded
+  6 failures (unreachable zone-3 emptied lairs/den/spires; a walled
+  pocket broke catch/bow/LoS fixtures). All retry-first or synthesized:
+  placement re-rolls, relocates, catchable()-gated targets, baseline
+  counts, +2 elev synthesis. 4x green; skips down to grotto room-2.
+- c295271: audit_data.py registered in the gate block.
+
+### S97 — art weak-spot pass — SHIPPED
+- HANDOFF's two surviving look complaints fixed at the generator:
+  every eyes() radius +30-40% (human 0.06->0.085, serpent 0.078->0.105,
+  blob 0.085->0.115; player matched) and f1 idle amplitude doubled
+  (head_dy 0.04->0.08, fluff_dy 0.06->0.10, ear_drop 0.3->0.45).
+- rigs_gen.py regenerated clean; 115 rig species + player re-rendered
+  through the Blender->post chain; smoke 967/0/0 after reimport —
+  ink/accessory pixel pins still green. IP CHECK: CLEAN.
+- QA evidence: docs/reviews/s97-contact.png (6 archetypes, f0/f1 rows).
+- Remaining weak spot: primitive-part look itself — the mesh-source
+  migration (render_src_asset.py path) is the next and biggest jump.
+
+### audit-50 — cold process review of S96–S97 — LANDED
+- Context-free review: 18 findings. Real defects found: leak_probe
+  clobbered the binary savegame (byte-backup now, matching smoke);
+  net_host couldn't observe the teardown it claimed (now samples
+  rparty/tags at ghost 1->0 — fresh transcript shows rparty=1 tags=0);
+  player f1 amplitude missed the bump; net_join silent-skip closed;
+  fixture hygiene (raze not dict-erase, job_site scrub, pocket relocate);
+  3 one-off tools archived; ledger gap closed. Doc: audit-50-cold-review.md.

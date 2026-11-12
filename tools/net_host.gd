@@ -13,9 +13,21 @@ func _boot() -> void:
 	fo.close()
 	var t0 := Time.get_ticks_msec()
 	var n := 0
+	var saw_peer := false # audit-50: sample the teardown tail, not just the ghost row
 	while Time.get_ticks_msec() - t0 < 15000:
 		await process_frame
 		n += 1
+		if game.net.ghosts.size() > 0:
+			saw_peer = true
+		if saw_peer and game.net.ghosts.is_empty():
+			# disconnect happened — record whether the teardown tail ran:
+			# ghost freed AND guest state retracted AND session tags pruned
+			var f3 := FileAccess.open("res://tools/net_host_state.txt", FileAccess.READ_WRITE)
+			f3.seek_end()
+			f3.store_line("disconnect: ghosts=0 rparty=%d tags=%d" % [
+				game.remote_parties.size(), game.net.peer_tags.size()])
+			f3.close()
+			break
 		if n % 60 == 0:
 			var f2 := FileAccess.open("res://tools/net_host_state.txt", FileAccess.READ_WRITE)
 			if f2:
