@@ -12,6 +12,8 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 #   tools/perf_probe.gd   — frame-budget gates incl. stress scenes: exits non-zero on budget breach
 #   tools/leak_probe.gd   — node lifetime: ObjectDB leak census after load cycles
 #   tools/package.sh [windows|web|android|all] — real exports into dist/ (build.txt ties to HEAD)
+#   net_host.gd + net_join.gd — REAL two-process loopback session: run host
+#     first (writes tools/net_host_state.txt), then join; verdict in net_join_out.txt
 # One-off stage scripts live in tools/archive/ — not part of the gate.
 ```
 

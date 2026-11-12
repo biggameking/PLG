@@ -1309,3 +1309,27 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   section (parser swallows the next header) — rendering_method, texture
   filter and ETC2 flag were all moot until now. Android debug APK builds.
   Three seed-flaky smoke fixtures hardened; 6x consecutive green.
+
+### S95 — cold process review of the campaign (audit-48) — SHIPPED
+- Context-free review of S1–S94 (reflog archaeology, ledger, rules, tools):
+  defects were closed as instances, so gate classes were re-litigated —
+  sync_pos ×5, pal_hit bound ×3, demolish ×6, phantom walls ×4, ~12 stages
+  of guest-dead-verbs. Verified-clean verdicts were later falsified.
+- Landed: sim_economy mirrors→production statics (rule 28), ROADMAP
+  dedup/order/S17 restored, check() persistent handle, 12 dead tools
+  archived, gate block registers perf/leak/package/net probes.
+- S95b: act-routing census — every emitted act must reach run_click's
+  routing (the guest-verb class is now a red build, not a memo); slam
+  ghost same-point anchor kills the last known flake. 5x green.
+- Doc: docs/reviews/audit-48-process-review.md.
+
+### S96 — real-socket multiplayer + leak soak — SHIPPED
+- First live host+client session: ENet loopback, join asserts host ghost,
+  world seed, kin spawn, day sync (4/0); host log shows peer seen, then
+  clean disconnect lifecycle (ghost erase + r_retract + orphan_guest_kin +
+  peer_tags all exercised live).
+- leak_probe 3-round soak (spawn/kill, drop/collect, build/raze,
+  save/load): 3794→3804 objects, delta 10 — inside documented jitter.
+- Known-benign noted: one put_packet stderr line from the post-disconnect
+  broadcast race (ghost pruned a frame after ENet drops the peer).
+- Doc: docs/reviews/audit-49-live-net.md.
