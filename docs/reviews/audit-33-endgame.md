@@ -78,3 +78,19 @@ The miss class: a hand-curated roster (`LEGENDARY_DEN`) gained members
 chosen for flavor ("paladin", "doom knight") without checking every
 member against the eligibility gates the list must satisfy. Rule 118
 added to AGENTS.md.
+
+## S78 follow-ons (same stage, landed after verification)
+
+- **[Fixed] Demolish preserves the claimed bloodline.** The three
+  incubator-refund sites now call `_return_egg_parent()`: the consumed
+  queue row rides home to the nearest ranch ledger with room, so a
+  refunded `bred_kin_egg` redeposits onto the same parents. Full-queue
+  or no-ranch falls back to "record burns with the box" (bounded).
+  Smoke: the exact claimed row returns to the ledger.
+- **[Fixed] Den re-roll favors unproven heirs.** `tick_boss_respawns`
+  legend branch now picks uniformly among species with no catch yet,
+  falling back to the full pool once all ten are caught. The
+  coupon-collector grind collapses from ~29 expected respawn cycles
+  (~44 in-game days) to exactly ≤10 (~15 days) — a pilgrimage, not a
+  lottery. Smoke: nine names banked forces the tenth deterministically.
+  Guide Vol IX text updated (en+zh) to describe the favored call.

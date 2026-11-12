@@ -1116,7 +1116,13 @@ func tick_boss_respawns() -> void:
 				func(s): return not SpeciesGen.SPECIES.get(s, {}).is_empty())
 			if lpool.is_empty():
 				continue # legend data trimmed — the den stays quiet
-			sid = lpool[rng.int_range(0, lpool.size() - 1)]
+			# the den calls an heir you haven't proven yet — a pilgrimage,
+			# not a lottery: uniform rolls could stall the tenth name for
+			# dozens of cycles (audit-33 pacing)
+			var fresh := lpool.filter(
+				func(s): return int(catch_counts.get(s, 0)) <= 0)
+			var pick_pool: Array = fresh if not fresh.is_empty() else lpool
+			sid = pick_pool[rng.int_range(0, pick_pool.size() - 1)]
 		var pp: Array = br.get("pos", [0, 0])
 		var at := Vector2(float(pp[0]), float(pp[1])) if pp.size() >= 2 else Vector2.ZERO
 		var np := preload("res://src/kin.gd").new()
@@ -2793,9 +2799,11 @@ func demolish_at(at: Vector2) -> bool:
 		xp1.pos = Vector2(cells[0].x + 0.5, cells[0].y + 0.5)
 	for it in st.get("store", {}).keys():
 		add_item(it, st["store"][it])
-	var inc_dm: Dictionary = st.get("egg_inc", {}) # razing a loaded incubator refunds the egg — the item survives; its claimed bloodline dies with the box's records
+	var inc_dm: Dictionary = st.get("egg_inc", {}) # razing a loaded incubator refunds the egg — and sends its claimed bloodline home to the ranch ledger
 	if not inc_dm.is_empty():
 		add_item("huge_kin_egg" if inc_dm.get("huge", false) else ("bred_kin_egg" if inc_dm.get("pair") != null else "kin_egg"), 1)
+		if not cells.is_empty():
+			_return_egg_parent(inc_dm.get("pair"), Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
 	st["store"] = {} # refunded — an open chest panel must not re-withdraw these
 	for c in StructureData.STRUCTURES[sid].get("cost", []):
 		add_item(c[0], int(ceil(c[1] * 0.5)))
@@ -2880,10 +2888,11 @@ func raze_structure(st) -> void:
 	for it in st.get("store", {}).keys(): # contents spill as loot — no vanishing stock
 		if not cells.is_empty():
 			spawn_drop(it, st["store"][it], Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
-	var inc_rz: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — the shell survives; the pedigree records burn with the box
+	var inc_rz: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — and its claimed bloodline rides back to the ranch ledger
 	if not inc_rz.is_empty() and not cells.is_empty():
 		spawn_drop("huge_kin_egg" if inc_rz.get("huge", false) else ("bred_kin_egg" if inc_rz.get("pair") != null else "kin_egg"),
 			1, Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
+		_return_egg_parent(inc_rz.get("pair"), Vector2(cells[0].x + 0.5, cells[0].y + 0.5))
 	st["store"] = {}
 	for k in cells:
 		structures.erase(k)
@@ -5247,6 +5256,25 @@ func _claim_egg_parent(pid: int):
 				return q.pop_at(i2) # oldest matching claim wins
 	return null
 
+# a demolished incubator gives the claimed bloodline back: the consumed
+# queue row rides home to the nearest ranch with room, so the refunded
+# bred egg redeposits onto the SAME parents, not the next pair in line.
+func _return_egg_parent(row, near: Vector2) -> void:
+	if not (row is Array):
+		return
+	var best_q = null
+	var bd := INF
+	for kr in structures:
+		var q = structures[kr].get("egg_parents")
+		if not (q is Array) or q.size() >= MAX_EGG_QUEUE:
+			continue
+		var dd := Vector2(kr.x, kr.y).distance_squared_to(near)
+		if dd < bd:
+			bd = dd; best_q = q
+	if best_q != null:
+		best_q.append(row) # the claim comes home — same blood, next deposit
+	# else: every ranch ledger is full — the record burns with the box after all
+
 func _free_incubator(at: Vector2, bound := 20.0) -> Vector2i:
 	# bound is the caller's arm: the keeper's own E stretches across the yard,
 	# a witnessed ghost only reaches the usual six tiles
@@ -6723,10 +6751,11 @@ func net_demolish(tx: int, ty: int, pid: int) -> void:
 	# no bag refund — the builder isn't here to catch it
 	for it in st.get("store", {}).keys():
 		spawn_drop(str(it), int(st["store"][it]), Vector2(tx + 0.5, ty + 0.5))
-	var inc_gd: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — the shell rides the ground; the pedigree burns with the box
+	var inc_gd: Dictionary = st.get("egg_inc", {}) # an incubating egg spills too — its claimed bloodline rides home to the ranch ledger
 	if not inc_gd.is_empty():
 		spawn_drop("huge_kin_egg" if inc_gd.get("huge", false) else ("bred_kin_egg" if inc_gd.get("pair") != null else "kin_egg"),
 			1, Vector2(tx + 0.5, ty + 0.5))
+		_return_egg_parent(inc_gd.get("pair"), Vector2(tx + 0.5, ty + 0.5))
 	st["store"] = {}
 	net_remove_structure(st)
 	log_msg(tr("Player %d razed %s") % [pid, st["id"]])

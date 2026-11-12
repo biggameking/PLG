@@ -7802,26 +7802,44 @@ func run() -> void:
 	check("fixture planted an incubator", inc78.x >= 0)
 	if inc78.x >= 0:
 		var inc_st32: Dictionary = game.structures[inc78]
-		inc_st32["egg_parents"] = [["fenlump", "fenlump", 10, 20, [], [], [], [], [0]]]
+		# a synthetic ranch ledger on a free far cell — production queues live
+		# on ranches, but claim/return iterate every structure carrying
+		# egg_parents, so a bare dict plays the role faithfully
+		var led_k32 := Vector2i(-1, -1)
+		for lx32 in range(200, 8, -1):
+			if not game.structures.has(Vector2i(lx32, lx32)):
+				led_k32 = Vector2i(lx32, lx32); break
+		var led_st32: Dictionary = {"id": "ranch", "store": {}, "workers": [],
+			"timer": 0.0, "hp": 200, "loot": false,
+			"egg_parents": [["fenlump", "fenlump", 10, 20, [], [], [], [], [0]]]}
+		if led_k32.x >= 0:
+			game.structures[led_k32] = led_st32
 		var ppos78: Vector2 = game.player.pos
 		game.player.pos = Vector2(inc78.x + 0.5, inc78.y + 0.5) # ours is surely nearest
 		game.items = {"kin_egg": 1}
 		game.deposit_egg()
 		check("a wild egg can't claim ranch blood", inc_st32.get("egg_inc", {}).get("pair") == null
-			and inc_st32["egg_parents"].size() == 1,
-			"inc=%s q=%d" % [inc_st32.get("egg_inc", {}), inc_st32["egg_parents"].size()])
+			and led_st32["egg_parents"].size() == 1,
+			"inc=%s q=%d" % [inc_st32.get("egg_inc", {}), led_st32["egg_parents"].size()])
 		inc_st32.erase("egg_inc")
 		game.items = {"bred_kin_egg": 1}
 		game.deposit_egg()
 		check("a bred egg claims its bloodline", inc_st32.get("egg_inc", {}).get("pair") != null
-			and inc_st32["egg_parents"].is_empty())
-		# razing a loaded incubator refunds the egg — claimed bloodline and all
+			and led_st32["egg_parents"].is_empty())
+		var claimed32 = inc_st32.get("egg_inc", {}).get("pair")
+		# razing a loaded incubator refunds the egg — AND rides the claimed
+		# bloodline home to the ranch ledger, not to the void
 		game.demolish_at(Vector2(inc78.x + 0.5, inc78.y + 0.5))
 		check("razing an incubator refunds the egg",
 			game.item_count("bred_kin_egg") == 1 and not game.structures.has(inc78),
 			"egg=%d st=%s" % [game.item_count("bred_kin_egg"), game.structures.has(inc78)])
+		check("the claimed bloodline rides home to the ranch",
+			led_st32["egg_parents"].size() == 1
+			and led_st32["egg_parents"][0] == claimed32,
+			"q=%s" % [led_st32["egg_parents"]])
 		game.player.pos = ppos78
 		# teardown: the fixture's footprint leaves structures AND world.structures
+		game.structures.erase(led_k32)
 		for dx79 in range(2):
 			for dy79 in range(2):
 				var cc79 := inc78 + Vector2i(dx79, dy79)
@@ -7984,6 +8002,23 @@ func run() -> void:
 		game.pals.erase(heir_np)
 		if heir_np.get_parent(): heir_np.get_parent().remove_child(heir_np)
 		heir_np.free()
+	# the den calls an heir you haven't proven — nine names banked leaves
+	# exactly one fresh call, and the re-roll must land it deterministically
+	var cc2_a33: Dictionary = game.catch_counts.duplicate()
+	for ls33b in game.LEGENDARY_DEN:
+		game.catch_counts[ls33b] = 1
+	game.catch_counts["tidscale"] = 0
+	game.boss_respawns = [{"sid": "scalbeak", "lv": 30, "pos": [2.0, 2.0],
+		"alpha": true, "boss": true, "at": 0.0}]
+	game.tick_boss_respawns()
+	var heir2_np: Kin = game.pals[game.pals.size() - 1] if game.pals.size() > pad_from else null
+	check("the den calls the heir you haven't proven",
+		heir2_np != null and heir2_np.species_id == "tidscale" and heir2_np.alpha)
+	if heir2_np != null:
+		game.pals.erase(heir2_np)
+		if heir2_np.get_parent(): heir2_np.get_parent().remove_child(heir2_np)
+		heir2_np.free()
+	game.catch_counts = cc2_a33
 	game.boss_respawns = brs_a33
 
 	# ---------- launch sweep: the shell chain a player actually runs ----------

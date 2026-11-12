@@ -1071,3 +1071,11 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - S77b verification sweep: full world defers den respawns instead of
   dropping the heir; forged alpha:false legend records can't smuggle an
   immune roamer. Smoke 869/0/0. Commit b79e95e.
+
+### S78 — lineage + legend pacing — SHIPPED
+- Incubator demolish/raze/net-demolish now returns the consumed
+  parentage row to the nearest ranch ledger (_return_egg_parent) — a
+  refunded bred egg redeposits onto the same blood, audit-33 Low closed.
+- Legend den re-roll prefers species with no catch yet → the 10-heir
+  quest is ≤10 cycles (~15 days) not ~29 (~44 days). Guide updated.
+- Smoke 870/0/0, sim 0 failures.
