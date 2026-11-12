@@ -701,3 +701,11 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
      append-only wire fields only stay compatible if the reshape chain
      forwards them: `pal_state_pack[12]` becomes `spawn_net_pal[11]` —
      assert the field at the consumer's index, not the producer's.
+126. **Mixed-outcome pays are audited best-of-branch, then summed.** A
+     gacha/chest with a rare tier stays a mint if ANY branch's best exit
+     (raw resale, processed resale, crafted value) beats its share of
+     cost — killing the common branch leaves the rare one printing.
+     Assert `Σ P(b) × max(exit_b) < cost` computed from live tables, so
+     price edits re-validate instead of rotting. And a rate cap is a
+     time gate, not a depth gate: if a sink is meant to absorb surplus,
+     uncap the stock and let the conversion rate do the limiting.
