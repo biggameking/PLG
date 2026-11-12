@@ -22,9 +22,25 @@ exported binary had ever been launched. This stage rebuilt and booted them.
 - **Stale dist** — rebuilt windows+web at HEAD (`09cab25`),
   `dist/build.txt` ties bytes to commit.
 
+- **THE BIG ONE — an inline comment silently killed the `[rendering]`
+  section.** `window/handheld/orientation=4 # sensor landscape…` — Godot's
+  ini parser does NOT support `#` after a value; the malformed line
+  swallowed the `[rendering]` header, so `rendering_method`,
+  `default_texture_filter` AND `import_etc2_astc` were dead config for
+  months (the game only ran GL-Compat via the features array). Proven by
+  `ConfigFile.get_sections()` — `[rendering]` never parsed. Comment moved
+  to its own `;` line; all three settings now read their intended values.
+- **Android debug APK now builds** — gradle-only `min_sdk`/`target_sdk`
+  overrides blanked for the non-gradle debug path (release profile must
+  re-add them WITH `use_gradle_build` + keystore, still an owner item).
+- **Suite de-flaked** — three seed-dependent fixtures: hint conds park
+  fire-pals + bust the 0.4s `nearest_heat` memo; grotto retries placement
+  once before skipping (no reachable site is a legal roll); hostile-kin
+  fixture spawns on a `los_clear` lane. 6 consecutive green runs.
+
 ## Verified evidence
 
-- `tools/package.sh windows|web` both green; SHA256SUMS emitted.
+- `tools/package.sh windows|web|android` all green; SHA256SUMS emitted.
 - Web PCK contents: `strings index.pck` → 0 hits for
   `res://(docs|tools|prototype|store)/`; all `assets/kin` sprites present.
 - Web build served (`python3 -m http.server`) and opened in a live browser

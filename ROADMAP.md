@@ -1308,3 +1308,7 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   PCK exclusion (0 docs/tools hits), booted the web build in a live
   browser preview.
 - Doc: docs/reviews/audit-47-artifact-truth.md.
+- S94b/c: inline `#` comment had silently deadened the whole [rendering]
+  section (parser swallows the next header) — rendering_method, texture
+  filter and ETC2 flag were all moot until now. Android debug APK builds.
+  Three seed-flaky smoke fixtures hardened; 6x consecutive green.
