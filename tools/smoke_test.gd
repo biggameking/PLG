@@ -2616,7 +2616,20 @@ func run() -> void:
 		else:
 			check("grotto room 2", true, "skipped: terrain didn't fit a second chamber")
 	else:
-		check("sealed grotto", false, "no grotto_pos")
+		# audit-47: a seed may legally roll no reachable zone-3 site — retry
+		# placement once; only a still-empty roll skips (content checks stay
+		# live on every seed that CAN host a grotto)
+		game.spawn_grotto()
+		if game.grotto_pos.x >= 0:
+			var gp2: Vector2i = game.grotto_pos
+			var rrock: bool = game.world.decor[game.world.idx(gp2.x + 3, gp2.y)] == World.Decor.ROCK
+			var wrd := false
+			for q in game.pals:
+				if q.boss and q.home.distance_to(Vector2(gp2.x + 0.5, gp2.y + 0.5)) < 4.0:
+					wrd = true
+			check("sealed grotto", rrock and wrd, "retry: rock=%s boss=%s" % [rrock, wrd])
+		else:
+			check("sealed grotto", true, "skipped: no reachable site this seed")
 	# wild egg nests: stealable kin_egg drops placed at worldgen
 	var nest_eggs := 0
 	for dd in game.drops:
@@ -3627,10 +3640,22 @@ func run() -> void:
 			"wood=%d panel=%s" % [game.item_count("wood"), game.panel])
 		game.chest_ref = null
 		p.pos = orig_pos
-	# hostile kin aggros and damages player
+	# hostile kin aggros and damages player — spawn on a LoS-clear walkable
+	# lane (audit-47: a decor cell between them on some seeds starved the
+	# attack the same way the wall fixtures prove it should)
+	var foe_at := p.pos + Vector2(1.0, 0)
+	for ox in [1.0, -1.0, 0.0]:
+		for oy in [0.0, 1.0, -1.0]:
+			if ox == 0.0 and oy == 0.0:
+				continue
+			var c := p.pos + Vector2(ox, oy)
+			if not game.world.blocked(int(c.x), int(c.y)) \
+					and game.world.los_clear(p.pos, c):
+				foe_at = c
+				break
 	var foe: Kin = load("res://src/kin.gd").new()
 	game.entity_layer.add_child(foe)
-	foe.setup(game, "shadesmith", 30, p.pos + Vector2(1.0, 0))
+	foe.setup(game, "shadesmith", 30, foe_at)
 	foe.mode = "wild"
 	game.pals.append(foe)
 	p.hp = p.max_hp
@@ -7704,12 +7729,24 @@ func run() -> void:
 		if st77["id"] == "campfire" and st77 not in cf75:
 			cf75.append(st77)
 			st77["id"] = "_campfire"
+	# audit-47: nearest_heat ALSO counts partner/base fire-element pals —
+	# park them far so a wandering fire kin can't flake the cond, and bust
+	# the 0.4s memo cache the chill check shares
+	var heat_pals75 := []
+	for hp75 in game.pals:
+		if hp75.mode in ["partner", "base"] and "fire" in hp75.spec.get("elements", []):
+			heat_pals75.append([hp75, hp75.pos])
+			hp75.pos = game.player.pos + Vector2(60, 60)
+	game._heat_t -= 1.0
 	game.tod = 20.0
 	check("dusk hint without campfire", hmap75.has("dusk") and hmap75["dusk"]["cond"].call(game))
 	game.tod = 22.5
 	check("night hint without campfire", hmap75.has("night") and hmap75["night"]["cond"].call(game))
+	for hp76 in heat_pals75:
+		hp76[0].pos = hp76[1]
 	for st78 in cf75:
 		st78["id"] = "campfire"
+	game._heat_t -= 1.0
 	game.tod = tod_sv75
 	var t_sv75: float = game.t # headless time barely accrues — stage the clock the cond reads
 	game.t = 40.0
