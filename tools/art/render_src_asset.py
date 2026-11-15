@@ -9,7 +9,7 @@ Per-species tuning lives in CFG below. Pipeline per species:
   3. recolor to the species palette, add ink-bead eyes parented to a bone
   4. drive the source armature through its own action, render frames FRAMES
 """
-import bpy, sys, os, math
+import bpy, sys, os, math, colorsys
 import mathutils
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "render")
@@ -39,6 +39,7 @@ CFG = {
     "scalcrest": {   # Eagle.blend — royal bird
         "mat_map": {"Wings": (0.42, 0.52, 0.78), "Head": (0.60, 0.66, 0.86),
                     "Beak": (0.90, 0.72, 0.30), "Claws": (0.28, 0.24, 0.30)},
+        "accessory": "crown",
         "subd_wool": 2, "displace": None,
         "rot_z": 285.0, "action": "Idle", "frames": (5, 25),
         "head_bone": "Bone.003",
@@ -65,6 +66,7 @@ CFG = {
     },
     "tidscale": {    # Piranha.blend — tide serpent reads as a fish-kin
         "mat_map": {"Brown": (0.20, 0.34, 0.52), "LightYellow": (0.55, 0.62, 0.72), "Black": (0.10, 0.12, 0.20), "White": (0.92, 0.92, 0.88)},
+        "accessory": "fins",
         "subd_wool": 2, "displace": None,
         "rot_z": -90.0, "action": "Idle", "frames": (5, 25),
         "head_bone": "Bone",
@@ -131,6 +133,16 @@ def mat(col, name):
     bsdf.inputs["Roughness"].default_value = 0.95
     bsdf.inputs["Specular IOR Level"].default_value = 0.15
     return m
+
+
+def shift_hsv(c, dh, ds, dv):
+    """Hue/sat/value nudge — mirrors rig_auto.shift so mesh accessories get
+    the same feature accent the primitive rigs stamp."""
+    import colorsys
+    h, s, v = colorsys.rgb_to_hsv(*c)
+    return colorsys.hsv_to_rgb((h + dh) % 1.0,
+                               min(1, max(0, s * ds)),
+                               min(1, max(0, v * dv)))
 
 
 def split_by_material(src, keep_idx, name):
@@ -279,11 +291,80 @@ def bone_attach(arm, bone_name, ob, world_m):
     ob.matrix_world = world_m
 
 
-def add_eyes(arm, bone_name, cfg, m, zcap=None):
-    """Ink beads auto-placed from the head bone: muzzle dir (head→tail) +
-    lateral cross gives both eye sockets — works on any quadruped rig.
-    All targets use POSE-space coords (pb.head/tail) so they match the
-    pose the file saved — never mix rest locals with pose matrices."""
+def head_group_top(arm, mesh_obj, bone_name):
+    """Skull-top anchor from the mesh itself: evaluated positions of verts
+    weighted to the head bone's vgroup. Pose-independent — the anchor sits
+    on the head GEOMETRY wherever the rig actually puts it, so throat/jaw
+    bones can't drag a crown under the chin (wolf Bone.003 did exactly
+    that). Returns (htop Vector) or None."""
+    try:
+        gi = mesh_obj.vertex_groups.find(bone_name)
+    except Exception:
+        gi = -1
+    if gi < 0:
+        return None
+    owned = [i for i, v in enumerate(mesh_obj.data.vertices)
+             if any(g.group == gi and g.weight > 0.5 for g in v.groups)]
+    if not owned:
+        return None
+    # evaluated (posed) positions — but only for verts the mesh still owns;
+    # subdiv blows up topology, so evaluate the RAW bind verts instead and
+    # transform them by the bone's pose delta
+    pb = arm.pose.bones[bone_name]
+    pose_m = arm.matrix_world @ pb.matrix  # bone pose in world
+    rest_m = arm.matrix_world @ mathutils.Matrix.Translation(
+        arm.data.bones[bone_name].head_local)
+    # approximate: move the rest-space vert cluster by the bone's pose
+    # translation only (head marks tolerate ~0.05 drift)
+    mw = mesh_obj.matrix_world
+    delta = pose_m.translation - (arm.matrix_world @
+                                arm.data.bones[bone_name].head_local)
+    pts = [mw @ mesh_obj.data.vertices[i].co + delta for i in owned]
+    hi = max(p.z for p in pts)
+    top = [p for p in pts if p.z > hi - 0.06]
+    return mathutils.Vector((
+        sum(p.x for p in top) / len(top),
+        sum(p.y for p in top) / len(top), hi))
+
+
+def real_head_bone(arm, mesh_obj, cfg_bn):
+    """The cfg head bone can be an unweighted control/IK bone. Verify it by
+    vertex weights: tally the vgroups of raw verts in the TOP band near the
+    bone's rest tail (the skull crown cluster, not the jaw-weighted muzzle
+    tip). Bind space only — evaluated meshes have post-subdiv topology and
+    their indices no longer map to vertex groups."""
+    if cfg_bn not in arm.data.bones:
+        return cfg_bn
+    mw = mesh_obj.matrix_world
+    ws = [mw @ v.co for v in mesh_obj.data.vertices]
+    if not ws:
+        return cfg_bn
+    hi = max(w.z for w in ws)
+    lo = min(w.z for w in ws)
+    tip = arm.matrix_world @ arm.data.bones[cfg_bn].tail_local
+    idx = [i for i, w in enumerate(ws)
+           if w.z > hi - 0.35 * (hi - lo)
+           and (w.xy - tip.xy).length < 0.35 * (hi - lo)]
+    if not idx:
+        return cfg_bn
+    tally = {}
+    for i in idx:
+        for g in mesh_obj.data.vertices[i].groups:
+            nm = mesh_obj.vertex_groups[g.group].name
+            tally[nm] = tally.get(nm, 0.0) + g.weight
+    if not tally:
+        return cfg_bn
+    best = max(tally, key=tally.get)
+    if best != cfg_bn and best in arm.pose.bones:
+        print("WARN head_bone '%s' is not weighted at the head — "
+              "real driver '%s'" % (cfg_bn, best))
+        return best
+    return cfg_bn
+
+
+def head_anchor(arm, bone_name, cfg, zcap=None):
+    """Face anchor shared by eyes/accessories: muzzle dir (head→tail) +
+    lateral cross. POSE-space coords only. Returns (center, fwd, lat)."""
     pb = arm.pose.bones[bone_name]
     h = arm.matrix_world @ pb.head
     t = arm.matrix_world @ pb.tail
@@ -298,12 +379,15 @@ def add_eyes(arm, bone_name, cfg, m, zcap=None):
     lat = mathutils.Vector((-fwd.y, fwd.x, 0.0))
     center = t + fwd * cfg["eye_fwd"] + mathutils.Vector((0, 0, cfg["eye_up"]))
     if zcap is not None:
-        # stylized rigs' head bones can extend far above the visible mesh
-        # (Skeleton head-bone tail sat at 3.0 on a 1.5-tall model) — never
-        # let eyes float beyond the rendered silhouette
         lo_z, hi_z = zcap
         center.z = min(max(center.z, lo_z + 0.35 * (hi_z - lo_z)),
                        hi_z + 0.05 * (hi_z - lo_z))
+    return center, fwd, lat, t
+
+
+def add_eyes(arm, bone_name, cfg, m, zcap=None):
+    """Ink beads auto-placed from the head bone — works on any rig."""
+    center, fwd, lat, t = head_anchor(arm, bone_name, cfg, zcap)
     for sgn in (-1, 1):
         bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12,
                                              radius=cfg["eye_r"])
@@ -325,6 +409,127 @@ def add_eyes(arm, bone_name, cfg, m, zcap=None):
         bone_attach(arm, bone_name, e,
                     mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
                         (1.15, 1.0, 0.8, 1)))
+
+
+def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
+    """Identity marks the source mesh lacks — the same marks the primitive
+    rigs stamp (rig_auto.ACCESSORY): crown/halo/horns/crest/fins/mask/wings
+    as primitive parts bone-parented to the head so they ride the action.
+    Anchored at the skull top (silhouette hi_z, not the bone tail — muzzle
+    bones would put a crown on the snout tip)."""
+    kind = cfg.get("accessory")
+    if not kind:
+        return
+    face, fwd, lat, tail = head_anchor(arm, bone_name, cfg, zcap)
+    hi_z = zcap[1] if zcap else face.z + 0.2
+    s = (zcap[1] - zcap[0]) / 1.4 if zcap else 1.0  # normalized-height scale
+    # measure the head's real extents around the FACE anchor (where the eyes
+    # landed) — the skull column is the verts near the face's xy, which
+    # excludes wings/body that merely share the silhouette top. Fixed
+    # offsets bury marks inside wide skulls; measuring keeps them outside.
+    hw_lat = 0.1 * s
+    hw_fwd = 0.1 * s
+    htop_z = hi_z
+    htop = mathutils.Vector((face.x, face.y, hi_z))
+    head_col = [v for o in objs for v in eval_verts(o)]
+    for w in head_col:
+        lv = (w.x - face.x) * lat.x + (w.y - face.y) * lat.y
+        fv = (w.x - face.x) * fwd.x + (w.y - face.y) * fwd.y
+        if abs(w.z - face.z) < 0.35 * s:
+            hw_lat = max(hw_lat, abs(lv))
+            hw_fwd = max(hw_fwd, fv)
+    # skull top from the head-bone's OWN weighted verts — the cranium rides
+    # whatever the bone does (throat-bone rigs like Wolf keep the crown on
+    # the skull even when the bone tail sits under the chin). Fall back to
+    # the face column if the bone owns no verts.
+    gt = head_group_top(arm, objs[0], bone_name)
+    if gt is not None:
+        htop = gt
+        htop_z = gt.z
+    else:
+        skull = [w for w in head_col
+                 if abs((w.x - face.x) * lat.x + (w.y - face.y) * lat.y)
+                 < 0.35 * s
+                 and -0.60 * s < ((w.x - face.x) * fwd.x +
+                                  (w.y - face.y) * fwd.y) < 0.15 * s
+                 and w.z <= face.z + 0.45 * s]
+        if skull:
+            htop_z = max(w.z for w in skull)
+            top_v = [w for w in skull if w.z > htop_z - 0.08 * s]
+            htop = mathutils.Vector((
+                sum(w.x for w in top_v) / len(top_v),
+                sum(w.y for w in top_v) / len(top_v), htop_z))
+    # marks that must sit ON the head mid-level anchor at the face column
+    hpos = mathutils.Vector((face.x, face.y, max(face.z, tail.z)))
+    print("HEAD_EXT lat=%.2f fwd=%.2f htz=%.2f" % (hw_lat, hw_fwd, htop_z))
+    placed = 0
+
+    def put(shape, p, dims, rot=None):
+        nonlocal placed
+        if shape == "sph":
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12,
+                                                 radius=1.0)
+        else:
+            bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=dims[0],
+                                                depth=dims[1])
+            dims = (1.0, 1.0, 1.0)
+        e = bpy.context.active_object
+        e.data.materials.append(accent_m)
+        m = mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
+            (*dims, 1.0))
+        if rot is not None:
+            m = m @ rot
+        bone_attach(arm, bone_name, e, m)
+        bpy.ops.object.shade_smooth()
+        placed += 1
+
+    # head-column top anchor: crown/halo/horns sit ON the skull, not the
+    # body mid (quadruped heads project forward of mid)
+    if kind == "crown":
+        put("cyl", htop + mathutils.Vector((0, 0, 0.04 * s)),
+            (0.13 * s, 0.11 * s))
+        for dx in (-0.10, 0.0, 0.10):
+            put("cyl", htop + fwd * (dx * s) + mathutils.Vector(
+                (0, 0, 0.17 * s)), (0.045 * s, 0.18 * s))
+    elif kind == "halo":
+        # ring in the fwd-z plane so it reads as a full arc in profile too
+        hr = max(0.18 * s, hw_lat * 1.15)
+        for i in range(5):
+            a = i * 1.2566
+            put("sph", htop + fwd * (hr * math.cos(a)) + mathutils.Vector(
+                (0, 0, 0.10 * s + 0.05 * s * math.sin(a))), (0.045 * s,) * 3)
+    elif kind == "horns":
+        # splay in the fwd-z plane (fore-aft V): a lateral horn pair is
+        # invisible from the profile views quadrupeds use (tips tilt along
+        # the view axis); a fore-aft pair reads as horns from any angle.
+        # Chunky + tall so the tips clear the skull silhouette at 80px.
+        for sx in (-1, 1):
+            put("cyl", htop + fwd * (0.12 * s * sx) + mathutils.Vector(
+                (0, 0, 0.05 * s)), (0.07 * s, 0.40 * s),
+                mathutils.Matrix.Rotation(sx * 0.5, 4, lat))
+    elif kind == "crest":
+        put("sph", htop + mathutils.Vector((0, 0, 0.05 * s)),
+            (0.06 * s, 0.17 * s, 0.20 * s))
+    elif kind == "fins":
+        # pectoral fins hug the body sides just behind the head — the
+        # skull-band lat can be inflated by fins already on the source
+        # mesh (Piranha's own fins counted as "head width"), so cap it
+        for sx in (-1, 1):
+            put("sph", hpos + lat * (min(hw_lat, 0.2 * s) * sx +
+                0.03 * s * sx) - mathutils.Vector((0, 0, 0.04 * s)),
+                (0.05 * s, 0.16 * s, 0.13 * s),
+                mathutils.Matrix.Rotation(sx * 0.5, 4, 'Z'))
+    elif kind == "mask":
+        put("sph", hpos + fwd * (hw_fwd + 0.03 * s) - mathutils.Vector(
+            (0, 0, 0.14 * s)), (0.28 * s, 0.06 * s, 0.11 * s))
+    elif kind == "wings":
+        put("sph", hpos - fwd * (0.24 * s) - mathutils.Vector(
+            (0, 0, 0.05 * s)), (0.36 * s, 0.07 * s, 0.20 * s),
+            mathutils.Matrix.Rotation(0.5, 4, lat))
+    else:
+        print("WARN accessory '%s' unknown — none placed" % kind)
+        return
+    print("ACCESSORY %s placed %d parts" % (kind, placed))
 
 
 def fluff_shell(arm, wool, cfg, m):
@@ -487,7 +692,7 @@ def main():
           (k, {o.name: len(o.data.polygons) for o in objs}))
 
     # report head-bone world position POST-normalize — tune eye params off it
-    head_bn = cfg.get("head_bone", "Head")
+    head_bn = real_head_bone(arm, objs[0], cfg.get("head_bone", "Head"))
     hb = arm.pose.bones.get(head_bn)
     if cfg.get("no_eyes"):
         hb = None
@@ -500,18 +705,10 @@ def main():
               (tuple(round(c, 3) for c in wh), tuple(round(c, 3) for c in wt)))
 
     em = mat(INK, "ink")
-    if hb:
-        zlo = zhi = None
-        for o in objs:
-            for w in eval_verts(o):
-                zlo = w.z if zlo is None else min(zlo, w.z)
-                zhi = w.z if zhi is None else max(zhi, w.z)
-        add_eyes(arm, head_bn, cfg, em,
-                 (zlo, zhi) if zlo is not None else None)
-    if cfg.get("puffs"):
-        fluff_shell(arm, objs[0], cfg["puffs"], wm)
-
-    # drive the source rig's own action
+    # assign the action + settle on frame f0 BEFORE placing eyes/accessories:
+    # bone-parented parts store an offset against the CURRENT pose — if the
+    # action only starts driving the rig afterwards, the f0 pose delta
+    # drags marks off the head (wolf horns landed past the muzzle)
     if not arm.animation_data:
         arm.animation_data_create()
     act = bpy.data.actions.get(cfg["action"])
@@ -523,6 +720,36 @@ def main():
                   % (cfg["frames"], tuple(act.frame_range)))
     else:
         print("WARN action '%s' missing — f0==f1 static frames" % cfg["action"])
+    s.frame_set(int(cfg["frames"][0]))
+    bpy.context.view_layer.update()
+
+    zlo = zhi = None
+    if hb:
+        for o in objs:
+            for w in eval_verts(o):
+                zlo = w.z if zlo is None else min(zlo, w.z)
+                zhi = w.z if zhi is None else max(zhi, w.z)
+        add_eyes(arm, head_bn, cfg, em,
+                 (zlo, zhi) if zlo is not None else None)
+    if cfg.get("accessory"):
+        if hb is None:
+            print("WARN accessory '%s' skipped — head bone missing" %
+                  cfg["accessory"])
+        else:
+            # same hue-shift accent the primitive rigs use for feature marks,
+            # with a value floor — dark-bodied species produce near-black
+            # accents that vanish at 80px
+            main_col = (next(iter(cfg["mat_map"].values()))
+                        if cfg.get("mat_map") else cfg["mats"][0])
+            acc = shift_hsv(main_col, 0.45, 1.4, 0.95)
+            h_, s_, v_ = colorsys.rgb_to_hsv(*acc)
+            if v_ < 0.6:
+                acc = colorsys.hsv_to_rgb(h_, min(1.0, s_ * 1.3), 0.68)
+            add_accessory(arm, head_bn, cfg,
+                          mat(acc, "accent"),
+                          (zlo, zhi) if zlo is not None else None, objs)
+    if cfg.get("puffs"):
+        fluff_shell(arm, objs[0], cfg["puffs"], wm)
 
     light_rig()
     camera()

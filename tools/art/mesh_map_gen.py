@@ -18,9 +18,9 @@ OUT = os.path.join(HERE, "mesh_cfg_gen.py")
 HAND = {"fenjelly", "scalcrest", "scalfang", "branpurr", "tidscale",
         "piplump", "digsnout", "dozantler", "cindpaw"}
 
-# identity-mark species — the mesh path has no accessory layer yet, so they
-# stay on the primitive renderer where marks render and smoke pins verify.
-# (scalcrest/tidscale are in HAND with hand-accepted mark loss — documented.)
+# identity-mark species — render_src_asset.py's accessory layer rebuilds the
+# marks the source meshes lack (crown/halo/horns/crest/fins/mask/wings), so
+# they migrate with everyone else. The kind is passed through per species.
 import rig_auto
 ACCESSORY_SIDS = set(rig_auto.ACCESSORY) - HAND
 
@@ -84,7 +84,7 @@ def main():
     for d in species:
         sid = d.get("id", "")
         body = d.get("body", "")
-        if sid in HAND or sid in ACCESSORY_SIDS or body not in TEMPLATES:
+        if sid in HAND or body not in TEMPLATES:
             continue
         blend, head_bone, th, mk = TEMPLATES[body]
         c = hex2rgb(d["color"])
@@ -97,6 +97,8 @@ def main():
         nose = ('"nose_r": 0.045, "nose_up": 0.02, ' if body in
                 ("quadruped", "kitty", "cow", "deer", "boar", "mouse") else '')
         no_eyes = ', "no_eyes": True' if body == "blob" else ''
+        acc = rig_auto.ACCESSORY.get(sid)
+        acc_s = ', "accessory": "%s"' % acc if acc else ''
         # head-bone tail = muzzle tip on quadrupeds (eyes trail it: fwd<0),
         # but skull top on upright/round rigs (eyes drop below + face -Y:
         # fwd>0, up<0)
@@ -110,7 +112,7 @@ def main():
                  f'        "action": "{action}", "frames": (5, 25),\n'
                  f'        "eye_r": 0.05, "eye_gap": 0.11, '
                  f'"eye_fwd": {eye_fwd}, "eye_up": {eye_up}, "target_h": {th},\n'
-                 f'        "subd_wool": 2, "displace": None{no_eyes}}},')
+                 f'        "subd_wool": 2, "displace": None{no_eyes}{acc_s}}},')
         out.append(entry)
         n += 1
     out.append("}")

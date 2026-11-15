@@ -33,10 +33,24 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   是当前质量标杆；primitive 栈只作 fallback。
 - 批量映射：`tools/art/mesh_map_gen.py` → `mesh_cfg_gen.py`（生成物，
   勿手改），按 body 套源 mesh 模板+配色派生；`bash tools/art/
-  batch_mesh.sh` 全量重渲。当前覆盖 108/116（9 手调含 fenjelly
-  +99 生成条目）；仅 8 个配饰种
-  （crown/halo/horns/crest/wings，ACCESSORY_SIDS）走
-  primitive——mesh 路径暂无配饰层，勿为凑数丢身份标志。
+  batch_mesh.sh` 全量重渲。**覆盖 116/116**（9 手调含 fenjelly
+  +107 生成条目，零 primitive 残余）。
+- S100 配饰层落地：`render_src_asset.add_accessory()` 以 primitive
+  件（crown/halo/horns/crest/fins/mask/wings）骨绑补全源 mesh 缺失的
+  身份标志，暖调 hue-shift accent 与 rig_auto 同源派生（暗体种有
+  value 下限防吞）。锚定教训（三次返工收敛）：
+  1. "剪影最高点"不是头顶锚——抬起的翅膀会占据头列 xy+z；
+  2. 骨端坐标也不可信——Wolf 的 Bone.003 在 Idle 姿态下尾端落到
+     喉下，face 锚点把角拖到颏底；`head_group_top()` 直接取
+     **头骨权重组顶点簇的顶**做颅顶锚，任意 rig/姿态自洽；
+  3. 骨绑件必须在**目标帧姿态下**装配——动作驱动前的 rest 姿态算
+     相对偏移会被 f0 姿态差拖走（先 assign action + frame_set(f0)
+     再 add_eyes/add_accessory）；`real_head_bone()` 按权重投票再
+     纠一次名不符的 cfg 骨（Ghost 'Head'→'Body'、Slime→'Head3'、
+     Eagle→'Bone.004'）；4. 侧视体型（狼/马/牛）的横向配饰在深度
+     轴上不可见——crown/halo/horns 的展开平面转 fwd-z 才能在纯
+     侧视读出。10/10 标志放置，smoke 像素钉（scalbeak 冠>6、
+     vermtrot 背扇>4）通过。
 - S99 扩批补源：cute_monsters 包（CC0）供 Ghost→ghost、
   Alien_Tall→human、Yeti→monkey、Cactus→hedgehog；monsters_basic
   包供 Slime→blob（no_eyes，自带眼材质）。注意该包是 Q 版大头
@@ -62,8 +76,9 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   modifier 下无效）。扩批方法：在 CFG 加条目（材质名映射物种
   palette、头骨、rot_z、action+frames、target_h），渲+post 后必看
   x4 预览再扩。
-- 传说种配饰（冠/环/面具/角/冠饰/鳍/背扇）在 rig 配饰层，10 种
-  ACCESSORY 表在 rig_auto.py。
+- 传说种配饰（冠/环/面具/角/冠饰/鳍/背扇）：primitive 路由走
+  rig_auto.ACCESSORY 表（10 种），mesh 路由走 cfg `accessory` 字段→
+  `add_accessory()`；两者都保证身份标志不落。
 - `gen_assets.py` 的 kin 写盘已门控 `--kin-legacy`——不要恢复默认。
 - `tools/art/render/` 已 gitignore；`farm_animals.zip` 已删（保留解压包
   + License.txt）。
