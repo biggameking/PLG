@@ -1322,9 +1322,21 @@ if __name__ == "__main__":
     if "--decor-legacy" in sys.argv:
         print("generating decor (legacy flat)…")
         decor()
-    print("generating structures…")
-    for sid, (col, w, h) in STRUCT_DEFS.items():
-        make_structure(sid, col, w, h)
+    # migrated structure sprites live in the Blender pipeline
+    # (tools/art/render_structure.py + post_structure.py); un-migrated ids
+    # still come from the legacy path until their batch lands. Pass
+    # --struct-legacy to regenerate ALL flat procedural fallbacks.
+    if "--struct-legacy" in sys.argv:
+        print("generating structures (legacy flat)…")
+        for sid, (col, w, h) in STRUCT_DEFS.items():
+            make_structure(sid, col, w, h)
+    else:
+        migrated = {"kinbox", "campfire", "workbench", "well", "torch",
+                    "waypoint", "chest", "feed_box", "kin_bed",
+                    "wooden_wall", "watch_tower", "notice_board"}
+        for sid, (col, w, h) in STRUCT_DEFS.items():
+            if sid not in migrated:
+                make_structure(sid, col, w, h)
     shadow()
     element_orbs()
     halftone_tile()

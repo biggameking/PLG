@@ -4256,6 +4256,41 @@ func run() -> void:
 	check("all decor sprites have bodies + ink contour", bad_decor.is_empty(),
 		",".join(bad_decor))
 
+	# structures: same pin shape as decor — dims + body + ink + top band.
+	# A blank file, a camera-clipped frame, or a dimension drift that
+	# would re-anchor the sprite all fail (S105 mesh migration pins).
+	var bad_struct := []
+	var struct_dims := {
+		"kinbox": [144, 136], "campfire": [80, 104], "workbench": [112, 120],
+		"well": [80, 104], "torch": [80, 104], "waypoint": [80, 104],
+		"chest": [80, 104], "feed_box": [80, 104], "kin_bed": [112, 120],
+		"wooden_wall": [80, 104], "watch_tower": [80, 104],
+		"notice_board": [80, 104],
+	}
+	for skey in struct_dims.keys():
+		var simg := Image.load_from_file("res://assets/structures/%s.png" % skey)
+		if simg == null:
+			bad_struct.append("%s:missing" % skey); continue
+		if simg.get_width() != struct_dims[skey][0] or simg.get_height() != struct_dims[skey][1]:
+			bad_struct.append("%s:dims=%dx%d" % [skey, simg.get_width(), simg.get_height()])
+			continue
+		var sopq := 0; var sink := 0; var s_top := 0
+		var s_rows := maxi(2, int(simg.get_height() * 0.10))
+		var s_total := s_rows * simg.get_width()
+		for sy2 in simg.get_height():
+			for sx2 in simg.get_width():
+				var spx := simg.get_pixel(sx2, sy2)
+				if spx.a > 0.9:
+					sopq += 1
+					if sy2 < s_rows:
+						s_top += 1
+					if spx.r < 0.25 and spx.g < 0.25 and spx.b < 0.3:
+						sink += 1
+		if sopq < 40 or sink < 2 or s_top > s_total * 0.6:
+			bad_struct.append("%s:opaque=%d,ink=%d,top=%d/%d" % [skey, sopq, sink, s_top, s_total])
+	check("all structure sprites have bodies + ink contour", bad_struct.is_empty(),
+		",".join(bad_struct))
+
 	# terrain atlas: every ground cell must fill its diamond with opaque
 	# pixels and real luminance variance — a blank cell, a mis-offset
 	# manifest, or a fully flat flood-fill all fail. (A speckled flat fill

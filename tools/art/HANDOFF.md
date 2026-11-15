@@ -156,3 +156,14 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
 - 实测：顶菱形 x[8,247] y[39,158]，面高 58px（=16cell px×3.72 缩放✓）。
 - 坑：SUBSURF 必须先于 DISPLACE（audit-56 已踩过的同坑——直接写对
   别复错）；modifier_move_up 的 while 条件是反的，别用。
+
+## S105a 结构迁移批次1
+
+- `render_structure.py` CFG：id → {build 构件族, h 世界高, ortho, tz
+  跟踪点}；构件库 cube/cyl/cone/ico/roof_prism，材质 wood/wood_d/
+  stone/iron + emit 火焰/水晶/宝珠。
+- 机位与 decor 相同（upright 3/4 ortho），非 tile 的 dimetric——
+  结构是竖直 sprite 不是地面格。
+- `post_structure.py` DIMS 逐 id 钉输出尺寸（与旧图一致保锚定）。
+- 坑：emit>0 的材质在 Standard view_transform 下会过曝变白——
+  kinbox 宝珠 emit=1.8 已到边界，别再调高。

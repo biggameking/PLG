@@ -1483,3 +1483,20 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   保留墨线顶边/淡紫 rim/层理线的可读性标记；stair/marker 仍程序画。
 - `render_wall.py`/`post_wall.py`；build_tiles 接入渲染墙面；
   实机证据 `docs/reviews/s104-cliffs.png`；smoke 971/0/1skip。
+
+## S105a — 结构迁移批次1（12 高可见结构 → 程序几何渲染）
+
+- 结构 sprite 是底锚竖直图（`place_free`/`build` 共用同一贴图路径），
+  约 50 种。批次1 迁最高可见的 12 种：kinbox/campfire/workbench/
+  well/torch/waypoint/chest/feed_box/kin_bed/wooden_wall/
+  watch_tower/notice_board。
+- `render_structure.py`：逐 id 程序建场景（cyl/cube/cone/ico/prism
+  构件库），kin 同 rig + decor 同 upright 3/4 机位单帧；
+  `post_structure.py` 复用 post_kin 链，输出尺寸逐字节对齐旧图
+  → 放置/锚定/光照语义零代码改动。
+- `gen_assets.py` 结构段加 `--struct-legacy` 门 + migrated 白名单
+  （未迁 id 仍走旧路，批次推进时逐批移除）。
+- smoke 新钉：12 结构 dims+body+ink+顶带（974/0/0skip）。
+- 实机证据 `docs/reviews/s105-structures.png` /
+  `s105-structures-night.png`（火光/塔灯光晕在位）。
+- 剩余 ~38 种结构仍平涂——S105b/c 续迁。
