@@ -1312,8 +1312,12 @@ if __name__ == "__main__":
             render_pal(sid)
     print("generating atlas…")
     atlas()
-    print("generating decor…")
-    decor()
+    # decor sprites moved to the Blender nature pipeline
+    # (tools/art/render_decor.py + post_decor.py); pass --decor-legacy to
+    # regenerate the flat procedural fallbacks.
+    if "--decor-legacy" in sys.argv:
+        print("generating decor (legacy flat)…")
+        decor()
     print("generating structures…")
     for sid, (col, w, h) in STRUCT_DEFS.items():
         make_structure(sid, col, w, h)

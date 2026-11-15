@@ -1456,3 +1456,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   strip_islands thresholds now bind-z fractions with per-island logs +
   strip_expect; zone band gaps snap+WARN; eye_abs_z guards + shares the
   nose anchor; puffs fallback material. Smoke 971/0/1skip.
+
+## S102 — 环境美术迁移（Ultimate Nature Pack，7/7 decor → mesh）
+
+- 世界装饰从平涂泪滴/菱形占位图全部迁到 Quaternius Ultimate Nature
+  Pack（CC0）真实网格渲染：松树层冠、白桦圆冠、浆果灌丛、三色岩、
+  苔藓树桩。`render_decor.py` + `post_decor.py` 新管线；输出尺寸与旧
+  图一致 → `src/main.gd` 装饰池零改动，收获/资源语义不变。
+- 实机证据 `docs/reviews/s102-world.png`；smoke 新增全 decor
+  存在/不透明/墨描边/非全出血断言（974/0/1skip，audit ALL CLEAN，
+  IP CLEAN）。

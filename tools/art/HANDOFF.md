@@ -115,3 +115,18 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   blob 0.085→0.115 等），player 同款，116 物种全量重渲过检。
 - ~~f1 帧差异幅度小~~ — S97 已修：head_dy 0.04→0.08、fluff_dy 0.06→0.10、
   ear_drop 0.3→0.45。
+
+## S102 环境美术（nature pack → decor）
+
+- `render_decor.py`（静态网格版渲染器：mat_map 重上色→归一到 target_h→
+  与 kin 同机位→单帧 512）+ `post_decor.py`（复用 post_kin 链，DIMS 表按
+  旧文件尺寸输出——装饰池底锚绘制，尺寸不变=零代码改动）。
+- 7 个 decor 全部迁到 Ultimate Nature Pack（CC0，见 PROVENANCE）：
+  tree_a=PineTree_2、tree_b=BirchTree_1（White/Black 树皮槽）、
+  berry_bush=BushBerries_1、rock/ore_coal/ore_gold=Rock_2 三色变体、
+  stump=TreeStump_Moss。
+- 坑：旧 Quaternius blend 的节点树是双输出，渲染输出接 BSDF_DIFFUSE——
+  给 Principled 设 Base Color 无效。mat() 一律重建干净节点树。
+- smoke 新增装饰钉：每个 decor PNG 必须存在、opaque≥40、ink≥2、且
+  非全出血（opaque<95% 总像素——全出血=相机裁了网格）。
+- 实机证据：`docs/reviews/s102-world.png`（tools/shot.gd play 帧）。

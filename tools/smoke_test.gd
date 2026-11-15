@@ -4220,6 +4220,42 @@ func run() -> void:
 	check("player sprite has face-band ink (eyes)", pimg != null and eye_ink >= 8,
 		"ink=%d" % eye_ink)
 
+	# decor sprites: every kind must exist at the exact dims the decor pool
+	# anchors on (a dims drift silently shifts every tile), with real pixels
+	# and an ink contour — and the TOP band must stay mostly transparent:
+	# a camera-clipped/full-bleed frame fills the top edge, a framed sprite
+	# thins out there (audit-55: a total-fill threshold can't trip — the
+	# post thumbnail's 4px pad caps max fill below any sensible cutoff)
+	var bad_decor := []
+	var decor_dims := {
+		"tree_a": [64, 96], "tree_b": [64, 96],
+		"rock": [64, 40], "ore_gold": [64, 40], "ore_coal": [64, 40],
+		"berry_bush": [64, 56], "stump": [48, 30],
+	}
+	for dkey in decor_dims.keys():
+		var dimg := Image.load_from_file("res://assets/decor/%s.png" % dkey)
+		if dimg == null:
+			bad_decor.append("%s:missing" % dkey); continue
+		if dimg.get_width() != decor_dims[dkey][0] or dimg.get_height() != decor_dims[dkey][1]:
+			bad_decor.append("%s:dims=%dx%d" % [dkey, dimg.get_width(), dimg.get_height()])
+			continue
+		var dopaque := 0; var dink := 0; var top_opaque := 0
+		var top_rows := maxi(2, int(dimg.get_height() * 0.10))
+		var top_total := top_rows * dimg.get_width()
+		for dy2 in dimg.get_height():
+			for dx2 in dimg.get_width():
+				var dpx := dimg.get_pixel(dx2, dy2)
+				if dpx.a > 0.9:
+					dopaque += 1
+					if dy2 < top_rows:
+						top_opaque += 1
+					if dpx.r < 0.25 and dpx.g < 0.25 and dpx.b < 0.3:
+						dink += 1
+		if dopaque < 40 or dink < 2 or top_opaque > top_total * 0.6:
+			bad_decor.append("%s:opaque=%d,ink=%d,top=%d/%d" % [dkey, dopaque, dink, top_opaque, top_total])
+	check("all decor sprites have bodies + ink contour", bad_decor.is_empty(),
+		",".join(bad_decor))
+
 	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
 	var apex: Kin = null
 	for q in game.pals:

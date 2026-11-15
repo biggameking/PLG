@@ -34,3 +34,26 @@ https://opengameart.org/content/lowpoly-animated-monsters — stored under
 Slime→all `blob` species (`no_eyes` — the mesh's own eye material is used).
 Bat/Dragon/Skeleton blends kept for future bodies — Skeleton was probed for
 `human` and rejected (detached bone segments read as floating fragments).
+
+## Quaternius "Ultimate Nature Pack" (CC0)
+
+Downloaded from
+https://opengameart.org/sites/default/files/ultimate_nature_pack_by_quaternius_1.zip
+(pack page: https://quaternius.com/packs/ultimatenature.html). Stored under
+`tools/art/src/nature/`, pack's own `License.txt` in-tree. S102 decor
+migration — used meshes, via `tools/art/render_decor.py` + `post_decor.py`:
+
+- PineTree_2 → `tree_a` (conifer)
+- BirchTree_1 → `tree_b` (round canopy, source White/Black birch bark)
+- BushBerries_1 → `berry_bush`
+- Rock_2 → `rock`, `ore_coal` (dark), `ore_gold` (warm) — recolor variants
+- TreeStump_Moss → `stump`
+
+Output dims match the replaced sprites exactly (bottom-anchor semantics of
+the decor pool in `src/main.gd` preserved — no code change needed).
+Note: legacy blends carry double-output node trees whose render output is a
+DIFFUSE node — `render_decor.py` rebuilds a clean Principled material when
+recoloring (setting Principled inputs on the source material reaches nothing).
+
+Kept-but-unused blends for future decor/POI work: CommonTree_1, Flowers,
+Grass, Rock_Moss_3, WoodLog_Moss.
