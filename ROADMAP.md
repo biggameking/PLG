@@ -1400,3 +1400,35 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   audit_data ALL CLEAN, check_ip CLEAN.
 - Remaining: 8 accessory species still primitive until a mesh accessory
   layer exists; unused Bat/Dragon/Cyclops/Demon kept for future bodies.
+
+### S100 — accessory layer → 116/116 mesh coverage — SHIPPED (d5f83e0)
+- render_src_asset.add_accessory(): primitive marks (crown/halo/horns/
+  crest/fins/mask/wings) bone-parented to the armature head bone —
+  they ride Idle animation, matching the legacy route's placement.
+- Anchoring that survived three rework rounds: head_anchor() shared
+  face/fwd/lateral basis; head_group_top() takes the skull top from
+  vertices weighted to the head bone (silhouette max fails on raised
+  bird wings, bone tail lands at the muzzle on quadrupeds);
+  real_head_bone() weight-votes the cfg bone and remaps unweighted
+  control/IK bones (Ghost Head→Body, Slime→Head3, Eagle→Bone.004).
+- Action + f0 settled BEFORE bone-parenting — offsets computed at rest
+  get dragged by the pose delta (wolf horns ended up under the chin).
+- crown/halo/horns span fwd-z so pure side-view rigs still read the
+  mark; accent colour value-floored so dark species don't swallow it.
+- Full 116 re-render; batch 107 ok/0 failed; smoke 972/0/1skip;
+  audit ALL CLEAN; IP CLEAN. Evidence: docs/reviews/s100-sheet116.png,
+  s100-accessories.png. Zero primitive species remain.
+
+### S100b — audit-53 fixes (cold review NEEDS-FIX → shipped)
+- Cold audit (context-free subagent) found 6 MED + 7 LOW against the
+  accessory layer — all fixed: sphere dims now in (lat,fwd,z) basis,
+  hw measurement needs z-band AND xy window, silhouette-top fallback
+  WARNs, humanoid -Y fallback carries rig yaw, head-bone vote is
+  distance-weighted + margined, _loc_fcurves dedupes by as_pointer
+  (Blender 4.4/4.5 double-scale trap), post_kin refuses blank renders.
+- Eyes/noses clamp to head_group_span (the head cluster's own z-band) —
+  Wolf's Bone.003 tail reports z=-0.53 under Idle f0; bone-space bands
+  bury parts, geometry-space bands don't.
+- batch_mesh.sh covers all 116 (hand CFGs resolved from # blend
+  comments); mktemp -d scratch; PROVENANCE corrected.
+- Doc: docs/reviews/audit-53-accessory-anchor.md.

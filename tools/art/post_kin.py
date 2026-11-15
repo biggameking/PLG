@@ -156,6 +156,11 @@ def process(sid):
     for f in (0, 1):
         img = Image.open(os.path.join(A, "%s_f%d.png" % (sid, f))).convert("RGBA")
         img = crop_alpha(img)
+        # a fully/nearly transparent render (camera miss, hidden mesh, dead
+        # action) must not pass as "ok" — bail so the batch tally stays true
+        if sum(img.getchannel("A").histogram()[41:]) < 50:
+            sys.exit("FAIL %s_f%d: blank render "
+                     "(<50 opaque px)" % (sid, f))
         img = cel_band(img)
         img = warm_lift(img)
         img = fit(img)

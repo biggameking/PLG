@@ -138,7 +138,6 @@ def mat(col, name):
 def shift_hsv(c, dh, ds, dv):
     """Hue/sat/value nudge — mirrors rig_auto.shift so mesh accessories get
     the same feature accent the primitive rigs stamp."""
-    import colorsys
     h, s, v = colorsys.rgb_to_hsv(*c)
     return colorsys.hsv_to_rgb((h + dh) % 1.0,
                                min(1, max(0, s * ds)),
@@ -204,14 +203,21 @@ def eval_verts(o):
 
 def _loc_fcurves(act):
     """Yield fcurves across Blender versions — 5.x nests them under
-    layers->strips->channelbags, 4.x kept act.fcurves."""
+    layers->strips->channelbags, 4.x kept act.fcurves. Dedupe by pointer:
+    4.4/4.5 expose the SAME fcurve through both APIs — scaling each key
+    twice per pass makes pose-dominated rigs (Cat) diverge."""
+    seen = set()
     for lay in getattr(act, "layers", []):
         for st in lay.strips:
             for cb in getattr(st, "channelbags", []):
                 for fc in cb.fcurves:
-                    yield fc
+                    if fc.as_pointer() not in seen:
+                        seen.add(fc.as_pointer())
+                        yield fc
     for fc in getattr(act, "fcurves", []):
-        yield fc
+        if fc.as_pointer() not in seen:
+            seen.add(fc.as_pointer())
+            yield fc
 
 
 def normalize(objs, target_h):
@@ -291,12 +297,10 @@ def bone_attach(arm, bone_name, ob, world_m):
     ob.matrix_world = world_m
 
 
-def head_group_top(arm, mesh_obj, bone_name):
-    """Skull-top anchor from the mesh itself: evaluated positions of verts
-    weighted to the head bone's vgroup. Pose-independent — the anchor sits
-    on the head GEOMETRY wherever the rig actually puts it, so throat/jaw
-    bones can't drag a crown under the chin (wolf Bone.003 did exactly
-    that). Returns (htop Vector) or None."""
+def _head_pts(arm, mesh_obj, bone_name):
+    """Pose-space positions of raw verts weighted >0.5 to the head bone —
+    the cluster that IS the head geometry, whatever the rig does to the
+    bone itself. None when the vgroup is missing or unweighted."""
     try:
         gi = mesh_obj.vertex_groups.find(bone_name)
     except Exception:
@@ -312,19 +316,39 @@ def head_group_top(arm, mesh_obj, bone_name):
     # transform them by the bone's pose delta
     pb = arm.pose.bones[bone_name]
     pose_m = arm.matrix_world @ pb.matrix  # bone pose in world
-    rest_m = arm.matrix_world @ mathutils.Matrix.Translation(
-        arm.data.bones[bone_name].head_local)
     # approximate: move the rest-space vert cluster by the bone's pose
     # translation only (head marks tolerate ~0.05 drift)
     mw = mesh_obj.matrix_world
     delta = pose_m.translation - (arm.matrix_world @
                                 arm.data.bones[bone_name].head_local)
-    pts = [mw @ mesh_obj.data.vertices[i].co + delta for i in owned]
+    return [mw @ mesh_obj.data.vertices[i].co + delta for i in owned]
+
+
+def head_group_top(arm, mesh_obj, bone_name):
+    """Skull-top anchor from the mesh itself: evaluated positions of verts
+    weighted to the head bone's vgroup. Pose-independent — the anchor sits
+    on the head GEOMETRY wherever the rig actually puts it, so throat/jaw
+    bones can't drag a crown under the chin (wolf Bone.003 did exactly
+    that). Returns (htop Vector) or None."""
+    pts = _head_pts(arm, mesh_obj, bone_name)
+    if not pts:
+        return None
     hi = max(p.z for p in pts)
     top = [p for p in pts if p.z > hi - 0.06]
     return mathutils.Vector((
         sum(p.x for p in top) / len(top),
         sum(p.y for p in top) / len(top), hi))
+
+
+def head_group_span(arm, mesh_obj, bone_name):
+    """(lo_z, hi_z) of the head-weighted vert cluster in pose space — the
+    band eyes/noses must stay inside even when the bone tail sits somewhere
+    nonsensical (Wolf's Bone.003 tail reports z=-0.53 under Idle f0)."""
+    pts = _head_pts(arm, mesh_obj, bone_name)
+    if not pts:
+        return None
+    zs = [p.z for p in pts]
+    return min(zs), max(zs)
 
 
 def real_head_bone(arm, mesh_obj, cfg_bn):
@@ -349,20 +373,27 @@ def real_head_bone(arm, mesh_obj, cfg_bn):
         return cfg_bn
     tally = {}
     for i in idx:
+        # distance-weighted: a raised wingtip can land in the top band near
+        # the beak's xy (Eagle) — verts right at the rest tail must dominate
+        # or the vote remaps the head anchor onto a wing bone (audit-53)
+        d = (ws[i].xy - tip.xy).length / max(0.1 * (hi - lo), 0.01)
         for g in mesh_obj.data.vertices[i].groups:
             nm = mesh_obj.vertex_groups[g.group].name
-            tally[nm] = tally.get(nm, 0.0) + g.weight
+            tally[nm] = tally.get(nm, 0.0) + g.weight / (1.0 + d)
     if not tally:
         return cfg_bn
     best = max(tally, key=tally.get)
-    if best != cfg_bn and best in arm.pose.bones:
+    # margin: only override the cfg when the winner clearly beats it —
+    # near-ties mean the cfg bone is still a valid head driver
+    if (best != cfg_bn and best in arm.pose.bones
+            and tally[best] > 1.5 * tally.get(cfg_bn, 0.0)):
         print("WARN head_bone '%s' is not weighted at the head — "
               "real driver '%s'" % (cfg_bn, best))
         return best
     return cfg_bn
 
 
-def head_anchor(arm, bone_name, cfg, zcap=None):
+def head_anchor(arm, bone_name, cfg, zcap=None, head_span=None):
     """Face anchor shared by eyes/accessories: muzzle dir (head→tail) +
     lateral cross. POSE-space coords only. Returns (center, fwd, lat)."""
     pb = arm.pose.bones[bone_name]
@@ -372,22 +403,40 @@ def head_anchor(arm, bone_name, cfg, zcap=None):
     fwd.z = 0
     if fwd.length < 1e-6 or fwd.length < 0.3 * (t - h).length:
         # near-vertical head bone (humanoid rigs like Skeleton): there is no
-        # muzzle direction — use the model's authored -Y facing instead of a
-        # collapsed lateral that strands eyes off-frame
-        fwd = mathutils.Vector((0.0, -1.0, 0.0))
+        # muzzle direction — use the model's authored -Y facing carried
+        # through the rig's own yaw (rot_z), else rotated humanoids get an
+        # eye line skewed ~35° off the face (audit-53)
+        fwd = arm.matrix_world.to_3x3() @ mathutils.Vector((0.0, -1.0, 0.0))
+        fwd.z = 0.0
+        if fwd.length < 1e-6:
+            fwd = mathutils.Vector((0.0, -1.0, 0.0))
     fwd = fwd.normalized()
     lat = mathutils.Vector((-fwd.y, fwd.x, 0.0))
     center = t + fwd * cfg["eye_fwd"] + mathutils.Vector((0, 0, cfg["eye_up"]))
-    if zcap is not None:
+    if head_span is not None:
+        # the head cluster's own z-band is the honest clamp: a bone tail can
+        # sit under the floor (Wolf Bone.003 → -0.53) or past the muzzle and
+        # the eyes still land inside the head's upper half (audit-53)
+        lo_h, hi_h = head_span
+        center.z = min(max(center.z, hi_h - 0.55 * (hi_h - lo_h)),
+                       hi_h - 0.10 * (hi_h - lo_h))
+    elif zcap is not None:
         lo_z, hi_z = zcap
         center.z = min(max(center.z, lo_z + 0.35 * (hi_z - lo_z)),
                        hi_z + 0.05 * (hi_z - lo_z))
+    if zcap is not None:
+        s = (zcap[1] - zcap[0]) / 1.4
+        dxy = mathutils.Vector((center.x - t.x, center.y - t.y))
+        if dxy.length > 0.6 * s:
+            dxy.normalize()
+            center.x = t.x + dxy.x * 0.6 * s
+            center.y = t.y + dxy.y * 0.6 * s
     return center, fwd, lat, t
 
 
-def add_eyes(arm, bone_name, cfg, m, zcap=None):
+def add_eyes(arm, bone_name, cfg, m, zcap=None, head_span=None):
     """Ink beads auto-placed from the head bone — works on any rig."""
-    center, fwd, lat, t = head_anchor(arm, bone_name, cfg, zcap)
+    center, fwd, lat, t = head_anchor(arm, bone_name, cfg, zcap, head_span)
     for sgn in (-1, 1):
         bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12,
                                              radius=cfg["eye_r"])
@@ -404,7 +453,9 @@ def add_eyes(arm, bone_name, cfg, m, zcap=None):
         e.data.materials.append(m)
         p = t + fwd * (cfg["eye_fwd"] + 0.04) + mathutils.Vector(
             (0, 0, cfg["nose_up"]))
-        if zcap is not None:
+        if head_span is not None:
+            p.z = min(max(p.z, head_span[0]), head_span[1])
+        elif zcap is not None:
             p.z = min(max(p.z, zcap[0]), zcap[1] + 0.05 * (zcap[1] - zcap[0]))
         bone_attach(arm, bone_name, e,
                     mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
@@ -420,7 +471,8 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
     kind = cfg.get("accessory")
     if not kind:
         return
-    face, fwd, lat, tail = head_anchor(arm, bone_name, cfg, zcap)
+    head_span = head_group_span(arm, objs[0], bone_name)
+    face, fwd, lat, tail = head_anchor(arm, bone_name, cfg, zcap, head_span)
     hi_z = zcap[1] if zcap else face.z + 0.2
     s = (zcap[1] - zcap[0]) / 1.4 if zcap else 1.0  # normalized-height scale
     # measure the head's real extents around the FACE anchor (where the eyes
@@ -435,7 +487,11 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
     for w in head_col:
         lv = (w.x - face.x) * lat.x + (w.y - face.y) * lat.y
         fv = (w.x - face.x) * fwd.x + (w.y - face.y) * fwd.y
-        if abs(w.z - face.z) < 0.35 * s:
+        # z-slab AND xy window around the face — otherwise torso tops and
+        # wing spans inflate "head width" (halo sized off the chest on
+        # Horse, audit-53)
+        if (abs(w.z - face.z) < 0.35 * s and abs(lv) < 0.5 * s
+                and -0.6 * s < fv < 0.6 * s):
             hw_lat = max(hw_lat, abs(lv))
             hw_fwd = max(hw_fwd, fv)
     # skull top from the head-bone's OWN weighted verts — the cranium rides
@@ -459,10 +515,20 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
             htop = mathutils.Vector((
                 sum(w.x for w in top_v) / len(top_v),
                 sum(w.y for w in top_v) / len(top_v), htop_z))
+        else:
+            # silhouette top on a raised-wing bird is a WINGTIP — a mark
+            # anchored there floats off the head; warn so batch can see it
+            print("WARN accessory anchor fell back to silhouette top")
     # marks that must sit ON the head mid-level anchor at the face column
     hpos = mathutils.Vector((face.x, face.y, max(face.z, tail.z)))
     print("HEAD_EXT lat=%.2f fwd=%.2f htz=%.2f" % (hw_lat, hw_fwd, htop_z))
     placed = 0
+
+    # sphere dims are expressed in the (lat, fwd, z) basis — a crest's
+    # long axis must run fore-aft even on yawed rigs; world-Y only lucks
+    # out when rot_z=0 (flarbeak got a lateral blade at rot_z=90, audit-53)
+    basis = mathutils.Matrix(
+        (lat, fwd, mathutils.Vector((0.0, 0.0, 1.0)))).transposed().to_4x4()
 
     def put(shape, p, dims, rot=None):
         nonlocal placed
@@ -472,11 +538,14 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
         else:
             bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=dims[0],
                                                 depth=dims[1])
-            dims = (1.0, 1.0, 1.0)
         e = bpy.context.active_object
         e.data.materials.append(accent_m)
-        m = mathutils.Matrix.Translation(p) @ mathutils.Matrix.Diagonal(
-            (*dims, 1.0))
+        if shape == "sph":
+            m = mathutils.Matrix.Translation(p) @ basis @ \
+                mathutils.Matrix.Diagonal((*dims, 1.0))
+        else:
+            # cylinders are axis-aligned already; radius/depth carry size
+            m = mathutils.Matrix.Translation(p)
         if rot is not None:
             m = m @ rot
         bone_attach(arm, bone_name, e, m)
@@ -523,9 +592,12 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
         put("sph", hpos + fwd * (hw_fwd + 0.03 * s) - mathutils.Vector(
             (0, 0, 0.14 * s)), (0.28 * s, 0.06 * s, 0.11 * s))
     elif kind == "wings":
-        put("sph", hpos - fwd * (0.24 * s) - mathutils.Vector(
-            (0, 0, 0.05 * s)), (0.36 * s, 0.07 * s, 0.20 * s),
-            mathutils.Matrix.Rotation(0.5, 4, lat))
+        # tilt about local X (= world lat once the basis maps it) so the
+        # wing sheet rakes back instead of spinning around an axis it no
+        # longer owns in the lat/fwd frame (audit-53)
+        put("sph", hpos - fwd * (0.45 * s) - mathutils.Vector(
+            (0, 0, 0.02 * s)), (0.36 * s, 0.07 * s, 0.20 * s),
+            mathutils.Matrix.Rotation(0.5, 4, 'X'))
     else:
         print("WARN accessory '%s' unknown — none placed" % kind)
         return
@@ -637,7 +709,10 @@ def main():
         print("WARN %d mesh objects — only '%s' is processed" %
               (len(meshes), src.name))
     for o in bpy.data.objects:
-        o.hide_render = False
+        # respect objects the source author hid (cutters/helpers) — only
+        # unhide render-hidden ones we actually need (audit-53)
+        if not o.hide_get():
+            o.hide_render = False
 
     # face the camera before anything else — eyes normalize against this pose
     arm.rotation_euler.z = math.radians(cfg.get("rot_z", 0.0))
@@ -729,8 +804,9 @@ def main():
             for w in eval_verts(o):
                 zlo = w.z if zlo is None else min(zlo, w.z)
                 zhi = w.z if zhi is None else max(zhi, w.z)
+        hspan = head_group_span(arm, objs[0], head_bn)
         add_eyes(arm, head_bn, cfg, em,
-                 (zlo, zhi) if zlo is not None else None)
+                 (zlo, zhi) if zlo is not None else None, hspan)
     if cfg.get("accessory"):
         if hb is None:
             print("WARN accessory '%s' skipped — head bone missing" %

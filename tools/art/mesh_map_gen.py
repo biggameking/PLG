@@ -22,7 +22,6 @@ HAND = {"fenjelly", "scalcrest", "scalfang", "branpurr", "tidscale",
 # marks the source meshes lack (crown/halo/horns/crest/fins/mask/wings), so
 # they migrate with everyone else. The kind is passed through per species.
 import rig_auto
-ACCESSORY_SIDS = set(rig_auto.ACCESSORY) - HAND
 
 VOL2 = "animal_pack2/Animal Pack Vol.2 by @Quaternius/Blends/"
 FARM = "farm_animals/Farm Animals by @Quaternius/Blends/"

@@ -18,8 +18,10 @@ var anim_t := 0.0
 var frame := 0
 
 func setup_visuals(t0: String, t1: String, bottom_px := 64.0) -> void:
-	tex0 = load(t0)
-	tex1 = load(t1)
+	# missing sprite => chest fallback per the load contract — never a
+	# null texture on screen
+	tex0 = load(t0) if ResourceLoader.exists(t0) else load("res://assets/structures/chest.png")
+	tex1 = load(t1) if ResourceLoader.exists(t1) else tex0
 	shadow_spr = Sprite2D.new()
 	shadow_spr.texture = load("res://assets/shadow.png")
 	shadow_spr.position = Vector2(0, -2)
