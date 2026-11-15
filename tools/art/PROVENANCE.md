@@ -57,3 +57,14 @@ recoloring (setting Principled inputs on the source material reaches nothing).
 
 Kept-but-unused blends for future decor/POI work: CommonTree_1, Flowers,
 Grass, Rock_Moss_3, WoodLog_Moss.
+
+## S103 ground tiles — fully procedural Blender geometry (no external mesh)
+
+`tools/art/render_tile.py` builds each ground cell procedurally (slab +
+cones/icospheres/tori/cubes detail) under a dimetric camera (az 45°, el 30°
+→ the game's 2:1 diamond) and the kin light rig; `post_tile.py` masks to
+the exact diamond (no ink outline — cell edges are shared with neighbors);
+`build_tiles.py` assembles tiles.png/tiles.json (wall/stair/marker cells
+still come from gen_assets' procedural painters — the flat cliff look is
+deliberate contrast). `gen_assets.py` atlas() is gated behind
+`--tiles-legacy` (audit-55 lesson: gate every writer of a migrated file).

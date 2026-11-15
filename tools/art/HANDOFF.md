@@ -130,3 +130,18 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
 - smoke 新增装饰钉：每个 decor PNG 必须存在、opaque≥40、ink≥2、且
   非全出血（opaque<95% 总像素——全出血=相机裁了网格）。
 - 实机证据：`docs/reviews/s102-world.png`（tools/shot.gd play 帧）。
+
+## S103 地砖迁移（程序几何 → tiles atlas）
+
+- `render_tile.py`：factory-startup 起空场景，每 tile 程序化建 slab+细节
+  （blades 锥体/flowers 球/ripples+waves 环/stones+clods 球/ridges 立方条），
+  dimetric 相机（az45/el30 → 顶面投影恰为 2:1 菱形），kin 同 rig。
+- 坑：kin rig 曝光 ≈1.45×——CFG col 必须按目标色 ÷~1.4，否则整体发白。
+- `post_tile.py`：裁→cel/warm→64×32→严格菱形 mask（任何超出会渗进邻格）
+  →贴进 64×64 cell 上半部；**不打墨描边**（描边=全地图暗格线）。
+- `build_tiles.py`：只装 GROUND 16 格 + 仍由 gen_assets 程序画 wall/stair/
+  marker（cliff 暗紫是刻意的对比）；manifest 布局与 world_drawer 约定一致。
+- smoke 新钉：atlas 每地面格菱形内 opaque≥800 且亮度方差非零。
+- 回退路径已堵：`gen_assets.py` 的 atlas() 也加了 `--tiles-legacy` 门
+  （audit-55 课的直接应用，不再等审计发现第二遍）。
+- 实机证据：`docs/reviews/s103-terrain.png`。

@@ -4256,6 +4256,52 @@ func run() -> void:
 	check("all decor sprites have bodies + ink contour", bad_decor.is_empty(),
 		",".join(bad_decor))
 
+	# terrain atlas: every ground cell must fill its diamond with opaque
+	# pixels and real luminance variance — a blank cell, a mis-offset
+	# manifest, or a fully flat flood-fill all fail. (A speckled flat fill
+	# can still pass variance; the pin's job is missing/blank/misplaced,
+	# not style.)
+	var bad_tile := []
+	var timg := Image.load_from_file("res://assets/tiles.png")
+	var tmani: Dictionary = {}
+	if FileAccess.file_exists("res://assets/tiles.json"):
+		tmani = JSON.parse_string(FileAccess.get_file_as_string("res://assets/tiles.json")).get("tiles", {})
+	if timg == null or tmani.is_empty():
+		bad_tile.append("atlas/json missing")
+	else:
+		for tname in ["grass_0", "grass_1", "grass_2", "grass_3",
+				"tallgrass_0", "tallgrass_1", "flower_0", "flower_1",
+				"sand_0", "sand_1", "water_0", "water_1",
+				"stonefield_0", "stonefield_1", "dirt_0", "farmland_0"]:
+			if not tmani.has(tname):
+				bad_tile.append("%s:no-cell" % tname); continue
+			var tcx: int = tmani[tname][0] * 64
+			var topaq := 0; var tlum := 0.0; var tlum2 := 0.0; var tn := 0
+			var edge_opaque := 0; var edge_total := 0
+			for ty2 in range(0, 33): # diamond rows 0-32 of the cell
+				for tx2 in range(0, 64):
+					var dxa: float = abs(tx2 - 32.0) / 32.0
+					var ytop := 16.0 * dxa
+					var ybot := 32.0 - 16.0 * dxa
+					if ytop <= ty2 and ty2 <= ybot:
+						var tpx := timg.get_pixel(tcx + tx2, tmani[tname][1] * 64 + ty2)
+						if ty2 < ytop + 3 or ty2 > ybot - 3: # 3px rim band
+							edge_total += 1
+							if tpx.a > 0.9:
+								edge_opaque += 1
+						if tpx.a > 0.9:
+							topaq += 1
+							var lum := tpx.r * 0.3 + tpx.g * 0.6 + tpx.b * 0.1
+							tlum += lum; tlum2 += lum * lum; tn += 1
+			var tvar: float = tlum2 / tn - (tlum / tn) * (tlum / tn) if tn > 0 else 0.0
+			# the rim band must be opaque — a semi-transparent edge draws a
+			# seam grid on the map (audit-56: the mask must cut opaque
+			# interior, not a feathered render edge)
+			if topaq < 800 or tvar < 0.0002 or edge_opaque < edge_total * 0.95:
+				bad_tile.append("%s:opaque=%d,var=%f,edge=%d/%d" % [tname, topaq, tvar, edge_opaque, edge_total])
+	check("all ground tiles have textured diamonds", bad_tile.is_empty(),
+		",".join(bad_tile))
+
 	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
 	var apex: Kin = null
 	for q in game.pals:

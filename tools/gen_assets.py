@@ -1310,8 +1310,12 @@ if __name__ == "__main__":
         print("generating kin (legacy flat)…")
         for sid in SPRITES:
             render_pal(sid)
-    print("generating atlas…")
-    atlas()
+    # ground tiles moved to the Blender tile pipeline
+    # (tools/art/render_tile.py + post_tile.py + build_tiles.py);
+    # pass --tiles-legacy to regenerate the flat procedural atlas.
+    if "--tiles-legacy" in sys.argv:
+        print("generating atlas (legacy flat)…")
+        atlas()
     # decor sprites moved to the Blender nature pipeline
     # (tools/art/render_decor.py + post_decor.py); pass --decor-legacy to
     # regenerate the flat procedural fallbacks.

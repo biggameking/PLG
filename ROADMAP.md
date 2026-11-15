@@ -1466,3 +1466,13 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - 实机证据 `docs/reviews/s102-world.png`；smoke 新增全 decor
   存在/不透明/墨描边/非全出血断言（974/0/1skip，audit ALL CLEAN，
   IP CLEAN）。
+
+## S103 — 地砖迁移（16 地面格 → 程序几何渲染）
+
+- tiles.png 的 16 个地面格从平涂菱形迁到 Blender 程序几何（草叶/花/
+  波环/卵石/土块/田垄），dimetric 30°/45° 相机严格投影 2:1 菱形；
+  无墨描边防网格线；wall/stair/marker 格保留程序画（崖面对比）。
+- `render_tile.py`/`post_tile.py`/`build_tiles.py` 新管线；
+  `gen_assets atlas()` 加 `--tiles-legacy` 门（audit-55 课的应用）。
+- smoke 加 atlas 地面格钉；实机证据 `docs/reviews/s103-terrain.png`；
+  smoke 971/0/1skip。
