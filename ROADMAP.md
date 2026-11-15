@@ -1432,3 +1432,27 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - batch_mesh.sh covers all 116 (hand CFGs resolved from # blend
   comments); mktemp -d scratch; PROVENANCE corrected.
 - Doc: docs/reviews/audit-53-accessory-anchor.md.
+
+### S101 — player migration (last primitive unit → source mesh)
+- Player rendered via Alien_Tall.blend (CC0): zone_mats splits the single
+  material by bind-z bands into trousers/jacket/skin; `hat` accessory
+  anchors brim+crown at the silhouette top (Alien's 'Head' vgroup covers
+  the face only — silhouette top IS the crown for this rig).
+- `strip_islands` removes baked face islands by region (upper-front
+  small islands = the 4 eyeballs); arms and mouth socket survive — the
+  socket sits below the eyes and reads as the mouth/beard at 80px.
+- `eye_abs_z` escape hatch when vgroup bands leave the visual face
+  unreachable (Alien: Head≤0.87, Head3≥1.14, face mid ~0.98).
+- zone_mats must materials.clear() before appending — slot index drift
+  was the first-live-render bug (colors shifted one zone).
+- player joins batch list via hand-CFG regex; smoke sprite sweep now
+  covers "player" (body+ink). Smoke 969/0/1skip, audit ALL CLEAN.
+- Consumers unchanged: player.gd, ghost.gd, merchant portraits all load
+  the same player_f{0,1}.png paths.
+- Cold audit (audit-54, context-free) → NEEDS-FIX closed: a sed bulk
+  replace had flipped 3 species' head_bone to a nonexistent "Head2"
+  (eyeless next render, uncatchable by ink); hat anchor moved off the
+  global silhouette top; face-band interior ink pin added for player;
+  strip_islands thresholds now bind-z fractions with per-island logs +
+  strip_expect; zone band gaps snap+WARN; eye_abs_z guards + shares the
+  nose anchor; puffs fallback material. Smoke 971/0/1skip.

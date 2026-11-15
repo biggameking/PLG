@@ -4187,7 +4187,7 @@ func run() -> void:
 	# every kin sprite: real pixels + a face — the Blender pipeline must not
 	# ship an empty frame, a clipped blob, or a featureless lump
 	var bad_kin := []
-	for ksid in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys():
+	for ksid in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys() + ["player"]:
 		for kf in ["f0", "f1"]:
 			var kimg := Image.load_from_file("res://assets/kin/%s_%s.png" % [ksid, kf])
 			if kimg == null:
@@ -4203,6 +4203,22 @@ func run() -> void:
 			if opaque < 40 or ink < 2:
 				bad_kin.append("%s_%s:opaque=%d,ink=%d" % [ksid, kf, opaque, ink])
 	check("all kin sprites have bodies + ink", bad_kin.is_empty(), ",".join(bad_kin))
+
+	# player face pin: the generic ink count can't see eyes — the hat and
+	# the silhouette outline already supply dozens of dark px (audit-54
+	# MED-4). Require ink INSIDE the face band (rows 30-55%, cols 30-72%)
+	# where the two eye beads live — an eyeless/buried-eye render fails.
+	var pimg := Image.load_from_file("res://assets/kin/player_f0.png")
+	var eye_ink := 0
+	if pimg != null:
+		var pimw := pimg.get_width(); var pimh := pimg.get_height()
+		for ey in range(int(pimh * 0.30), int(pimh * 0.55)):
+			for ex in range(int(pimw * 0.30), int(pimw * 0.72)):
+				var epx := pimg.get_pixel(ex, ey)
+				if epx.a > 0.9 and epx.r < 0.25 and epx.g < 0.25 and epx.b < 0.3:
+					eye_ink += 1
+	check("player sprite has face-band ink (eyes)", pimg != null and eye_ink >= 8,
+		"ink=%d" % eye_ink)
 
 	# apex hostiles (hostile==2) auto-aggro on sight and skip night sleep
 	var apex: Kin = null

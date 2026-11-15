@@ -19,6 +19,23 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "render")
 # offsets solved AFTER normalizing (script prints the head-bone position so
 # tuning is one render round-trip) · subd/displace = surface complexity knobs
 CFG = {
+    "player": {      # Alien_Tall.blend — the rancher (zone-matted outfit + hat)
+        "zone_mats": [(0.0, 0.28, (0.30, 0.62, 0.88)),   # trousers #4d9de0
+                      (0.28, 0.56, (0.82, 0.48, 0.24)),  # jacket #d17b3c
+                      (0.56, 1.01, (0.91, 0.79, 0.63))], # skin #e8c9a0
+        "strip_islands": True,  # strip the alien's 4 baked eyeball islands
+        "strip_expect_faces": 528,
+        "accessory": "hat", "acc_col": (0.16, 0.14, 0.18),
+        "subd_wool": 2, "displace": None,
+        "rot_z": 25.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Head3",  # dome driver (vgroup z 0.98-1.35) — 'Head'
+                               # is jaw, 'Head2' mid-face; verified by the
+                               # weight-vote remap, not by name
+        "eye_r": 0.06, "eye_gap": 0.13, "eye_fwd": 0.50, "eye_up": -0.15,
+        "eye_abs_z": 0.98,
+        "nose_r": None,
+        "target_h": 1.35,
+    },
     "fenjelly": {
         "wool_mat_idx": 0,          # Quaternius 'White'
         "mats": [(0.93, 0.88, 0.78), (0.80, 0.66, 0.53)],
@@ -413,7 +430,21 @@ def head_anchor(arm, bone_name, cfg, zcap=None, head_span=None):
     fwd = fwd.normalized()
     lat = mathutils.Vector((-fwd.y, fwd.x, 0.0))
     center = t + fwd * cfg["eye_fwd"] + mathutils.Vector((0, 0, cfg["eye_up"]))
-    if head_span is not None:
+    if cfg.get("eye_abs_z") is not None:
+        # explicit world-z override — rigs whose vgroup bands leave the
+        # visual face center unreachable (Alien: Head≤0.94, Head3≥0.98)
+        center.z = cfg["eye_abs_z"]
+        if head_span is not None:
+            lo_h, hi_h = head_span
+            sp = max(hi_h - lo_h, 1e-6)
+            if center.z < lo_h - 0.1 * sp or center.z > hi_h + 0.1 * sp:
+                print("WARN eye_abs_z %.2f outside head span %.2f..%.2f" %
+                      (center.z, lo_h, hi_h))
+        elif zcap is not None and not (
+                zcap[0] - 0.05 <= center.z <= zcap[1] + 0.05):
+            print("WARN eye_abs_z %.2f outside mesh z %.2f..%.2f" %
+                  (center.z, zcap[0], zcap[1]))
+    elif head_span is not None:
         # the head cluster's own z-band is the honest clamp: a bone tail can
         # sit under the floor (Wolf Bone.003 → -0.53) or past the muzzle and
         # the eyes still land inside the head's upper half (audit-53)
@@ -453,7 +484,11 @@ def add_eyes(arm, bone_name, cfg, m, zcap=None, head_span=None):
         e.data.materials.append(m)
         p = t + fwd * (cfg["eye_fwd"] + 0.04) + mathutils.Vector(
             (0, 0, cfg["nose_up"]))
-        if head_span is not None:
+        if cfg.get("eye_abs_z") is not None:
+            # nose shares the eyes' explicit z-space, else eye and nose
+            # anchors disagree (audit-54)
+            p.z = cfg["eye_abs_z"] - 0.06 + cfg["nose_up"]
+        elif head_span is not None:
             p.z = min(max(p.z, head_span[0]), head_span[1])
         elif zcap is not None:
             p.z = min(max(p.z, zcap[0]), zcap[1] + 0.05 * (zcap[1] - zcap[0]))
@@ -588,6 +623,22 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
                 0.03 * s * sx) - mathutils.Vector((0, 0, 0.04 * s)),
                 (0.05 * s, 0.16 * s, 0.13 * s),
                 mathutils.Matrix.Rotation(sx * 0.5, 4, 'Z'))
+    elif kind == "hat":
+        # rancher hat: wide brim + crown on the skull top (player identity).
+        # Anchor to the head-band top (vgroup/skull column), NOT the global
+        # silhouette top — on rigs where an appendage rises past the head,
+        # hi_z is the appendage tip and the hat floats off the face (audit-54)
+        hat_z = htop_z
+        if hi_z - hat_z > 0.1 * s:
+            print("WARN hat anchor %.2f below silhouette top %.2f — "
+                  "something rises past the head" % (hat_z, hi_z))
+        hat_top = mathutils.Vector((face.x, face.y, hat_z))
+        put("cyl", hat_top - mathutils.Vector((0, 0, 0.05 * s)),
+            (0.42 * s, 0.06 * s))
+        put("cyl", hat_top + mathutils.Vector((0, 0, 0.07 * s)),
+            (0.20 * s, 0.16 * s))
+        # the alien's sculpted mouth socket now sits BELOW the eyes — it
+        # reads as the character's open mouth, no plug needed
     elif kind == "mask":
         put("sph", hpos + fwd * (hw_fwd + 0.03 * s) - mathutils.Vector(
             (0, 0, 0.14 * s)), (0.28 * s, 0.06 * s, 0.11 * s))
@@ -718,7 +769,91 @@ def main():
     arm.rotation_euler.z = math.radians(cfg.get("rot_z", 0.0))
     bpy.context.view_layer.update()
 
-    if cfg.get("mat_map"):
+    if cfg.get("zone_mats"):
+        # single-material mesh recolored by height bands — faces get the
+        # zone material matching their bind-space z fraction (player's
+        # jacket/trousers/skin on Alien_Tall)
+        objs = [src]
+        if cfg.get("strip_islands"):
+            # the source's baked eyeballs are disconnected islands floating
+            # in front of the upper head — drop small islands that live
+            # entirely in the upper-front zone. Thresholds are fractions of
+            # the bind z-span (audit-54): Alien's eyeballs sit fz>0.45,
+            # fy<-0.10; arms survive on fz_min≈0.30 (the y guard alone
+            # would NOT protect them — their fy_max is only −0.07).
+            import bmesh
+            bm = bmesh.new()
+            bm.from_mesh(src.data)
+            zlo_i = min(v.co.z for v in src.data.vertices)
+            zspan_i = max(max(v.co.z for v in src.data.vertices) - zlo_i,
+                          1e-6)
+            seen = set()
+            doomed = []
+            for f in bm.faces:
+                if f.index in seen:
+                    continue
+                stack, isl = [f], []
+                while stack:
+                    g = stack.pop()
+                    if g.index in seen:
+                        continue
+                    seen.add(g.index)
+                    isl.append(g)
+                    for e in g.edges:
+                        for lf in e.link_faces:
+                            if lf.index not in seen:
+                                stack.append(lf)
+                zs = [v.co.z for g in isl for v in g.verts]
+                ys = [v.co.y for g in isl for v in g.verts]
+                fz_min = (min(zs) - zlo_i) / zspan_i
+                fy_max = max(ys) / zspan_i
+                hit = (len(isl) < cfg.get("strip_max_faces", 200)
+                       and fz_min > 0.42 and fy_max < -0.10)
+                if hit:
+                    doomed += isl
+                print("ISLAND faces=%d fz=%.2f..%.2f fy=%.2f..%.2f %s" % (
+                    len(isl), (min(zs) - zlo_i) / zspan_i,
+                    (max(zs) - zlo_i) / zspan_i, min(ys) / zspan_i, fy_max,
+                    "DROP" if hit else "keep"))
+            bmesh.ops.delete(bm, geom=doomed, context='FACES')
+            bm.to_mesh(src.data)
+            bm.free()
+            want = cfg.get("strip_expect_faces")
+            if want is not None and len(doomed) != want:
+                print("WARN strip_islands dropped %d faces, expected %d — "
+                      "heuristics misfired" % (len(doomed), want))
+        zmin = min(v.co.z for v in src.data.vertices)
+        zmax = max(v.co.z for v in src.data.vertices)
+        zspan = max(zmax - zmin, 1e-6)
+        src.data.materials.clear()  # zone indices must own slots 0..n
+        for zi, (z0, z1, col) in enumerate(cfg["zone_mats"]):
+            src.data.materials.append(mat(col, "zone%d" % zi))
+        zones = cfg["zone_mats"]
+        stray = 0
+        for p in src.data.polygons:
+            zc = (sum(src.data.vertices[vi].co.z for vi in p.vertices)
+                  / len(p.vertices) - zmin) / zspan
+            hit = False
+            for zi, (z0, z1, col) in enumerate(zones):
+                if z0 <= zc < z1:
+                    p.material_index = zi
+                    hit = True
+                    break
+            if not hit:
+                # a gap/overrun between bands must not keep a stale index
+                # (audit-54) — snap to the nearest zone edge
+                stray += 1
+                p.material_index = min(range(len(zones)), key=lambda zi:
+                    min(abs(zc - zones[zi][0]), abs(zc - zones[zi][1])))
+        if stray:
+            print("WARN zone_mats: %d faces fell outside every band" % stray)
+        smooth(src)
+        subdiv(src, cfg["subd_wool"])
+        d = cfg["displace"]
+        if d:
+            displace(src, d["scale"], d["strength"], d["detail"])
+        wm = sm = None
+    elif cfg.get("mat_map"):
         # audit-51: multi-material meshes — recolor every named slot to a
         # palette color, keep the mesh whole (no wool/skin split)
         objs = [src]
@@ -816,15 +951,24 @@ def main():
             # with a value floor — dark-bodied species produce near-black
             # accents that vanish at 80px
             main_col = (next(iter(cfg["mat_map"].values()))
-                        if cfg.get("mat_map") else cfg["mats"][0])
+                        if cfg.get("mat_map")
+                        else (cfg["zone_mats"][-1][2]
+                              if cfg.get("zone_mats") else cfg["mats"][0]))
             acc = shift_hsv(main_col, 0.45, 1.4, 0.95)
             h_, s_, v_ = colorsys.rgb_to_hsv(*acc)
             if v_ < 0.6:
                 acc = colorsys.hsv_to_rgb(h_, min(1.0, s_ * 1.3), 0.68)
+            acc = cfg.get("acc_col", acc)
             add_accessory(arm, head_bn, cfg,
                           mat(acc, "accent"),
                           (zlo, zhi) if zlo is not None else None, objs)
     if cfg.get("puffs"):
+        if wm is None:
+            # zone_mats/mat_map entries have no wool material — a None
+            # material crashes mid-render (audit-54); use the lowest zone
+            # (trousers/fur-level) or the first mapped color
+            wm = mat(cfg["zone_mats"][0][2] if cfg.get("zone_mats")
+                     else next(iter(cfg["mat_map"].values())), "puff")
         fluff_shell(arm, objs[0], cfg["puffs"], wm)
 
     light_rig()

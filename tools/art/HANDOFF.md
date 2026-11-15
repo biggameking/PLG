@@ -35,6 +35,17 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
   勿手改），按 body 套源 mesh 模板+配色派生；`bash tools/art/
   batch_mesh.sh` 全量重渲。**覆盖 116/116**（9 手调含 fenjelly
   +107 生成条目，零 primitive 残余）。
+- S101 player 迁移：Alien_Tall（zone_mats 分带裤/夹克/肤、`hat` 配饰
+  锚剪影顶、眼用 `eye_abs_z` 显式锚）。教训：
+  1. Q 版怪物的"脸"分布在全身——烘培眼球/口腔是**独立网格岛**，
+     `strip_islands` 按区域删岛（z_min>0.9 & y_max<-0.15 → 只摘眼球，
+     手臂/口腔保住）；口腔腔体留在眼位下方即读作脸（勿当洞补）。
+  2. zone_mats 必须 `materials.clear()` 再 append——slot 索引错位会让
+     整条配色链偏移一格。
+  3. 簇带钳制在某些 rig 把面中夹成真空（Alien: Head≤0.87/Head3≥1.14）
+     ——`eye_abs_z` 显式世界 z 逃生口。
+  4. player 已进批渲清单（hand 正则按 `# Xxx.blend` 注释解析），
+     sprite 像素断言已含 "player"。
 - S100 配饰层落地：`render_src_asset.add_accessory()` 以 primitive
   件（crown/halo/horns/crest/fins/mask/wings）骨绑补全源 mesh 缺失的
   身份标志，暖调 hue-shift accent 与 rig_auto 同源派生（暗体种有

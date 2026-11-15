@@ -22,8 +22,10 @@ Dog→cindpaw — armature-animated, CC0 1.0.
 https://opengameart.org/content/textured-cute-monster-pack — stored under
 `tools/art/src/cute_monsters/`, `License.txt` in-tree. Used: Ghost→all `ghost`,
 Cactus→`hedgehog`, Yeti→`monkey`, Alien_Tall→`human` species (rot_z≈35° —
-front view is head-only; the angle exposes the raised arms). Cyclops/Demon
-were probed and rejected — same head-dominant silhouette.
+front view is head-only; the angle exposes the raised arms) AND the `player`
+rancher (S101: zone_mats outfit bands, `hat` accessory, baked eyeball/mouth
+mesh islands stripped via `strip_islands`). Cyclops/Demon were probed and
+rejected — same head-dominant silhouette.
 
 ## Quaternius "Animated Monster Pack" (CC0 1.0)
 
