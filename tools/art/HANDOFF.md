@@ -145,3 +145,14 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
 - 回退路径已堵：`gen_assets.py` 的 atlas() 也加了 `--tiles-legacy` 门
   （audit-55 课的直接应用，不再等审计发现第二遍）。
 - 实机证据：`docs/reviews/s103-terrain.png`。
+
+## S104 崖面（wall_*）迁移
+
+- `render_wall.py`：1×1×0.4 立方体、同 dimetric 相机（跟踪点下移 -h/2
+  让侧面进帧）→ `post_wall.py`：按 cell→render 线性映射抽两面进
+  wall_sx/sy/corner 格（覆盖区=游戏 edge+16px 下落几何），post 里重画
+  顶边墨线+淡紫 rim+t∈{5,10} 层理线。stair/marker 格仍程序画（台阶
+  平涂更读得清）。
+- 实测：顶菱形 x[8,247] y[39,158]，面高 58px（=16cell px×3.72 缩放✓）。
+- 坑：SUBSURF 必须先于 DISPLACE（audit-56 已踩过的同坑——直接写对
+  别复错）；modifier_move_up 的 while 条件是反的，别用。

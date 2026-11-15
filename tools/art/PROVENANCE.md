@@ -68,3 +68,11 @@ the exact diamond (no ink outline — cell edges are shared with neighbors);
 still come from gen_assets' procedural painters — the flat cliff look is
 deliberate contrast). `gen_assets.py` atlas() is gated behind
 `--tiles-legacy` (audit-55 lesson: gate every writer of a migrated file).
+
+## S104 cliff walls — procedural Blender cube (no external mesh)
+
+`render_wall.py` renders one 1x1xH cube under the same dimetric camera;
+`post_wall.py` extracts the two visible side faces into wall_sx/sy/corner
+cells by the game's own face geometry (edge + 16px drop), re-applying the
+INK top line + lilac rim and post strata lines. Stair/marker cells stay
+procedural — stepped treads read better flat.

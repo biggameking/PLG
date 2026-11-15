@@ -1476,3 +1476,10 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   `gen_assets atlas()` 加 `--tiles-legacy` 门（audit-55 课的应用）。
 - smoke 加 atlas 地面格钉；实机证据 `docs/reviews/s103-terrain.png`；
   smoke 971/0/1skip。
+
+## S104 — 崖面迁移（wall_sx/sy/corner → 立方体渲染）
+
+- 崖壁三格从平涂多边形迁到 1×1×H 立方体 dimetric 渲染+面区抽取，
+  保留墨线顶边/淡紫 rim/层理线的可读性标记；stair/marker 仍程序画。
+- `render_wall.py`/`post_wall.py`；build_tiles 接入渲染墙面；
+  实机证据 `docs/reviews/s104-cliffs.png`；smoke 971/0/1skip。

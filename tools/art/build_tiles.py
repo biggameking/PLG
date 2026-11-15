@@ -23,10 +23,8 @@ GROUND = ["grass_0", "grass_1", "grass_2", "grass_3",
           "tallgrass_0", "tallgrass_1", "flower_0", "flower_1",
           "sand_0", "sand_1", "water_0", "water_1",
           "stonefield_0", "stonefield_1", "dirt_0", "farmland_0"]
-PROC = [("wall_sx", gen_assets.wall_img("sx")),
-        ("wall_sy", gen_assets.wall_img("sy")),
-        ("wall_corner", gen_assets.wall_img("corner")),
-        ("stair_sx", gen_assets.wall_img("stair_sx")),
+RENDERED_WALLS = ["wall_sx", "wall_sy", "wall_corner"]  # from post_wall.py
+PROC = [("stair_sx", gen_assets.wall_img("stair_sx")),
         ("stair_sy", gen_assets.wall_img("stair_sy")),
         ("stair_corner", gen_assets.wall_img("stair_corner")),
         ("marker", gen_assets.marker_img())]
@@ -38,6 +36,11 @@ def main():
         p = os.path.join(R, "tile_%s.png" % name)
         if not os.path.exists(p):
             sys.exit("FAIL: missing posted tile %s" % p)
+        tiles.append((name, Image.open(p).convert("RGBA")))
+    for name in RENDERED_WALLS:
+        p = os.path.join(R, "%s.png" % name)
+        if not os.path.exists(p):
+            sys.exit("FAIL: missing posted wall %s" % p)
         tiles.append((name, Image.open(p).convert("RGBA")))
     tiles += PROC
     cols = 8
