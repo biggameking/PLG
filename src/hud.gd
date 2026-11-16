@@ -1878,7 +1878,8 @@ func draw_chest(r: Vector2) -> void:
 	chest_scroll = clampi(chest_scroll, 0, maxi(0, skeys.size() - 12))
 	for i2 in range(chest_scroll, skeys.size()):
 		var iid: String = skeys[i2]
-		draw_string(font, Vector2(rr.position.x + 16, y), tr("%s  x%d") % [tr(str(ItemData.ITEMS.get(iid, {}).get("name", iid))), st["store"][iid]],
+		draw_item_icon(iid, Vector2(rr.position.x + 16, y - 13), 14.0)
+		draw_string(font, Vector2(rr.position.x + 34, y), tr("%s  x%d") % [tr(str(ItemData.ITEMS.get(iid, {}).get("name", iid))).left(18), st["store"][iid]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK)
 		y += 18
 		if y > rr.end.y - 16:
@@ -1900,8 +1901,10 @@ func draw_craft(r: Vector2) -> void:
 		for c in rep["cost"]:
 			rcost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
 		var wnm: String = tr(str(ItemData.ITEMS.get(game.player.equipment["weapon"], {}).get("name", "?")))
-		draw_string(font, Vector2(rrect.position.x, y), tr("REPAIR %s [%d/%d]  <-  %s") % [wnm,
-			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(46)],
+		draw_item_icon(str(game.player.equipment["weapon"]), Vector2(rrect.position.x, y - 13),
+			14.0, 1.0 if rep["afford"] else 0.45)
+		draw_string(font, Vector2(rrect.position.x + 18, y), tr("REPAIR %s [%d/%d]  <-  %s") % [wnm.left(12),
+			int(game.player.weapon_wear), rep["max"], rcost.left(-2).left(44)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep["afford"] else Ink.INK_SOFT)
 		y += 24
 	var rep_a := game.repair_quote_armor()
@@ -1912,8 +1915,10 @@ func draw_craft(r: Vector2) -> void:
 		for c in rep_a["cost"]:
 			acost += "%d %s, " % [c[1], tr(str(ItemData.ITEMS.get(c[0], {}).get("name", c[0])))]
 		var anm: String = tr(str(ItemData.ITEMS.get(game.player.equipment["armor"], {}).get("name", "?")))
-		draw_string(font, Vector2(rrect_a.position.x, y), tr("REPAIR %s [%d/%d]  <-  %s") % [anm,
-			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(46)],
+		draw_item_icon(str(game.player.equipment["armor"]), Vector2(rrect_a.position.x, y - 13),
+			14.0, 1.0 if rep_a["afford"] else 0.45)
+		draw_string(font, Vector2(rrect_a.position.x + 18, y), tr("REPAIR %s [%d/%d]  <-  %s") % [anm.left(12),
+			int(game.player.armor_wear), rep_a["max"], acost.left(-2).left(44)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.TEAL if rep_a["afford"] else Ink.INK_SOFT)
 		y += 24
 	var vis := []

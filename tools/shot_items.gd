@@ -41,6 +41,12 @@ func _boot() -> void:
 		await process_frame
 	await _shot("items-inv")
 	game.craft_station = "workbench" # 46 workbench rows outnumber the lone hand recipe
+	# worn, equipped gear surfaces the REPAIR rows' icons (hand recipes show
+	# at every station, so the workbench quote covers both slots)
+	game.player.equipment["weapon"] = "wooden_club"
+	game.player.weapon_wear = 10
+	game.player.equipment["armor"] = "hide_armor"
+	game.player.armor_wear = 30
 	game.panel = "craft"
 	for i in 10:
 		await process_frame
@@ -54,6 +60,19 @@ func _boot() -> void:
 	for i in 12:
 		await process_frame
 	await _shot("items-shop")
+	# a stocked chest through the real placer, then open its panel
+	var cp: Vector2 = game.player.pos
+	var ctx := int(cp.x) + 3
+	var cty := int(cp.y)
+	game.place_free("chest", ctx, cty, {"wood": 12})
+	var cst: Dictionary = game.structures.get(Vector2i(ctx, cty), {})
+	for iid in bag:
+		cst["store"][iid] = cst["store"].get(iid, 0) + 4
+	game.chest_ref = cst
+	game.panel = "chest"
+	for i in 10:
+		await process_frame
+	await _shot("items-chest")
 	quit()
 
 func _process(_dt: float) -> bool:

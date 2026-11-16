@@ -1571,6 +1571,15 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   零 MTU 警告。反作弊验证：传送阻挡格被 host 正确拒绝。
 - smoke **979/0/0skip** · audit_data ALL CLEAN · IP CLEAN。
 
+## S107b — 图标面收尾：chest + 修理行（audit-60 模式延伸）
+
+- `draw_chest` 物品行 + `draw_craft` 武器/护甲 REPAIR 行补图标（含装备
+  自身图标+afford dim）。至此**全部物品消费面**（inv/craft 配方/修理/
+  shop 买卖/chest）图标化完毕；tech 行刻意纯文本（非物品）。
+- 新证据 `docs/reviews/s107-items-chest.png`（12 行全 kind+relic）、
+  `s107-items-craft.png` 更新（双 REPAIR 行入镜，fixture 磨损武器+护甲）。
+- smoke 984/0/1skip。
+
 ## S107 — 物品 kind 图标：137 物品从纯文本到剪影+色调（audit-60 PASS）
 
 - **新管线** `render_item.py`（12 个 kind 剪影：11 种 + relic 兜 7 个无
