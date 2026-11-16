@@ -41,6 +41,21 @@ CFG = {
     "spikes":       {"build": "spikes",      "h": 0.6, "ortho": 1.3, "tz": 0.3},
     "cooler":       {"build": "cooler",      "h": 0.9, "ortho": 1.5, "tz": 0.4},
     "kin_condenser":{"build": "kin_condenser","h": 1.5, "ortho": 2.1, "tz": 0.7},
+    # batch 3 — farms / defense / misc
+    "berry_farm":   {"build": "berry_farm",  "h": 0.7, "ortho": 2.4, "tz": 0.35},
+    "wheat_farm":   {"build": "wheat_farm",  "h": 0.7, "ortho": 2.4, "tz": 0.35},
+    "ranch":        {"build": "ranch",       "h": 1.1, "ortho": 3.4, "tz": 0.5},
+    "straw_bed":    {"build": "straw_bed",   "h": 0.5, "ortho": 1.4, "tz": 0.25},
+    "hot_spring":   {"build": "hot_spring",  "h": 0.8, "ortho": 2.2, "tz": 0.4},
+    "fish_trap":    {"build": "fish_trap",   "h": 0.7, "ortho": 1.4, "tz": 0.35},
+    "snare_trap":   {"build": "snare_trap",  "h": 0.5, "ortho": 1.3, "tz": 0.25},
+    "kin_cage":     {"build": "kin_cage",    "h": 1.3, "ortho": 1.9, "tz": 0.6},
+    "guard_post":   {"build": "guard_post",  "h": 1.6, "ortho": 2.1, "tz": 0.7},
+    "training_hall":{"build": "training_hall","h": 1.5, "ortho": 2.6, "tz": 0.7},
+    "sparring_ring":{"build": "sparring",    "h": 1.0, "ortho": 2.4, "tz": 0.5},
+    "training_dummy":{"build": "dummy",      "h": 1.4, "ortho": 1.9, "tz": 0.65},
+    "war_banner":   {"build": "war_banner",  "h": 1.7, "ortho": 2.2, "tz": 0.8},
+    "monitoring_stand":{"build": "monitor",  "h": 1.5, "ortho": 2.0, "tz": 0.7},
 }
 
 WOOD = (0.45, 0.32, 0.20)
@@ -295,6 +310,124 @@ def build(kind, cfg):
         cyl("cap2", (0, 0, 0.08), 0.44, 0.16, w, 10)
         for sx in (-0.35, 0.35):
             cyl("pipe", (sx, 0.25, 0.9), 0.05, 0.6, ir, 6).rotation_euler.x = math.radians(20)
+    elif kind == "berry_farm":
+        cube("soil", (0, 0, 0.08), (1.7, 1.1, 0.14), mat((0.30, 0.20, 0.12), "soil"))
+        for i in range(6):
+            x = -0.6 + (i % 3) * 0.6; y = -0.3 + (i // 3) * 0.6
+            ico("bush", (x, y, 0.30), 0.22, mat((0.32, 0.52, 0.24), "bush"), 1)
+            for j in range(3):
+                a = j * 2.1 + i
+                ico("berry", (x + math.cos(a) * 0.16, y + math.sin(a) * 0.10, 0.38),
+                    0.05, mat((0.85, 0.25, 0.25), "berry"), 1)
+    elif kind == "wheat_farm":
+        cube("soil", (0, 0, 0.08), (1.7, 1.1, 0.14), mat((0.32, 0.24, 0.14), "soil"))
+        wheat = mat((0.85, 0.70, 0.30), "wheat")
+        for i in range(12):
+            x = -0.65 + (i % 4) * 0.43; y = -0.35 + (i // 4) * 0.35
+            cone("wheat", (x, y, 0.35), 0.07, 0.55, wheat, 5)
+    elif kind == "ranch":
+        for x, y in ((-1.4, -0.9), (0, -0.9), (1.4, -0.9), (-1.4, 0.9),
+                     (0, 0.9), (1.4, 0.9), (-1.4, 0), (1.4, 0)):
+            cyl("post", (x, y, 0.35), 0.06, 0.70, wd, 6)
+        for y in (-0.9, 0.9):
+            for z in (0.30, 0.55):
+                o = cyl("rail", (0, y, z), 0.04, 2.9, w, 6)
+                o.rotation_euler.y = math.radians(90)
+        for x in (-1.4, 1.4):
+            for z in (0.30, 0.55):
+                o = cyl("rail", (x, 0, z), 0.04, 1.9, w, 6)
+                o.rotation_euler.x = math.radians(90)
+        ico("hay", (0.6, 0.3, 0.25), 0.28, mat((0.85, 0.72, 0.35), "hay"), 1)
+    elif kind == "straw_bed":
+        cube("mat", (0, 0, 0.14), (0.95, 0.55, 0.22), mat((0.82, 0.70, 0.40), "straw"))
+        for i in range(6):
+            a = i * 1.1
+            ico("tuft", (math.cos(a) * 0.35, math.sin(a) * 0.2, 0.28), 0.07,
+                mat((0.88, 0.78, 0.45), "tuft"), 1)
+    elif kind == "hot_spring":
+        cyl("rim", (0, 0, 0.28), 0.75, 0.55, st, 12)
+        cyl("water", (0, 0, 0.52), 0.62, 0.10, mat((0.45, 0.75, 0.90), "water"), 12)
+        steam = mat((0.9, 0.9, 0.95), "steam", emit=0.6)
+        for x in (-0.25, 0.1, 0.3):
+            ico("steam", (x, 0, 0.85), 0.12, steam, 1, 1.6)
+    elif kind == "fish_trap":
+        cone("basket", (0, 0, 0.35), 0.35, 0.65, w, 10)
+        bpy.context.active_object.rotation_euler.x = math.pi
+        cyl("hoop", (0, 0, 0.06), 0.38, 0.06, wd, 10)
+        for i in range(6):
+            a = i * math.tau / 6
+            o = cyl("rib", (math.cos(a) * 0.19, math.sin(a) * 0.19, 0.33), 0.02, 0.6, wd, 5)
+            o.rotation_euler = (math.cos(a) * 0.5, math.sin(a) * 0.5, 0)
+    elif kind == "snare_trap":
+        cube("plate", (0, 0, 0.04), (0.7, 0.7, 0.07), wd)
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.22, minor_radius=0.03,
+                                         major_segments=10, minor_segments=6,
+                                         location=(0, 0, 0.12))
+        bpy.context.active_object.data.materials.append(ir)
+        for i in range(4):
+            a = i * math.tau / 4 + 0.4
+            o = cyl("stick", (math.cos(a) * 0.25, math.sin(a) * 0.25, 0.16),
+                    0.02, 0.3, w, 5)
+            o.rotation_euler = (math.cos(a) * 0.6, math.sin(a) * 0.6, 0)
+    elif kind == "kin_cage":
+        cube("floor", (0, 0, 0.06), (0.9, 0.9, 0.10), wd)
+        for sx in (-0.42, 0.42):
+            for sy in (-0.42, 0.42):
+                cyl("corner", (sx, sy, 0.65), 0.04, 1.25, ir, 6)
+        for i in range(4):
+            a = i * math.tau / 4 + math.tau / 8
+            for sx in (-0.2, 0.0, 0.2):
+                x = math.cos(a) * 0.42 - math.sin(a) * sx
+                y = math.sin(a) * 0.42 + math.cos(a) * sx
+                cyl("bar", (x, y, 0.65), 0.02, 1.15, ir, 5)
+        cube("top", (0, 0, 1.30), (0.9, 0.9, 0.08), wd)
+    elif kind == "guard_post":
+        cyl("pole", (0, 0, 0.7), 0.07, 1.4, wd, 8)
+        cube("deck", (0, 0, 1.35), (0.5, 0.5, 0.08), w)
+        cube("hut", (0, 0, 1.55), (0.4, 0.35, 0.32), w)
+        roof_prism("roof", (0, 0, 1.72), 0.55, 0.5, 0.18, wd)
+        spear = cyl("spear", (0.28, -0.1, 0.9), 0.025, 1.4, ir, 6)
+        spear.rotation_euler.x = math.radians(8)
+    elif kind == "training_hall":
+        for sx in (-0.8, 0.8):
+            for sy in (-0.5, 0.5):
+                cyl("post", (sx, sy, 0.75), 0.07, 1.5, wd, 8)
+        roof_prism("roof", (0, 0, 1.55), 1.9, 1.3, 0.35, w)
+        cube("mat", (0, 0, 0.05), (1.6, 1.0, 0.08), mat((0.72, 0.55, 0.35), "mat"))
+        cyl("dummy", (0.4, 0.1, 0.45), 0.14, 0.8, mat((0.75, 0.60, 0.35), "dum"), 8)
+        ico("dhead", (0.4, 0.1, 0.95), 0.16, mat((0.75, 0.60, 0.35), "dum2"), 1)
+    elif kind == "sparring":
+        cyl("ring", (0, 0, 0.06), 0.85, 0.10, mat((0.72, 0.55, 0.35), "ring"), 14)
+        for i in range(8):
+            a = i * math.tau / 8
+            cyl("post", (math.cos(a) * 0.85, math.sin(a) * 0.85, 0.30), 0.04, 0.5, wd, 6)
+        for z in (0.35, 0.5):
+            bpy.ops.mesh.primitive_torus_add(major_radius=0.85, minor_radius=0.02,
+                                             major_segments=14, minor_segments=5,
+                                             location=(0, 0, z))
+            bpy.context.active_object.data.materials.append(
+                mat((0.75, 0.30, 0.25), "rope"))
+    elif kind == "dummy":
+        cyl("post", (0, 0, 0.45), 0.07, 0.9, wd, 8)
+        cyl("body", (0, 0, 0.85), 0.22, 0.7, mat((0.78, 0.62, 0.38), "straw_d"), 8)
+        ico("head", (0, 0, 1.30), 0.20, mat((0.78, 0.62, 0.38), "straw_h"), 1)
+        o = cyl("arm", (0, 0, 1.0), 0.04, 0.9, wd, 6)
+        o.rotation_euler.y = math.radians(90)
+        cube("target", (0, -0.23, 0.85), (0.20, 0.02, 0.20),
+             mat((0.85, 0.30, 0.25), "target"))
+    elif kind == "war_banner":
+        cyl("pole", (0, 0, 0.85), 0.05, 1.7, wd, 8)
+        ico("finial", (0, 0, 1.75), 0.08, mat((0.85, 0.72, 0.30), "brass"), 1)
+        cube("banner", (0.28, 0, 1.35), (0.5, 0.02, 0.6),
+             mat((0.72, 0.22, 0.20), "banner"))
+        cube("sigil", (0.28, -0.015, 1.35), (0.20, 0.01, 0.20),
+             mat((0.92, 0.85, 0.60), "sigil"))
+    elif kind == "monitor":
+        cube("deck", (0, 0, 0.9), (0.6, 0.5, 0.07), w)
+        for sx, sy in ((-0.25, -0.2), (0.25, -0.2), (-0.25, 0.2), (0.25, 0.2)):
+            cyl("leg", (sx, sy, 0.45), 0.045, 0.9, wd, 6)
+        cyl("scope", (0, -0.15, 1.1), 0.07, 0.4, ir, 8).rotation_euler.x = math.radians(75)
+        cube("board", (0.2, 0.1, 1.05), (0.25, 0.02, 0.2), mat((0.93, 0.89, 0.75), "note"))
 
 
 def main():

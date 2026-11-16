@@ -4271,6 +4271,12 @@ func run() -> void:
 		"logging_site": [144, 136], "stone_pit": [144, 136],
 		"gathering_site": [144, 136], "spikes": [80, 104], "cooler": [80, 104],
 		"kin_condenser": [112, 120],
+		"berry_farm": [176, 134], "wheat_farm": [176, 134], "ranch": [240, 166],
+		"straw_bed": [112, 120], "hot_spring": [144, 136],
+		"fish_trap": [80, 104], "snare_trap": [80, 104], "kin_cage": [80, 104],
+		"guard_post": [80, 104], "training_hall": [144, 136],
+		"sparring_ring": [144, 136], "training_dummy": [80, 104],
+		"war_banner": [80, 104], "monitoring_stand": [80, 104],
 	}
 	for skey in struct_dims.keys():
 		var simg := Image.load_from_file("res://assets/structures/%s.png" % skey)

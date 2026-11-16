@@ -1511,3 +1511,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   scale=True)`；批次1 因无 cube+rotation 组合未踩中。
 - 实机证据 `docs/reviews/s105b-structures.png`；smoke 钉扩到 24。
 - 剩余 ~26 种结构仍平涂——S105c 续迁（农场/防御/杂项）。
+
+## S105c — 结构迁移批次3（14 农场/防御/杂项 → 程序几何渲染）
+
+- berry_farm/wheat_farm/ranch/straw_bed/hot_spring/fish_trap/
+  snare_trap/kin_cage/guard_post/training_hall/sparring_ring/
+  training_dummy/war_banner/monitoring_stand 全部实几何化。
+- 实机证据 `docs/reviews/s105c-structures.png`（38 结构基地全景）；
+  smoke 钉扩到 38。
+- 剩余 ~12 种（pharmacy/oil_extractor/sphere_factory×2/compost_bin/
+  apiary/weather_shrine/kin_gacha/fossil_bed/spyglass/lightning_rod/
+  expedition_post）——S105d 收官批。
