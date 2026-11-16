@@ -56,6 +56,19 @@ CFG = {
     "training_dummy":{"build": "dummy",      "h": 1.4, "ortho": 1.9, "tz": 0.65},
     "war_banner":   {"build": "war_banner",  "h": 1.7, "ortho": 2.2, "tz": 0.8},
     "monitoring_stand":{"build": "monitor",  "h": 1.5, "ortho": 2.0, "tz": 0.7},
+    # batch 4 — remaining machines / POI misc
+    "pharmacy":     {"build": "pharmacy",    "h": 1.3, "ortho": 1.9, "tz": 0.6},
+    "oil_extractor":{"build": "oil_extractor","h": 1.5, "ortho": 2.2, "tz": 0.7},
+    "sphere_factory":{"build": "sphere_factory","h": 1.3, "ortho": 2.0, "tz": 0.6},
+    "sphere_factory_2":{"build": "sphere_factory_2","h": 1.4, "ortho": 2.1, "tz": 0.65},
+    "compost_bin":  {"build": "compost",     "h": 0.8, "ortho": 1.4, "tz": 0.35},
+    "apiary":       {"build": "apiary",      "h": 1.0, "ortho": 1.6, "tz": 0.45},
+    "weather_shrine":{"build": "weather_shrine","h": 1.4, "ortho": 1.9, "tz": 0.65},
+    "kin_gacha":    {"build": "kin_gacha",   "h": 1.4, "ortho": 1.9, "tz": 0.65},
+    "fossil_bed":   {"build": "fossil_bed",  "h": 0.7, "ortho": 1.5, "tz": 0.3},
+    "spyglass":     {"build": "spyglass",    "h": 1.2, "ortho": 1.7, "tz": 0.55},
+    "lightning_rod":{"build": "lightning_rod","h": 1.7, "ortho": 2.2, "tz": 0.8},
+    "expedition_post":{"build": "expedition","h": 1.4, "ortho": 2.2, "tz": 0.65},
 }
 
 WOOD = (0.45, 0.32, 0.20)
@@ -428,6 +441,106 @@ def build(kind, cfg):
             cyl("leg", (sx, sy, 0.45), 0.045, 0.9, wd, 6)
         cyl("scope", (0, -0.15, 1.1), 0.07, 0.4, ir, 8).rotation_euler.x = math.radians(75)
         cube("board", (0.2, 0.1, 1.05), (0.25, 0.02, 0.2), mat((0.93, 0.89, 0.75), "note"))
+    elif kind == "pharmacy":
+        cube("hut", (0, 0, 0.55), (1.0, 0.7, 1.1), w)
+        roof_prism("roof", (0, 0, 1.10), 1.2, 0.85, 0.30, wd)
+        cube("sign", (0, -0.37, 0.95), (0.3, 0.03, 0.3), mat((0.93, 0.90, 0.80), "sign"))
+        cube("cross_v", (0, -0.39, 0.95), (0.08, 0.02, 0.22), mat((0.35, 0.70, 0.45), "cross"))
+        cube("cross_h", (0, -0.39, 0.95), (0.22, 0.02, 0.08), mat((0.35, 0.70, 0.45), "cross2"))
+        for sx in (-0.25, 0.1):
+            cyl("vial", (sx, -0.25, 0.25), 0.06, 0.25, mat((0.55, 0.85, 0.60), "vial"), 6)
+    elif kind == "oil_extractor":
+        for sx, sy in ((-0.5, -0.4), (0.5, -0.4), (0, 0.5)):
+            leg = cyl("leg", (sx * 0.6, sy * 0.6, 0.7), 0.05, 1.5, ir, 6)
+            leg.rotation_euler = (math.radians(sy * 12), math.radians(-sx * 12), 0)
+        cube("beam", (0, 0, 1.30), (1.1, 0.12, 0.14), ir)
+        cyl("drum", (0.35, 0, 1.0), 0.18, 0.4, mat((0.25, 0.28, 0.32), "drum"), 8)
+        cyl("rod", (-0.3, 0, 0.9), 0.04, 0.8, ir, 6)
+        cube("base", (0, 0, 0.08), (1.0, 0.8, 0.14), st)
+    elif kind == "sphere_factory":
+        cube("body", (0, 0, 0.5), (0.9, 0.7, 0.9), ir)
+        ico("dome", (0, -0.1, 1.0), 0.32, mat((0.30, 0.82, 0.88), "dome", emit=1.4), 2, 0.8)
+        cyl("belt", (0, -0.5, 0.3), 0.22, 0.9, mat((0.2, 0.2, 0.25), "belt"), 8).rotation_euler.y = math.radians(90)
+        for i in range(3):
+            ico("sphere", (-0.3 + i * 0.3, -0.62, 0.30), 0.10,
+                mat((0.30, 0.82, 0.88), "ball"), 2)
+    elif kind == "sphere_factory_2":
+        cube("body", (0, 0, 0.55), (1.0, 0.75, 1.0), ir)
+        ico("dome", (0, -0.1, 1.1), 0.36, mat((0.85, 0.60, 0.95), "dome2", emit=1.6), 2, 0.8)
+        cyl("belt", (0, -0.55, 0.3), 0.24, 1.0, mat((0.2, 0.2, 0.25), "belt2"), 8).rotation_euler.y = math.radians(90)
+        for i in range(4):
+            ico("sphere", (-0.42 + i * 0.28, -0.68, 0.30), 0.10,
+                mat((0.85, 0.60, 0.95), "ball2"), 2)
+        cyl("stack", (0.4, 0.25, 1.2), 0.08, 0.5, ir, 6)
+    elif kind == "compost":
+        cube("bin", (0, 0, 0.35), (0.7, 0.6, 0.65), wd)
+        for z in (0.15, 0.35, 0.55):
+            cube("slat", (0, -0.31, z), (0.72, 0.03, 0.10), w)
+        ico("heap", (0, 0, 0.72), 0.25, mat((0.35, 0.28, 0.15), "heap"), 1, 0.6)
+        for i in range(3):
+            a = i * 2.1
+            ico("leaf", (math.cos(a) * 0.15, math.sin(a) * 0.15, 0.80), 0.05,
+                mat((0.45, 0.62, 0.30), "leaf"), 1)
+    elif kind == "apiary":
+        cyl("hive", (0, 0, 0.45), 0.35, 0.85, mat((0.85, 0.70, 0.30), "hive"), 10)
+        for z in (0.25, 0.45, 0.65):
+            cyl("band", (0, 0, z), 0.36, 0.06, wd, 10)
+        cube("slot", (0, -0.33, 0.30), (0.14, 0.05, 0.06), mat((0.10, 0.08, 0.06), "slot"))
+        for i in range(3):
+            a = i * 2.1 + 0.5
+            ico("bee", (math.cos(a) * 0.5, math.sin(a) * 0.35, 0.6 + i * 0.15),
+                0.045, mat((0.9, 0.8, 0.2), "bee"), 1)
+    elif kind == "weather_shrine":
+        cyl("base", (0, 0, 0.15), 0.35, 0.3, st, 8)
+        cyl("pillar", (0, 0, 0.7), 0.12, 0.9, st, 8)
+        orb = mat((0.55, 0.80, 0.95), "worb", emit=1.6)
+        ico("orb", (0, 0, 1.25), 0.20, orb, 2)
+        for i in range(3):
+            a = i * math.tau / 3
+            ico("ring_stone", (math.cos(a) * 0.32, math.sin(a) * 0.32, 1.25),
+                0.06, st, 1)
+    elif kind == "kin_gacha":
+        cyl("base", (0, 0, 0.30), 0.45, 0.55, ir, 10)
+        ico("globe", (0, 0, 0.95), 0.40, mat((0.75, 0.88, 0.98), "globe"), 2)
+        for i in range(5):
+            a = i * math.tau / 5 + 0.3
+            ico("capsule", (math.cos(a) * 0.18, math.sin(a) * 0.14, 0.90 + (i % 2) * 0.12),
+                0.09, mat((0.95, 0.60, 0.25), "caps"), 1)
+        cyl("knob", (0, -0.42, 0.45), 0.07, 0.12, mat((0.85, 0.72, 0.30), "brass"), 8)
+    elif kind == "fossil_bed":
+        cube("soil", (0, 0, 0.08), (0.9, 0.7, 0.14), mat((0.35, 0.28, 0.20), "soil"))
+        bone = mat((0.90, 0.86, 0.75), "bone")
+        cyl("rib1", (-0.15, 0, 0.25), 0.03, 0.4, bone, 6).rotation_euler.y = math.radians(20)
+        cyl("rib2", (0.0, 0, 0.28), 0.03, 0.45, bone, 6).rotation_euler.y = math.radians(-15)
+        cyl("rib3", (0.15, 0, 0.25), 0.03, 0.4, bone, 6).rotation_euler.y = math.radians(20)
+        cyl("spine", (0, 0, 0.16), 0.04, 0.6, bone, 6).rotation_euler.y = math.radians(90)
+    elif kind == "spyglass":
+        for sx, sy in ((-0.2, -0.15), (0.2, -0.15), (0, 0.25)):
+            leg = cyl("tripod", (sx * 0.7, sy * 0.7, 0.4), 0.035, 0.85, wd, 6)
+            leg.rotation_euler = (math.radians(sy * 25), math.radians(-sx * 25), 0)
+        tube = cyl("scope", (0, -0.1, 0.95), 0.09, 0.7, mat((0.72, 0.62, 0.30), "brass"), 8)
+        tube.rotation_euler.x = math.radians(65)
+        cyl("eye", (0, 0.15, 0.72), 0.06, 0.15, ir, 8).rotation_euler.x = math.radians(65)
+    elif kind == "lightning_rod":
+        cyl("rod", (0, 0, 0.85), 0.045, 1.6, ir, 8)
+        ico("tip", (0, 0, 1.70), 0.10, mat((0.90, 0.85, 0.35), "tip", emit=1.2), 1)
+        for i in range(3):
+            a = i * math.tau / 3
+            o = cyl("fin", (math.cos(a) * 0.10, math.sin(a) * 0.10, 0.5),
+                    0.03, 0.5, mat((0.85, 0.80, 0.30), "fin"), 5)
+            o.rotation_euler = (math.cos(a) * 0.4, math.sin(a) * 0.4, 0)
+        cyl("base", (0, 0, 0.08), 0.20, 0.15, st, 8)
+    elif kind == "expedition":
+        for sx in (-0.55, 0.55):
+            cyl("post", (sx, 0, 0.7), 0.05, 1.4, wd, 8)
+        cube("beam", (0, 0, 1.35), (1.25, 0.07, 0.09), wd)
+        cube("map", (0, -0.02, 1.05), (0.5, 0.02, 0.4), mat((0.90, 0.85, 0.65), "map"))
+        for i in range(3):
+            a = i * 2.1
+            ico("pack", (math.cos(a) * 0.3, 0.25, 0.15), 0.12,
+                mat((0.6, 0.45, 0.3), "pack"), 1)
+        cyl("flag", (0.55, 0, 1.55), 0.02, 0.4, wd, 6)
+        cube("flagc", (0.66, 0, 1.65), (0.2, 0.01, 0.12), mat((0.85, 0.35, 0.25), "flagc"))
 
 
 def main():

@@ -37,10 +37,13 @@ func _boot() -> void:
 		"kin_condenser",
 		"berry_farm","wheat_farm","ranch","straw_bed","hot_spring",
 		"fish_trap","snare_trap","kin_cage","guard_post","training_hall",
-		"sparring_ring","training_dummy","war_banner","monitoring_stand"]
+		"sparring_ring","training_dummy","war_banner","monitoring_stand",
+		"pharmacy","oil_extractor","sphere_factory","sphere_factory_2",
+		"compost_bin","apiary","weather_shrine","kin_gacha","fossil_bed",
+		"spyglass","lightning_rod","expedition_post"]
 	var placed := 0
-	for ty in range(ty0, ty0 + 12):
-		for tx in range(tx0, tx0 + 12):
+	for ty in range(ty0, ty0 + 15):
+		for tx in range(tx0, tx0 + 15):
 			if placed >= ids.size():
 				break
 			var sid: String = ids[placed]

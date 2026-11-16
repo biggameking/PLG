@@ -1340,7 +1340,11 @@ if __name__ == "__main__":
                     "berry_farm", "wheat_farm", "ranch", "straw_bed",
                     "hot_spring", "fish_trap", "snare_trap", "kin_cage",
                     "guard_post", "training_hall", "sparring_ring",
-                    "training_dummy", "war_banner", "monitoring_stand"}
+                    "training_dummy", "war_banner", "monitoring_stand",
+                    "pharmacy", "oil_extractor", "sphere_factory",
+                    "sphere_factory_2", "compost_bin", "apiary",
+                    "weather_shrine", "kin_gacha", "fossil_bed",
+                    "spyglass", "lightning_rod", "expedition_post"}
         for sid, (col, w, h) in STRUCT_DEFS.items():
             if sid not in migrated:
                 make_structure(sid, col, w, h)

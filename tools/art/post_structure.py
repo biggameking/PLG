@@ -31,6 +31,13 @@ DIMS = {
     "guard_post": (80, 104), "training_hall": (144, 136),
     "sparring_ring": (144, 136), "training_dummy": (80, 104),
     "war_banner": (80, 104), "monitoring_stand": (80, 104),
+    # batch 4 — remaining machines / POI misc
+    "pharmacy": (112, 120), "oil_extractor": (144, 136),
+    "sphere_factory": (112, 120), "sphere_factory_2": (112, 120),
+    "compost_bin": (80, 104), "apiary": (80, 104),
+    "weather_shrine": (80, 104), "kin_gacha": (80, 104),
+    "fossil_bed": (80, 104), "spyglass": (80, 104),
+    "lightning_rod": (80, 104), "expedition_post": (112, 120),
 }
 
 

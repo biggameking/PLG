@@ -1522,3 +1522,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - 剩余 ~12 种（pharmacy/oil_extractor/sphere_factory×2/compost_bin/
   apiary/weather_shrine/kin_gacha/fossil_bed/spyglass/lightning_rod/
   expedition_post）——S105d 收官批。
+
+## S105d — 结构迁移收官批（12 机器/POI → 程序几何渲染，50/50 完成）
+
+- pharmacy/oil_extractor/sphere_factory/sphere_factory_2/compost_bin/
+  apiary/weather_shrine/kin_gacha/fossil_bed/spyglass/lightning_rod/
+  expedition_post —— 结构面全部实几何化，gen_assets 结构段除
+  --struct-legacy 外不再产出任何平涂图。
+- 实机证据 `docs/reviews/s105d-structures.png`（50 结构全景）；
+  smoke 钉覆盖全部 50 种（dims+body+ink+顶带）。
+- 至此游戏可见面全部 mesh/几何化：生物 116+player、装饰 7、
+  地砖 16、崖面 3、结构 50。
