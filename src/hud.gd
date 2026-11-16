@@ -61,6 +61,39 @@ func draw_portrait(pos: Vector2, sid: String, w := 20.0, h := 16.0) -> void:
 	if t != null:
 		draw_texture_rect(t, Rect2(pos, Vector2(w, h)), false)
 
+var _item_tex := {} # kind-icon sprites, same bounded lazy-cache contract —
+# the seven kindless specials all share "relic"
+func item_icon(iid: String) -> Texture2D:
+	var it: Dictionary = ItemData.ITEMS.get(iid, {})
+	var kind := str(it.get("kind", "relic"))
+	if kind == "" or not ITEM_KINDS.has(kind):
+		kind = "relic"
+	if not _item_tex.has(kind):
+		var p := "res://assets/items/icons/%s.png" % kind
+		_item_tex[kind] = load(p) if ResourceLoader.exists(p) else null
+	return _item_tex[kind]
+
+const ITEM_KINDS := ["material", "food", "seed", "orb", "weapon", "ammo",
+	"medicine", "gear", "fruit", "armor", "accessory"]
+
+var _item_tint := {} # iid-keyed Color cache, bounded by ITEMS.size() — parsing
+# a hex string per row per frame is the kind of alloc rule 4 grumbles about
+func draw_item_icon(iid: String, pos: Vector2, size := 14.0, a := 1.0) -> void:
+	var t := item_icon(iid)
+	if t == null:
+		return
+	var tint := Color(1, 1, 1)
+	if _item_tint.has(iid):
+		tint = _item_tint[iid]
+	elif ItemData.ITEMS.has(iid): # real ids only — bound = ITEMS.size()
+		var col: Variant = ItemData.ITEMS[iid].get("color", null)
+		# silhouette = kind, hue = item — keeps 109 item identities without
+		# 109 bespoke sprites; colorless items stay untinted
+		tint = Color(str(col)) if col != null else Color(1, 1, 1)
+		_item_tint[iid] = tint
+	tint.a = a
+	draw_texture_rect(t, Rect2(pos, Vector2(size, size)), false, tint)
+
 func bake_minimap() -> void:
 	var W := game.world
 	map_img = Image.create(W.WORLD_W, W.WORLD_H, false, Image.FORMAT_RGB8)
@@ -1910,7 +1943,9 @@ func draw_craft(r: Vector2) -> void:
 			break # don't leave click rects for rows that were never drawn
 		var rect := Rect2(rr.position.x + 16, y - 12, 440, 18)
 		click_rects.append({"rect": rect, "act": "craft", "arg": rec["id"]})
-		draw_string(font, Vector2(rect.position.x, y), tr("%s x%d  <-  %s") % [out_name, rec["out"][1], cost.left(50)],
+		draw_item_icon(str(rec["out"][0]), Vector2(rect.position.x, y - 13), 14.0,
+			1.0 if afford else 0.45)
+		draw_string(font, Vector2(rect.position.x + 18, y), tr("%s x%d  <-  %s") % [out_name.left(14), rec["out"][1], cost.left(44)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Ink.INK if afford else Ink.INK_SOFT)
 		y += 20
 		if y > rr.end.y - 16:
@@ -1963,7 +1998,8 @@ func draw_inv(r: Vector2) -> void:
 		elif usable:
 			click_rects.append({"rect": rect, "act": "use_item", "arg": k})
 			nm += "  [use]"
-		draw_string(font, Vector2(cx0, y0), tr("%s x%d") % [nm.left(16), game.items[k]],
+		draw_item_icon(k, Vector2(cx0, y0 - 12), 13.0)
+		draw_string(font, Vector2(cx0 + 17, y0), tr("%s x%d") % [nm.left(13), game.items[k]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.GOLD if usable else Ink.INK)
 	if keys.size() > rows:
 		_scroll_btns(rr, "inv_up", "inv_dn")
@@ -2166,7 +2202,8 @@ func draw_shop(r: Vector2) -> void:
 	for i in range(shop_scroll, game.merchant_stock.size()):
 		var it: Dictionary = game.merchant_stock[i]
 		var nm: String
-		if it.has("kin"):
+		var is_kin := it.has("kin")
+		if is_kin:
 			var sp: Dictionary = SpeciesData.species_of(str(it["kin"]))
 			nm = tr("Lv%d %s") % [it["lv"], tr(str(sp.get("name", it["kin"])))]
 		else:
@@ -2176,7 +2213,10 @@ func draw_shop(r: Vector2) -> void:
 		if it["n"] > 0 and afford:
 			click_rects.append({"rect": rect, "act": "buy", "arg": i})
 		var col := Ink.INK if (it["n"] > 0 and afford) else Ink.INK_SOFT # the till can't comp what the bag can't cover
-		draw_string(font, Vector2(rect.position.x, y), tr("%s x%d  %dg") % [nm.left(16), it["n"], it["price"]],
+		if not is_kin:
+			draw_item_icon(str(it["id"]), Vector2(rect.position.x, y - 12), 13.0,
+				1.0 if col == Ink.INK else 0.45)
+		draw_string(font, Vector2(rect.position.x + (17 if not is_kin else 0), y), tr("%s x%d  %dg") % [nm.left(14), it["n"], it["price"]],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 		y += 17
 		if y > rr.end.y - 14:
@@ -2194,7 +2234,8 @@ func draw_shop(r: Vector2) -> void:
 			continue
 		var rect := Rect2(rr.position.x + 316, y - 12, 270, 16)
 		click_rects.append({"rect": rect, "act": "sell", "arg": k})
-		draw_string(font, Vector2(rect.position.x, y), tr("%s x%d  +%dg") % [tr(str(ItemData.ITEMS[k]["name"])).left(16),
+		draw_item_icon(k, Vector2(rect.position.x, y - 12), 13.0)
+		draw_string(font, Vector2(rect.position.x + 17, y), tr("%s x%d  +%dg") % [tr(str(ItemData.ITEMS[k]["name"])).left(13),
 			game.items[k], maxi(1, int(price * 0.5))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Ink.INK)
 		y += 17
 		if y > rr.end.y - 14:

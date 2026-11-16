@@ -1812,6 +1812,44 @@ func run() -> void:
 		and rows67[rows67.size() - 1]["sid"] == "fenjelly", "rows=%s" % str(rows67))
 	game.party.erase(p67.uid); game.pals.erase(p67); p67.free()
 
+	# S107: item kind icons — every kind resolves, kindless specials land on
+	# relic, unknown ids miss exactly once without crashing
+	var ok107 := true
+	for iid in ItemData.ITEMS:
+		if not (hud67.item_icon(iid) is Texture2D):
+			ok107 = false
+			break
+	check("every item id resolves an icon", ok107)
+	# audit-60 MED-1: a brand-new kind must not silently ride the relic icon —
+	# data kinds, the whitelist, and the png files drift apart invisibly
+	var kinds107 := {}
+	for iid in ItemData.ITEMS:
+		var k107: String = ItemData.ITEMS[iid].get("kind", "")
+		if k107 != "":
+			kinds107[k107] = true
+	var drift107 := []
+	for k107 in kinds107:
+		if not hud67.ITEM_KINDS.has(k107):
+			drift107.append(k107)
+	check("item kinds stay inside the icon whitelist", drift107.is_empty(),
+		"unknown kinds: %s" % str(drift107))
+	var relic_tex: Texture2D = load("res://assets/items/icons/relic.png")
+	var relic107 := true
+	for iid in ["kin_egg", "bred_kin_egg", "huge_kin_egg", "sprigmelt_effigy",
+		"ancient_part", "boss_sigil", "gauntlet_sigil"]:
+		var it107: Dictionary = ItemData.ITEMS.get(iid, {})
+		if it107.get("kind", "") != "" or hud67.item_icon(iid) != relic_tex:
+			relic107 = false
+	check("kindless specials all ride the relic icon", relic107, "")
+	var sz107: int = hud67._item_tex.size()
+	hud67.item_icon("__bogus_item__")
+	hud67.item_icon("__bogus_item__")
+	# bogus ids normalize to relic — a hit, not a miss; the bound pin is what
+	# proves the cache can't grow per-iid (kind-keyed by construction)
+	check("item icon cache is bounded (kind-keyed)",
+		hud67._item_tex.size() == sz107 and sz107 <= 12,
+		"cache=%d" % hud67._item_tex.size())
+
 	# skills + statuses
 	var sp_pal: Kin = game.pals[0]
 	sp_pal.statuses["burn"] = game.t + 3

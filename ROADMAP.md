@@ -1570,3 +1570,23 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   精确跟随 +5,+3 位移（screen=64,3648 vs player=0,3520）。零 RPC 错误、
   零 MTU 警告。反作弊验证：传送阻挡格被 host 正确拒绝。
 - smoke **979/0/0skip** · audit_data ALL CLEAN · IP CLEAN。
+
+## S107 — 物品 kind 图标：137 物品从纯文本到剪影+色调（audit-60 PASS）
+
+- **新管线** `render_item.py`（12 个 kind 剪影：11 种 + relic 兜 7 个无
+  kind 特殊品）→ `post_item.py`（24×24 cel+ink，四边裁剪检测）。
+  weapon/ammo/armor 三轮视觉返修（细线剑→立剑、镐状箭→箭、糊盾→椭圆盾）。
+- **HUD 集成**：`item_icon(iid)` kind 归一化懒缓存（白名单外→relic，构造
+  上限 12 键）+ `_item_tint` iid 色缓存（上限=ITEMS.size()，消逐帧 Color
+  解析）+ `draw_item_icon(iid,pos,size,a)` 支持 alpha dim。
+  接入 draw_inv / draw_craft / draw_shop 买·卖四行，kin 商品行刻意无图标。
+- **audit-60 冷审 PASS**（`docs/reviews/audit-60-item-icons.md`）——2 MED
+  + 7 LOW 全修：kind 漂移洞（数据 kind⊆ITEM_KINDS 数据钉，新 kind 不再
+  静默骑 relic）；+17/+18px 图标偏移吃文本预算（left() 截断收紧）；未购
+  得/售空行图标 dim 至 0.45α；relic 身份钉改纹理对象比较；post 补底边
+  检测；render/post argv 守卫。
+- **视觉证据**（`docs/reviews/s107-items-*.png`）：inv 17 行图标+物品色
+  tint / craft 20 行配方剪影 / shop 买·卖双列图标+kin 行正确留白，
+  全部经真实 draw 路径渲染。
+- smoke **984/0/1skip**（4 新钉：全 id 解析·kind⊆白名单·7 特殊品=relic
+  纹理·缓存构造界）· git 范围干净。
