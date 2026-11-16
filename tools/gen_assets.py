@@ -1333,7 +1333,10 @@ if __name__ == "__main__":
     else:
         migrated = {"kinbox", "campfire", "workbench", "well", "torch",
                     "waypoint", "chest", "feed_box", "kin_bed",
-                    "wooden_wall", "watch_tower", "notice_board"}
+                    "wooden_wall", "watch_tower", "notice_board",
+                    "furnace", "generator", "crusher", "mill", "incubator",
+                    "ore_mine", "logging_site", "stone_pit", "gathering_site",
+                    "spikes", "cooler", "kin_condenser"}
         for sid, (col, w, h) in STRUCT_DEFS.items():
             if sid not in migrated:
                 make_structure(sid, col, w, h)

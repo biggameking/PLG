@@ -31,7 +31,10 @@ func _boot() -> void:
 	var tx0 := int(kp.x) - 4
 	var ty0 := int(kp.y) - 4
 	var ids := ["kinbox", "watch_tower", "notice_board", "waypoint", "well", "torch",
-		"campfire", "workbench", "chest", "feed_box", "kin_bed", "wooden_wall"]
+		"campfire", "workbench", "chest", "feed_box", "kin_bed", "wooden_wall",
+		"furnace", "generator", "crusher", "mill", "incubator", "ore_mine",
+		"logging_site", "stone_pit", "gathering_site", "spikes", "cooler",
+		"kin_condenser"]
 	var placed := 0
 	for ty in range(ty0, ty0 + 9):
 		for tx in range(tx0, tx0 + 9):

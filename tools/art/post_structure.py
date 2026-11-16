@@ -18,6 +18,12 @@ DIMS = {
     "chest": (80, 104), "feed_box": (80, 104), "kin_bed": (112, 120),
     "wooden_wall": (80, 104), "watch_tower": (80, 104),
     "notice_board": (80, 104),
+    # batch 2 — production machines
+    "furnace": (144, 136), "generator": (144, 136), "crusher": (144, 136),
+    "mill": (144, 136), "incubator": (144, 136), "ore_mine": (144, 136),
+    "logging_site": (144, 136), "stone_pit": (144, 136),
+    "gathering_site": (144, 136), "spikes": (80, 104), "cooler": (80, 104),
+    "kin_condenser": (112, 120),
 }
 
 

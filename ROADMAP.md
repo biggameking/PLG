@@ -1500,3 +1500,14 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - 实机证据 `docs/reviews/s105-structures.png` /
   `s105-structures-night.png`（火光/塔灯光晕在位）。
 - 剩余 ~38 种结构仍平涂——S105b/c 续迁。
+
+## S105b — 结构迁移批次2（12 生产机器 → 程序几何渲染）
+
+- furnace/generator/crusher/mill/incubator/ore_mine/logging_site/
+  stone_pit/gathering_site/spikes/cooler/kin_condenser 全部实几何化。
+- 真坑修复：`transform_apply(scale=True)` 默认连 location/rotation 一起
+  烘——对象原点归零，后续 rotation_euler 绕世界原点甩飞（mill 风翼
+  散开即此）。改 `transform_apply(location=False, rotation=False,
+  scale=True)`；批次1 因无 cube+rotation 组合未踩中。
+- 实机证据 `docs/reviews/s105b-structures.png`；smoke 钉扩到 24。
+- 剩余 ~26 种结构仍平涂——S105c 续迁（农场/防御/杂项）。

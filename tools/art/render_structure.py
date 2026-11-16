@@ -28,6 +28,19 @@ CFG = {
     "wooden_wall":  {"build": "log_wall",    "h": 1.2, "ortho": 1.7, "tz": 0.5},
     "watch_tower":  {"build": "watch_tower", "h": 2.4, "ortho": 3.0, "tz": 1.1},
     "notice_board": {"build": "notice_board","h": 1.4, "ortho": 1.9, "tz": 0.6},
+    # batch 2 — production machines
+    "furnace":      {"build": "furnace",     "h": 1.5, "ortho": 2.2, "tz": 0.7},
+    "generator":    {"build": "generator",   "h": 1.4, "ortho": 2.1, "tz": 0.6},
+    "crusher":      {"build": "crusher",     "h": 1.5, "ortho": 2.2, "tz": 0.7},
+    "mill":         {"build": "mill",        "h": 1.8, "ortho": 2.5, "tz": 0.8},
+    "incubator":    {"build": "incubator",   "h": 1.3, "ortho": 2.0, "tz": 0.6},
+    "ore_mine":     {"build": "ore_mine",    "h": 1.3, "ortho": 2.0, "tz": 0.6},
+    "logging_site": {"build": "logging_site","h": 0.9, "ortho": 1.8, "tz": 0.4},
+    "stone_pit":    {"build": "stone_pit",   "h": 0.9, "ortho": 1.8, "tz": 0.4},
+    "gathering_site":{"build": "gathering",  "h": 1.0, "ortho": 1.8, "tz": 0.5},
+    "spikes":       {"build": "spikes",      "h": 0.6, "ortho": 1.3, "tz": 0.3},
+    "cooler":       {"build": "cooler",      "h": 0.9, "ortho": 1.5, "tz": 0.4},
+    "kin_condenser":{"build": "kin_condenser","h": 1.5, "ortho": 2.1, "tz": 0.7},
 }
 
 WOOD = (0.45, 0.32, 0.20)
@@ -55,7 +68,9 @@ def cube(name, loc, scale, material):
     o = bpy.context.active_object
     o.scale = scale
     o.data.materials.append(material)
-    bpy.ops.object.transform_apply(scale=True)
+    # bake scale ONLY — the default applies location too, zeroing the
+    # object origin so any later rotation_euler orbits the world origin
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     bpy.ops.object.shade_smooth_by_angle()
     return o
 
@@ -189,6 +204,97 @@ def build(kind, cfg):
         cube("board", (0, 0, 0.95), (0.95, 0.06, 0.55), w)
         cube("note", (-0.18, -0.035, 0.98), (0.22, 0.015, 0.26), mat((0.93, 0.89, 0.75), "paper"))
         cube("note2", (0.20, -0.035, 0.92), (0.18, 0.015, 0.20), mat((0.88, 0.85, 0.70), "paper2"))
+    elif kind == "furnace":
+        cyl("body", (0, 0, 0.65), 0.55, 1.30, st, 10)
+        cyl("chimney", (0.15, 0.15, 1.35), 0.18, 0.35, ir, 8)
+        cube("mouth", (0, -0.52, 0.35), (0.34, 0.10, 0.34), mat((0.08, 0.08, 0.10), "dark"))
+        fire = mat((0.95, 0.45, 0.10), "fire", emit=2.2)
+        cube("fire", (0, -0.50, 0.35), (0.24, 0.06, 0.24), fire)
+        cyl("rim", (0, 0, 1.32), 0.58, 0.10, ir, 10)
+    elif kind == "generator":
+        cube("base", (0, 0, 0.30), (0.9, 0.7, 0.55), ir)
+        cyl("coil", (0, 0, 0.85), 0.28, 0.45, mat((0.75, 0.65, 0.20), "copper"), 10)
+        bolt = mat((0.95, 0.85, 0.20), "spark", emit=2.0)
+        for i, a in enumerate((0.0, 2.1, 4.2)):
+            o = cone("rod", (math.cos(a) * 0.35, math.sin(a) * 0.35, 1.05),
+                     0.04, 0.5, ir, 6)
+        ico("orb", (0, 0, 1.35), 0.18, bolt, 2)
+    elif kind == "crusher":
+        cube("frame_l", (-0.45, 0, 0.6), (0.10, 0.6, 1.2), ir)
+        cube("frame_r", (0.45, 0, 0.6), (0.10, 0.6, 1.2), ir)
+        cyl("roller", (0, 0, 0.75), 0.30, 0.75, st, 10).rotation_euler.x = math.radians(90)
+        for i in range(6):
+            a = i * math.tau / 6
+            ico("tooth", (math.cos(a) * 0.30, -0.01, 0.75 + math.sin(a) * 0.30), 0.05, ir, 1)
+        cube("hopper", (0, 0, 1.12), (0.55, 0.55, 0.30), w)
+    elif kind == "mill":
+        cyl("tower", (0, 0, 0.55), 0.35, 1.10, st, 8)
+        roof_prism("cap", (0, 0, 1.10), 0.85, 0.85, 0.30, wd)
+        cyl("hub", (0, -0.44, 0.98), 0.09, 0.16, ir, 8).rotation_euler.x = math.radians(90)
+        for i in range(4):
+            a = i * math.tau / 4 + math.radians(45)
+            o = cube("sail", (math.sin(a) * 0.26, -0.50, 0.98 + math.cos(a) * 0.26),
+                     (0.12, 0.02, 0.55), mat((0.88, 0.82, 0.65), "sail"))
+            o.rotation_euler.y = a
+    elif kind == "incubator":
+        cube("base", (0, 0, 0.25), (0.85, 0.65, 0.45), w)
+        egg = mat((0.95, 0.80, 0.85), "egg")
+        ico("egg", (0, 0, 0.75), 0.32, egg, 2, 1.25)
+        glow = mat((0.95, 0.60, 0.65), "glow", emit=1.5)
+        for sx in (-0.30, 0.30):
+            cyl("lamp", (sx, 0.15, 0.90), 0.05, 0.35, glow, 6)
+    elif kind == "ore_mine":
+        for sx in (-0.5, 0.5):
+            cube("post", (sx, 0, 0.55), (0.09, 0.09, 1.1), wd)
+        cube("beam", (0, 0, 1.05), (1.15, 0.10, 0.12), wd)
+        ico("ore1", (-0.2, -0.2, 0.18), 0.22, mat((0.72, 0.55, 0.30), "ore"), 1)
+        ico("ore2", (0.25, -0.1, 0.14), 0.16, mat((0.80, 0.68, 0.38), "ore2"), 1)
+        ico("rock", (0, 0.2, 0.20), 0.28, st, 1, 0.8)
+        o = cyl("pick", (0.35, -0.3, 0.45), 0.03, 0.7, wd, 6)
+        o.rotation_euler = (math.radians(30), 0, math.radians(-30))
+    elif kind == "logging_site":
+        for i in range(3):
+            o = cyl("log", (-0.2 + i * 0.2, -0.1, 0.12 + i * 0.13), 0.12, 0.8, w, 8)
+            o.rotation_euler.y = math.radians(90)
+        ico("stump", (0.3, 0.25, 0.18), 0.20, wd, 1, 0.9)
+        o = cube("axe", (0.3, 0.25, 0.5), (0.03, 0.03, 0.5), wd)
+        o.rotation_euler.x = math.radians(25)
+        cube("axehead", (0.3, 0.35, 0.68), (0.16, 0.03, 0.12), ir)
+    elif kind == "stone_pit":
+        for i, (x, y, r) in enumerate(((-0.25, -0.15, 0.25), (0.2, -0.2, 0.18),
+                                       (0.0, 0.25, 0.30), (0.35, 0.15, 0.15))):
+            ico("rock", (x, y, r * 0.7), r, st, 1, 0.75)
+        cyl("post", (-0.45, 0.3, 0.4), 0.05, 0.8, wd, 6)
+        o = cyl("pick", (-0.45, 0.25, 0.75), 0.025, 0.5, ir, 6)
+        o.rotation_euler.x = math.radians(60)
+    elif kind == "gathering":
+        for i in range(5):
+            a = i * math.tau / 5 + 0.3
+            ico("bush", (math.cos(a) * 0.35, math.sin(a) * 0.35, 0.22),
+                0.18, mat((0.35, 0.55, 0.25), "bush"), 1)
+        for i in range(4):
+            a = i * math.tau / 4 + 0.9
+            ico("berry", (math.cos(a) * 0.38, math.sin(a) * 0.38, 0.32),
+                0.05, mat((0.85, 0.25, 0.25), "berry"), 1)
+        cyl("basket", (0, 0, 0.18), 0.16, 0.30, w, 8)
+    elif kind == "spikes":
+        cube("plate", (0, 0, 0.06), (0.85, 0.85, 0.10), wd)
+        for x, y in ((-0.25, -0.25), (0.25, -0.25), (-0.25, 0.25), (0.25, 0.25), (0, 0)):
+            cone("spike", (x, y, 0.30), 0.09, 0.45, mat((0.75, 0.72, 0.65), "spike"), 6)
+    elif kind == "cooler":
+        cube("box", (0, 0, 0.32), (0.65, 0.5, 0.60), mat((0.55, 0.80, 0.92), "cooler"))
+        cube("lid", (0, 0, 0.65), (0.68, 0.53, 0.12), mat((0.85, 0.90, 0.95), "lid"))
+        cube("latch", (0, -0.27, 0.55), (0.10, 0.04, 0.12), ir)
+        for i in range(3):
+            ico("frost", (-0.15 + i * 0.15, -0.20, 0.45), 0.05,
+                mat((0.85, 0.95, 1.0), "frost"), 1)
+    elif kind == "kin_condenser":
+        cyl("tank", (0, 0, 0.65), 0.40, 1.20, ir, 10)
+        ico("core", (0, -0.05, 0.65), 0.28, mat((0.55, 0.40, 0.90), "core", emit=1.6), 2)
+        cyl("cap", (0, 0, 1.28), 0.42, 0.10, w, 10)
+        cyl("cap2", (0, 0, 0.08), 0.44, 0.16, w, 10)
+        for sx in (-0.35, 0.35):
+            cyl("pipe", (sx, 0.25, 0.9), 0.05, 0.6, ir, 6).rotation_euler.x = math.radians(20)
 
 
 def main():
