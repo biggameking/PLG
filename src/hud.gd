@@ -16,6 +16,7 @@ var kin_scroll := 0
 var tech_scroll := 0
 var stat_scroll := 0
 var build_sel := -1
+var build_scroll := 0 # page offset into buildable_list() — 9 slots per page
 var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
@@ -41,6 +42,15 @@ func kin_tex(sid: String) -> Texture2D:
 		var path := "res://assets/kin/%s_f0.png" % sid
 		_kin_tex[sid] = load(path) if ResourceLoader.exists(path) else null
 	return _kin_tex[sid]
+
+# structure sprites for build-bar icons + the placement ghost — same
+# bounded lazy-cache contract as kin_tex (misses cached once)
+var _struct_tex := {}
+func struct_tex(sid: String) -> Texture2D:
+	if not _struct_tex.has(sid):
+		var path := "res://assets/structures/%s.png" % sid
+		_struct_tex[sid] = load(path) if ResourceLoader.exists(path) else null
+	return _struct_tex[sid]
 
 func draw_portrait(pos: Vector2, sid: String, w := 20.0, h := 16.0) -> void:
 	var t := kin_tex(sid)
@@ -396,7 +406,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var k: int = event.keycode
 		if k >= KEY_1 and k <= KEY_9:
 			var lst := game.buildable_list()
-			var i := k - KEY_1
+			var i := build_scroll + (k - KEY_1) # keys address the visible page
 			build_sel = i if i < lst.size() else -1
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -420,6 +430,7 @@ func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to re
 		"shop": shop_scroll = maxi(0, shop_scroll + dir)
 		"inv": inv_scroll = maxi(0, inv_scroll + dir)
 		"kinbox": kin_scroll = maxi(0, kin_scroll + dir)
+		"build": build_scroll = maxi(0, build_scroll + dir * 9)
 		"tech": tech_scroll = maxi(0, tech_scroll + dir)
 		"statues": stat_scroll = maxi(0, stat_scroll + dir)
 		"guide": guide_scroll = maxi(0, guide_scroll + dir)
@@ -582,6 +593,9 @@ func run_click(cr: Dictionary) -> void:
 		"stat_dn": _panel_scroll(1)
 		"build_pick": # tap toggles — there's no right-click on glass
 			build_sel = -1 if build_sel == int(cr["arg"]) else int(cr["arg"])
+		"build_pg":
+			build_scroll = maxi(0, build_scroll + int(cr["arg"]) * 9)
+			build_sel = -1 # a page flip voids the selection (menu-state rule)
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -1143,7 +1157,7 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Ink.GOLD if cd_left <= 0 else Ink.INK_SOFT)
 	# build ghost preview
-	if game.panel == "build" and build_sel >= 0:
+	if game.panel == "build" and build_sel >= 0 and build_sel < game.buildable_list().size():
 		var tw := mouse_tile()
 		var sid: String = game.buildable_list()[build_sel]
 		var s: Dictionary = StructureData.STRUCTURES[sid]
@@ -1160,6 +1174,17 @@ func _draw() -> void:
 					sc + Vector2(0, 16), sc + Vector2(-32, 0), sc + Vector2(0, -16)])
 				draw_polyline(dia, Ink.INK, 1.5)
 				draw_colored_polygon(dia.slice(0, 4), col)
+		# ghost sprite — the same anchor math place_structure uses, tinted
+		# by placeability so the player sees what actually lands
+		var gt := struct_tex(sid)
+		if gt != null:
+			var ge: int = game.world.elev_at(int(tw.x), int(tw.y))
+			var gp := Iso.to_screen(int(tw.x) + w * 0.5, int(tw.y) + h * 0.5, ge)
+			var gs := w2s(gp)
+			draw_texture_rect(gt, Rect2(
+				gs + Vector2(-gt.get_width() * 0.5, -gt.get_height() * 0.5 + 8),
+				Vector2(gt.get_width(), gt.get_height())), false,
+				Color(0.5, 1.0, 0.6, 0.55) if ok else Color(1.0, 0.45, 0.4, 0.55))
 	match game.panel:
 		"build":
 			draw_build_bar(r)
@@ -1697,10 +1722,16 @@ func draw_build_bar(r: Vector2) -> void:
 	var bx := 10.0
 	var by := r.y - 200.0
 	Ink.card(self, Rect2(bx, by, 620, 56), Ink.PAPER, 0.0, 3.0)
+	# 9 slots per page; scroll/wheel pages through the whole unlock list —
+	# before paging existed, unlocks past index 9 were unreachable
+	var pages := maxi(1, int(ceil(lst.size() / 9.0)))
+	build_scroll = clampi(build_scroll, 0, maxi(0, lst.size() - 9))
 	var head := tr("BUILD — tap/1-9 pick, tap again to cancel")
+	if pages > 1:
+		head += "  (%d/%d)" % [build_scroll / 9 + 1, pages]
 	var hfont := 12
-	if build_sel >= 0:
-		var ps: Dictionary = StructureData.STRUCTURES[game.buildable_list()[build_sel]]
+	if build_sel >= 0 and build_sel < lst.size():
+		var ps: Dictionary = StructureData.STRUCTURES[lst[build_sel]]
 		var pcost := ""
 		for c in ps.get("cost", []):
 			pcost += "%d %s  " % [c[1], tr(str(ItemData.ITEMS.get(str(c[0]), {}).get("name", c[0])))]
@@ -1711,19 +1742,31 @@ func draw_build_bar(r: Vector2) -> void:
 		while font.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, hfont).x > 604.0 and head.length() > 8:
 			head = head.left(head.length() - 2) # last-ditch crop — never spill off the card
 	draw_string(font, Vector2(bx + 8, by + 16), head, HORIZONTAL_ALIGNMENT_LEFT, -1, hfont, Ink.TEAL)
-	for i in range(mini(9, lst.size())):
-		var s: Dictionary = StructureData.STRUCTURES[lst[i]]
+	if pages > 1:
+		click_rects.append({"rect": Rect2(bx + 552, by + 4, 28, 16), "act": "build_pg", "arg": -1})
+		click_rects.append({"rect": Rect2(bx + 584, by + 4, 28, 16), "act": "build_pg", "arg": 1})
+		draw_string(font, Vector2(bx + 560, by + 17), "◀", HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
+			Ink.INK if build_scroll > 0 else Ink.LILAC)
+		draw_string(font, Vector2(bx + 592, by + 17), "▶", HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
+			Ink.INK if build_scroll + 9 < lst.size() else Ink.LILAC)
+	for i in range(mini(9, lst.size() - build_scroll)):
+		var idx := build_scroll + i
+		var s: Dictionary = StructureData.STRUCTURES[lst[idx]]
 		var afford := true
 		for c in s.get("cost", []):
 			if game.item_count(str(c[0])) < int(c[1]):
 				afford = false
-		var col := Ink.ORANGE if i == build_sel else (Ink.INK if afford else Color(0.72, 0.45, 0.4))
+		var col := Ink.ORANGE if idx == build_sel else (Ink.INK if afford else Color(0.72, 0.45, 0.4))
 		var x := bx + 8 + (i % 5) * 122
 		var y := by + 32 + (i / 5) * 14
-		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": i})
-		# name only — the 122px slot can't hold a cost too; the selected
-		# structure's full recipe lives in the header line above
-		draw_string(font, Vector2(x, y), tr("%d %s") % [i + 1, tr(str(s["name"])).left(9)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+		click_rects.append({"rect": Rect2(x - 4, y - 11, 118, 14), "act": "build_pick", "arg": idx})
+		var st := struct_tex(lst[idx])
+		if st != null: # silhouette icon — dims vary wildly, fit a 13px box
+			var ar := float(st.get_width()) / float(st.get_height())
+			var iw := minf(18.0, 13.0 * ar)
+			draw_texture_rect(st, Rect2(x, y - 12, iw, 13.0), false,
+				Color(1, 1, 1) if afford else Color(1, 0.6, 0.55))
+		draw_string(font, Vector2(x + 20, y), tr("%d %s") % [i + 1, tr(str(s["name"])).left(8)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 func draw_tech(r: Vector2) -> void:
 	var rr := Rect2(r.x / 2 - 240, 120, 480, 360)

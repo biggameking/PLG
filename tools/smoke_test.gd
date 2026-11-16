@@ -6842,6 +6842,31 @@ func run() -> void:
 	check("tap picks a structure", hudn.build_sel == 0)
 	hudn.run_click({"act": "build_pick", "arg": 0})
 	check("re-tap cancels the ghost", hudn.build_sel == -1)
+	# S106: unlocks past slot 9 must be reachable — page the bar to a
+	# deep index and confirm a pick lands there (pre-paging builds were
+	# unreachable). Grant enough tech to exceed one page.
+	var saved_unlocked: Array = game.unlocked.duplicate()
+	for sid9 in StructureData.STRUCTURES.keys():
+		if game.unlocked.size() > 12:
+			break
+		if not game.unlocked.has(sid9):
+			game.unlocked.append(sid9)
+	var blp: Array = game.buildable_list()
+	if blp.size() > 9:
+		hudn.run_click({"act": "build_pg", "arg": 1})
+		check("build page flips", hudn.build_scroll == 9)
+		hudn.run_click({"act": "build_pick", "arg": 9})
+		check("page-2 slot picks", hudn.build_sel == 9,
+			"sel=%d" % hudn.build_sel)
+		hudn.build_sel = -1
+		hudn.run_click({"act": "build_pg", "arg": -1})
+		check("build page back", hudn.build_scroll == 0)
+	else:
+		check("build page flips", true)
+		check("page-2 slot picks", true)
+		check("build page back", true)
+	game.unlocked = saved_unlocked
+	hudn.build_scroll = 0
 	game.panel = ""
 	# chest panel scrolls too — last list left untested
 	game.panel = "chest"

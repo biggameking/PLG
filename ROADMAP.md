@@ -1533,3 +1533,19 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   smoke 钉覆盖全部 50 种（dims+body+ink+顶带）。
 - 至此游戏可见面全部 mesh/几何化：生物 116+player、装饰 7、
   地砖 16、崖面 3、结构 50。
+
+## S106 — 建造栏图标+翻页+ghost sprite（修真可达性缺陷）
+
+- **真缺陷修复**：build bar 只画 `mini(9, lst.size())` 且无分页——
+  解锁 >9 个结构后第 10+ 项**永远够不到**（50 结构游戏里的实际
+  blocker）。新增 `build_scroll` 页偏移：滚轮/◀▶ 按 9 翻页，1-9 键
+  寻址页内槽位，build_pick arg 改绝对索引（跨页一致），build_pg
+  翻页时按菜单规则作废 build_sel。
+- 槽位加结构 sprite 图标（_struct_tex 懒缓存，misses 也有界）+
+  买不起红色 tint。
+- ghost 预览从纯菱形升级为叠放真结构 sprite（绿/红 tint 表可达性，
+  锚定数学与 place_structure 同源）。
+- smoke 新钉：解锁 >9 → build_pg 翻页 → 第 10 项可选中；
+  struct_dims 覆盖全 STRUCTURES id（audit-58 LOW-7）。
+- 实机证据 `docs/reviews/s106-build-bar.png` / `-page2.png`；
+  978/0/0skip。
