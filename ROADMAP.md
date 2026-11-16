@@ -1549,3 +1549,24 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   struct_dims 覆盖全 STRUCTURES id（audit-58 LOW-7）。
 - 实机证据 `docs/reviews/s106-build-bar.png` / `-page2.png`；
   978/0/0skip。
+
+## S106b — audit-59 修复 + 联机实机证据（首次真实双人截图）
+
+- **audit-59 冷审 NEEDS-FIX → 10 项全修**（`docs/reviews/audit-59-build-bar.md`）：
+  ghost sprite 锚点错半高（center-anchor 误当 top-left，预览比真实落点低
+  52-83px）；分页尾页非对齐窗 + 计数器撒谎 → 页边界吸附；wheel 门漏 build；
+  smoke 翻页门数错列表（改 `buildable_list()` 且失败即红）；`build_sel_sid`
+  钉选中 sid 防 net_unlocked 重排偷换；ghost 循环去每帧分配。
+- **联机真缺陷链**（制作双人截图时挖出）：
+  - `main.gd` 建 net 节点不设 name → 自动名 @Node@N 两端漂移 →
+    **所有 RPC 路径无效被静默丢弃**（headless 探针靠节点序巧合相等才过）。
+    修 `net.name = "Net"`。
+  - pal/drop/struct_sync 全量名册单不可靠包 → 45kin=6.2KB/220kin≈30KB
+    超 MTU 碎片化丢包。改 `_send_chunked` 按 `var_to_bytes` 字节预算
+    （1100B/包）+ idx/total 重组 + 伪造守卫，`_close_peer` 清半批。
+  - shot/net_host 状态文件 bind 失败照写 → `is_host` 校验失败即退出。
+- **首次联机视觉证据**（`docs/reviews/s106b-net-*.png`）：guest 视角见
+  host ghost 停出生点 + "Synced world seed" 日志；host 视角 guest ghost
+  精确跟随 +5,+3 位移（screen=64,3648 vs player=0,3520）。零 RPC 错误、
+  零 MTU 警告。反作弊验证：传送阻挡格被 host 正确拒绝。
+- smoke **979/0/0skip** · audit_data ALL CLEAN · IP CLEAN。

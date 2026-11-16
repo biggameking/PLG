@@ -6842,16 +6842,28 @@ func run() -> void:
 	check("tap picks a structure", hudn.build_sel == 0)
 	hudn.run_click({"act": "build_pick", "arg": 0})
 	check("re-tap cancels the ghost", hudn.build_sel == -1)
+	# audit-59: the armed ghost is pinned to the sid it picked — a reorder
+	# (net_unlocked swap) must refuse instead of planting a different build
+	hudn.run_click({"act": "build_pick", "arg": 0})
+	var blp0: Array = game.buildable_list()
+	var forged := "watch_tower" if blp0[0] != "watch_tower" else "kin_condenser"
+	hudn.build_sel_sid = forged
+	var nst := game.structures.size()
+	hudn.place_ghost()
+	check("reordered pick refuses to plant", game.structures.size() == nst)
+	check("refused pick re-pins sid", hudn.build_sel_sid == blp0[hudn.build_sel])
+	hudn.build_sel = -1; hudn.build_sel_sid = ""
 	# S106: unlocks past slot 9 must be reachable — page the bar to a
 	# deep index and confirm a pick lands there (pre-paging builds were
 	# unreachable). Grant enough tech to exceed one page.
 	var saved_unlocked: Array = game.unlocked.duplicate()
 	for sid9 in StructureData.STRUCTURES.keys():
-		if game.unlocked.size() > 12:
-			break
+		if game.buildable_list().size() > 9: # count the FILTERED list — recipe
+			break #  tech ids ride unlocked too and would fake the headcount
 		if not game.unlocked.has(sid9):
 			game.unlocked.append(sid9)
 	var blp: Array = game.buildable_list()
+	check("paging fixture has a page 2", blp.size() > 9, "n=%d" % blp.size())
 	if blp.size() > 9:
 		hudn.run_click({"act": "build_pg", "arg": 1})
 		check("build page flips", hudn.build_scroll == 9)
@@ -6862,9 +6874,9 @@ func run() -> void:
 		hudn.run_click({"act": "build_pg", "arg": -1})
 		check("build page back", hudn.build_scroll == 0)
 	else:
-		check("build page flips", true)
-		check("page-2 slot picks", true)
-		check("build page back", true)
+		check("build page flips", false)
+		check("page-2 slot picks", false)
+		check("build page back", false)
 	game.unlocked = saved_unlocked
 	hudn.build_scroll = 0
 	game.panel = ""

@@ -73,6 +73,47 @@ func _pay_rej(pid: int, tag: String) -> void:
 var is_host := false
 var peer_tags := {} # peer_id -> install token — a guest's stable keeper identity
 
+# State syncs ship whole rosters on the unreliable lane — one call = one
+# datagram, and past ~1.4KB ENet fragments it and loss climbs (220 kin rows
+# ≈ 30KB at cap). Chunked send + idx/total reassembly keeps each packet
+# small; a lost chunk wastes only that tick — the next 0.5s broadcast heals.
+const SYNC_BUDGET := 1100 # bytes per datagram — MTU minus header slack;
+# row widths wander (store dicts ride struct rows), so pack by size, not count
+const SYNC_MAX_CHUNKS := 32 # ≥ the biggest roster ÷ budget on the wire
+const SYNC_BUF_CAP := 640 # a buffer is one roster, not an accumulator
+var _pal_buf: Array = []
+var _drop_buf: Array = []
+var _struct_buf: Array = []
+func _sync_chunk(buf: Array, arr: Array, idx: int, total: int) -> bool:
+	if total < 1 or total > SYNC_MAX_CHUNKS or idx < 0 or idx >= total:
+		return false # a forged chunk index is not a batch — drop it whole
+	if idx == 0:
+		buf.clear()
+	buf.append_array(arr)
+	if buf.size() > SYNC_BUF_CAP:
+		buf.clear()
+		return false
+	if idx != total - 1:
+		return false
+	return true # buf now holds one complete broadcast
+
+func _send_chunked(m: String, rows: Array) -> void:
+	var chunks: Array = []
+	var cur: Array = []
+	var bytes := 0
+	for r in rows:
+		var rb: int = var_to_bytes(r).size()
+		if cur.size() > 0 and bytes + rb > SYNC_BUDGET:
+			chunks.append(cur)
+			cur = []
+			bytes = 0
+		cur.append(r)
+		bytes += rb
+	if cur.size() > 0 or chunks.is_empty():
+		chunks.append(cur)
+	for i in chunks.size():
+		rpc(m, chunks[i], i, chunks.size())
+
 func setup(g: Game, layer: Node2D) -> void:
 	game = g
 	entity_layer = layer
@@ -117,6 +158,8 @@ func _close_peer() -> void:
 	# scene reload — every caller here either has no live session or is
 	# to_title, which razes the whole tree a line later)
 	pending_pays.clear()
+	_pal_buf.clear(); _drop_buf.clear(); _struct_buf.clear() # a half batch
+	# carried into the next session would despawn/spawn against a stale roster
 	mount_pending = false
 	mount_pending_uid = -1
 	unbind_retry_t = 0.0
@@ -379,16 +422,18 @@ func pal_state_pack() -> Array:
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
-func pal_sync(arr: Array) -> void:
+func pal_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
 	if is_host:
 		return # the host's own broadcast echoes back — it's the authority already
+	if not _sync_chunk(_pal_buf, arr, idx, total):
+		return # mid-batch chunk — the apply waits for the tail
 	var seen := {}
 	var byid := {} # one O(pals) pass per packet — find_net_pal's per-row linear
 	# scan ran ~48k compares/broadcast at 220 kin (audit-45)
 	for q in game.pals:
 		if q.net_id > 0:
 			byid[q.net_id] = q
-	for e in arr:
+	for e in _pal_buf:
 		if not (e is Array) or e.size() < 6 or not Game._fin(e[0]):
 			continue
 		var nid := int(e[0])
@@ -728,10 +773,11 @@ func drop_state_pack() -> Array:
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
-func drop_sync(arr: Array) -> void:
+func drop_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
 	if is_host:
 		return
-	game.drop_sync(arr)
+	if _sync_chunk(_drop_buf, arr, idx, total):
+		game.drop_sync(_drop_buf)
 
 @rpc("any_peer", "call_remote", "reliable")
 func take_drop(did: int) -> void:
@@ -783,10 +829,11 @@ func struct_state_pack() -> Array:
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
-func struct_sync(arr: Array) -> void:
+func struct_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
 	if is_host:
 		return
-	game.struct_sync(arr)
+	if _sync_chunk(_struct_buf, arr, idx, total):
+		game.struct_sync(_struct_buf)
 
 @rpc("authority", "call_remote", "unreliable")
 func decor_delta(arr: Array) -> void:
@@ -1513,9 +1560,9 @@ func _process(dt: float) -> void:
 		pal_sync_t += dt
 		if pal_sync_t >= 0.5: # 2Hz — pals drift slowly; anything faster is noise
 			pal_sync_t = 0.0
-			rpc("pal_sync", pal_state_pack())
-			rpc("drop_sync", drop_state_pack())
-			rpc("struct_sync", struct_state_pack())
+			_send_chunked("pal_sync", pal_state_pack())
+			_send_chunked("drop_sync", drop_state_pack())
+			_send_chunked("struct_sync", struct_state_pack())
 			var mp2 := {}
 			if game.merchant != null and is_instance_valid(game.merchant):
 				mp2 = {"on": true, "x": game.merchant.pos.x, "y": game.merchant.pos.y}

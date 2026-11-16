@@ -18,6 +18,8 @@ func _ready() -> void:
 	game.hud = $UILayer/HUD
 	if not OS.has_feature("web"): # browsers can't host/join ENet — hide the whole co-op surface
 		var net := preload("res://src/net.gd").new()
+		net.name = "Net" # RPC paths carry this node's name — auto-names like
+		# "@Node@221" differ between peers and every packet lands nowhere
 		add_child(net)
 		net.setup(game, game.entity_layer)
 		game.net = net

@@ -7,6 +7,10 @@ func _boot() -> void:
 		await process_frame
 	var game = main.get_node("Game")
 	game.net.host()
+	if not game.net.is_host: # bind refused — writing a state file hands the
+		push_error("host bind failed") # joiner a dead handshake
+		quit(1)
+		return
 	var fo := FileAccess.open("res://tools/net_host_state.txt", FileAccess.WRITE)
 	fo.store_line(str(game.world.seed))
 	fo.store_line("%d,%f" % [game.day, game.tod])

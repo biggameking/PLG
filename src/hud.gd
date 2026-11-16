@@ -17,6 +17,10 @@ var tech_scroll := 0
 var stat_scroll := 0
 var build_sel := -1
 var build_scroll := 0 # page offset into buildable_list() — 9 slots per page
+var build_sel_sid := "" # the sid the pick pointed at — a list reorder must
+# not silently retarget the ghost onto a different building (audit-59)
+var _dia_line := PackedVector2Array() # ghost-footprint template — built once
+var _dia_poly := PackedVector2Array() # and drawn per cell via draw_set_transform
 var menu_sel := 0 # pad/arrow-key cursor over shell menus
 var click_rects := []   # [{rect, act, arg}]
 var chat_buf := ""
@@ -297,6 +301,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("build"):
 		game.panel = "" if game.panel == "build" else "build"
 		build_sel = -1
+		build_sel_sid = ""
+		build_scroll = 0 # menu-state reset — same convention as dex/guide
 		return
 	if event.is_action_pressed("inv"):
 		game.panel = "" if game.panel == "inv" else "inv"
@@ -311,7 +317,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		game.panel = "" if game.panel == "dex" else "dex" # P: kindex
 		dex_scroll = 0
 		return
-	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox", "tech", "statues"] and event is InputEventMouseButton and event.pressed:
+	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox", "tech", "statues", "build"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_panel_scroll(-1)
 			get_viewport().set_input_as_handled()
@@ -408,6 +414,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			var lst := game.buildable_list()
 			var i := build_scroll + (k - KEY_1) # keys address the visible page
 			build_sel = i if i < lst.size() else -1
+			build_sel_sid = lst[build_sel] if build_sel >= 0 else ""
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		for cr in click_rects:
@@ -420,6 +427,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and game.panel == "build":
 		build_sel = -1
+		build_sel_sid = ""
 		game.panel = ""
 
 func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to real bounds
@@ -593,9 +601,12 @@ func run_click(cr: Dictionary) -> void:
 		"stat_dn": _panel_scroll(1)
 		"build_pick": # tap toggles — there's no right-click on glass
 			build_sel = -1 if build_sel == int(cr["arg"]) else int(cr["arg"])
+			var bll := game.buildable_list()
+			build_sel_sid = bll[build_sel] if build_sel >= 0 and build_sel < bll.size() else ""
 		"build_pg":
 			build_scroll = maxi(0, build_scroll + int(cr["arg"]) * 9)
 			build_sel = -1 # a page flip voids the selection (menu-state rule)
+			build_sel_sid = ""
 		"equip":
 			game.equip(cr["arg"])
 		"perk":
@@ -917,7 +928,12 @@ func place_ghost() -> void:
 	if build_sel >= bl.size(): # list shrank since the bar was drawn
 		build_sel = maxi(0, bl.size() - 1)
 		return
-	game.place_structure(bl[build_sel], int(tw.x), int(tw.y))
+	var pick: String = bl[build_sel]
+	if pick != build_sel_sid: # a net_unlocked swap can reorder the list
+		# without touching the index — don't plant a different building (audit-59)
+		build_sel_sid = pick
+		return
+	game.place_structure(pick, int(tw.x), int(tw.y))
 
 func w2s(p: Vector2) -> Vector2:
 	var c: Camera2D = get_viewport().get_camera_2d()
@@ -1157,23 +1173,29 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Ink.GOLD if cd_left <= 0 else Ink.INK_SOFT)
 	# build ghost preview
-	if game.panel == "build" and build_sel >= 0 and build_sel < game.buildable_list().size():
+	var blx: Array = game.buildable_list() if game.panel == "build" else []
+	if build_sel >= 0 and build_sel < blx.size():
 		var tw := mouse_tile()
-		var sid: String = game.buildable_list()[build_sel]
+		var sid: String = blx[build_sel]
 		var s: Dictionary = StructureData.STRUCTURES[sid]
 		var w: int = s.get("w", 2)
 		var h: int = s.get("h", 2)
 		var ok := game.can_place(sid, int(tw.x), int(tw.y))
 		var col := Color(Ink.GREEN, 0.45) if ok else Color(Ink.RED, 0.45)
+		if _dia_line.is_empty(): # one template, translated per cell — the ghost
+			# loop used to allocate two arrays × w×h × frame (audit-59)
+			_dia_line = PackedVector2Array([Vector2(0, -16), Vector2(32, 0),
+				Vector2(0, 16), Vector2(-32, 0), Vector2(0, -16)])
+			_dia_poly = PackedVector2Array([Vector2(0, -16), Vector2(32, 0),
+				Vector2(0, 16), Vector2(-32, 0)])
 		for dy in range(h):
 			for dx in range(w):
 				var e: int = game.world.elev_at(int(tw.x) + dx, int(tw.y) + dy)
 				var pc := Iso.to_screen(int(tw.x) + dx + 0.5, int(tw.y) + dy + 0.5, e)
-				var sc := w2s(pc)
-				var dia := PackedVector2Array([sc + Vector2(0, -16), sc + Vector2(32, 0),
-					sc + Vector2(0, 16), sc + Vector2(-32, 0), sc + Vector2(0, -16)])
-				draw_polyline(dia, Ink.INK, 1.5)
-				draw_colored_polygon(dia.slice(0, 4), col)
+				draw_set_transform(w2s(pc))
+				draw_polyline(_dia_line, Ink.INK, 1.5)
+				draw_colored_polygon(_dia_poly, col)
+		draw_set_transform(Vector2.ZERO)
 		# ghost sprite — the same anchor math place_structure uses, tinted
 		# by placeability so the player sees what actually lands
 		var gt := struct_tex(sid)
@@ -1181,8 +1203,9 @@ func _draw() -> void:
 			var ge: int = game.world.elev_at(int(tw.x), int(tw.y))
 			var gp := Iso.to_screen(int(tw.x) + w * 0.5, int(tw.y) + h * 0.5, ge)
 			var gs := w2s(gp)
-			draw_texture_rect(gt, Rect2(
-				gs + Vector2(-gt.get_width() * 0.5, -gt.get_height() * 0.5 + 8),
+			draw_texture_rect(gt, Rect2( # Sprite2D centers the texture — the
+				# rect's top edge sits a full height up, not half (audit-59)
+				gs + Vector2(-gt.get_width() * 0.5, -gt.get_height() + 8),
 				Vector2(gt.get_width(), gt.get_height())), false,
 				Color(0.5, 1.0, 0.6, 0.55) if ok else Color(1.0, 0.45, 0.4, 0.55))
 	match game.panel:
@@ -1449,6 +1472,8 @@ func touch_verb(b: String) -> void:
 		"bld":
 			game.panel = "build"
 			build_sel = -1
+			build_sel_sid = ""
+			build_scroll = 0 # same reset the keybind path applies
 		"roll":
 			pl.dodge()
 		"atk":
@@ -1725,7 +1750,9 @@ func draw_build_bar(r: Vector2) -> void:
 	# 9 slots per page; scroll/wheel pages through the whole unlock list —
 	# before paging existed, unlocks past index 9 were unreachable
 	var pages := maxi(1, int(ceil(lst.size() / 9.0)))
-	build_scroll = clampi(build_scroll, 0, maxi(0, lst.size() - 9))
+	# snap to page edges — a tail-aligned window duplicates slots across
+	# "pages" and misreads the counter (audit-59)
+	build_scroll = clampi((build_scroll / 9) * 9, 0, maxi(0, (pages - 1) * 9))
 	var head := tr("BUILD — tap/1-9 pick, tap again to cancel")
 	if pages > 1:
 		head += "  (%d/%d)" % [build_scroll / 9 + 1, pages]

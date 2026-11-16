@@ -167,3 +167,18 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
 - `post_structure.py` DIMS 逐 id 钉输出尺寸（与旧图一致保锚定）。
 - 坑：emit>0 的材质在 Standard view_transform 下会过曝变白——
   kinbox 宝珠 emit=1.8 已到边界，别再调高。
+
+## S106b 联机证据管线 + net.gd 修复
+
+- `tools/shot_net_host.gd` / `shot_net_join.gd`：窗口化双进程联机截图。
+  host 写 `tools/net_host_state.txt`（seed+day）→ join 读到才连 →
+  等 `ghosts.has(1) AND world.seed == host_seed`（不是只看 ghost——seed
+  不匹配的连接是假同步）→ guest 走到**可走格**（阻挡格会被 host 反作弊
+  gate 正确拒绝）→ 双端截图 + 打印 ghost/player 屏幕坐标差做硬证据。
+- 大坑：**`preload.new()` 的节点必须显式设 `name`**——没名字的节点拿
+  自动名 @Node@N，两端节点序稍有不同全链路 RPC 静默丢包，且只在
+  headless 探针里因节点序巧合而"碰巧通过"。
+- 状态文件必须在 `is_host` 验证后写——bind 失败的进程写文件 = 给
+  joiner 一个死握手。
+- pal/drop/struct_sync 名册按 `var_to_bytes` 字节预算分包（1100B），
+  不可靠大包超 MTU 必丢。
