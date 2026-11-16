@@ -4291,22 +4291,37 @@ func run() -> void:
 		if simg.get_width() != struct_dims[skey][0] or simg.get_height() != struct_dims[skey][1]:
 			bad_struct.append("%s:dims=%dx%d" % [skey, simg.get_width(), simg.get_height()])
 			continue
-		var sopq := 0; var sink := 0; var s_top := 0
-		var s_rows := maxi(2, int(simg.get_height() * 0.10))
-		var s_total := s_rows * simg.get_width()
+		var sopq := 0; var sink := 0; var first_row := -1
 		for sy2 in simg.get_height():
+			var row_opq := 0
 			for sx2 in simg.get_width():
 				var spx := simg.get_pixel(sx2, sy2)
 				if spx.a > 0.9:
 					sopq += 1
-					if sy2 < s_rows:
-						s_top += 1
+					row_opq += 1
 					if spx.r < 0.25 and spx.g < 0.25 and spx.b < 0.3:
 						sink += 1
-		if sopq < 40 or sink < 2 or s_top > s_total * 0.6:
-			bad_struct.append("%s:opaque=%d,ink=%d,top=%d/%d" % [skey, sopq, sink, s_top, s_total])
+			if first_row < 0 and row_opq > 0:
+				first_row = row_opq
+		# audit-58: the old top-10%-band clip pin was unreachable for
+		# 33/50 sprites (post's pad guarantees sparse top rows). The live
+		# signal is the first opaque row's width: a camera clip leaves a
+		# flat near-full-width edge (~1.0), a framed structure tapers to
+		# a tip (measured legit max = 0.44 on guard_post's roof).
+		var clip := float(first_row) / simg.get_width()
+		if sopq < 40 or sink < 2 or clip > 0.70:
+			bad_struct.append("%s:opaque=%d,ink=%d,clip=%.2f" % [skey, sopq, sink, clip])
 	check("all structure sprites have bodies + ink contour", bad_struct.is_empty(),
 		",".join(bad_struct))
+	# every structure id must carry a migrated-sprite pin — a new
+	# STRUCTURES entry without a sprite pin would fall back to legacy
+	# flat art silently (audit-58)
+	var unpinned := []
+	for sid3 in StructureData.STRUCTURES.keys():
+		if not struct_dims.has(sid3):
+			unpinned.append(sid3)
+	check("every structure id has a sprite pin", unpinned.is_empty(),
+		",".join(unpinned))
 
 	# terrain atlas: every ground cell must fill its diamond with opaque
 	# pixels and real luminance variance — a blank cell, a mis-offset

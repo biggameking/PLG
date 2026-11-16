@@ -76,3 +76,15 @@ deliberate contrast). `gen_assets.py` atlas() is gated behind
 cells by the game's own face geometry (edge + 16px drop), re-applying the
 INK top line + lilac rim and post strata lines. Stair/marker cells stay
 procedural — stepped treads read better flat.
+
+## S105 structures — fully procedural Blender geometry (no external mesh)
+
+All 50 `assets/structures/*.png` are produced by
+`tools/art/render_structure.py` (per-id primitive builders: cube/cyl/
+cone/ico/roof_prism under the shared kin light rig + upright 3/4 ortho
+camera) and `tools/art/post_structure.py` (post_kin post chain, output
+dims pinned byte-identical to the legacy sprites so the `p.y - h*0.5 + 8`
+anchor is unchanged). `tools/art/batch_struct.sh` renders all 50 with
+`--python-exit-code` on both stages. No external source assets; the flat
+`make_structure` path in `tools/gen_assets.py` remains only behind
+`--struct-legacy`.

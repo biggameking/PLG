@@ -8,67 +8,66 @@
 
 import bpy
 import math
-import mathutils
 import os
 import sys
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "render")
 
-# id -> builder kind, world height, camera ortho/track, rot_z
+# id -> builder kind, camera ortho_scale, track-target z
 CFG = {
-    "kinbox":       {"build": "kinbox",      "h": 2.2, "ortho": 2.8, "tz": 1.0},
-    "campfire":     {"build": "campfire",    "h": 0.9, "ortho": 1.5, "tz": 0.4},
-    "workbench":    {"build": "workbench",   "h": 1.1, "ortho": 1.7, "tz": 0.5},
-    "well":         {"build": "well",        "h": 1.4, "ortho": 1.9, "tz": 0.6},
-    "torch":        {"build": "torch",       "h": 1.3, "ortho": 1.8, "tz": 0.6},
-    "waypoint":     {"build": "waypoint",    "h": 1.5, "ortho": 2.0, "tz": 0.7},
-    "chest":        {"build": "chest",       "h": 0.7, "ortho": 1.3, "tz": 0.3},
-    "feed_box":     {"build": "feed_box",    "h": 0.7, "ortho": 1.4, "tz": 0.3},
-    "kin_bed":      {"build": "bed",         "h": 0.6, "ortho": 1.5, "tz": 0.3},
-    "wooden_wall":  {"build": "log_wall",    "h": 1.2, "ortho": 1.7, "tz": 0.5},
-    "watch_tower":  {"build": "watch_tower", "h": 2.4, "ortho": 3.0, "tz": 1.1},
-    "notice_board": {"build": "notice_board","h": 1.4, "ortho": 1.9, "tz": 0.6},
+    "kinbox":       {"build": "kinbox", "ortho": 2.8, "tz": 1.0},
+    "campfire":     {"build": "campfire", "ortho": 1.5, "tz": 0.4},
+    "workbench":    {"build": "workbench", "ortho": 1.7, "tz": 0.5},
+    "well":         {"build": "well", "ortho": 1.9, "tz": 0.6},
+    "torch":        {"build": "torch", "ortho": 1.8, "tz": 0.6},
+    "waypoint":     {"build": "waypoint", "ortho": 2.0, "tz": 0.7},
+    "chest":        {"build": "chest", "ortho": 1.3, "tz": 0.3},
+    "feed_box":     {"build": "feed_box", "ortho": 1.4, "tz": 0.3},
+    "kin_bed":      {"build": "bed", "ortho": 1.5, "tz": 0.3},
+    "wooden_wall":  {"build": "log_wall", "ortho": 1.7, "tz": 0.5},
+    "watch_tower":  {"build": "watch_tower", "ortho": 3.0, "tz": 1.1},
+    "notice_board": {"build": "notice_board", "ortho": 1.9, "tz": 0.6},
     # batch 2 — production machines
-    "furnace":      {"build": "furnace",     "h": 1.5, "ortho": 2.2, "tz": 0.7},
-    "generator":    {"build": "generator",   "h": 1.4, "ortho": 2.1, "tz": 0.6},
-    "crusher":      {"build": "crusher",     "h": 1.5, "ortho": 2.2, "tz": 0.7},
-    "mill":         {"build": "mill",        "h": 1.8, "ortho": 2.5, "tz": 0.8},
-    "incubator":    {"build": "incubator",   "h": 1.3, "ortho": 2.0, "tz": 0.6},
-    "ore_mine":     {"build": "ore_mine",    "h": 1.3, "ortho": 2.0, "tz": 0.6},
-    "logging_site": {"build": "logging_site","h": 0.9, "ortho": 1.8, "tz": 0.4},
-    "stone_pit":    {"build": "stone_pit",   "h": 0.9, "ortho": 1.8, "tz": 0.4},
-    "gathering_site":{"build": "gathering",  "h": 1.0, "ortho": 1.8, "tz": 0.5},
-    "spikes":       {"build": "spikes",      "h": 0.6, "ortho": 1.3, "tz": 0.3},
-    "cooler":       {"build": "cooler",      "h": 0.9, "ortho": 1.5, "tz": 0.4},
-    "kin_condenser":{"build": "kin_condenser","h": 1.5, "ortho": 2.1, "tz": 0.7},
+    "furnace":      {"build": "furnace", "ortho": 2.2, "tz": 0.7},
+    "generator":    {"build": "generator", "ortho": 2.1, "tz": 0.6},
+    "crusher":      {"build": "crusher", "ortho": 2.2, "tz": 0.7},
+    "mill":         {"build": "mill", "ortho": 2.5, "tz": 0.8},
+    "incubator":    {"build": "incubator", "ortho": 2.0, "tz": 0.6},
+    "ore_mine":     {"build": "ore_mine", "ortho": 2.0, "tz": 0.6},
+    "logging_site": {"build": "logging_site", "ortho": 1.8, "tz": 0.4},
+    "stone_pit":    {"build": "stone_pit", "ortho": 1.8, "tz": 0.4},
+    "gathering_site":{"build": "gathering", "ortho": 1.8, "tz": 0.5},
+    "spikes":       {"build": "spikes", "ortho": 1.3, "tz": 0.3},
+    "cooler":       {"build": "cooler", "ortho": 1.5, "tz": 0.4},
+    "kin_condenser":{"build": "kin_condenser", "ortho": 2.1, "tz": 0.7},
     # batch 3 — farms / defense / misc
-    "berry_farm":   {"build": "berry_farm",  "h": 0.7, "ortho": 2.4, "tz": 0.35},
-    "wheat_farm":   {"build": "wheat_farm",  "h": 0.7, "ortho": 2.4, "tz": 0.35},
-    "ranch":        {"build": "ranch",       "h": 1.1, "ortho": 3.4, "tz": 0.5},
-    "straw_bed":    {"build": "straw_bed",   "h": 0.5, "ortho": 1.4, "tz": 0.25},
-    "hot_spring":   {"build": "hot_spring",  "h": 0.8, "ortho": 2.2, "tz": 0.4},
-    "fish_trap":    {"build": "fish_trap",   "h": 0.7, "ortho": 1.4, "tz": 0.35},
-    "snare_trap":   {"build": "snare_trap",  "h": 0.5, "ortho": 1.3, "tz": 0.25},
-    "kin_cage":     {"build": "kin_cage",    "h": 1.3, "ortho": 1.9, "tz": 0.6},
-    "guard_post":   {"build": "guard_post",  "h": 1.6, "ortho": 2.1, "tz": 0.7},
-    "training_hall":{"build": "training_hall","h": 1.5, "ortho": 2.6, "tz": 0.7},
-    "sparring_ring":{"build": "sparring",    "h": 1.0, "ortho": 2.4, "tz": 0.5},
-    "training_dummy":{"build": "dummy",      "h": 1.4, "ortho": 1.9, "tz": 0.65},
-    "war_banner":   {"build": "war_banner",  "h": 1.7, "ortho": 2.2, "tz": 0.8},
-    "monitoring_stand":{"build": "monitor",  "h": 1.5, "ortho": 2.0, "tz": 0.7},
+    "berry_farm":   {"build": "berry_farm", "ortho": 2.4, "tz": 0.35},
+    "wheat_farm":   {"build": "wheat_farm", "ortho": 2.4, "tz": 0.35},
+    "ranch":        {"build": "ranch", "ortho": 3.4, "tz": 0.5},
+    "straw_bed":    {"build": "straw_bed", "ortho": 1.4, "tz": 0.25},
+    "hot_spring":   {"build": "hot_spring", "ortho": 2.2, "tz": 0.4},
+    "fish_trap":    {"build": "fish_trap", "ortho": 1.4, "tz": 0.35},
+    "snare_trap":   {"build": "snare_trap", "ortho": 1.3, "tz": 0.25},
+    "kin_cage":     {"build": "kin_cage", "ortho": 1.9, "tz": 0.6},
+    "guard_post":   {"build": "guard_post", "ortho": 2.1, "tz": 0.7},
+    "training_hall":{"build": "training_hall", "ortho": 2.6, "tz": 0.7},
+    "sparring_ring":{"build": "sparring", "ortho": 2.4, "tz": 0.5},
+    "training_dummy":{"build": "dummy", "ortho": 1.9, "tz": 0.65},
+    "war_banner":   {"build": "war_banner", "ortho": 2.2, "tz": 0.8},
+    "monitoring_stand":{"build": "monitor", "ortho": 2.0, "tz": 0.7},
     # batch 4 — remaining machines / POI misc
-    "pharmacy":     {"build": "pharmacy",    "h": 1.3, "ortho": 1.9, "tz": 0.6},
-    "oil_extractor":{"build": "oil_extractor","h": 1.5, "ortho": 2.2, "tz": 0.7},
-    "sphere_factory":{"build": "sphere_factory","h": 1.3, "ortho": 2.0, "tz": 0.6},
-    "sphere_factory_2":{"build": "sphere_factory_2","h": 1.4, "ortho": 2.1, "tz": 0.65},
-    "compost_bin":  {"build": "compost",     "h": 0.8, "ortho": 1.4, "tz": 0.35},
-    "apiary":       {"build": "apiary",      "h": 1.0, "ortho": 1.6, "tz": 0.45},
-    "weather_shrine":{"build": "weather_shrine","h": 1.4, "ortho": 1.9, "tz": 0.65},
-    "kin_gacha":    {"build": "kin_gacha",   "h": 1.4, "ortho": 1.9, "tz": 0.65},
-    "fossil_bed":   {"build": "fossil_bed",  "h": 0.7, "ortho": 1.5, "tz": 0.3},
-    "spyglass":     {"build": "spyglass",    "h": 1.2, "ortho": 1.7, "tz": 0.55},
-    "lightning_rod":{"build": "lightning_rod","h": 1.7, "ortho": 2.2, "tz": 0.8},
-    "expedition_post":{"build": "expedition","h": 1.4, "ortho": 2.2, "tz": 0.65},
+    "pharmacy":     {"build": "pharmacy", "ortho": 1.9, "tz": 0.6},
+    "oil_extractor":{"build": "oil_extractor", "ortho": 2.2, "tz": 0.7},
+    "sphere_factory":{"build": "sphere_factory", "ortho": 2.0, "tz": 0.6},
+    "sphere_factory_2":{"build": "sphere_factory_2", "ortho": 2.1, "tz": 0.65},
+    "compost_bin":  {"build": "compost", "ortho": 1.4, "tz": 0.35},
+    "apiary":       {"build": "apiary", "ortho": 1.6, "tz": 0.45},
+    "weather_shrine":{"build": "weather_shrine", "ortho": 1.9, "tz": 0.65},
+    "kin_gacha":    {"build": "kin_gacha", "ortho": 1.9, "tz": 0.65},
+    "fossil_bed":   {"build": "fossil_bed", "ortho": 1.5, "tz": 0.3},
+    "spyglass":     {"build": "spyglass", "ortho": 1.7, "tz": 0.55},
+    "lightning_rod":{"build": "lightning_rod", "ortho": 2.2, "tz": 0.8},
+    "expedition_post":{"build": "expedition", "ortho": 2.2, "tz": 0.65},
 }
 
 WOOD = (0.45, 0.32, 0.20)
@@ -237,7 +236,7 @@ def build(kind, cfg):
         cyl("chimney", (0.15, 0.15, 1.35), 0.18, 0.35, ir, 8)
         cube("mouth", (0, -0.52, 0.35), (0.34, 0.10, 0.34), mat((0.08, 0.08, 0.10), "dark"))
         fire = mat((0.95, 0.45, 0.10), "fire", emit=2.2)
-        cube("fire", (0, -0.50, 0.35), (0.24, 0.06, 0.24), fire)
+        cube("fire", (0, -0.585, 0.35), (0.22, 0.04, 0.24), fire)
         cyl("rim", (0, 0, 1.32), 0.58, 0.10, ir, 10)
     elif kind == "generator":
         cube("base", (0, 0, 0.30), (0.9, 0.7, 0.55), ir)
@@ -414,12 +413,12 @@ def build(kind, cfg):
         for i in range(8):
             a = i * math.tau / 8
             cyl("post", (math.cos(a) * 0.85, math.sin(a) * 0.85, 0.30), 0.04, 0.5, wd, 6)
+        rope = mat((0.75, 0.30, 0.25), "rope")
         for z in (0.35, 0.5):
             bpy.ops.mesh.primitive_torus_add(major_radius=0.85, minor_radius=0.02,
                                              major_segments=14, minor_segments=5,
                                              location=(0, 0, z))
-            bpy.context.active_object.data.materials.append(
-                mat((0.75, 0.30, 0.25), "rope"))
+            bpy.context.active_object.data.materials.append(rope)
     elif kind == "dummy":
         cyl("post", (0, 0, 0.45), 0.07, 0.9, wd, 8)
         cyl("body", (0, 0, 0.85), 0.22, 0.7, mat((0.78, 0.62, 0.38), "straw_d"), 8)
@@ -466,7 +465,7 @@ def build(kind, cfg):
                 mat((0.30, 0.82, 0.88), "ball"), 2)
     elif kind == "sphere_factory_2":
         cube("body", (0, 0, 0.55), (1.0, 0.75, 1.0), ir)
-        ico("dome", (0, -0.1, 1.1), 0.36, mat((0.85, 0.60, 0.95), "dome2", emit=1.6), 2, 0.8)
+        ico("dome", (0, -0.1, 1.1), 0.36, mat((0.85, 0.60, 0.95), "dome2", emit=1.15), 2, 0.8)
         cyl("belt", (0, -0.55, 0.3), 0.24, 1.0, mat((0.2, 0.2, 0.25), "belt2"), 8).rotation_euler.y = math.radians(90)
         for i in range(4):
             ico("sphere", (-0.42 + i * 0.28, -0.68, 0.30), 0.10,
@@ -541,6 +540,8 @@ def build(kind, cfg):
                 mat((0.6, 0.45, 0.3), "pack"), 1)
         cyl("flag", (0.55, 0, 1.55), 0.02, 0.4, wd, 6)
         cube("flagc", (0.66, 0, 1.65), (0.2, 0.01, 0.12), mat((0.85, 0.35, 0.25), "flagc"))
+    else:
+        raise RuntimeError("unknown build kind %s" % kind)
 
 
 def main():

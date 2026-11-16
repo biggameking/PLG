@@ -47,6 +47,31 @@ def process(sid):
     img = post_kin.crop_alpha(img)
     if sum(img.getchannel("A").histogram()[41:]) < 50:
         sys.exit("FAIL %s: blank render (<50 opaque px)" % sid)
+    # audit-58: the shipped-sprite top-band smoke pin is unreachable for
+    # small dims — clip detection belongs HERE on the tight crop. A
+    # camera-clipped frame has a flat solid edge; a framed sprite tapers
+    # to spire tips (top/sides, sparse) or a ground base (bottom, wide
+    # but not solid). Thresholds tuned so real tips pass and any clip
+    # (~100% edge) fails.
+    w, h = img.size
+    al = img.getchannel("A")
+    px = al.load()
+    def frac_opaque(x0, y0, x1, y1):
+        n = 0; t = (x1 - x0) * (y1 - y0)
+        for yy in range(y0, y1):
+            for xx in range(x0, x1):
+                if px[xx, yy] > 40:
+                    n += 1
+        return n / max(1, t)
+    # measured on all 50 crops: legit max top=0.73 (guard_post's wide
+    # roof), sides=0.37, bottom≈0. A camera clip leaves a flat ~1.00
+    # frame edge — 0.80/0.95 thresholds separate them with margin.
+    if frac_opaque(0, 0, w, 1) > 0.80:
+        sys.exit("FAIL %s: top edge clipped (%.2f opaque)" % (sid, frac_opaque(0, 0, w, 1)))
+    if frac_opaque(0, 0, 1, h) > 0.80 or frac_opaque(w - 1, 0, w, h) > 0.80:
+        sys.exit("FAIL %s: side edge clipped" % sid)
+    if frac_opaque(0, h - 1, w, h) > 0.95:
+        sys.exit("FAIL %s: bottom edge clipped" % sid)
     img = post_kin.cel_band(img)
     img = post_kin.warm_lift(img)
     img.thumbnail((dw - 8, dh - 8), Image.LANCZOS)
