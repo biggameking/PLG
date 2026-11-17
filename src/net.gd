@@ -84,6 +84,7 @@ const SYNC_BUF_CAP := 640 # a buffer is one roster, not an accumulator
 var _pal_buf: Array = []
 var _drop_buf: Array = []
 var _struct_buf: Array = []
+var _decor_buf: Array = []
 func _sync_chunk(buf: Array, arr: Array, idx: int, total: int) -> bool:
 	if total < 1 or total > SYNC_MAX_CHUNKS or idx < 0 or idx >= total:
 		return false # a forged chunk index is not a batch — drop it whole
@@ -158,8 +159,9 @@ func _close_peer() -> void:
 	# scene reload — every caller here either has no live session or is
 	# to_title, which razes the whole tree a line later)
 	pending_pays.clear()
-	_pal_buf.clear(); _drop_buf.clear(); _struct_buf.clear() # a half batch
+	_pal_buf.clear(); _drop_buf.clear(); _struct_buf.clear(); _decor_buf.clear() # a half batch
 	# carried into the next session would despawn/spawn against a stale roster
+	unl_sig = -1 # the next session's first env_sync re-announces the tech set
 	mount_pending = false
 	mount_pending_uid = -1
 	unbind_retry_t = 0.0
@@ -836,10 +838,11 @@ func struct_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
 		game.struct_sync(_struct_buf)
 
 @rpc("authority", "call_remote", "unreliable")
-func decor_delta(arr: Array) -> void:
+func decor_delta(arr: Array, idx: int = 0, total: int = 1) -> void:
 	if is_host:
 		return
-	game.decor_sync(arr)
+	if _sync_chunk(_decor_buf, arr, idx, total):
+		game.decor_sync(_decor_buf)
 
 @rpc("any_peer", "call_remote", "reliable")
 func harvest_req(tx: int, ty: int) -> void:
@@ -1551,6 +1554,9 @@ func chat(t: String, from_id: int = 0) -> void:
 		rpc("chat", line, int(real_from)) # ENet is a star: relay to other clients
 
 var pal_sync_t := 0.0
+var unl_sig := -1 # unlocked is append-only mid-session (loads refuse with
+# guests) — its size IS the change fingerprint; env_sync re-ships the ~1KB
+# tech list only when research actually lands, like box_sig's roster diff
 
 func _process(dt: float) -> void:
 	unbind_retry_t = maxf(0.0, unbind_retry_t - dt) # cools even mid-tear — a half-dead session still drains it
@@ -1573,8 +1579,12 @@ func _process(dt: float) -> void:
 			for smi in Game.SPIRE_DEFS.size():
 				if game.spires_done.has("spire_%d" % smi):
 					spire_sm |= 1 << smi
+			var unl_send: Array = []
+			if game.unlocked.size() != unl_sig:
+				unl_sig = game.unlocked.size()
+				unl_send = game.unlocked
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
-				bq_send, mp2, game.work_mode, game.unlocked,
+				bq_send, mp2, game.work_mode, unl_send,
 				game.crowned, game.accord,
 				game.spires_done.size(), game.den_caught(), spire_sm) # clock + sky + threat + posting + trader + orders + tech + the campaign spine are host truth — the holder's pid stays home
 			box_resend -= 0.5
@@ -1586,7 +1596,9 @@ func _process(dt: float) -> void:
 					rpc_id(pid, "box_sync", box_state_pack(pid), game.rparty_for(pid).duplicate(), party_state_pack(pid))
 			var dd := game.dirty_decor_pack()
 			if not dd.is_empty():
-				rpc("decor_delta", dd)
+				_send_chunked("decor_delta", dd) # a harvest burst no longer
+				# fits one MTU — a dropped unchunked delta was a permanent
+				# decor desync: the cell never re-dirties, the ghost stays
 	send_timer += dt
 	if send_timer < 0.05:
 		return

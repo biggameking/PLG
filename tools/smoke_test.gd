@@ -1861,22 +1861,28 @@ func run() -> void:
 			continue
 		var hit109 := false
 		for rec in ItemData.RECIPES:
-			if str(rec.get("tech", rec.get("id", ""))) == tid109:
-				hit109 = true
+			if str(rec.get("tech", rec.get("id", ""))) == tid109 \
+					and ItemData.ITEMS.has(str(rec.get("out", [""])[0])):
+				hit109 = true # only counts if the product can draw an icon
 				break
 		if not hit109:
 			bare109.append(tid109)
 	check("every tech node resolves an icon source", bare109.is_empty(),
 		"bare: %s" % str(bare109))
-	# the three recipe-shaped techs resolve to real products, not relic-masquerade
-	var outs109 := true
-	for tid109 in ["spear", "axe", "pick"]:
+	# every recipe-shaped tech resolves to a real product — a recipe whose out
+	# isn't an item must resolve "" so the draw skips it instead of borrowing
+	# the relic sprite (audit-62 LOW-4: verbatim out[0] WAS the masquerade)
+	var outs109 := []
+	for t109 in StructureData.TECH:
+		var tid109: String = t109["id"]
+		if ItemData.ITEMS.has(tid109) \
+				or ResourceLoader.exists("res://assets/structures/%s.png" % tid109):
+			continue
 		var prod: String = hud67.tech_product(tid109)
 		if prod == "" or not ItemData.ITEMS.has(prod):
-			outs109 = false
-	check("recipe techs resolve to real products", outs109,
-		"spear=%s axe=%s pick=%s" % [hud67.tech_product("spear"),
-			hud67.tech_product("axe"), hud67.tech_product("pick")])
+			outs109.append("%s→%s" % [tid109, prod])
+	check("recipe techs resolve to real products", outs109.is_empty(),
+		"bad: %s" % str(outs109))
 	for t109 in StructureData.TECH: # fill the cache to prove the bound
 		hud67.tech_product(t109["id"])
 	hud67.tech_product("__bogus_tech__")
@@ -2508,6 +2514,36 @@ func run() -> void:
 	var dv0: int = game.world.decor[0]
 	game.decor_sync([[0, {"v": 1}], [{"x": 9}, 2]])
 	check("decor_sync hostile value skipped", game.world.decor[0] == dv0)
+	# S109b: decor_delta rides the chunker now — a harvest burst that no longer
+	# fits one MTU must assemble across packets, not drop half a forest
+	game.net.is_host = false
+	var dc_a: int = game.world.decor.find(World.Decor.TREE_A)
+	if dc_a < 0:
+		dc_a = 1
+	var dc_b: int = dc_a + 1
+	var dva: int = game.world.decor[dc_a]
+	var dvb: int = game.world.decor[dc_b]
+	game.net.decor_delta([[dc_a, World.Decor.NONE]], 0, 2)
+	check("decor chunk 1 of 2 holds", game.world.decor[dc_a] == dva)
+	game.net.decor_delta([[dc_b, World.Decor.NONE]], 1, 2)
+	check("decor chunk applies whole batch",
+		game.world.decor[dc_a] == World.Decor.NONE
+		and game.world.decor[dc_b] == World.Decor.NONE)
+	game.world.decor[dc_a] = dva; game.world.decor[dc_b] = dvb
+	game.net.decor_delta([[dc_a, World.Decor.NONE]], 5, 2) # forged idx dies whole
+	check("decor forged chunk dropped", game.world.decor[dc_a] == dva)
+	game.net._decor_buf.clear()
+	# the unl diff-gate's contract: an empty tech list on the wire means
+	# "unchanged", never "wipe" — env_sync already honored it, now it's pinned
+	game.net_unlocked = ["smoke_fake_tech"]
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [])
+	check("empty unl keeps the mirrored tech set",
+		game.net_unlocked == ["smoke_fake_tech"])
+	game.net_unlocked = []
+	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, ["smoke_new_tech"])
+	check("a real unl payload replaces the mirror",
+		game.net_unlocked == ["smoke_new_tech"])
+	game.net_unlocked = []
 	# S59: NaN damage claims and hostile echo payloads can't poison host state
 	var nan_pal: Kin = game.gen_pal("fenjelly", 5, p.pos)
 	nan_pal.mode = "wild"; nan_pal.net_id = 0
@@ -4276,7 +4312,10 @@ func run() -> void:
 	var bad_kin := []
 	for ksid in SpeciesData.SPECIES.keys() + SpeciesGen.SPECIES.keys() + ["player"]:
 		for kf in ["f0", "f1"]:
-			var kimg := Image.load_from_file("res://assets/kin/%s_%s.png" % [ksid, kf])
+			# via load() not load_from_file — a stale/missing .import fails
+			# here exactly the way it fails in game, on-disk png or not
+			var ktex: Texture2D = load("res://assets/kin/%s_%s.png" % [ksid, kf])
+			var kimg: Image = ktex.get_image() if ktex != null else null
 			if kimg == null:
 				bad_kin.append("%s_%s:missing" % [ksid, kf]); continue
 			var opaque := 0; var ink := 0
@@ -4295,7 +4334,8 @@ func run() -> void:
 	# the silhouette outline already supply dozens of dark px (audit-54
 	# MED-4). Require ink INSIDE the face band (rows 30-55%, cols 30-72%)
 	# where the two eye beads live — an eyeless/buried-eye render fails.
-	var pimg := Image.load_from_file("res://assets/kin/player_f0.png")
+	var ptex: Texture2D = load("res://assets/kin/player_f0.png")
+	var pimg: Image = ptex.get_image() if ptex != null else null
 	var eye_ink := 0
 	if pimg != null:
 		var pimw := pimg.get_width(); var pimh := pimg.get_height()
@@ -4320,7 +4360,10 @@ func run() -> void:
 		"berry_bush": [64, 56], "stump": [48, 30],
 	}
 	for dkey in decor_dims.keys():
-		var dimg := Image.load_from_file("res://assets/decor/%s.png" % dkey)
+		# load() through the import path, not load_from_file — a png whose
+		# .import died still exists on disk while the game draws nothing
+		var dtex: Texture2D = load("res://assets/decor/%s.png" % dkey)
+		var dimg: Image = dtex.get_image() if dtex != null else null
 		if dimg == null:
 			bad_decor.append("%s:missing" % dkey); continue
 		if dimg.get_width() != decor_dims[dkey][0] or dimg.get_height() != decor_dims[dkey][1]:
@@ -4372,7 +4415,8 @@ func run() -> void:
 		"lightning_rod": [80, 104], "expedition_post": [112, 120],
 	}
 	for skey in struct_dims.keys():
-		var simg := Image.load_from_file("res://assets/structures/%s.png" % skey)
+		var stex: Texture2D = load("res://assets/structures/%s.png" % skey)
+		var simg: Image = stex.get_image() if stex != null else null
 		if simg == null:
 			bad_struct.append("%s:missing" % skey); continue
 		if simg.get_width() != struct_dims[skey][0] or simg.get_height() != struct_dims[skey][1]:
@@ -4416,7 +4460,8 @@ func run() -> void:
 	# can still pass variance; the pin's job is missing/blank/misplaced,
 	# not style.)
 	var bad_tile := []
-	var timg := Image.load_from_file("res://assets/tiles.png")
+	var ttex: Texture2D = load("res://assets/tiles.png")
+	var timg: Image = ttex.get_image() if ttex != null else null
 	var tmani: Dictionary = {}
 	if FileAccess.file_exists("res://assets/tiles.json"):
 		tmani = JSON.parse_string(FileAccess.get_file_as_string("res://assets/tiles.json")).get("tiles", {})
@@ -7362,8 +7407,10 @@ func run() -> void:
 
 	# hero accessories: the crown jewels and back wings are real pixels, not
 	# a comment — scalbeak wears white jewel dots, vermtrot carries a back fan
-	var h1 := Image.load_from_file("res://assets/kin/scalbeak_f0.png")
-	var h2 := Image.load_from_file("res://assets/kin/vermtrot_f0.png")
+	var h1t: Texture2D = load("res://assets/kin/scalbeak_f0.png")
+	var h2t: Texture2D = load("res://assets/kin/vermtrot_f0.png")
+	var h1: Image = h1t.get_image() if h1t != null else null
+	var h2: Image = h2t.get_image() if h2t != null else null
 	var crown_px := 0 # the crown is warm accent pixels in the head-top band
 	if h1 != null:
 		for cy2 in range(4, 16):
@@ -7480,6 +7527,8 @@ func run() -> void:
 			if rockc43.x < 0 and game.world.blocked(xx, yy) \
 					and game.world.tile_at(xx, yy) != World.Tile.WATER:
 				rockc43 = Vector2i(xx, yy)
+	check("rock cell exists", rockc43.x >= 0) # an all-walkable world skips
+	# the assertion silently — existence is itself a fixture requirement
 	if rockc43.x >= 0:
 		game.net.sync_pos(rockc43.x + 0.5, rockc43.y + 0.5, 0.0)
 		check("sync_pos kills a rock-embedded claim",
@@ -7534,6 +7583,8 @@ func run() -> void:
 	check("blink fixtures planted", kb.x >= 0 and wk.x >= 0, "kb=%s wk=%s" % [kb, wk])
 	if kb.x >= 0:
 		g0.set_meta("pos_pps", 60.0) # wall-clock bucket — refresh between probes (rule 44)
+		g0.set_meta("pos_allow", 0.0) # force the blink lane — a kinbox landing
+		# inside the step bucket would skip _legit_blink and never set blink_t
 		game.net.sync_pos(kb.x + 0.5, kb.y + 2.5, 0.0)
 		check("respawn blink lands", g0.net_pos == Vector3(kb.x + 0.5, kb.y + 2.5, 0))
 	if wk.x >= 0:

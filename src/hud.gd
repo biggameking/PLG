@@ -88,6 +88,9 @@ func tech_product(tid: String) -> String:
 			if str(rec.get("tech", rec.get("id", ""))) == tid:
 				iid = str(rec.get("out", ["", 0])[0])
 				break
+	if iid != "" and not ItemData.ITEMS.has(iid):
+		iid = "" # a recipe out that isn't an item resolves to nothing —
+		# letting it reach item_icon IS the relic masquerade this refuses
 	if _tech_out.size() < StructureData.TECH.size():
 		_tech_out[tid] = iid
 	return iid
@@ -1850,7 +1853,10 @@ func draw_tech(r: Vector2) -> void:
 	draw_string(font, Vector2(rr.position + Vector2(16, 24)), tr("TECH  (pts: %d)") % game.tech_points,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.GOLD)
 	var colw := 232.0
-	var cap := int((rr.size.x - 24) / colw) * 18 # columns × rows that actually fit
+	# same arithmetic the draw break uses: column c fits while
+	# 12 + (c+1)*colw - 10 <= rr.size.x — counting (rr.size.x-24)/colw
+	# dropped a whole column and let scroll march into a degenerate page
+	var cap := int((rr.size.x - 2.0) / colw) * 18
 	tech_scroll = clampi(tech_scroll, 0, maxi(0, StructureData.TECH.size() - cap))
 	for ti in range(tech_scroll, StructureData.TECH.size()):
 		var di := ti - tech_scroll
@@ -1877,7 +1883,8 @@ func draw_tech(r: Vector2) -> void:
 			draw_texture_rect(sti, Rect2(cx0, cy0 - 12, 13, 13), false, Color(1, 1, 1, ial))
 		elif tech_product(k) != "": # no relic masquerade — unresolved ids stay bare
 			draw_item_icon(tech_product(k), Vector2(cx0, cy0 - 12), 13.0, ial)
-		draw_string(font, Vector2(cx0 + 16, cy0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
+		draw_string(font, Vector2(cx0 + 16, cy0), label, HORIZONTAL_ALIGNMENT_LEFT,
+			colw - 30, 12, col) # clipped — CJK names can't overprint the next column
 	if StructureData.TECH.size() > cap:
 		_scroll_btns(rr, "tech_up", "tech_dn")
 

@@ -1625,3 +1625,39 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - **smoke 987/0/0skip**（+3 新钉：LEGENDARY_DEN⊆species 数据防静默丢
   id 缩水；den 名册成员断言；10-名册封印存活回归）· audit_data ALL
   CLEAN（120 物种）· IP CLEAN。
+
+## S109 — tech 树图标 + sync_pos 种子 flake 根除（已推 304c916）
+
+- **tech 面板**（最后一块纯文本面）：每个节点画它解锁的东西——结构
+  节点画建筑精灵（复用 `_struct_tex`），物品/配方节点画 S107 kind 图
+  标+物品色 tint。`tech_product()` 三级解析：ITEMS 直查 → RECIPES
+  反查（spear→stone_spear、axe→metal_axe、pick→metal_pickaxe）→ ""
+  裸行；缓存以 TECH.size() 槽位封顶，spam 查不到槽不复用。锁定行
+  0.45α dim，古代科技 violet 保留；未解析 id 不借 relic 冒充
+  （audit-60 课的复用）。
+- **smoke 钉**（数据级，非复用谓词）：全 70 TECH id 必须经
+  struct png/ITEMS/RECIPES 之一解析；三个配方形 tech 解到真实产物；
+  缓存界 ≤TECH.size() 且 bogus spam 不长。
+- **sync_pos flake 根除**：fixture 全部改世界推导——first-fix 环扫
+  spawn±12、"nowhere cell" 粗扫（standable+off-node+超门径）、岩石
+  格扫、相邻可走对扫；wk 落点加 spawn home-pad 距离约束堵边缘 seed。
+  扫不到 fixture 的 check 响亮失败，不再断言垃圾坐标。
+- **视觉证据**：`docs/reviews/s109-tech-p1.png`（三态：已解锁 ink_soft
+  /可购 ink/锁定 lilac+dim）；`s109-tech-p2.png`（古代 violet 行）。
+- **S109b 大包残余收官**：`decor_delta` 改走 `_send_chunked`（收割暴
+  发超 MTU 时原先整包丢弃=永久装饰 desync，cell 不重脏幽灵永存；
+  `_decor_buf` 随 _close_peer 清批）。`env_sync` 的 unlocked（~1KB/2Hz
+  常驻）改 diff-gate——session 内 append-only（load_game 带客禁载已
+  证实），size 即指纹，未变发 []；接收端 `unl.is_empty()` 语义恰是
+  "未变"，契约被钉死（empty=keep / 实载=replace）。
+- **load_from_file→load()**：smoke 全部像素检查改走 import 路径——
+  源 png 在盘而 .import 坏的情形，旧写法照样绿、游戏里照样没图；
+  顺带消了 296 条 export 警告噪音。
+- **audit-62 冷审 NEEDS-FIX→全修**：MED-1 首个 kinbox 声明可走步幅
+  车道致 blink_t 不置位（pos_allow=0 强制 blink 车道）；MED-2 tech cap
+  公式少算一列致尾部滚动渲染退化单列页（改与 draw break 同算式=36）；
+  LOW-1 rock 存在钉/LOW-3 label 裁剪/LOW-4 out[0] 非 ITEMS 恰撞 relic
+  masquerade（tech_product 验证+两钉同步 out∈ITEMS）。审档
+  `docs/reviews/audit-62-tech-icons.md`。
+- **smoke 994/0/0skip**（+8 钉：decor 分块装配/伪造 idx 整批弃/unl
+  空载保持/实载替换/rock 存在/tech 图标三钉）· audit-62 已闭环。
