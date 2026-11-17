@@ -1771,3 +1771,32 @@ pos 精确往返）；Esc→真点 SAVE & QUIT TO TITLE→CONTINUE 再恢复；
 **证据**：`docs/reviews/s113-save-*.png` ×2（日志含
 Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
 **smoke 1002/0/0skip**
+
+## S114 — raid/boss 战斗链端到端（号角→波次→掠袭者击杀→巢主）
+
+**验收**：`tools/raid_walkthrough.gd` —— **RAID-LOOP: 0 failures,
+11 门，双种子连过**（water/flarbeak, dark/hexfiend）：
+
+| 门 | 证据 |
+|---|---|
+| kinbox 立基（place_free fixture） | raid clock 武装 |
+| raid_t 30.8→号角 | warned+theme+公告+sfx |
+| raid_t→0 波次落地（水环箱可合理 fizzle→重试） | raiders≥2+"!! RAID:" |
+| 真 melee 放血+击杀掠袭者 | hp 93→51→dead |
+| 巢主真伤+倒下+战利品 | 5269→5267→dead, drops 9→14 |
+
+**夹出真问题（harness 课三连）**：
+1. `los_clear` 的阻断集含**无坡度高差**（sheer face=wall，
+   audit-43 语义）——`_stand_spot` 只查 blocked 导致巢主
+   dist=1.69/los=false 全挥空。新 `_fight_spot` 按 los_clear
+   选位+浮点精校 reach（kin 任意浮点位置 vs 格心站位超程）。
+2. `set_process(false)` 冻不住物理循环——掠袭者照样走位。
+   `PROCESS_MODE_DISABLED` 双循环全冻。
+3. raid_t 衰减走墙钟——160fps 窗口帧计数欠测（老课新用）。
+4. **解析钉立功**：sed 删多行 DBG print 留孤儿续行——audit-64
+   装的 `harness parses` 钉当轮擒获，未进 commit。
+5. Iron Pact/远圈掠袭者 aggro>14 即衰减（kin.gd:429 设计）——
+   "aimed" 门改认波次本体+公告。
+
+**证据**：`docs/reviews/s114-raid-*.png` ×4。
+**smoke 1002/0/0skip · 解析钉×4**
