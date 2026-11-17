@@ -1850,6 +1850,41 @@ func run() -> void:
 		hud67._item_tex.size() == sz107 and sz107 <= 12,
 		"cache=%d" % hud67._item_tex.size())
 
+	# S109: tech tree icons — every node resolves against DATA (struct sprite on
+	# disk, an item id, or a recipe that names it), not via the draw helper —
+	# an unresolvable node would render bare forever behind a pretty check
+	var bare109 := []
+	for t109 in StructureData.TECH:
+		var tid109: String = t109["id"]
+		if ResourceLoader.exists("res://assets/structures/%s.png" % tid109) \
+				or ItemData.ITEMS.has(tid109):
+			continue
+		var hit109 := false
+		for rec in ItemData.RECIPES:
+			if str(rec.get("tech", rec.get("id", ""))) == tid109:
+				hit109 = true
+				break
+		if not hit109:
+			bare109.append(tid109)
+	check("every tech node resolves an icon source", bare109.is_empty(),
+		"bare: %s" % str(bare109))
+	# the three recipe-shaped techs resolve to real products, not relic-masquerade
+	var outs109 := true
+	for tid109 in ["spear", "axe", "pick"]:
+		var prod: String = hud67.tech_product(tid109)
+		if prod == "" or not ItemData.ITEMS.has(prod):
+			outs109 = false
+	check("recipe techs resolve to real products", outs109,
+		"spear=%s axe=%s pick=%s" % [hud67.tech_product("spear"),
+			hud67.tech_product("axe"), hud67.tech_product("pick")])
+	for t109 in StructureData.TECH: # fill the cache to prove the bound
+		hud67.tech_product(t109["id"])
+	hud67.tech_product("__bogus_tech__")
+	hud67.tech_product("__bogus_tech__")
+	hud67.tech_product("__bogus_tech2__")
+	check("tech product cache is bounded", hud67._tech_out.size() <= StructureData.TECH.size(),
+		"cache=%d" % hud67._tech_out.size())
+
 	# skills + statuses
 	var sp_pal: Kin = game.pals[0]
 	sp_pal.statuses["burn"] = game.t + 3
@@ -7391,53 +7426,61 @@ func run() -> void:
 	var g0 = game.net.ghosts[0]
 	g0.net_pos = Vector3(-1, -1, 0) # unset sentinel — but the first fix must
 	# still land where a join materializes: spawn, or a pad beside it
-	var spfx := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
-	# hunt a standable cell beside spawn — the gate rejects claims anchored
-	# inside solid rock, and some seeds wall spawn+3 off entirely
+	var sp43 := Vector2(game.world.spawn) + Vector2(0.5, 0.5)
+	var walk43 := func(cx: int, cy: int) -> bool:
+		return not (game.world.blocked(cx, cy) \
+				and game.world.tile_at(cx, cy) != World.Tile.WATER)
+	# fixtures DERIVE from the world — fixed-offset candidates flaked whenever
+	# a seed walled the spawn margin or planted a pad on a lucky coordinate
+	# (rule 42: plant what the test needs, or prove a spot exists)
 	var spfix := Vector2.ZERO
-	for off in [Vector2(3, 0), Vector2(-3, 0), Vector2(0, 3), Vector2(0, -3),
-			Vector2(2, 2), Vector2(-2, 2), Vector2(2, -2), Vector2(-2, -2),
-			Vector2(1, 0), Vector2(0, 1)]:
-		var c: Vector2 = spfx + off
-		if not (game.world.blocked(int(c.x), int(c.y))
-				and game.world.tile_at(int(c.x), int(c.y)) != World.Tile.WATER):
-			spfix = c
-			break
+	for dy in range(-12, 13):
+		for dx in range(-12, 13):
+			if spfix != Vector2.ZERO:
+				continue
+			var c: Vector2 = sp43 + Vector2(dx, dy)
+			if c.distance_to(sp43) <= 12.0 and walk43.call(int(c.x), int(c.y)):
+				spfix = c
 	check("first-fix target open", spfix != Vector2.ZERO)
 	game.net.sync_pos(spfix.x, spfix.y, 0.0)
 	check("first fix lands at spawn", g0.net_pos == Vector3(spfix.x, spfix.y, 0))
+	# the "nowhere cell" scan: standable, off every travel pad, past the gate
+	# radii — deterministic per world instead of a list of guesses
+	var open_cell := func(src: Vector2, dmin: float, sp_min: float) -> Vector2:
+		for yy in range(4, World.WORLD_H - 4, 3):
+			for xx in range(4, World.WORLD_W - 4, 3):
+				var c := Vector2(xx + 0.5, yy + 0.5)
+				if not walk43.call(xx, yy):
+					continue
+				if game.net._near_travel_node(c) != "":
+					continue
+				if c.distance_to(src) <= dmin or c.distance_to(sp43) <= sp_min:
+					continue
+				return c
+		return Vector2.ZERO
 	g0.net_pos = Vector3(-1, -1, 0) # a recycled ghost gets no second free blink
-	var ffx := Vector2.ZERO
-	for fcand in [Vector2(200, 200), Vector2(20, 20), Vector2(400, 400), Vector2(150, 180)]:
-		if game.net._near_travel_node(fcand) == "" and fcand.distance_to(spfx) > 12.0:
-			ffx = fcand
-			break
+	var ffx: Vector2 = open_cell.call(sp43, 12.0, 0.0)
 	check("far first-fix target exists", ffx != Vector2.ZERO)
 	if ffx != Vector2.ZERO:
 		game.net.sync_pos(ffx.x, ffx.y, 0.0)
 		check("first fix off-spawn dies", g0.net_pos == Vector3(-1, -1, 0))
 	g0.net_pos = Vector3(150, 150, 0) # planted for the step/blink checks below
-	# a jump to nowhere still dies at the door — hunt a spot that is provably
-	# not a travel-node landing so seeds can't make this test seed-dependent
-	var bad := Vector2.ZERO
-	for cand in [Vector2(200, 200), Vector2(20, 20), Vector2(400, 400), Vector2(150, 180)]:
-		if game.net._near_travel_node(cand) == "" \
-				and cand.distance_to(Vector2(game.world.spawn) + Vector2(0.5, 0.5)) > game.net.BLINK_RADIUS:
-			bad = cand
-			break
+	# a jump to nowhere still dies at the door — the scan dodges both blink
+	# lanes (travel pads AND the spawn home-pad) so only the distance gate fires
+	var bad: Vector2 = open_cell.call(Vector2(150, 150), 8.0, game.net.BLINK_RADIUS + 1.0)
 	check("bad blink target exists", bad != Vector2.ZERO)
 	game.net.sync_pos(bad.x, bad.y, 0.0)
 	check("sync_pos kills teleports", g0.net_pos == Vector3(150, 150, 0))
 	# audit-43: a claim inside solid rock dies too — every proximity gate
-	# measures from this anchor, so it must be a place a body can stand
-	var rockc43 := Vector2i.ZERO
-	for rc43 in [Vector2i(160, 160), Vector2i(170, 170), Vector2i(180, 180),
-			Vector2i(190, 190), Vector2i(150, 160)]:
-		if game.world.blocked(rc43.x, rc43.y) \
-				and game.world.tile_at(rc43.x, rc43.y) != World.Tile.WATER:
-			rockc43 = rc43
-			break
-	if rockc43 != Vector2i.ZERO:
+	# measures from this anchor, so it must be a place a body can stand.
+	# Scan for the first blocked non-water cell; every island has one.
+	var rockc43 := Vector2i(-1, -1)
+	for yy in range(4, World.WORLD_H - 4, 3):
+		for xx in range(4, World.WORLD_W - 4, 3):
+			if rockc43.x < 0 and game.world.blocked(xx, yy) \
+					and game.world.tile_at(xx, yy) != World.Tile.WATER:
+				rockc43 = Vector2i(xx, yy)
+	if rockc43.x >= 0:
 		game.net.sync_pos(rockc43.x + 0.5, rockc43.y + 0.5, 0.0)
 		check("sync_pos kills a rock-embedded claim",
 			g0.net_pos == Vector3(150, 150, 0))
@@ -7445,14 +7488,17 @@ func run() -> void:
 	check("sync_pos kills NaN", g0.net_pos == Vector3(150, 150, 0))
 	game.net.sync_pos(-5.0, 50.0, 0.0)
 	check("sync_pos kills out-of-bounds", g0.net_pos == Vector3(150, 150, 0))
-	# the audit-43 gate refuses claims into solid cells — the "normal step"
-	# fixture must land somewhere provably walkable, not a lucky coordinate
-	var step43 := Vector2(152.0, 150.0)
-	for sc43 in [Vector2(152.0, 150.0), Vector2(151.0, 150.0), Vector2(153.0, 150.0),
-			Vector2(152.0, 151.0), Vector2(151.0, 151.0), Vector2(152.0, 149.0),
-			Vector2(150.0, 151.0), Vector2(154.0, 150.0), Vector2(153.0, 151.0)]:
-		if not game.world.blocked(int(sc43.x), int(sc43.y)):
-			step43 = sc43; break
+	# a normal step still lands: two ADJACENT standable cells by scan — the
+	# planted anchor is walkable by construction, not by seed luck
+	var step43 := Vector2.ZERO
+	var step43_from := Vector2.ZERO
+	for yy in range(4, World.WORLD_H - 4):
+		for xx in range(4, World.WORLD_W - 4):
+			if step43 == Vector2.ZERO and walk43.call(xx, yy) and walk43.call(xx + 1, yy):
+				step43_from = Vector2(xx + 0.5, yy + 0.5)
+				step43 = Vector2(xx + 1.5, yy + 0.5)
+	check("adjacent walkable pair exists", step43 != Vector2.ZERO)
+	g0.net_pos = Vector3(step43_from.x, step43_from.y, 0)
 	game.net.sync_pos(step43.x, step43.y, 0.0) # a normal step still lands
 	check("sync_pos accepts steps", g0.net_pos == Vector3(step43.x, step43.y, 0))
 	# legit blinks land: respawns wake at a kinbox, waypoint hops go
@@ -7480,8 +7526,11 @@ func run() -> void:
 				continue
 			if kb.x < 0 and game.place_free("kinbox", cc.x, cc.y):
 				kb = cc
-			elif wk.x < 0 and cc.distance_to(kb) > 16.0 and game.place_free("waypoint", cc.x, cc.y):
-				wk = cc
+			elif wk.x < 0 and cc.distance_to(kb) > 16.0 \
+					and Vector2(cc).distance_to(sp43) > game.net.BLINK_RADIUS + 3.0 \
+					and game.place_free("waypoint", cc.x, cc.y):
+				wk = cc # off the spawn home-pad too — else the hop tests a lane
+				# that was never under test
 	check("blink fixtures planted", kb.x >= 0 and wk.x >= 0, "kb=%s wk=%s" % [kb, wk])
 	if kb.x >= 0:
 		g0.set_meta("pos_pps", 60.0) # wall-clock bucket — refresh between probes (rule 44)
@@ -7489,11 +7538,7 @@ func run() -> void:
 		check("respawn blink lands", g0.net_pos == Vector3(kb.x + 0.5, kb.y + 2.5, 0))
 	if wk.x >= 0:
 		var wdst := Vector2(wk.x + 0.5, wk.y + 2.5)
-		var src_far := Vector2.ZERO
-		for cand in [Vector2(150, 150), Vector2(180, 180), Vector2(300, 60), Vector2(60, 300), Vector2(250, 250), Vector2(40, 40)]:
-			if game.net._near_travel_node(cand) == "" and cand.distance_to(wdst) > 12.0:
-				src_far = cand
-				break
+		var src_far: Vector2 = open_cell.call(wdst, 12.0, 0.0)
 		check("off-node source exists", src_far != Vector2.ZERO)
 		g0.net_pos = Vector3(src_far.x, src_far.y, 0) # open ground, far from stones
 		g0.set_meta("pos_pps", 60.0)
@@ -7509,7 +7554,7 @@ func run() -> void:
 		game.net.sync_pos(wdst.x, wdst.y, 0.0) # …then node→node
 		check("node-to-node hop lands", g0.net_pos == Vector3(wdst.x, wdst.y, 0))
 	# elevation is validated too — guests can't float above the skybox
-	g0.net_pos = Vector3(151, 150, 0) # a hop-length step away, no blink needed
+	g0.net_pos = Vector3(step43_from.x, step43_from.y, 0) # a hop-length step away
 	g0.set_meta("pos_allow", 6.0) # earlier blinks drained the bucket
 	game.net.sync_pos(step43.x, step43.y, 99.0)
 	check("sync_pos clamps elevation", g0.net_pos == Vector3(step43.x, step43.y, 8))

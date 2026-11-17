@@ -76,6 +76,22 @@ func item_icon(iid: String) -> Texture2D:
 const ITEM_KINDS := ["material", "food", "seed", "orb", "weapon", "ammo",
 	"medicine", "gear", "fruit", "armor", "accessory"]
 
+var _tech_out := {} # tid → product item id for item/recipe unlocks; "" marks
+# a confirmed structure node — lazily filled, capped at TECH.size() slots so
+# spam lookups can't grow it past one entry per real node
+func tech_product(tid: String) -> String:
+	if _tech_out.has(tid):
+		return _tech_out[tid]
+	var iid := tid if ItemData.ITEMS.has(tid) else ""
+	if iid == "":
+		for rec in ItemData.RECIPES: # "spear" tech → stone_spear recipe out
+			if str(rec.get("tech", rec.get("id", ""))) == tid:
+				iid = str(rec.get("out", ["", 0])[0])
+				break
+	if _tech_out.size() < StructureData.TECH.size():
+		_tech_out[tid] = iid
+	return iid
+
 var _item_tint := {} # iid-keyed Color cache, bounded by ITEMS.size() — parsing
 # a hex string per row per frame is the kind of alloc rule 4 grumbles about
 func draw_item_icon(iid: String, pos: Vector2, size := 14.0, a := 1.0) -> void:
@@ -1849,13 +1865,19 @@ func draw_tech(r: Vector2) -> void:
 		var col := Ink.INK_SOFT if has else (Ink.INK if afford else Ink.LILAC)
 		if t.get("parts", 0) > 0 and not has:
 			col = Ink.VIOLET if afford else Color(Ink.VIOLET, 0.5) # ancient tech is purple
-		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), tr(str(t.get("name", k))).left(14), t.get("cost", 0),
+		var label := "T%d %s [%d]%s%s" % [t.get("tier", 1), tr(str(t.get("name", k))).left(12), t.get("cost", 0),
 			"+%d❖" % t["parts"] if t.get("parts", 0) > 0 else "", " ✓" if has else ""]
 		var cy0: float = rr.position.y + 44 + (di % 18) * 17
 		var rect := Rect2(cx0, cy0 - 12, colw - 14, 17)
 		if not has:
 			click_rects.append({"rect": rect, "act": "tech", "arg": k})
-		draw_string(font, Vector2(cx0, cy0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
+		var ial: float = 1.0 if (has or afford) else 0.45
+		var sti := struct_tex(k) # structure nodes show the building itself
+		if sti != null:
+			draw_texture_rect(sti, Rect2(cx0, cy0 - 12, 13, 13), false, Color(1, 1, 1, ial))
+		elif tech_product(k) != "": # no relic masquerade — unresolved ids stay bare
+			draw_item_icon(tech_product(k), Vector2(cx0, cy0 - 12), 13.0, ial)
+		draw_string(font, Vector2(cx0 + 16, cy0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
 	if StructureData.TECH.size() > cap:
 		_scroll_btns(rr, "tech_up", "tech_dn")
 
