@@ -1841,3 +1841,15 @@ Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
 `sfx keys all resolve`（拼写方向）构成双向闭环。
 
 **smoke 1004/0/0skip**（+1 钉）。提交 `99e81de`。
+
+### audit-65（S115+S116 冷审，0 HIGH / 4 MED / 6 LOW 全修）
+
+| 抓到 | 修法 |
+|---|---|
+| 音效钉可规避（注释行算 wired、只扫 5/21 文件、null 流算 resolved） | 全树 DirAccess 扫描+跳注释行+断言 AudioStreamWAV 有数据 |
+| craft 门用 "club"（hand 配方）——bench 门/队列/助手催单全死覆盖 | 加 flour 腿（wheat3→1，最便宜无 tech 工作台配方）：行点→queue+1→催熟→产出；arrow 陷阱记档（输出项带 tech，recipe_tech 双向查） |
+| 金钱断言仅方向性 | 精确增量：gold==gold0-price、+sell_value()、pts==pts0-cost |
+| 买腿 ≤40 价帽是种子彩票 | 最便宜在库行+补足金币+精确扣款 |
+| `cr["arg"]` 裸取/站位回退可埋人/商黄昏消失/`SfxLib` 遮蔽常量 | 全修（`.get`、环扩 7、tod=10、统一 `SFX_LIB`） |
+
+**ECON-LOOP 19/0 ×2 种子** · smoke **1006/0/0skip**

@@ -66,7 +66,7 @@ func _click(x: float, y: float) -> void:
 
 func _find_row(act_name: String, arg = null) -> Dictionary:
 	for cr in hudn.click_rects:
-		if cr["act"] == act_name and (arg == null or cr["arg"] == arg):
+		if cr["act"] == act_name and (arg == null or cr.get("arg") == arg):
 			return cr
 	return {}
 
@@ -79,13 +79,14 @@ func _click_row(act_name: String, arg = null) -> bool:
 	return true
 
 func _stand_spot(near: Vector2) -> Vector2:
-	for r in range(1, 6):
+	for r in range(1, 8):
 		for dy in range(-r, r + 1):
 			for dx in range(-r, r + 1):
 				var c := Vector2(int(near.x) + dx + 0.5, int(near.y) + dy + 0.5)
 				if not game.world.blocked(int(c.x), int(c.y)):
 					return c
-	return near + Vector2(1.5, 0)
+	return near # a blocked fallback would plant the player inside terrain —
+	# fail the downstream gate loudly instead
 
 func _boot() -> void:
 	_stamp()
@@ -143,12 +144,33 @@ func _boot() -> void:
 	_gate("club crafted", game.item_count("wooden_club") == club0 + 1
 		and game.item_count("wood") == wood0 - 5,
 		"club=%d wood=%d" % [game.item_count("wooden_club"), game.item_count("wood")])
+	# station path: "club" is a hand recipe — it exercises none of the bench
+	# gate, the craft_queue or the helper-hurried drain. "flour" is the
+	# cheapest tech-free workbench recipe (wheat 3 -> 1; "arrow" looked free
+	# too but its *output item* carries tech gating — recipe_tech checks both)
+	game.add_item("wheat", 3)
+	var fl0: int = game.item_count("flour")
+	var wh0: int = game.item_count("wheat")
+	var q0: int = game.craft_queue.size()
+	_gate("flour row clicked", await _click_row("craft", "flour"))
+	for i in 3:
+		await process_frame
+	_gate("bench craft queues", game.craft_queue.size() == q0 + 1,
+		"queue=%d" % game.craft_queue.size())
+	for cq in game.craft_queue: # the bench path already ran — hurry the timer
+		cq["left"] = 0.02      # so the drain (the verb under test) can be seen
+	for i in 12:
+		await process_frame
+	_gate("flour crafted at bench", game.item_count("flour") == fl0 + 1
+		and game.item_count("wheat") == wh0 - 3,
+		"flour=%d wheat=%d" % [game.item_count("flour"), game.item_count("wheat")])
 	await _tap_key(KEY_ESCAPE)
 	for i in 4:
 		await process_frame
 
 	# ---- SHOP: merchant fixture + E + buy/sell rows move real gold
-	if game.merchant == null:
+	game.tod = 10.0 # pin daylight — a dusk roll could despawn the merchant
+	if game.merchant == null:   # mid-leg and fail on a schedule, not a bug
 		game.spawn_merchant()
 	for i in 4:
 		await process_frame
@@ -163,34 +185,45 @@ func _boot() -> void:
 	_gate("E opens shop", game.panel == "shop", "panel=%s" % game.panel)
 	game.add_item("gold_coin", 60)
 	game.add_item("fertilizer", 6) # sell fodder — wood/jam carry no price
-	var gold0: int = game.item_count("gold_coin")
+	# cheapest priced row regardless of cost — a ≤40 ceiling would make this
+	# pick a stock-roll lottery (audit-65): fund the purse, then assert the
+	# exact debit rather than a direction
 	var stock_i := -1
 	var want := ""
-	for si in game.merchant_stock.size(): # cheapest buyable row —
-		var it: Dictionary = game.merchant_stock[si]  # deterministic pick
-		if str(it.get("id", "")) != "" and int(it.get("price", 999)) <= 40:
-			stock_i = si
-			want = str(it["id"])
-			break
+	var price := 0
+	for si in game.merchant_stock.size():
+		var it: Dictionary = game.merchant_stock[si]
+		if str(it.get("id", "")) != "" and int(it.get("n", 0)) > 0:
+			var p2: int = int(it.get("price", 999))
+			if stock_i < 0 or p2 < price:
+				stock_i = si
+				want = str(it["id"])
+				price = p2
+	if stock_i >= 0:
+		game.add_item("gold_coin", price)
+	var gold0: int = game.item_count("gold_coin")
 	await _shot("shop")
 	var got0: int = game.item_count(want) if want != "" else 0
 	_gate("buy row clicked", stock_i >= 0 and await _click_row("buy", stock_i),
 		"stock_i=%d want=%s" % [stock_i, want])
 	for i in 8:
 		await process_frame
-	_gate("buy debits gold, goods arrive", want != ""
+	_gate("buy debits exact price, goods arrive", want != ""
 		and game.item_count(want) == got0 + 1
-		and game.item_count("gold_coin") < gold0,
-		"%s=%d gold %d→%d" % [want, game.item_count(want) if want != "" else -1,
-			gold0, game.item_count("gold_coin")])
+		and game.item_count("gold_coin") == gold0 - price,
+		"%s=%d gold %d→%d price=%d" % [want,
+			game.item_count(want) if want != "" else -1,
+			gold0, game.item_count("gold_coin"), price])
 	var gold1: int = game.item_count("gold_coin")
 	var fod1: int = game.item_count("fertilizer")
 	_gate("sell row clicked", await _click_row("sell", "fertilizer"))
 	for i in 8:
 		await process_frame
-	_gate("sell credits gold", game.item_count("gold_coin") > gold1
-		and game.item_count("fertilizer") < fod1,
-		"gold %d→%d fert %d→%d" % [gold1, game.item_count("gold_coin"),
+	_gate("sell credits exact half price", game.item_count("gold_coin") ==
+		gold1 + Game.sell_value("fertilizer")
+		and game.item_count("fertilizer") == fod1 - 1,
+		"gold %d→%d (+%d) fert %d→%d" % [gold1, game.item_count("gold_coin"),
+			Game.sell_value("fertilizer"),
 			fod1, game.item_count("fertilizer")])
 	await _tap_key(KEY_ESCAPE)
 	for i in 4:
@@ -201,10 +234,12 @@ func _boot() -> void:
 	game.tech_points = 15
 	game.add_item("ancient_part", 2)
 	var pick := ""
+	var cost := 0
 	for t in StructureData.TECH:
 		if int(t.get("tier", 9)) <= 4 and int(t.get("cost", 99)) <= 12 \
 				and int(t.get("parts", 0)) <= 1 and str(t["id"]) not in game.unlocked:
 			pick = str(t["id"])
+			cost = int(t["cost"])
 			break
 	_gate("affordable tech exists", pick != "", pick)
 	await _tap_action("tech")
@@ -217,8 +252,10 @@ func _boot() -> void:
 		"pick=%s" % pick)
 	for i in 8:
 		await process_frame
-	_gate("unlock lands", pick in game.unlocked and game.tech_points < pts0,
-		"unlocked=%s pts %d→%d" % [str(pick in game.unlocked), pts0, game.tech_points])
+	_gate("unlock lands at exact cost", pick in game.unlocked
+		and game.tech_points == pts0 - cost,
+		"unlocked=%s pts %d→%d cost=%d" % [str(pick in game.unlocked),
+			pts0, game.tech_points, cost])
 
 	print("==== ECON-LOOP: %d failures ====" % fails)
 	quit(fails)

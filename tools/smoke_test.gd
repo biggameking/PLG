@@ -7414,37 +7414,45 @@ func run() -> void:
 	check("every preset excludes dev payloads", preset_n > 0 and excl_n == preset_n,
 		"%d presets, %d filtered" % [preset_n, excl_n])
 
-	# every sfx_play literal must name a real SFX key — a typo plays silence
+	# every sfx_play literal must name a real SFX key — a typo plays silence.
+	# Whole-tree scan (audit-65): a stray literal in an unscanned file would
+	# escape the check, and comment lines must not count as call sites.
 	var sfx_re := RegEx.create_from_string("sfx_play\\(\"([^\"]+)\"\\)")
+	var sfx_files := []
+	for sfx_d in ["res://src", "res://src/data"]:
+		var sfx_dir := DirAccess.open(sfx_d)
+		if sfx_dir:
+			for sfx_fn in sfx_dir.get_files():
+				if sfx_fn.ends_with(".gd"):
+					sfx_files.append(sfx_d + "/" + sfx_fn)
 	var sfx_bad := []
-	for sf in ["res://src/game.gd", "res://src/hud.gd", "res://src/kin.gd",
-			"res://src/net.gd", "res://src/player.gd"]:
+	var sfx_used := {}
+	for sf in sfx_files:
 		var src_f := FileAccess.open(sf, FileAccess.READ)
 		if src_f == null:
 			continue
 		while not src_f.eof_reached():
 			var ln := src_f.get_line()
+			if ln.strip_edges().begins_with("#"):
+				continue
 			for sm in sfx_re.search_all(ln):
-				if not game.SFX.has(sm.get_string(1)):
-					sfx_bad.append("%s:%s" % [sf, sm.get_string(1)])
+				var sk := sm.get_string(1)
+				if not game.SFX.has(sk):
+					sfx_bad.append("%s:%s" % [sf, sk])
+				else:
+					sfx_used[sk] = true
 		src_f.close()
 	check("sfx keys all resolve", sfx_bad.is_empty(), "bad=%s" % str(sfx_bad))
 
-	# coverage direction: every synthesized cue must have a call site — an
-	# orphaned SFX key is a sound nobody can ever hear (dead synthesis code)
-	var sfx_used := {}
-	for sf2 in ["res://src/game.gd", "res://src/hud.gd", "res://src/kin.gd",
-			"res://src/net.gd", "res://src/player.gd"]:
-		var src_f2 := FileAccess.open(sf2, FileAccess.READ)
-		if src_f2 == null:
-			continue
-		while not src_f2.eof_reached():
-			for sm2 in sfx_re.search_all(src_f2.get_line()):
-				sfx_used[sm2.get_string(1)] = true
-		src_f2.close()
+	# coverage direction: every synthesized cue must have a live call site —
+	# an orphaned SFX key is a sound nobody can ever hear (dead synthesis
+	# code), and a null stream "resolves" while playing silence
 	var sfx_orphan := []
 	for k in game.SFX.keys():
-		if not sfx_used.has(k):
+		var st = game.SFX[k]
+		if not (st is AudioStreamWAV and st.data.size() > 0):
+			sfx_orphan.append("%s:null-stream" % k)
+		elif not sfx_used.has(k):
 			sfx_orphan.append(k)
 	check("sfx cues all wired", sfx_orphan.is_empty(), "orphan=%s" % str(sfx_orphan))
 

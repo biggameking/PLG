@@ -250,30 +250,29 @@ func _ready() -> void:
 		var ap := AudioStreamPlayer.new()
 		add_child(ap)
 		sfx_pool.append(ap)
-	var SfxLib := preload("res://src/sfx.gd")
 	SFX = {
-		"throw": SfxLib.noise(0.12, 0.35, 10.0),
-		"catch": SfxLib.arp([660, 880, 1320], 0.09, 0.45),
-		"fail": SfxLib.tone(220, 0.18, 0.4, 0.7),
-		"level": SfxLib.arp([523, 659, 784, 1046], 0.08, 0.4),
-		"build": SfxLib.noise(0.2, 0.5, 7.0),
-		"break": SfxLib.noise(0.3, 0.55, 12.0),
-		"horn": SfxLib.tone(98, 0.8, 0.5, 0.85),
-		"ko": SfxLib.tone(160, 0.5, 0.45, 0.6),
-		"hit": SfxLib.noise(0.07, 0.3, 14.0),
-		"lucky": SfxLib.arp([880, 1174, 1568, 2093], 0.07, 0.35),
-		"click": SfxLib.tone(880, 0.05, 0.28),
-		"quest": SfxLib.arp([659, 784, 988], 0.09, 0.4),
-		"craft": SfxLib.arp([392, 523, 659], 0.1, 0.35),
-		"hatch": SfxLib.arp([784, 988, 1319], 0.08, 0.4),
-		"coin": SfxLib.tone(1174, 0.09, 0.3, 1.3),
-		"eat": SfxLib.noise(0.09, 0.3, 9.0),
-		"drop": SfxLib.tone(180, 0.09, 0.35, 0.5),
-		"hurt": SfxLib.noise(0.16, 0.55, 9.0),
-		"dodge": SfxLib.noise(0.09, 0.22, 5.0),
-		"sleep": SfxLib.tone(330, 0.5, 0.25, 0.5),
-		"slam": SfxLib.noise(0.4, 0.65, 5.0),
-		"chop": SfxLib.noise(0.06, 0.4, 16.0),
+		"throw": SFX_LIB.noise(0.12, 0.35, 10.0),
+		"catch": SFX_LIB.arp([660, 880, 1320], 0.09, 0.45),
+		"fail": SFX_LIB.tone(220, 0.18, 0.4, 0.7),
+		"level": SFX_LIB.arp([523, 659, 784, 1046], 0.08, 0.4),
+		"build": SFX_LIB.noise(0.2, 0.5, 7.0),
+		"break": SFX_LIB.noise(0.3, 0.55, 12.0),
+		"horn": SFX_LIB.tone(98, 0.8, 0.5, 0.85),
+		"ko": SFX_LIB.tone(160, 0.5, 0.45, 0.6),
+		"hit": SFX_LIB.noise(0.07, 0.3, 14.0),
+		"lucky": SFX_LIB.arp([880, 1174, 1568, 2093], 0.07, 0.35),
+		"click": SFX_LIB.tone(880, 0.05, 0.28),
+		"quest": SFX_LIB.arp([659, 784, 988], 0.09, 0.4),
+		"craft": SFX_LIB.arp([392, 523, 659], 0.1, 0.35),
+		"hatch": SFX_LIB.arp([784, 988, 1319], 0.08, 0.4),
+		"coin": SFX_LIB.tone(1174, 0.09, 0.3, 1.3),
+		"eat": SFX_LIB.noise(0.09, 0.3, 9.0),
+		"drop": SFX_LIB.tone(180, 0.09, 0.35, 0.5),
+		"hurt": SFX_LIB.noise(0.16, 0.55, 9.0),
+		"dodge": SFX_LIB.noise(0.09, 0.22, 5.0),
+		"sleep": SFX_LIB.tone(330, 0.5, 0.25, 0.5),
+		"slam": SFX_LIB.noise(0.4, 0.65, 5.0),
+		"chop": SFX_LIB.noise(0.06, 0.4, 16.0),
 	}
 	# audio buses: Master owns Music + SFX; settings.cfg holds the mix
 	if AudioServer.get_bus_index("Music") == -1:
@@ -291,14 +290,14 @@ func _ready() -> void:
 	# ambient score: day and night pad loops crossfaded on the Music bus —
 	# no assets, synthesized at boot like the SFX bank
 	music_day = AudioStreamPlayer.new()
-	music_day.stream = SfxLib.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7], [164.8, 220.0, 261.6]], 6.0, 0.13, 0.75, 0.05)
+	music_day.stream = SFX_LIB.pad([[220.0, 277.2, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7], [164.8, 220.0, 261.6]], 6.0, 0.13, 0.75, 0.05)
 	music_day.bus = "Music"
 	music_day.volume_db = -10.0
 	add_child(music_day)
 	if audio_live:
 		music_day.play()
 	music_night = AudioStreamPlayer.new()
-	music_night.stream = SfxLib.pad([[146.8, 174.6, 220.0], [130.8, 155.6, 196.0], [110.0, 146.8, 174.6], [123.5, 164.8, 196.0]], 6.0, 0.12, 1.0, 0.04)
+	music_night.stream = SFX_LIB.pad([[146.8, 174.6, 220.0], [130.8, 155.6, 196.0], [110.0, 146.8, 174.6], [123.5, 164.8, 196.0]], 6.0, 0.12, 1.0, 0.04)
 	music_night.bus = "Music"
 	music_night.volume_db = -80.0
 	add_child(music_night)
@@ -307,7 +306,7 @@ func _ready() -> void:
 	# the danger layer: a low minor drone that swallows the pastoral pads when
 	# a raid wave, gauntlet or phase-two boss is on the field
 	music_danger = AudioStreamPlayer.new()
-	music_danger.stream = SfxLib.pad([[110.0, 130.8, 164.8], [103.8, 123.5, 155.6], [98.0, 116.5, 146.8], [110.0, 138.6, 164.8]], 6.0, 0.14, 0.3, 0.07)
+	music_danger.stream = SFX_LIB.pad([[110.0, 130.8, 164.8], [103.8, 123.5, 155.6], [98.0, 116.5, 146.8], [110.0, 138.6, 164.8]], 6.0, 0.14, 0.3, 0.07)
 	music_danger.bus = "Music"
 	music_danger.volume_db = -80.0
 	add_child(music_danger)
