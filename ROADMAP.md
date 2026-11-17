@@ -1871,3 +1871,47 @@ Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
 
 审档 `audit-66-harness-deep.md`。SAVE/RAID/ECON-LOOP 全 0 ·
 smoke **1004/0/0skip**
+
+## S117 — 联机双人会话真机（host/guest 双进程 ENet 全门）
+
+`net_walk_host.gd`（9 门观测）+ `net_walk_join.gd`（7 门驱动+自检），
+真进程、真 ENet :7777、真输入事件——guest 的每个动词走生产代码路径。
+
+**HOST 9/9 × JOIN 7/7，双种子连过（41447/6292）**。证据
+`s117-net-guest/chop/gone.png`：ghost 落场、thwack 浮字、断线后消失。
+
+| 门 | 证明形态 |
+|---|---|
+| ghost 落场 + 走位追踪 | guest 自写落地 claim，host 鬼影须 <3.0 命中（非"有移动"） |
+| harvest_req 中继 | 真 LMB→melee→try_harvest→is_client→rpc，host 格 hp 30→20 |
+| decor_delta 回声 | 3+ 真挥砍砍倒，host mark_decor 翻 CLIENT 副本为 stump |
+| 50 格位置欺骗拒绝 | 速度桶饿死，drift 0.0 |
+| 超距 harvest_req 拒绝 | 4.0 邻近闸，远格 hp/decor 不动 |
+| 断线清理 | ghosts/peer_tags 双空 |
+
+### harness 自抓 bug（本阶段修复）
+
+- **斜站砍空气**：try_harvest 主导轴取格，facing(.7,.7) 砍正交邻格——
+  中继其实到了，瞄错。站位限正交。
+- 出生环可封单方向：走腿 D/S/A/W 实测位移取舍。
+- 野生 kin 进 melee 半径吃挥击（hit_any 短路）：站位加 2.0 净空。
+- host 跨 await 持 ghost 引用遇断线悬空：逐轮 `ghosts.get(gid)`。
+- 树 30hp 需 3 斧，decor_delta 仅 felling 发——挥击预算覆盖砍倒。
+- net_walk_*.txt 标记件入 .gitignore，双端 boot 先清防 aborted 残留。
+
+审档 `s117-net-walkthrough.md`。smoke **1005/0/1skip**
+
+### audit-67（S117 冷审 NEEDS-FIX → 2 HIGH + 7 MED + 7 LOW 全修）
+
+| 抓到 | 修法 |
+|---|---|
+| **HIGH-1 真存档覆写**：join 端 `state="play"` 先于 `join()`，后者对非 title 态 `save_game()`，此刻 `is_client()` 尚 false——临时世界序列化覆盖真存档（shot_net_join 同病） | 双 harness 保持 title，`_arrive_guest` 在 world_sync 翻转 |
+| **HIGH-2 空转 PASS**：phase 标记超时→`spoof_claim=(-1,-1)`→reached=false→照样绿 | 门加 `marker_seen`；ghost 悬空回退不再喂判定 |
+| far 门静默跳过/基线可拍在 rpc 落地后/判定 vs `player.pos` 而 `net_harvest` 判 `ghost.net_pos` | 缺标记即 FAIL + `decor!=NONE`+`gdist>4.0`+fired-marker 竞态断言；far 格须离 home 与 stand 双 >4.0 |
+| spoof 判定单点采样（与回家 blink 竞速） | 全窗轮询 `ever_reached` |
+| 走位容忍可吞零移动（claim≈spawn 也过） | `dist(claim)<3.0 AND dist(pos0)>1.0` 双条件 |
+| 标记件卫生（state 从不删、旧全绿件冒名、与 net_join.gd 撞名） | host 清全标记+输出；join 输出改名 net_walk_join_out.txt |
+| 帧数窗 fps 失真/死码 `_tap_key`/`_gate(true)` 同义反复/ghosts[0] 任意取/tag 空转/±50 撞界检 | 全修（墙钟、is_client 门、size==1、tag_seen、8 向自由落点扫描） |
+| **修后再跑自抓**：游荡 kin/商人 1.55 半径吃挥击 | 选位缓冲 3.5+merchant；每挥有界等待游荡者离开 |
+
+smoke **1009/0/0skip**（+2 解析钉）。审档 `s117-net-walkthrough.md`

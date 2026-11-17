@@ -96,7 +96,8 @@ func run() -> void:
 	# (audit-64: a sed-stripped debug line orphaned loop_walkthrough.gd
 	# for a whole commit while ROADMAP quoted its gate count.)
 	for harness in ["tools/play_walkthrough.gd", "tools/loop_walkthrough.gd",
-			"tools/save_walkthrough.gd", "tools/raid_walkthrough.gd", "tools/econ_walkthrough.gd"]:
+			"tools/save_walkthrough.gd", "tools/raid_walkthrough.gd", "tools/econ_walkthrough.gd",
+			"tools/net_walk_host.gd", "tools/net_walk_join.gd"]:
 		var pc_out: Array = []
 		OS.execute(OS.get_executable_path(), ["--headless", "--path", ".",
 			"--check-only", "-s", harness], pc_out, true)

@@ -20,7 +20,8 @@ func _boot() -> void:
 	for i in 10:
 		await process_frame
 	game = main.get_node("Game")
-	game.state = "play"
+	# stay in "title" — join() save_game()s non-title states and would clobber
+	# the real save with this boot world; _arrive_guest flips to play on sync
 	DirAccess.remove_absolute("user://plg_net.cfg")
 	var host_seed := -1
 	for i in 600:
