@@ -9,7 +9,7 @@ var fails := 0
 var game: Node
 var hudn: Node
 var main: Node
-var save_backup := PackedByteArray()
+var pal_spec := "" # loaded pals get fresh uids — identity is species+mode
 
 func _initialize() -> void:
 	call_deferred("_boot")
@@ -72,17 +72,23 @@ func _click_row(act_name: String) -> bool: # click a live menu/panel row
 			return true
 	return false
 
-func _restore_save() -> void:
-	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
-	if f and save_backup.size() > 0:
-		f.store_buffer(save_backup)
-	elif f == null and save_backup.size() == 0:
+func _restore_save() -> void: # audit-66: RAM-only backup dies with the
+	# script — a crash mid-run would eat a real save. Spill to disk at
+	# boot; restore from disk; a missing backup means "there was no save".
+	if FileAccess.file_exists("user://savegame.plg.savbak"):
+		var dst := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+		dst.store_buffer(FileAccess.get_file_as_bytes("user://savegame.plg.savbak"))
+		dst.close()
+		DirAccess.remove_absolute("user://savegame.plg.savbak")
+	elif FileAccess.file_exists("user://savegame.plg"):
 		DirAccess.remove_absolute("user://savegame.plg")
 
 func _boot() -> void:
 	_stamp()
 	if FileAccess.file_exists("user://savegame.plg"): # never eat a real save
-		save_backup = FileAccess.get_file_as_bytes("user://savegame.plg")
+		var f0 := FileAccess.open("user://savegame.plg.savbak", FileAccess.WRITE)
+		f0.store_buffer(FileAccess.get_file_as_bytes("user://savegame.plg"))
+		f0.close()
 	change_scene_to_file("res://scenes/main.tscn") # a real current_scene —
 	for i in 12:                                  # reload_current_scene must
 		await process_frame                     # work for to_title's leg
@@ -108,6 +114,7 @@ func _boot() -> void:
 	game.pals.append(pal) # gen_pal is a factory — registration is the caller's
 	pal.mode = "partner" # a rostered kin rides the save too
 	game.party.append(pal.uid)
+	pal_spec = pal.species_id
 	var save_pos := Vector2(114, 110)
 	if game.world.blocked(114, 110):
 		save_pos = Vector2(int(game.player.pos.x), int(game.player.pos.y))
@@ -119,11 +126,16 @@ func _boot() -> void:
 	var day_s: int = game.day
 	var party_s: int = game.party.size()
 
-	# ---- F5: real key -> save
+	# ---- F1: real key -> save (audit-66: file_exists is vacuous when a
+	# save already exists — assert the bytes actually changed)
+	var md5_0 := FileAccess.get_md5("user://savegame.plg") \
+		if FileAccess.file_exists("user://savegame.plg") else ""
 	await _tap_action("save")
 	for i in 6:
 		await process_frame
-	_gate("F5 writes the save", FileAccess.file_exists("user://savegame.plg"))
+	_gate("F1 writes the save", FileAccess.file_exists("user://savegame.plg")
+		and FileAccess.get_md5("user://savegame.plg") != md5_0,
+		"md5=%s" % FileAccess.get_md5("user://savegame.plg"))
 
 	# ---- mutate everything the save owns
 	game.items["wood"] = 0
@@ -141,12 +153,15 @@ func _boot() -> void:
 
 	# ---- F4,F4: armed-confirm then real reload
 	await _tap_action("load_save")
-	var armed := false
-	for m in game.messages:
-		if "F4" in str(m) or "reload" in str(m):
-			armed = true
-	_gate("first F4 only arms", armed and game.day == 99,
-		"day=%d armed=%s" % [game.day, armed])
+	# audit-66: messages is a 6-entry ring — an append-index baseline scans
+	# nothing once it's full. Assert the real arm field AND the tail line.
+	var armed: bool = game.load_arm > game.t
+	var arm_msg := false
+	for mi in range(maxi(0, game.messages.size() - 3), game.messages.size()):
+		if "F4" in str(game.messages[mi]):
+			arm_msg = true
+	_gate("first F4 only arms", armed and arm_msg and game.day == 99,
+		"day=%d arm=%.1f msg=%s" % [game.day, game.load_arm - game.t, arm_msg])
 	await _tap_action("load_save")
 	for i in 20:
 		await process_frame
@@ -155,8 +170,14 @@ func _boot() -> void:
 		"day=%d wood=%d tod=%.1f" % [game.day, game.item_count("wood"), game.tod])
 	_gate("position round-trips", game.player.pos.distance_to(save_pos) < 1.5,
 		"pos=%s want~%s" % [str(game.player.pos), str(save_pos)])
-	_gate("roster round-trips", game.party.size() == party_s,
-		"party=%d want %d" % [game.party.size(), party_s])
+	# audit-66: loaded pals get FRESH uids (party_idx maps positionally) —
+	# identity survives as species+mode+party membership, not the old uid
+	var pal_back: Kin = game.find_pal(game.party[0]) if game.party.size() > 0 else null
+	_gate("roster round-trips", game.party.size() == party_s
+		and pal_back != null and pal_back.mode == "partner"
+		and pal_back.species_id == pal_spec,
+		"party=%d want %d pal=%s" % [game.party.size(), party_s,
+			"%s/%s" % [pal_back.species_id, pal_back.mode] if pal_back != null else "missing"])
 	await _shot("reloaded")
 
 	# ---- Esc -> SAVE & QUIT TO TITLE -> CONTINUE
@@ -179,8 +200,10 @@ func _boot() -> void:
 	for i in 25:
 		await process_frame
 	_gate("CONTINUE resumes the save", game.state == "play"
-		and game.day == day_s and game.item_count("wood") == wood_s,
-		"state=%s day=%d wood=%d" % [game.state, game.day, game.item_count("wood")])
+		and game.day == day_s and game.item_count("wood") == wood_s
+		and absf(game.tod - tod_s) < 0.5, # the 99.0 poke proves file, not RAM
+		"state=%s day=%d wood=%d tod=%.1f" % [game.state, game.day,
+			game.item_count("wood"), game.tod])
 	await _shot("continued")
 
 	# ---- corrupt save: hostile file must fail closed, not crash
@@ -196,11 +219,12 @@ func _boot() -> void:
 	if f:
 		f.store_string("KINBOUND-CORRUPTED-BLOB")
 		f.close()
-	_gate("CONTINUE on corrupt save", await _click_row("continue"))
-	for i in 25:
-		await process_frame
-	_gate("corrupt save fails closed", game.state == "title",
-		"state=%s" % game.state)
+	game.day = 55 # canary (audit-66): a post-validation reject that left the
+	_gate("CONTINUE on corrupt save", await _click_row("continue")) # world
+	for i in 25:                                                   # half-rebuilt
+		await process_frame                                         # would still
+	_gate("corrupt save fails closed", game.state == "title"       # pass on
+		and game.day == 55, "state=%s day=%d" % [game.state, game.day]) # state alone
 
 	_restore_save()
 	print("==== SAVE-LOOP: %d failures ====" % fails)

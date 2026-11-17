@@ -100,10 +100,10 @@ func run() -> void:
 		var pc_out: Array = []
 		OS.execute(OS.get_executable_path(), ["--headless", "--path", ".",
 			"--check-only", "-s", harness], pc_out, true)
-		var pc_bad := false
-		for ln in pc_out:
+		var pc_bad := not FileAccess.file_exists("res://" + harness) # audit-66:
+		for ln in pc_out:            # a renamed/deleted harness prints a
 			if "SCRIPT ERROR" in str(ln) or "Failed to load script" in str(ln):
-				pc_bad = true
+				pc_bad = true        # different signature — existence is pinned
 		check("harness parses: %s" % harness, not pc_bad, "")
 
 	# movement + blocked — if the spawn is boxed in, relocate to open ground

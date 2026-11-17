@@ -65,8 +65,9 @@ func _click_row(act_name: String) -> bool:
 	return false
 
 func _world_px(w: Vector2) -> Vector2:
-	var px: Vector2 = Iso.to_screen(w.x, w.y, 0.0)
-	return root.get_canvas_transform() * px
+	var px: Vector2 = Iso.to_screen(w.x, w.y,
+		game.world.elev_at(int(w.x), int(w.y))) # audit-66: dropping
+	return root.get_canvas_transform() * px   # elevation clicks the wrong px
 
 func _stand_spot(near: Vector2) -> Vector2:
 	for r in range(1, 6):
@@ -86,7 +87,9 @@ func _fight_spot(kin: Kin) -> Vector2: # melee needs reach AND sight —
 					continue
 				if game.world.los_clear(c, kin.pos):
 					var d: Vector2 = (c - kin.pos).normalized()
-					return kin.pos + d * minf(1.25, c.distance_to(kin.pos))
+					var spot := kin.pos + d * minf(1.25, c.distance_to(kin.pos))
+					if not game.world.blocked(int(spot.x), int(spot.y)):
+						return spot # the melee point must itself be standable
 	return _stand_spot(kin.pos)
 
 func _face_at(from: Vector2, to: Vector2) -> Vector2:
@@ -217,11 +220,19 @@ func _boot() -> void:
 
 	# ---- BOSS: den warden — real swings hurt it, low-hp fixture lets the
 	# kill land inside the run; drops prove the fight paid out
-	var warden: Kin = null
-	for q in game.pals:
+	var warden: Kin = null # audit-66: the first q.boss may be a grotto
+	for q in game.pals:    # warden sealed inside a rock ring — unreachable
 		if q.boss and is_instance_valid(q):
-			warden = q
-			break
+			var spot := _fight_spot(q) # pick the first boss a fighter can
+			if not game.world.blocked(int(spot.x), int(spot.y)) \
+					and game.world.los_clear(spot, q.pos):
+				warden = q # actually reach — the fallback order isn't a promise
+				break
+	if warden == null: # none reachable — take the first boss and fail loudly
+		for q in game.pals:
+			if q.boss and is_instance_valid(q):
+				warden = q
+				break
 	_gate("den warden found", warden != null,
 		"%s" % (warden.species_id if warden else "none"))
 	if warden != null:
@@ -261,9 +272,9 @@ func _boot() -> void:
 		for i in 10:
 			await process_frame
 		_gate("the fight pays out", game.drops.size() > drops0
-			or game.item_count("ancient_relic") > 0,
-			"drops %d→%d relic=%d" % [drops0, game.drops.size(),
-				game.item_count("ancient_relic")])
+			or game.item_count("ancient_part") > 0, # audit-66: "ancient_relic"
+			"drops %d→%d part=%d" % [drops0, game.drops.size(), # never existed —
+				game.item_count("ancient_part")]) # a permanently dead disjunct
 	await _shot("boss")
 
 	print("==== RAID-LOOP: %d failures ====" % fails)

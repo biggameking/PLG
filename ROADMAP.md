@@ -19,7 +19,7 @@ shell, no localization/input options, unverified tuning.
 | # | Name | Deliverable | Acceptance |
 |---|------|-------------|------------|
 | S1 | IP de-risk | All 116 species renamed (id+name+sprites), pal-lexicon replaced (kin/kinbox/kindex/orbs/lumenite), the Wildmere→Wildmere, Iron Pact→Iron Pact, save-migration for old ids, export metadata updated | `grep -iE "palworld|palapagos|fenjelly|scalbeak|kindex|kin sphere|lumenite"` clean in shipped strings; smoke 0-fail; old save loads via migration |
-| S2 | Product shell | Title screen (New/Continue/Quit), Esc pause (Resume/Save/Settings/Quit), settings (master+music+sfx volume, fullscreen), save version field + autosave on quit + quit-confirm | Boot lands on title; Esc pauses sim (single-player); settings persist to user://; F5 save + title continue round-trip |
+| S2 | Product shell | Title screen (New/Continue/Quit), Esc pause (Resume/Save/Settings/Quit), settings (master+music+sfx volume, fullscreen), save version field + autosave on quit + quit-confirm | Boot lands on title; Esc pauses sim (single-player); settings persist to user://; F1 save + title continue round-trip |
 | S3 | Balance & endgame holes | Legendary species excluded from wild/gacha egg pool (or behind legendary-egg item), raid intensity option (off/normal in settings), boss immunity surfaced in UI pre-throw | New smoke checks: wild egg never yields legendary; peaceful mode spawns no raid |
 | S4 | Onboarding | Contextual hints (first-catch aim/throw prompt, first-build ghost hint, hungry warning, raid countdown explainer) + mission tracker stays | New game shows ≤3 concurrent contextual hints; hints retire on action; smoke unaffected |
 | S5 | Audio layer | Audio buses (Master/Music/SFX) + volume wired to settings, ambient pad loop (day/night/weather variants), UI click + ~8 more event SFX | Volume sliders audibly change mix (manual check); no crash headless; buses exist in default_bus_layout |
@@ -1748,10 +1748,12 @@ MED：chip 门 hp0 取样顺序、kinbox 门改格点严格、删 E 全局开盒
 补 web 陈旧清理+APK 完整性/签名块+日志 ERROR 闸。审档
 `audit-64-input-acceptance-chain.md`。
 
-## S113 — 存档往返真机验证（F5/F4/CONTINUE 全输入链）
+## S113 — 存档往返真机验证（F1/F4/CONTINUE 全输入链）
 
 **验收**：`tools/save_walkthrough.gd` —— **SAVE-LOOP: 0 failures,
-16 门**。标记物（木头数/位置/tod/party uid）经 F5 真实按键落盘，
+15 门 + 绑定守卫**（audit-66 修正门数：条件守卫仅在死绑定时触发）。
+标记物（木头数/位置/tod/party uid）经 F1 真实按键落盘（发货绑定
+是 F1 非 F5——harness 从活 InputMap 取键不受影响，文档错误已修），
 mutate 清零后 F4,F4 武装确认恢复（day 99→1, wood 0→37,
 pos 精确往返）；Esc→真点 SAVE & QUIT TO TITLE→CONTINUE 再恢复；
 最后写入腐化 blob→CONTINUE 关死在 title（游戏自 coercion 拒绝
@@ -1853,3 +1855,19 @@ Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
 | `cr["arg"]` 裸取/站位回退可埋人/商黄昏消失/`SfxLib` 遮蔽常量 | 全修（`.get`、环扩 7、tod=10、统一 `SFX_LIB`） |
 
 **ECON-LOOP 19/0 ×2 种子** · smoke **1006/0/0skip**
+
+### audit-66（S113-115 harness 深审延迟回执，5 MED + 12 LOW 全修）
+
+| 抓到 | 修法 |
+|---|---|
+| `ancient_relic` 死分支（id 不存在，boss 货币是 ancient_part） | 换 ancient_part——首跑 part=6 证明库存道 |
+| F5 存在性门空转（任何存档在就过） | md5 前后比对 |
+| 腐化门缺 canary | day=55 金丝雀+title 双断 |
+| 解析钉对"文件被删"盲 | +file_exists |
+| 存档备份 RAM-only（中途崩吃真档） | 落盘 .savbak |
+| **修复自抓两个活 bug**：6 条环形缓冲的基线扫描读空；载入 pal 新 uid——身份=物种+mode+成员 | arm 断言改读 load_arm 字段+尾扫；roster 断 party[0] 解析物种/mode |
+| ROADMAP "F5"→F1、门数 16→15+绑定守卫 | 文档修正 |
+| _fight_spot 落点未验/warden 首选可能密封/_world_px 丢海拔/_stand_spot 超探测距 | 全修 |
+
+审档 `audit-66-harness-deep.md`。SAVE/RAID/ECON-LOOP 全 0 ·
+smoke **1004/0/0skip**

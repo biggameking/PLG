@@ -83,6 +83,8 @@ func _stand_spot(near: Vector2) -> Vector2:
 		for dy in range(-r, r + 1):
 			for dx in range(-r, r + 1):
 				var c := Vector2(int(near.x) + dx + 0.5, int(near.y) + dy + 0.5)
+				if c.distance_to(near) > 2.0: # past the interact probes'
+					continue              # reach (2.2 struct / 2.4 merchant)
 				if not game.world.blocked(int(c.x), int(c.y)):
 					return c
 	return near # a blocked fallback would plant the player inside terrain —
