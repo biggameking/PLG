@@ -1822,3 +1822,22 @@ Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
 **证据**：`docs/reviews/s115-econ-*.png` ×3（工作台+配方栏/双列
 商店带价签/70 节点科技树图标行）。解析钉×5。
 **smoke 1003/0/0skip**
+
+## S116 — 音频覆盖审（哑动词补声 + 覆盖方向钉）
+
+**审计**：35→40 个 `sfx_play` 调用点全量盘点，17→22 个合成音效。
+五个玩家向哑动词接声：
+
+| 动词 | 事件 | 备注 |
+|---|---|---|
+| `apply_player_damage` | `hurt` | 注释自承 "should thump" 却只有 rumble |
+| `player.dodge` | `dodge` | 翻滚耗体力却无声 |
+| `sleep_to_morning` | `sleep` | 跨天唯一缺 cue |
+| `kin.pact_slam` | `slam` | 蓄力 floater 是无声警告 |
+| `harvest_cell` | `chop` | "thwack" 浮字无声 |
+
+**新钉**：`sfx cues all wired` —— 覆盖方向反向断言：每个 SFX 键
+必须有 ≥1 调用点，孤儿键=无人可听的死合成代码。与既有
+`sfx keys all resolve`（拼写方向）构成双向闭环。
+
+**smoke 1004/0/0skip**（+1 钉）。提交 `99e81de`。
