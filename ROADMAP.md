@@ -1747,3 +1747,27 @@ MED：chip 门 hp0 取样顺序、kinbox 门改格点严格、删 E 全局开盒
 回退（近身路径已存在，空场 E 恢复报 Nothing）、export_check
 补 web 陈旧清理+APK 完整性/签名块+日志 ERROR 闸。审档
 `audit-64-input-acceptance-chain.md`。
+
+## S113 — 存档往返真机验证（F5/F4/CONTINUE 全输入链）
+
+**验收**：`tools/save_walkthrough.gd` —— **SAVE-LOOP: 0 failures,
+16 门**。标记物（木头数/位置/tod/party uid）经 F5 真实按键落盘，
+mutate 清零后 F4,F4 武装确认恢复（day 99→1, wood 0→37,
+pos 精确往返）；Esc→真点 SAVE & QUIT TO TITLE→CONTINUE 再恢复；
+最后写入腐化 blob→CONTINUE 关死在 title（游戏自 coercion 拒绝
+变体数据，非崩溃）。
+
+**夹出真缺陷**：
+1. `hud.gd` 20 处 `get_viewport().set_input_as_handled()` 裸调——
+   reload_current_scene 拆解帧 viewport=null，落在帧上的输入炸
+   SCRIPT ERROR。改 `_eat_input()` 空守卫帮手，重跑 0 错误。
+2. 测试课：`gen_pal` 是工厂——pals 注册是调用方责任（uid 有了但
+   find_pal 扫不到→party_idx=-1→载入丢名册）。
+3. harness 必须 `change_scene_to_file` 给真 current_scene——
+   `to_title()` 的 reload_current_scene 在裸 instantiate 下无场景
+   可载；且 reload 后 main/game/hudn 全引用必须重解析（旧引用指向
+   freed 节点）。
+
+**证据**：`docs/reviews/s113-save-*.png` ×2（日志含
+Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
+**smoke 1002/0/0skip**

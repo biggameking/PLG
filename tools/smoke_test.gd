@@ -95,7 +95,8 @@ func run() -> void:
 	# --check-only exits 0 even on parse failure, so gate on error text.
 	# (audit-64: a sed-stripped debug line orphaned loop_walkthrough.gd
 	# for a whole commit while ROADMAP quoted its gate count.)
-	for harness in ["tools/play_walkthrough.gd", "tools/loop_walkthrough.gd"]:
+	for harness in ["tools/play_walkthrough.gd", "tools/loop_walkthrough.gd",
+			"tools/save_walkthrough.gd"]:
 		var pc_out: Array = []
 		OS.execute(OS.get_executable_path(), ["--headless", "--path", ".",
 			"--check-only", "-s", harness], pc_out, true)

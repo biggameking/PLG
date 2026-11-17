@@ -230,6 +230,11 @@ func _input(event: InputEvent) -> void:
 	elif (event is InputEventKey or event is InputEventMouseButton) and event.is_pressed():
 		game.using_pad = false
 
+func _eat_input() -> void: # get_viewport() is null for one teardown frame
+	var vp := get_viewport()  # during reload_current_scene — eat safely
+	if vp:
+		vp.set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	var mk := "%s|%s" % [game.state, game.panel]
 	if mk != _menu_key: # a transition just happened: last frame's rows are void
@@ -243,11 +248,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				touch_down(event.position, event.index)
 			else:
 				touch_up(event.index)
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event is InputEventScreenDrag:
 			touch_move(event.position, event.index)
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		# desktop "TOUCH CONTROLS: on" — a mouse emits no ScreenTouch, so the
 		# row rendered dead buttons that still swallowed clicks (audit-45).
@@ -257,16 +262,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				if touch_zone_hit(event.position):
 					touch_down(event.position, 99)
 					_mouse_finger = true
-					get_viewport().set_input_as_handled()
+					_eat_input()
 					return
 			elif _mouse_finger:
 				touch_up(99)
 				_mouse_finger = false
-				get_viewport().set_input_as_handled()
+				_eat_input()
 				return
 		if _mouse_finger and event is InputEventMouseMotion:
 			touch_move(event.position, 99)
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 	# text panels type in EVERY state — the pause shell can open them, so the
 	# buffers must live above the shell's eat-everything branch
@@ -279,7 +284,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			chat_buf = chat_buf.left(-1)
 		elif event.unicode >= 32:
 			chat_buf += char(event.unicode) # CJK keepers chat too — ASCII-only was a cage
-		get_viewport().set_input_as_handled()
+		_eat_input()
 		return
 	if game.panel == "join" and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
@@ -290,7 +295,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			join_buf = join_buf.left(-1)
 		elif event.unicode >= 33 and event.unicode < 127 and not event.unicode == 32:
 			join_buf += char(event.unicode)
-		get_viewport().set_input_as_handled()
+		_eat_input()
 		return
 	# guide paging rides the same hoist — pause rows can open it too
 	if game.panel == "guide" and event is InputEventKey and event.pressed:
@@ -300,7 +305,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			guide_page = maxi(guide_page - 1, 0)
 		elif event.is_action_pressed("ui_cancel") or event.keycode == KEY_N or event.keycode == KEY_G:
 			game.panel = ""
-		get_viewport().set_input_as_handled()
+		_eat_input()
 		return
 	# shell states own the whole input stack — menus don't leak to gameplay
 	if game.state == "title" or game.state == "paused":
@@ -309,30 +314,30 @@ func _unhandled_input(event: InputEvent) -> void:
 				game.panel = "" # Esc leaves settings first, its parent menu second
 			elif game.state == "paused":
 				game.state = "play"
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		# pad/dpad menu nav: stick and arrows move the cursor, A/Enter confirms
 		if event.is_action_pressed("ui_down"):
 			if not click_rects.is_empty():
 				menu_sel = wrapi(menu_sel + 1, 0, click_rects.size()) # never park on -1: negative wraps to the last row
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event.is_action_pressed("ui_up"):
 			if not click_rects.is_empty():
 				menu_sel = wrapi(menu_sel - 1, 0, click_rects.size())
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event.is_action_pressed("ui_accept"):
 			if menu_sel >= 0 and menu_sel < click_rects.size():
 				run_click(click_rects[menu_sel])
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			for cr in click_rects:
 				if cr["rect"].has_point(event.position):
 					run_click(cr)
 					break
-		get_viewport().set_input_as_handled() # the shell owns every event here
+		_eat_input() # the shell owns every event here
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER 		and game.panel == "" and game.net and multiplayer.multiplayer_peer != null:
 		game.panel = "chat"; chat_buf = ""
@@ -372,11 +377,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if game.panel in ["dex", "chest", "craft", "shop", "inv", "kinbox", "tech", "statues", "build"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_panel_scroll(-1)
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_panel_scroll(1)
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 	# panels take the pad cursor too: dpad/arrows pick a row, A/Enter
 	# confirms. The world verbs below already refuse to fire while a panel
@@ -384,16 +389,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	if game.state == "play" and game.panel != "" and not click_rects.is_empty():
 		if event.is_action_pressed("ui_down"):
 			menu_sel = wrapi(menu_sel + 1, 0, click_rects.size())
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event.is_action_pressed("ui_up"):
 			menu_sel = wrapi(menu_sel - 1, 0, click_rects.size())
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 		if event.is_action_pressed("ui_accept"):
 			if menu_sel >= 0 and menu_sel < click_rects.size():
 				run_click(click_rects[menu_sel])
-			get_viewport().set_input_as_handled()
+			_eat_input()
 			return
 	if event.is_action_pressed("party_toggle"):
 		if game.panel != "":
@@ -472,11 +477,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		for cr in click_rects:
 			if cr["rect"].has_point(event.position):
 				run_click(cr)
-				get_viewport().set_input_as_handled() # a panel-closing act must not fall through to melee
+				_eat_input() # a panel-closing act must not fall through to melee
 				return
 		if game.panel == "build" and build_sel >= 0 and _build_tap_ok(event.position):
 			place_ghost() # the ✕ tap arrives as a mouse event first — never plant under it
-			get_viewport().set_input_as_handled()
+			_eat_input()
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and game.panel == "build":
 		build_sel = -1
 		build_sel_sid = ""
