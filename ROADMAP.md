@@ -1661,3 +1661,26 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   `docs/reviews/audit-62-tech-icons.md`。
 - **smoke 994/0/0skip**（+8 钉：decor 分块装配/伪造 idx 整批弃/unl
   空载保持/实载替换/rock 存在/tech 图标三钉）· audit-62 已闭环。
+
+## S110 — 端到端输入链验证（kb/mouse/pad/touch 四类全真事件）
+
+**验收**：`tools/play_walkthrough.gd` 在有窗实渲染下对 `Input.parse_input_event`
+队列注入真事件（与硬件同一通道），18 闸全过：
+- 标题 NEW GAME 行真实鼠标点击进 play（armed-confirm 处理）
+- 方向键长压走位（车道扫描选开阔向，非钉死 D）
+- LMB 砍树 hp 30→10、伐倒拾取入包
+- B 开建造栏 / Esc 关面板、暂停、恢复
+- 野生 kin 在场时 Q 瞄准 + LMB 掷球（球 3→2、弹道起飞）
+- **JoypadButton B 实事件翻滚**（stamina 100→85、using_pad 翻转）
+- **ScreenTouch 实事件**：ATK 钮命中野生 kin（hp 2047→2044）、
+  摇杆推边缘走位 2.15 格（live vec 采样，非 up 后空值）
+
+**关键 harness 课**：窗口模式下注入的 MouseMotion 输给物理光标——
+`root.warp_mouse` 才是"手"；viewport 投影必须走 `canvas_transform`
+（`get_global_transform_with_canvas` 是节点自身变换，差出 26 格）。
+atk_cd 会被自由跑的物理帧先读空——行为闸要打在战斗副作用上。
+
+**证据**：`docs/reviews/s110-walk-*.png` ×8（标题海报/游玩/走位/
+采集/建造栏/瞄准线/暂停壳/触屏虚拟按键+提示语切换）。
+
+**smoke 1000/0/1skip · audit_data ALL CLEAN**
