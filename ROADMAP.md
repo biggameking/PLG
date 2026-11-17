@@ -1800,3 +1800,25 @@ Saved/F4 武装/Loaded 全叙事）。harness 解析钉扩至三件套。
 
 **证据**：`docs/reviews/s114-raid-*.png` ×4。
 **smoke 1002/0/0skip · 解析钉×4**
+
+## S115 — 经济循环端到端（craft→shop 买/卖→tech 解锁 全输入链）
+
+**验收**：`tools/econ_walkthrough.gd` —— **ECON-LOOP: 0 failures,
+16 门，双种子连过**：
+
+| 门 | 证据 |
+|---|---|
+| workbench fixture+E | panel=craft st=workbench |
+| 行点"club"配方 | wooden_club+1, wood 12→7 |
+| 商人 fixture+E | panel=shop |
+| BUY 行点击 | 物品+1, gold 60→45 |
+| SELL 行点击（fertilizer，价签>0 才上栏） | gold 45→51, fert 6→5 |
+| T 开树+行点击 spear | unlocked, pts 15→14 |
+
+**课**：配方行 arg 是 `rec["id"]`（club）非产物 id（wooden_club）
+——面板 arg 语义以 click_rect 实证为准不靠猜；卖品上栏条件
+`ITEMS.price>0`（wood/jam_bun 无价签天然不可卖，fertilizer 入选）。
+
+**证据**：`docs/reviews/s115-econ-*.png` ×3（工作台+配方栏/双列
+商店带价签/70 节点科技树图标行）。解析钉×5。
+**smoke 1003/0/0skip**
