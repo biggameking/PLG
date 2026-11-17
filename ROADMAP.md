@@ -1600,7 +1600,7 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - smoke **984/0/1skip**（4 新钉：全 id 解析·kind⊆白名单·7 特殊品=relic
   纹理·缓存构造界）· git 范围干净。
 
-## S108 — 四座新巢穴传说：未用授权网格的终局轮廓（audit-61 待审）
+## S108 — 四座新巢穴传说：未用授权网格的终局轮廓（audit-61 已闭环）
 
 - **物种**：gloamwing（Bat.blend 暮色蝠王）/ cragmaw（Cyclops.blend 山冠
   独眼巨人）/ hexfiend（Demon.blend 烬翼魔君）/ dreadwyrm（Dragon.blend
@@ -1617,6 +1617,11 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 - **视觉证据**（`docs/reviews/`）：`s108-warden-sprites.png` 出货像素
   联检；`s108-den-wardens.png` 2.5× 守卫阵实机图（BOSS 条+压场体量）；
   `s108-den-heirs.png` 1.0× 继承人形。全部经 shot_den.gd 真实场景渲染。
-- **smoke 985/0/1skip**（+2 新钉：LEGENDARY_DEN⊆species 数据防静默丢
-  id 缩水；四新种 den-exclusive 双断言）· audit_data ALL CLEAN（120 物
-  种）· IP CLEAN。
+- **audit-61 冷审**：0 HIGH / 2 MED / 9 LOW 全修——10-名册盖章存档的
+  Accord 静默解封缺陷（heirs 门槛改取盖章时名册 `mini(size,10)` +
+  存档形态回归钉）；evidence sidecar 补齐；首骨架歧义改 `find_armature`；
+  "ten" 注释腐化清理； rigs_gen 再生成；证据联检画布修正。审档
+  `docs/reviews/audit-61-den-wardens.md`。
+- **smoke 987/0/0skip**（+3 新钉：LEGENDARY_DEN⊆species 数据防静默丢
+  id 缩水；den 名册成员断言；10-名册封印存活回归）· audit_data ALL
+  CLEAN（120 物种）· IP CLEAN。
