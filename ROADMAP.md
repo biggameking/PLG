@@ -1665,25 +1665,33 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
 ## S110 — 端到端输入链验证（kb/mouse/pad/touch 四类全真事件）
 
 **验收**：`tools/play_walkthrough.gd` 在有窗实渲染下对 `Input.parse_input_event`
-队列注入真事件（与硬件同一通道），18 闸全过：
+队列注入真事件（与硬件同一通道），19 闸全过：
 - 标题 NEW GAME 行真实鼠标点击进 play（armed-confirm 处理）
 - 方向键长压走位（车道扫描选开阔向，非钉死 D）
-- LMB 砍树 hp 30→10、伐倒拾取入包
-- B 开建造栏 / Esc 关面板、暂停、恢复
+- LMB 砍树 hp 30→0 真伐倒（预埋 hp=20 + `create_timer` 墙钟配速，
+  audit-63 指出空闲帧配速随刷新率漂移）→ 拾取入包 wood 0→4
+- B 开建造栏 / Esc 关面板、暂停、恢复——**真 keycode** 非
+  InputEventAction（绑死即挂，MED-2）
 - 野生 kin 在场时 Q 瞄准 + LMB 掷球（球 3→2、弹道起飞）
-- **JoypadButton B 实事件翻滚**（stamina 100→85、using_pad 翻转）
-- **ScreenTouch 实事件**：ATK 钮命中野生 kin（hp 2047→2044）、
-  摇杆推边缘走位 2.15 格（live vec 采样，非 up 后空值）
+- **JoypadButton B 实事件翻滚**（dodge_t>0 单证、stamina 半支在
+  游泳点会空转——MED-3）
+- **ScreenTouch 实事件**：ATK 钮命中野生 kin（同架层邻格扫）、
+  摇杆推边缘走位（live vec 采样，非 up 后空值）
 
 **关键 harness 课**：窗口模式下注入的 MouseMotion 输给物理光标——
 `root.warp_mouse` 才是"手"；viewport 投影必须走 `canvas_transform`
 （`get_global_transform_with_canvas` 是节点自身变换，差出 26 格）。
 atk_cd 会被自由跑的物理帧先读空——行为闸要打在战斗副作用上。
 
+**audit-63 连坐真 bug**：harness 跑过 120s 暴露 `tick_weather` 调
+`rng.randf()`（自定义 Rng 只有 `next()`）——天气 roll 每次到点
+炸死、天空永不变化。修 + smoke 钉 "weather roll consumes rng"
+（rng.s 推进证明执行体跑完）。审档 `audit-63-input-walkthrough.md`。
+
 **证据**：`docs/reviews/s110-walk-*.png` ×8（标题海报/游玩/走位/
 采集/建造栏/瞄准线/暂停壳/触屏虚拟按键+提示语切换）。
 
-**smoke 1000/0/1skip · audit_data ALL CLEAN**
+**walkthrough 19/19 · smoke 998/0/0skip · audit_data ALL CLEAN**
 
 ## S111 — 导出管线实测（三 preset 全真产物）
 

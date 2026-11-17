@@ -1448,7 +1448,8 @@ func tick_weather(dt: float) -> void:
 	if weather_t < 120.0:
 		return
 	weather_t = 0.0
-	var roll: float = rng.randf()
+	var roll: float = rng.next() # Rng exposes next(), not randf — the 120s
+	# weather roll died on the bad call and the sky never changed (audit-63)
 	var next := "storm" if roll < 0.15 else ("rain" if roll < 0.45 else ("drought" if roll < 0.60 else "clear"))
 	if next != weather:
 		weather = next

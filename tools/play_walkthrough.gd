@@ -23,14 +23,14 @@ func _shot(name: String) -> void:
 	img.save_png("/tmp/plg-walk-%s.png" % name)
 	print("shot %s" % name)
 
-func _tap_act(a: String) -> void: # action-mapped event through the real queue
-	var ev := InputEventAction.new()
-	ev.action = a
+func _tap_key(k: Key) -> void: # a real keycode — the InputMap binding is
+	var ev := InputEventKey.new()    # part of what this gate proves
+	ev.keycode = k
 	ev.pressed = true
 	Input.parse_input_event(ev)
 	await process_frame
-	var ev2 := InputEventAction.new()
-	ev2.action = a
+	var ev2 := InputEventKey.new()
+	ev2.keycode = k
 	ev2.pressed = false
 	Input.parse_input_event(ev2)
 	await process_frame
@@ -68,7 +68,7 @@ func _boot() -> void:
 	for i in 30:
 		await process_frame
 	_gate("boots to title", game.state == "title", "state=%s" % game.state)
-	await _shot("walk-title")
+	await _shot("title")
 
 	# title → NEW GAME through a real mouse click on the menu row —
 	# an existing save arms the overwrite confirm (first click arms,
@@ -84,13 +84,13 @@ func _boot() -> void:
 				clicked = true
 				break
 		if not clicked:
-			await _tap_act("ui_accept")
+			_gate("new_game row exists", false, "click_rects had no new_game")
 		for j in 8:
 			await process_frame
 	_gate("NEW GAME enters play", game.state == "play", "state=%s" % game.state)
 	for i in 30:
 		await process_frame
-	await _shot("walk-play")
+	await _shot("play")
 
 	# movement: pick an open lane from the world, then hold that key through
 	# real key events — the sim walks, not the script (spawn seed decides
@@ -125,7 +125,7 @@ func _boot() -> void:
 	_gate("held key walks the keeper", game.player.pos.distance_to(p0) > 0.8,
 		"moved %.2f (lane %s room %d)" % [game.player.pos.distance_to(p0),
 		char(lane), best_room])
-	await _shot("walk-moved")
+	await _shot("moved")
 
 	# harvest: a real tree, a real swing — teleport beside it, face it, LMB
 	var tree := Vector2i(-1, -1)
@@ -144,8 +144,13 @@ func _boot() -> void:
 	_gate("harvest fixture found", tree.x >= 0)
 	var wood0: int = game.item_count("wood")
 	var hp0 := 0
+	var decor0 := -1
 	if tree.x >= 0:
-		hp0 = game.world.hp[game.world.idx(tree.x, tree.y)]
+		var tidx: int = game.world.idx(tree.x, tree.y)
+		hp0 = game.world.hp[tidx]
+		decor0 = game.world.decor_at(tree.x, tree.y)
+		game.world.hp[tidx] = 20 # fixture plants a near-dead tree — the gate
+		# must prove click→swing→fell→pickup, not luck with refresh pacing
 		game.player.pos = stand
 		game.player.facing = Vector2(0, 1) # the tree is directly south
 		for i in 4:
@@ -155,30 +160,35 @@ func _boot() -> void:
 		for i in 6:
 			await process_frame
 		var tp := _world_px(Vector2(tree) + Vector2(0.5, 0.5))
-		for s in 8: # several swings — a single chop rarely fells a tree
-			await _click(tp.x, tp.y)
-			for i in 8:
-				await process_frame
+		for s in 6: # atk_cd is wall-clock 0.45s — idle frames pace wrong on
+			await _click(tp.x, tp.y)          # high-refresh displays; timers don't
+			await create_timer(0.55).timeout
 			game.player.facing = Vector2(0, 1) # the swing may turn him
 	var hp1: int = game.world.hp[game.world.idx(tree.x, tree.y)] if tree.x >= 0 else -1
 	_gate("LMB swings chip the tree", tree.x >= 0 and hp1 < hp0,
 		"hp %d→%d" % [hp0, hp1])
+	_gate("tree actually fells", tree.x >= 0 and hp1 == 0
+			and game.world.decor_at(tree.x, tree.y) != decor0,
+		"hp=%d decor %d→%d" % [hp1, decor0,
+			game.world.decor_at(tree.x, tree.y) if tree.x >= 0 else -1])
 	# felled wood lands as a ground drop — step onto the tile to collect
 	if tree.x >= 0 and hp1 == 0:
 		game.player.pos = Vector2(tree.x + 0.5, tree.y + 0.5)
-		for i in 20:
+		await create_timer(0.8).timeout # pickup radius is 0.74 — a beat
+		for i in 10:
 			await process_frame
-	_gate("felled wood reaches the pack", tree.x < 0 or hp1 > 0 or game.item_count("wood") > wood0,
+	_gate("felled wood reaches the pack", tree.x < 0 or game.item_count("wood") > wood0,
 		"wood %d→%d" % [wood0, game.item_count("wood")])
-	await _shot("walk-harvest")
+	await _shot("harvest")
 
-	# build panel through the real key route
-	await _tap_act("build")
+	# build panel through the real key route — a physical keycode, so a
+	# deleted binding fails instead of matching an action name
+	await _tap_key(KEY_B)
 	for i in 8:
 		await process_frame
 	_gate("B opens build", game.panel == "build", "panel=%s" % game.panel)
-	await _shot("walk-build")
-	await _tap_act("ui_cancel")
+	await _shot("build")
+	await _tap_key(KEY_ESCAPE)
 	for i in 6:
 		await process_frame
 	_gate("Esc closes the panel", game.panel == "")
@@ -196,18 +206,39 @@ func _boot() -> void:
 	_gate("wild kin exists to aim at", tgt != null)
 	if tgt != null:
 		var w0: int = game.item_count("kin_orb")
-		game.player.pos = tgt.pos + Vector2(-3.0, 0.0)
-		game.player.facing = Vector2(1, 0)
+		# land the keeper on a standable cell near the target — a blind
+		# offset can be water, and a swimming keeper distorts later gates
+		var best_spot: Vector2 = tgt.pos + Vector2(-3.0, 0.0)
+		var elev_t: int = game.world.elev_at(int(tgt.pos.x), int(tgt.pos.y))
+		var spot_score := -1
+		for d in [Vector2(-3, 0), Vector2(-2, -2), Vector2(-2, 2), Vector2(-3, -3),
+				Vector2(-3, 3), Vector2(0, -3), Vector2(0, 3)]:
+			var c: Vector2 = tgt.pos + d
+			var ci := Vector2i(int(c.x), int(c.y))
+			var score := 0
+			if game.world.in_bounds(ci.x, ci.y) and not game.world.blocked(ci.x, ci.y):
+				score += 2 # blocked covers water/decor/structure already
+				if game.world.elev_at(ci.x, ci.y) == elev_t:
+					score += 2 # same shelf — melee LOS and dodge stay honest
+				if game.world.tile_at(ci.x, ci.y) != World.Tile.WATER:
+					score += 1 # dry land preferred — a swimmer distorts gates
+			if score > spot_score:
+				spot_score = score
+				best_spot = Vector2(ci.x + 0.5, ci.y + 0.5)
+		game.player.pos = best_spot
+		game.player.facing = (tgt.pos - best_spot).normalized()
+		if game.player.facing.length_squared() < 0.01:
+			game.player.facing = Vector2(1, 0)
 		for i in 4:
 			await process_frame
 		main.cam.global_position = game.player.global_position
 		for i in 6:
 			await process_frame
-		await _tap_act("aim")
+		await _tap_key(KEY_Q)
 		for i in 8:
 			await process_frame
 		_gate("Q aims", game.player.aiming, "aiming=%s" % game.player.aiming)
-		await _shot("walk-aim")
+		await _shot("aim")
 		var tp2 := _world_px(tgt.pos)
 		await _click(tp2.x, tp2.y)
 		for i in 20:
@@ -217,12 +248,12 @@ func _boot() -> void:
 			"orbs=%d flying=%d" % [game.item_count("kin_orb"), game.spheres_flying.size()])
 
 	# pause shell through Esc — the whole game's stop button
-	await _tap_act("ui_cancel")
+	await _tap_key(KEY_ESCAPE)
 	for i in 8:
 		await process_frame
 	_gate("Esc pauses", game.state == "paused", "state=%s panel=%s" % [game.state, game.panel])
-	await _shot("walk-pause")
-	await _tap_act("ui_cancel")
+	await _shot("pause")
+	await _tap_key(KEY_ESCAPE)
 	for i in 8:
 		await process_frame
 	_gate("Esc resumes", game.state == "play", "state=%s" % game.state)
@@ -236,7 +267,7 @@ func _boot() -> void:
 	Input.parse_input_event(jp)
 	for i in 8:
 		await process_frame
-	_gate("pad B dodges", game.player.dodge_t > 0 or game.player.stamina < st0,
+	_gate("pad B dodges", game.player.dodge_t > 0,
 		"dodge_t=%.2f stamina %.0f→%.0f" % [game.player.dodge_t, st0, game.player.stamina])
 	_gate("pad sighted", game.using_pad, "using_pad=%s" % game.using_pad)
 
@@ -247,20 +278,38 @@ func _boot() -> void:
 	var lay: Dictionary = hudn.touch_layout(Vector2(root.size))
 	# ATK must do a verb's work: land a real hit on a real wild kin —
 	# atk_cd is eaten by free-running physics before we can read it
-	game.spawn_wild(true)
-	for i in 10:
-		await process_frame
 	var mark: Kin = null
-	for p in game.pals:
+	for p in game.pals: # reuse a wild that exists; spawn only if the field is bare
 		if p.mode == "wild" and p.hp > 0:
 			mark = p
 			break
+	if mark == null:
+		game.spawn_wild(true)
+		for i in 10:
+			await process_frame
+		for p in game.pals:
+			if p.mode == "wild" and p.hp > 0:
+				mark = p
+				break
 	var hp_mark := -1.0
 	if mark != null:
-		mark.pos = game.player.pos + Vector2(1.0, 0.0)
+		# adjacent cell on the player's own shelf — an elevation step
+		# between them blocks melee LOS and fails the gate for nothing
+		var pe: int = game.world.elev_at(int(game.player.pos.x), int(game.player.pos.y))
+		var adj: Vector2 = game.player.pos + Vector2(1.0, 0.0)
+		for d in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
+			var c: Vector2 = game.player.pos + d
+			var ci := Vector2i(int(c.x), int(c.y))
+			if game.world.in_bounds(ci.x, ci.y) and not game.world.blocked(ci.x, ci.y) \
+					and game.world.elev_at(ci.x, ci.y) == pe:
+				adj = Vector2(ci.x + 0.5, ci.y + 0.5)
+				break
+		mark.pos = adj
+		game.player.facing = (adj - game.player.pos).normalized()
+		if game.player.facing.length_squared() < 0.01:
+			game.player.facing = Vector2(1, 0)
 		hp_mark = mark.hp
 		game.player.aiming = false # ATK while aiming throws — melee needs it off
-		game.player.facing = Vector2(1, 0)
 		game.player.atk_cd = 0.0
 		var atk_p: Vector2 = lay["btns"]["atk"]
 		var tc := InputEventScreenTouch.new()
@@ -276,8 +325,10 @@ func _boot() -> void:
 		Input.parse_input_event(tc2)
 		for i in 6:
 			await process_frame
-	_gate("ATK button lands a hit", mark != null and mark.hp < hp_mark,
-		"hp %.0f→%.0f" % [hp_mark, mark.hp if mark != null else -1.0])
+	_gate("ATK button lands a hit", mark != null and is_instance_valid(mark)
+			and mark.hp < hp_mark,
+		"hp %.0f→%.0f" % [hp_mark,
+			mark.hp if (mark != null and is_instance_valid(mark)) else -1.0])
 
 	# joystick drag: finger down on the stick, drag toward an OPEN rim
 	# direction — physics runs free here, so read the stick live, not after
@@ -323,7 +374,7 @@ func _boot() -> void:
 		"live vec=%s" % vec_live)
 	_gate("stick drag walks", moved > 0.5,
 		"moved %.2f (dir %s room %d)" % [moved, drag_dir.sign(), drag_room])
-	await _shot("walk-touch")
+	await _shot("touch")
 
 	print("==== WALK: %d failures ====" % fails)
 	quit()

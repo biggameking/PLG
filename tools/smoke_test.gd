@@ -875,6 +875,15 @@ func run() -> void:
 			fp2.job_site = null
 			game.weather = wt0; game.tod = tod0
 			game.pals.erase(fp2); fp2.free()
+			# the 120s weather roll must run clean — it called rng.randf()
+			# on a custom Rng that only exposes next(); rng state advancing
+			# proves the roll executed (the old call died before advancing)
+			var rng_s0: int = game.rng.s
+			game.weather_t = 200.0
+			game.tick_weather(1.0)
+			check("weather roll consumes rng", game.rng.s != rng_s0
+				and game.weather in ["storm", "rain", "drought", "clear"],
+				"weather=%s" % game.weather)
 			# worker IVs: a T100 crew outpaces a T0 crew on the same site
 			var ivp: Kin = game.gen_pal("sprigmelt", 5, game.player.pos)
 			ivp.mode = "base"; ivp.san = 90.0; ivp.ailment = ""; ivp.passives = []
@@ -8870,7 +8879,7 @@ func run() -> void:
 	for em48 in RegEx.create_from_string("\"act\":\\s*\"([a-z_0-9]+)\"").search_all(hudsrc):
 		emitted[em48.get_string(1)] = true
 	var dead_acts: Array = emitted.keys().filter(func(a): return not handled.has(a))
-	check("every emitted act is routed", dead_acts.is_empty(), "dead=%s" % dead_acts)
+	check("every emitted act is routed", dead_acts.is_empty(), "dead=%s" % [dead_acts])
 	check("catch preview isn't touch-gated",
 		not ("tiers2.is_empty() and not game.touch_ui" in hudsrc))
 	var netsrc := FileAccess.get_file_as_string("res://src/net.gd")
