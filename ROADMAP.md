@@ -1599,3 +1599,24 @@ S42 (eighth audit sweep — 0C/1H/5M/8L, honest-path economy):
   全部经真实 draw 路径渲染。
 - smoke **984/0/1skip**（4 新钉：全 id 解析·kind⊆白名单·7 特殊品=relic
   纹理·缓存构造界）· git 范围干净。
+
+## S108 — 四座新巢穴传说：未用授权网格的终局轮廓（audit-61 待审）
+
+- **物种**：gloamwing（Bat.blend 暮色蝠王）/ cragmaw（Cyclops.blend 山冠
+  独眼巨人）/ hexfiend（Demon.blend 烬翼魔君）/ dreadwyrm（Dragon.blend
+  岛霸古龙）——tier3·hostile2·双元素·专属技能线+掉落，LEGENDARY_DEN
+  10→14。继承人 fresh 过滤机制零改动自动循环 14 种；Accord/HUD 的
+  `LEGENDARY_DEN.size()` 计数自动变 14。
+- **渲染器新路径**：`norm_obj`——Dragon rig 姿态主导，数据烘焙逐 pass
+  反向发散（ext 3.5→2.5 越烘越大），改走骨架 OBJECT 缩放一次收敛
+  （3.495→1.500 精确），EyeArmature 经骨骼约束自动跟随（实测验证）。
+  gloamwing：head_bone Head→Face（真实头部驱动）、frames 收到
+  Bat_Flying 的 0–30 域内。cragmaw/hexfiend：chibi rig 骨尾在巨头内部，
+  eye_fwd 取正值推到面表（Cyclops 独眼 0.72 / Demon 双眼 0.62，面表
+  -0.79/-0.71 实测探测值）。
+- **视觉证据**（`docs/reviews/`）：`s108-warden-sprites.png` 出货像素
+  联检；`s108-den-wardens.png` 2.5× 守卫阵实机图（BOSS 条+压场体量）；
+  `s108-den-heirs.png` 1.0× 继承人形。全部经 shot_den.gd 真实场景渲染。
+- **smoke 985/0/1skip**（+2 新钉：LEGENDARY_DEN⊆species 数据防静默丢
+  id 缩水；四新种 den-exclusive 双断言）· audit_data ALL CLEAN（120 物
+  种）· IP CLEAN。

@@ -2988,6 +2988,20 @@ func run() -> void:
 	check("mortal data: fenjelly is neither legend nor human",
 		"fenjelly" not in Game.LEGENDARY_DEN
 		and SpeciesData.body_of("fenjelly") != "human")
+	# every den id must resolve — the spawn pool filter drops missing-data
+	# ids SILENTLY, so a typo'd id shrinks the heir list while the Accord
+	# still demands it (S108: the list grew 10→14)
+	var den_missing := []
+	for dsid in Game.LEGENDARY_DEN:
+		if SpeciesData.species_of(dsid).is_empty():
+			den_missing.append(dsid)
+	check("all den ids resolve to species data", den_missing.is_empty(),
+		",".join(den_missing))
+	# den membership IS the exclusivity definition (audit-61 L1) — pool-level
+	# exclusion is pinned globally at "zone pools carry no legends"
+	check("the four S108 wardens are on the den roster",
+		"gloamwing" in Game.LEGENDARY_DEN and "cragmaw" in Game.LEGENDARY_DEN
+		and "hexfiend" in Game.LEGENDARY_DEN and "dreadwyrm" in Game.LEGENDARY_DEN)
 	# catch gate end-to-end: a den legend is NOT IMMUNE anymore (roll itself
 	# is rng — assert the gate admitted it, either verdict proves the lane)
 	if legend:
@@ -6794,6 +6808,29 @@ func run() -> void:
 	ac_ff.store_var(ac_forged); ac_ff.close()
 	game.load_game()
 	check("a forged accord without the crown is refused", not game.accord)
+	# S108 grandfather: a save sealed under the 10-warden roster must keep
+	# its seal when the list grows — craft that exact save shape
+	var ac_gf := FileAccess.open("user://savegame.plg", FileAccess.READ)
+	var ac_gfd = ac_gf.get_var()
+	ac_gf.close()
+	ac_gfd["accord"] = true; ac_gfd["crowned"] = true
+	var ac_gsp: Array = []
+	for ac_gsi in Game.SPIRE_DEFS.size():
+		ac_gsp.append("spire_%d" % ac_gsi)
+	ac_gfd["spires"] = ac_gsp # the crown re-derives from spires, never the flag
+	var ac_gfmf: Dictionary = ac_gfd.get("mflags", {}).duplicate()
+	ac_gfmf["gauntlet_ex"] = true
+	ac_gfd["mflags"] = ac_gfmf
+	var ac_gc: Dictionary = {}
+	for ac_gls in Game.LEGENDARY_DEN.slice(0, 10):
+		ac_gc[ac_gls] = 1
+	ac_gfd["catches"] = ac_gc
+	var ac_gfw := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	ac_gfw.store_var(ac_gfd); ac_gfw.close()
+	game.accord = false
+	game.load_game()
+	check("a 10-roster seal survives roster growth", game.accord,
+		"accord=%s heirs=%d" % [game.accord, 10])
 	game.crowned = ac_cr
 	game.spires_done.clear()
 	for ac_sk in ac_sd:

@@ -16,7 +16,8 @@ OUT = os.path.join(HERE, "mesh_cfg_gen.py")
 
 # species with hand-tuned CFG entries in render_src_asset.py — never emit
 HAND = {"fenjelly", "scalcrest", "scalfang", "branpurr", "tidscale",
-        "piplump", "digsnout", "dozantler", "cindpaw"}
+        "piplump", "digsnout", "dozantler", "cindpaw",
+        "gloamwing", "cragmaw", "hexfiend", "dreadwyrm"}
 
 # identity-mark species — render_src_asset.py's accessory layer rebuilds the
 # marks the source meshes lack (crown/halo/horns/crest/fins/mask/wings), so

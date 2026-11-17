@@ -1301,6 +1301,10 @@ SPRITES.update({
     "gritmite": ("hedgehog", ["#a89468", "#8a7452", "#d8c9a0"], 0.35),
     "corlfang": ("serpent", ["#3a7a9a", "#2d6080", "#9be8d8"], 0.15),
     "sparkhaunt": ("ghost", ["#5a5ae8", "#3a3aa8", "#e8d44d"], 0.1),
+    "gloamwing": ("bird", ["#4a3a5e", "#352a45", "#c8b8d8"], 0.1),
+    "cragmaw": ("monkey", ["#5e6e4a", "#455238", "#a8b888"], 0.1),
+    "hexfiend": ("monkey", ["#8a3d5c", "#5c2a44", "#e8b8d1"], 0.1),
+    "dreadwyrm": ("quadruped", ["#8a3a2e", "#5e2820", "#e8c9a0"], 0.1),
 })
 
 if __name__ == "__main__":

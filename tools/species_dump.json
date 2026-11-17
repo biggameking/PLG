@@ -1059,5 +1059,45 @@
     ],
     "id": "sparkhaunt",
     "name": "Sparkhaunt"
+  },
+  {
+    "body": "bird",
+    "color": "#4a3a5e",
+    "elements": [
+      "dark",
+      "electric"
+    ],
+    "id": "gloamwing",
+    "name": "Gloamwing"
+  },
+  {
+    "body": "monkey",
+    "color": "#5e6e4a",
+    "elements": [
+      "ground",
+      "dark"
+    ],
+    "id": "cragmaw",
+    "name": "Cragmaw"
+  },
+  {
+    "body": "monkey",
+    "color": "#8a3d5c",
+    "elements": [
+      "dark",
+      "fire"
+    ],
+    "id": "hexfiend",
+    "name": "Hexfiend"
+  },
+  {
+    "body": "quadruped",
+    "color": "#8a3a2e",
+    "elements": [
+      "dragon",
+      "fire"
+    ],
+    "id": "dreadwyrm",
+    "name": "Dreadwyrm"
   }
 ]

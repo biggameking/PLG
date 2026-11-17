@@ -24,16 +24,20 @@ https://opengameart.org/content/textured-cute-monster-pack — stored under
 Cactus→`hedgehog`, Yeti→`monkey`, Alien_Tall→`human` species (rot_z≈35° —
 front view is head-only; the angle exposes the raised arms) AND the `player`
 rancher (S101: zone_mats outfit bands, `hat` accessory, baked eyeball/mouth
-mesh islands stripped via `strip_islands`). Cyclops/Demon were probed and
-rejected — same head-dominant silhouette.
+mesh islands stripped via `strip_islands`). Cyclops→`cragmaw`,
+Demon→`hexfiend` (S108 den wardens — chibi heads salvaged via rot_z≈35° +
+positive `eye_fwd` to push bead eyes onto the face surface; see HANDOFF
+S108 notes on the chibi rig's bone-tail-inside-head geometry).
 
 ## Quaternius "Animated Monster Pack" (CC0 1.0)
 
 https://opengameart.org/content/lowpoly-animated-monsters — stored under
 `tools/art/src/monsters_basic/`, pack's own `License.txt` in-tree. Used:
 Slime→all `blob` species (`no_eyes` — the mesh's own eye material is used).
-Bat/Dragon/Skeleton blends kept for future bodies — Skeleton was probed for
-`human` and rejected (detached bone segments read as floating fragments).
+Bat→`gloamwing`, Dragon→`dreadwyrm` (S108 den wardens — Dragon needed the
+`norm_obj` object-scale path, see HANDOFF; both keep their baked
+armature-driven eye meshes via `no_eyes`). Skeleton remains probed-and-
+rejected (detached bone segments read as floating fragments).
 
 ## Quaternius "Ultimate Nature Pack" (CC0)
 

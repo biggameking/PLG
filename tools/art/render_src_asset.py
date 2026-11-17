@@ -126,6 +126,51 @@ CFG = {
         "nose_r": 0.045, "nose_up": 0.02,
         "target_h": 1.4,
     },
+    # ---- S108 den wardens: four previously-unused licensed meshes, one
+    # silhouette each. Dragon/Bat keep their baked eye meshes (no_eyes);
+    # Cyclops gets a single bead (gap=0 folds the pair onto the midline).
+    "dreadwyrm": {   # Dragon.blend — ember elder wyrm
+        "mat_map": {"Main": (0.55, 0.20, 0.14), "Wings": (0.36, 0.14, 0.10),
+                    "Belly": (0.80, 0.62, 0.42), "Claws": (0.88, 0.82, 0.70)},
+        # pose-dominated rig: data-bake diverges (ext grew every pass) —
+        # scale the DragonArmature OBJECT; EyeArmature follows by constraint
+        "norm_obj": True,
+        "no_eyes": True,  # baked Eyes mesh is armature-driven and follows
+        "subd_wool": 2, "displace": None,
+        "rot_z": 0.0, "action": "Dragon_Flying", "frames": (10, 40),
+        "head_bone": "Head",
+        "eye_r": 0.05, "eye_gap": 0.10, "eye_fwd": -0.10, "eye_up": 0.10,
+        "target_h": 1.5,
+    },
+    "gloamwing": {   # Bat.blend — dusk sovereign bat
+        "mat_map": {"Main": (0.30, 0.23, 0.38), "Black": (0.12, 0.10, 0.16),
+                    "Belly": (0.66, 0.60, 0.72), "Nose": (0.80, 0.50, 0.58)},
+        "no_eyes": True,
+        "subd_wool": 2, "displace": None,
+        # Bat_Flying range is 0–30; the 'Face' bone is the real head driver
+        "rot_z": 0.0, "action": "Bat_Flying", "frames": (10, 30),
+        "head_bone": "Face",
+        "eye_r": 0.05, "eye_gap": 0.10, "eye_fwd": -0.10, "eye_up": 0.10,
+        "target_h": 1.2,
+    },
+    "cragmaw": {     # Cyclops.blend — granite moss giant, ONE bead eye
+        "mat_map": {"Texture": (0.38, 0.46, 0.30)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 35.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Head",
+        # chibi rig: bone tail sits INSIDE the giant head — positive eye_fwd
+        # pushes the bead out to the face surface at -Y (probed -0.79×k)
+        "eye_r": 0.13, "eye_gap": 0.0, "eye_fwd": 0.72, "eye_up": 0.10,
+        "target_h": 1.6,
+    },
+    "hexfiend": {    # Demon.blend — cinder fiend prince
+        "mat_map": {"Texture": (0.32, 0.11, 0.19)},
+        "subd_wool": 2, "displace": None,
+        "rot_z": 35.0, "action": "Idle", "frames": (5, 25),
+        "head_bone": "Head",
+        "eye_r": 0.055, "eye_gap": 0.22, "eye_fwd": 0.62, "eye_up": 0.10,
+        "target_h": 1.5,
+    },
 }
 
 # generated batch mapping (tools/art/mesh_map_gen.py → mesh_cfg_gen.py).
@@ -237,7 +282,7 @@ def _loc_fcurves(act):
             yield fc
 
 
-def normalize(objs, target_h):
+def normalize(objs, target_h, norm_obj=False):
     """Uniform-scale the rig so the mesh stands target_h units, feet on z=0.
 
     Iterates: armature rigs deform in bone-data space and the deform
@@ -245,43 +290,79 @@ def normalize(objs, target_h):
     for several passes; Skeleton diverged when child location was also
     scaled). Each pass measures EVALUATED bounds and bakes the residual
     factor into bone rest matrices AND mesh verts — both sides of the
-    deform conjugation. Object scale is NEVER used: an armature-child
-    mesh's modifier round-trip cancels the parent's object scale.
+    deform conjugation.
+
+    norm_obj rigs (S108 Dragon): pose-dominated rigs whose deform output
+    GROWS as rest data shrinks (the bake and the pose fight — ext rose
+    every pass, 3.5→2.5 on 0.6× passes) are scaled through the armature
+    OBJECT instead, which multiplies the whole deform output linearly —
+    verified 3.495→1.500 in one shot. Sibling armatures bone-constrained
+    to it (Dragon's EyeArmature) follow for free. The parent's object
+    scale round-trip caveat only applies to bake-style uniform meshes.
     """
     k = 1.0
-    for _ in range(10):
+    owner = None
+    if norm_obj:
         lo, hi = 1e9, -1e9
         for o in objs:
             for w in eval_verts(o):
                 lo = min(lo, w.z); hi = max(hi, w.z)
         kk = target_h / max(hi - lo, 0.001)
-        print("PASS ext=%.2f kk=%.3f" % (hi - lo, kk))
-        if abs(kk - 1.0) < 0.02:
-            break
-        k *= kk
-        S = mathutils.Matrix.Scale(kk, 4)
-        for o in bpy.data.objects:
-            if o.type == 'ARMATURE':
+        owner = objs[0].find_armature() or (
+            objs[0].parent if objs[0].parent and
+            objs[0].parent.type == 'ARMATURE' else None)
+        if owner is None:
+            print("WARN norm_obj: no armature owner — falling back to bake")
+        else:
+            owner.scale = owner.scale * kk
+            bpy.context.view_layer.update()
+            lo2, hi2 = 1e9, -1e9
+            for o in objs:
+                for w in eval_verts(o):
+                    lo2 = min(lo2, w.z); hi2 = max(hi2, w.z)
+            resid = target_h / max(hi2 - lo2, 0.001)
+            print("PASS ext=%.2f kk=%.3f (object-scale on %s)" %
+                  (hi - lo, kk, owner.name))
+            if abs(resid - 1.0) > 0.03:
+                print("WARN norm_obj residual %.3f — deform not linear" %
+                      resid)
+            k = kk
+    if owner is None:
+        for _ in range(10):
+            lo, hi = 1e9, -1e9
+            for o in objs:
+                for w in eval_verts(o):
+                    lo = min(lo, w.z); hi = max(hi, w.z)
+            kk = target_h / max(hi - lo, 0.001)
+            print("PASS ext=%.2f kk=%.3f" % (hi - lo, kk))
+            if abs(kk - 1.0) < 0.02:
+                break
+            k *= kk
+            S = mathutils.Matrix.Scale(kk, 4)
+            for o in bpy.data.objects:
+                if o.type == 'ARMATURE':
+                    o.data.transform(S)
+            for o in objs:
                 o.data.transform(S)
-        for o in objs:
-            o.data.transform(S)
-        # audit-51: pose-bone location F-curves are stored in bone-local
-        # units — they do NOT scale with the baked data, and for rigs whose
-        # deform is pose-dominated (Cat converged to a 2.0 skeleton no
-        # matter how small the verts) the ACTION'S positions ARE the
-        # output. Scale every location channel by this pass's kk.
-        for act in bpy.data.actions:
-            for fc in _loc_fcurves(act):
-                if fc.data_path.endswith("location"):
-                    for kp in fc.keyframe_points:
-                        kp.co[1] *= kk
-                        kp.handle_left[1] *= kk
-                        kp.handle_right[1] *= kk
-        bpy.context.view_layer.update()
-    else:
-        # 10 passes without converging — sprite ships at whatever residual
-        # scale remains; make it loud instead of silently mis-sized
-        print("WARN normalize unconverged after 10 passes kk=%.3f" % kk)
+            # audit-51: pose-bone location F-curves are stored in bone-local
+            # units — they do NOT scale with the baked data, and for rigs
+            # whose deform is pose-dominated (Cat converged to a 2.0
+            # skeleton no matter how small the verts) the ACTION'S
+            # positions ARE the output. Scale every location channel by
+            # this pass's kk.
+            for act in bpy.data.actions:
+                for fc in _loc_fcurves(act):
+                    if fc.data_path.endswith("location"):
+                        for kp in fc.keyframe_points:
+                            kp.co[1] *= kk
+                            kp.handle_left[1] *= kk
+                            kp.handle_right[1] *= kk
+            bpy.context.view_layer.update()
+        else:
+            # 10 passes without converging — sprite ships at whatever
+            # residual scale remains; make it loud instead of silently
+            # mis-sized
+            print("WARN normalize unconverged after 10 passes kk=%.3f" % kk)
     # drop feet to the floor
     lo2 = 1e9
     for o in objs:
@@ -751,9 +832,15 @@ def main():
     cfg = CFG[sid]
     s = bpy.context.scene
 
-    arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
     src = meshes[0]
+    # the processed mesh's OWN deformer, not whatever armature iterates
+    # first — Dragon ships DragonArmature + constrained EyeArmature and
+    # bpy.data order is not load-bearing (audit-61 L6)
+    arm = src.find_armature() or next(
+        (o for o in bpy.data.objects if o.type == 'ARMATURE'), None)
+    if arm is None:
+        raise RuntimeError("no armature in scene")
     if len(meshes) > 1:
         # only the first mesh is recolored/normalized — siblings still render
         # at original scale and can poison the sprite (audit-52)
@@ -897,7 +984,7 @@ def main():
         skin.data.materials.clear(); skin.data.materials.append(sm)
         objs = [wool, skin]
 
-    k = normalize(objs, cfg["target_h"])
+    k = normalize(objs, cfg["target_h"], cfg.get("norm_obj", False))
     print("scale k=%.4f faces: %s" %
           (k, {o.name: len(o.data.polygons) for o in objs}))
 

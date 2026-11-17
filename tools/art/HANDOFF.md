@@ -62,12 +62,29 @@ subdivide/displace/bone-parented shell）就是正确方向。对所有物种：
      轴上不可见——crown/halo/horns 的展开平面转 fwd-z 才能在纯
      侧视读出。10/10 标志放置，smoke 像素钉（scalbeak 冠>6、
      vermtrot 背扇>4）通过。
+- S108 巢穴传说四补：Bat→gloamwing、Dragon→dreadwyrm、
+  Cyclops→cragmaw、Demon→hexfiend（LEGENDARY_DEN 10→14）。两条新课：
+  1. **norm_obj 归一路径**——Dragon 的 27 骨 rig 姿态主导，数据烘焙
+     逐 pass 反向发散（ext 3.5→2.5 越烘越大：rest 骨缩短时旋转姿态
+     反而把网格撑开）。CFG `"norm_obj": true` 改走骨架 OBJECT 缩放
+     （`owner.scale *= k`），形变输出线性——实测 3.495→1.500 一次
+     收敛。Dragon 的 EyeArmature 是骨骼约束子骨架，跟随主骨架缩放
+     无需处理（EyeArmature 自身缩放是无操作）。适用判据：bake 路径
+     报 unconverged 且 ext 递增的 rig。
+  2. **chibi 眼位取正 eye_fwd**——cute_monsters 的骨尾在巨头内部
+     （Cyclops/Demon 头骨尾 y=0，面表在 y=-0.79/-0.71），负 eye_fwd
+     把墨珠埋进头内。取正值推到面表：独眼 gap=0+r=0.13，恶魔双眼
+     gap=0.22+r=0.055。探面表距用 evaluated 顶点 z-band 取 min y。
+  Bat 沿用 bake 路径（2 pass 收敛，Eyes 网格经约束跟随正常）；
+  head_bone 用 `Face`（'Head' 在该 rig 不是权重驱动骨）；Bat_Flying
+  帧域 0–30。
 - S99 扩批补源：cute_monsters 包（CC0）供 Ghost→ghost、
   Alien_Tall→human、Yeti→monkey、Cactus→hedgehog；monsters_basic
   包供 Slime→blob（no_eyes，自带眼材质）。注意该包是 Q 版大头
   风格——human/monkey 用 rot_z≈35° 露出手臂/犄角剪影，正对镜头
-  只剩一张脸。Skeleton/Cyclops/Demon 试过不合用（骨头碎片/同样
-  大头）；Bat/Dragon 留作未来源。
+  只剩一张脸。Skeleton 判不合用（骨头碎片）；Cyclops/Demon/Bat/
+  Dragon 均已在 S108 上岗（见上节 —— 大头风格靠 rot_z+正 eye_fwd
+  救回，Dragon 需 norm_obj）。
 - 归一化教训（S98c 实战）：bound_box 看不见 modifier 变形——必须用
   evaluated 顶点；烘缩放要**两侧共轭**（骨 rest 矩阵+顶点同烘 k，
   只烘骨骼在 rest-pose 下输出零变化）；子 mesh 的 location 不要动；

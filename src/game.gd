@@ -919,7 +919,7 @@ func acquirable(sid: String) -> bool:
 func ownable(sid: String) -> bool:
 	# legend heirs are the den's whole promise — a knight-shaped legend is
 	# still a legend: human body can't bar a den heir from the roster, or
-	# the Accord's tenth name can never be earned (audit-33)
+	# the Accord's last name can never be earned (audit-33)
 	return SpeciesData.body_of(sid) != "human" or sid in LEGENDARY_DEN
 
 func acq_pool(pool: Array) -> Array:
@@ -1162,13 +1162,13 @@ func tick_boss_respawns() -> void:
 		if legend:
 			# a legendary den never re-raises the same warden — it calls a NEW
 			# legend, and this one roams catchable: legendary orbs finally have
-			# a target, and the ten-name collection loop closes
+			# a target, and the full-roster collection loop closes
 			var lpool := LEGENDARY_DEN.filter(
 				func(s): return not SpeciesGen.SPECIES.get(s, {}).is_empty())
 			if lpool.is_empty():
 				continue # legend data trimmed — the den stays quiet
 			# the den calls an heir you haven't proven yet — a pilgrimage,
-			# not a lottery: uniform rolls could stall the tenth name for
+			# not a lottery: uniform rolls could stall the last name for
 			# dozens of cycles (audit-33 pacing)
 			var fresh := lpool.filter(
 				func(s): return int(catch_counts.get(s, 0)) <= 0)
@@ -1319,7 +1319,7 @@ func ownable_species_count() -> int:
 			if ownable(str(sid)):
 				_ownable_n += 1
 	return _ownable_n
-var accord := false     # the Wildmere Accord — crown + all ten legend heirs
+var accord := false     # the Wildmere Accord — crown + every legend heir
 # + the EX gauntlet. Sealed once per save; the island fields a sixth slot.
 
 func party_cap() -> int:
@@ -4778,8 +4778,12 @@ func load_game() -> bool:
 	for ls in LEGENDARY_DEN:
 		if int(catch_counts.get(ls, 0)) > 0:
 			heirs += 1
+	# Grandfather the seal: a save that sealed under the 10-warden roster
+	# keeps it when the list grows (S108: 10→14) — the heirs bar is the
+	# roster size at the time sealing was possible, never below 10
 	accord = crowned and mission_flags.get("gauntlet_ex", false) \
-		and heirs >= LEGENDARY_DEN.size() and d.get("accord") is bool and d["accord"]
+		and heirs >= mini(LEGENDARY_DEN.size(), 10) \
+		and d.get("accord") is bool and d["accord"]
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
 		for slot in ["weapon", "armor", "acc1", "acc2"]:
@@ -6408,7 +6412,8 @@ func spawn_grotto() -> void:
 
 # World bosses that only appear as den guardians — legendary tier.
 const LEGENDARY_DEN := ["scalbeak", "snovstride", "nibhand", "shadekin",
-	"wyrmhoof", "cindchew", "flarbeak", "tidscale", "scalcrest", "vermtrot"]
+	"wyrmhoof", "cindchew", "flarbeak", "tidscale", "scalcrest", "vermtrot",
+	"gloamwing", "cragmaw", "hexfiend", "dreadwyrm"]
 
 # The Pact spires: five element shrines seeded through the island's bands —
 # break every guardian and the island crowns you. The campaign's spine: each
@@ -6580,7 +6585,7 @@ func spawn_legendary_den() -> void:
 	# one per world: bigger ring, an orb-immune giant, elite honour guard.
 	# The FIRST warden is a kill-fight — its successor respawns catchable
 	# (tick_boss_respawns legend branch), and catching that one re-arms the
-	# den: the ten-name collection loop runs on this one site
+	# den: the full-roster collection loop runs on this one site
 	var tries := 0
 	while tries < 6000:
 		tries += 1

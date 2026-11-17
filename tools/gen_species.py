@@ -101,6 +101,12 @@ NEW = [
  ("gritmite","Gritmite","hedgehog",["#a89468","#8a7452","#d8c9a0"],.35,["ground"],0,{"mining":1,"gathering":1},[["stone",1,3],["bone",1,1]],"Pill-bug dirt burrower.",0),
  ("corlfang","Corlfang","serpent",["#3a7a9a","#2d6080","#9be8d8"],.15,["water"],2,{"watering":2,"transporting":2},[["kin_fluid",2,4],["raw_fish",1,2]],"Tide-hunting brine serpent.",1),
  ("sparkhaunt","Sparkhaunt","ghost",["#5a5ae8","#3a3aa8","#e8d44d"],.1,["electric","dark"],3,{"electricity":3,"gathering":2},[["electric_organ",3,5],["venom_gland",1,2]],"Storm-wraith of the deep wilds.",2),
+ # S108 den wardens — four unused licensed meshes get their own legendaries.
+ # LEGENDARY_DEN picks these up automatically; dens stay the only source.
+ ("gloamwing","Gloamwing","bird",["#4a3a5e","#352a45","#c8b8d8"],.1,["dark","electric"],3,{"electricity":4},[["electric_organ",3,5],["venom_gland",2,4]],"Storm-dusk bat sovereign.",2),
+ ("cragmaw","Cragmaw","monkey",["#5e6e4a","#455238","#a8b888"],.1,["ground","dark"],3,{"mining":4,"lumbering":3},[["stone",4,6],["horn",2,3]],"Mountain-crowned cyclops.",2),
+ ("hexfiend","Hexfiend","monkey",["#8a3d5c","#5c2a44","#e8b8d1"],.1,["dark","fire"],3,{"kindling":4},[["flame_organ",3,5],["gold_coin",2,4]],"Cinder-winged fiend prince.",2),
+ ("dreadwyrm","Dreadwyrm","quadruped",["#8a3a2e","#5e2820","#e8c9a0"],.1,["dragon","fire"],3,{"kindling":4,"mining":3},[["horn",3,5],["flame_organ",3,5]],"Island-tyrant elder dragon.",2),
 ]
 
 TIER_STATS = {0: (70,70,70,40,35,2,70), 1: (82,82,76,52,45,3,75), 2: (96,96,86,70,60,4,80), 3: (115,115,98,88,80,5,90)}

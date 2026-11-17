@@ -4650,10 +4650,240 @@ const SPECIES = {
   "desc": "Storm-wraith of the deep wilds.",
   "hostile": 2,
   "body": "ghost"
+ },
+ "gloamwing": {
+  "id": "gloamwing",
+  "name": "Gloamwing",
+  "glyph": "g",
+  "color": "#4a3a5e",
+  "elements": [
+   "dark",
+   "electric"
+  ],
+  "hp": 115,
+  "atk": 115,
+  "def": 98,
+  "speed": 88,
+  "capturePower": 80,
+  "food": 5,
+  "san": 90,
+  "work": {
+   "electricity": 4
+  },
+  "skills": [
+   [
+    1,
+    "darkBall"
+   ],
+   [
+    7,
+    "nightmare"
+   ],
+   [
+    12,
+    "shockwave"
+   ],
+   [
+    15,
+    "lightningStrike"
+   ],
+   [
+    20,
+    "arcLance"
+   ]
+  ],
+  "drops": [
+   [
+    "electric_organ",
+    3,
+    5
+   ],
+   [
+    "venom_gland",
+    2,
+    4
+   ]
+  ],
+  "desc": "Storm-dusk bat sovereign.",
+  "hostile": 2,
+  "body": "bird"
+ },
+ "cragmaw": {
+  "id": "cragmaw",
+  "name": "Cragmaw",
+  "glyph": "c",
+  "color": "#5e6e4a",
+  "elements": [
+   "ground",
+   "dark"
+  ],
+  "hp": 115,
+  "atk": 115,
+  "def": 98,
+  "speed": 88,
+  "capturePower": 80,
+  "food": 5,
+  "san": 90,
+  "work": {
+   "mining": 4,
+   "lumbering": 3
+  },
+  "skills": [
+   [
+    1,
+    "sandBlast"
+   ],
+   [
+    7,
+    "stoneShot"
+   ],
+   [
+    12,
+    "darkBall"
+   ],
+   [
+    15,
+    "nightmare"
+   ],
+   [
+    20,
+    "soulSiphon"
+   ]
+  ],
+  "drops": [
+   [
+    "stone",
+    4,
+    6
+   ],
+   [
+    "horn",
+    2,
+    3
+   ]
+  ],
+  "desc": "Mountain-crowned cyclops.",
+  "hostile": 2,
+  "body": "monkey"
+ },
+ "hexfiend": {
+  "id": "hexfiend",
+  "name": "Hexfiend",
+  "glyph": "h",
+  "color": "#8a3d5c",
+  "elements": [
+   "dark",
+   "fire"
+  ],
+  "hp": 115,
+  "atk": 115,
+  "def": 98,
+  "speed": 88,
+  "capturePower": 80,
+  "food": 5,
+  "san": 90,
+  "work": {
+   "kindling": 4
+  },
+  "skills": [
+   [
+    1,
+    "darkBall"
+   ],
+   [
+    7,
+    "nightmare"
+   ],
+   [
+    12,
+    "flameBurst"
+   ],
+   [
+    15,
+    "ignitionBreath"
+   ],
+   [
+    20,
+    "cinderFeast"
+   ]
+  ],
+  "drops": [
+   [
+    "flame_organ",
+    3,
+    5
+   ],
+   [
+    "gold_coin",
+    2,
+    4
+   ]
+  ],
+  "desc": "Cinder-winged fiend prince.",
+  "hostile": 2,
+  "body": "monkey"
+ },
+ "dreadwyrm": {
+  "id": "dreadwyrm",
+  "name": "Dreadwyrm",
+  "glyph": "d",
+  "color": "#8a3a2e",
+  "elements": [
+   "dragon",
+   "fire"
+  ],
+  "hp": 115,
+  "atk": 115,
+  "def": 98,
+  "speed": 88,
+  "capturePower": 80,
+  "food": 5,
+  "san": 90,
+  "work": {
+   "kindling": 4,
+   "mining": 3
+  },
+  "skills": [
+   [
+    1,
+    "dragonBurst"
+   ],
+   [
+    7,
+    "dragonCanon"
+   ],
+   [
+    12,
+    "flameBurst"
+   ],
+   [
+    15,
+    "ignitionBreath"
+   ],
+   [
+    20,
+    "cinderFeast"
+   ]
+  ],
+  "drops": [
+   [
+    "horn",
+    3,
+    5
+   ],
+   [
+    "flame_organ",
+    3,
+    5
+   ]
+  ],
+  "desc": "Island-tyrant elder dragon.",
+  "hostile": 2,
+  "body": "quadruped"
  }
 }
 
-const ZONE = {"0": ["pyrejelly", "bubwrith", "lazpuff", "hushnib", "thornmelt", "mossjelly", "fernveil", "sparkwhisk", "tambeak", "glaclump", "snowtail", "chilgloom", "terrnib", "mimspike", "mimtrot", "doztail", "noctgloom", "shadegloom", "duskwing", "dewpuff", "faradwisp", "rimewhisk", "bubgloom", "embpaw", "gritmite"], "1": ["branpurr", "scalfang", "frostfang", "bringloom", "bubgoo", "dewmane", "wortling", "thornhoof", "petalantler", "briarmaw", "briarchim", "tawtail", "ivyveil", "mosswisp", "floraling", "statstride", "rimemane", "snovfawn", "loamquill", "tammane", "bramplume", "murkwing", "worthand", "puffchim", "hushsmith", "noctmane", "shadehand", "grimling", "shadewisp", "duskpurr", "veilkin", "embquill", "soltalon", "lazburr", "wortquill", "sprigveil", "digsnout", "brancrest"], "2": ["pyresmith", "cindpaw", "branling", "pyreplume", "ripbell", "ripwrith", "leaftrot", "fernchim", "mossveil", "zapplume", "zaptrot", "snovmool", "glacmane", "terrkin", "grithoof", "noctplume", "scalcrest", "vermtrot", "corlfang"], "3": ["flarbeak", "cindchew", "tidscale", "statchew", "snovstride", "shadesmith", "veilplume", "shadekin", "scalbeak", "nibhand", "wyrmhoof", "noctfang", "sparkhaunt"]}
+const ZONE = {"0": ["pyrejelly", "bubwrith", "lazpuff", "hushnib", "thornmelt", "mossjelly", "fernveil", "sparkwhisk", "tambeak", "glaclump", "snowtail", "chilgloom", "terrnib", "mimspike", "mimtrot", "doztail", "noctgloom", "shadegloom", "duskwing", "dewpuff", "faradwisp", "rimewhisk", "bubgloom", "embpaw", "gritmite"], "1": ["branpurr", "scalfang", "frostfang", "bringloom", "bubgoo", "dewmane", "wortling", "thornhoof", "petalantler", "briarmaw", "briarchim", "tawtail", "ivyveil", "mosswisp", "floraling", "statstride", "rimemane", "snovfawn", "loamquill", "tammane", "bramplume", "murkwing", "worthand", "puffchim", "hushsmith", "noctmane", "shadehand", "grimling", "shadewisp", "duskpurr", "veilkin", "embquill", "soltalon", "lazburr", "wortquill", "sprigveil", "digsnout", "brancrest"], "2": ["pyresmith", "cindpaw", "branling", "pyreplume", "ripbell", "ripwrith", "leaftrot", "fernchim", "mossveil", "zapplume", "zaptrot", "snovmool", "glacmane", "terrkin", "grithoof", "noctplume", "scalcrest", "vermtrot", "corlfang"], "3": ["flarbeak", "cindchew", "tidscale", "statchew", "snovstride", "shadesmith", "veilplume", "shadekin", "scalbeak", "nibhand", "wyrmhoof", "noctfang", "sparkhaunt", "gloamwing", "cragmaw", "hexfiend", "dreadwyrm"]}
 
 static func species_of(id: String) -> Dictionary:
 	return SPECIES.get(id, {})
