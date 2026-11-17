@@ -147,10 +147,10 @@ func _boot() -> void:
 	var decor0 := -1
 	if tree.x >= 0:
 		var tidx: int = game.world.idx(tree.x, tree.y)
-		hp0 = game.world.hp[tidx]
 		decor0 = game.world.decor_at(tree.x, tree.y)
 		game.world.hp[tidx] = 20 # fixture plants a near-dead tree — the gate
 		# must prove click→swing→fell→pickup, not luck with refresh pacing
+		hp0 = game.world.hp[tidx] # read AFTER the poke — chipping must beat 20
 		game.player.pos = stand
 		game.player.facing = Vector2(0, 1) # the tree is directly south
 		for i in 4:
@@ -163,7 +163,7 @@ func _boot() -> void:
 		for s in 6: # atk_cd is wall-clock 0.45s — idle frames pace wrong on
 			await _click(tp.x, tp.y)          # high-refresh displays; timers don't
 			await create_timer(0.55).timeout
-			game.player.facing = Vector2(0, 1) # the swing may turn him
+			game.player.facing = Vector2(0, 1) # fixture — the swing may turn him
 	var hp1: int = game.world.hp[game.world.idx(tree.x, tree.y)] if tree.x >= 0 else -1
 	_gate("LMB swings chip the tree", tree.x >= 0 and hp1 < hp0,
 		"hp %d→%d" % [hp0, hp1])

@@ -1714,7 +1714,7 @@ exe PE32+ 形态闸——本次验证 0 failures。
 
 ## S112 — 核心循环端到端（capture→kinbox→deploy→sleep 全输入链）
 
-**验收**：`tools/loop_walkthrough.gd` —— **LOOP: 0 failures, 13 门**，
+**验收**：`tools/loop_walkthrough.gd` —— **LOOP: 0 failures, 15 门**，
 真实窗口+事件注入，无内部方法直调：
 
 | 门 | 证据 |
@@ -1738,3 +1738,12 @@ exe PE32+ 形态闸——本次验证 0 failures。
 /部署面板 BASE(1/9)/Day2 黎明床畔+MISSION DONE+quest 推进）。
 
 **smoke 999/0/0skip · 审档 audit-64 待派**
+
+### audit-64 冷审 NEEDS-FIX → 全修（已推本提交）
+
+HIGH：harness 孤儿行致解析失败（证据在而文件坏）→ 修复+smoke
+`harness parses` 解析钉×2（--check-only 退 0，按错误文本判）。
+MED：chip 门 hp0 取样顺序、kinbox 门改格点严格、删 E 全局开盒
+回退（近身路径已存在，空场 E 恢复报 Nothing）、export_check
+补 web 陈旧清理+APK 完整性/签名块+日志 ERROR 闸。审档
+`audit-64-input-acceptance-chain.md`。

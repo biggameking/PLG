@@ -955,9 +955,6 @@ func interact() -> void:
 			"wooden_wall", "spikes":
 				game.log_msg(tr("%s (HP %d)") % [tr(str(StructureData.STRUCTURES[st["id"]]["name"])), int(st.get("hp", 0))])
 				return
-	if game.has_structure("kinbox"):
-		game.panel = "kinbox"
-		return
 	game.log_msg(tr("Nothing to interact with"))
 
 func mouse_tile() -> Vector2:

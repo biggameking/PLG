@@ -24,8 +24,14 @@ run() { # name preset outfile mode
 		echo "FAIL $name (see $OUT/log-$name.txt)"
 		fails=$((fails + 1))
 	fi
+	# an artifact existing does not mean the run was clean
+	if grep -q "ERROR:" "$OUT/log-$name.txt"; then
+		echo "FAIL $name log has ERROR lines (see $OUT/log-$name.txt)"
+		fails=$((fails + 1))
+	fi
 }
 
+rm -f "$OUT/web"/index.* # stale bundle siblings must not satisfy the check
 run windows "Windows Desktop (Steam)" "$OUT/Kinbound.exe" --export-release
 run web "Web" "$OUT/web/index.html" --export-release
 run android "Android" "$OUT/android/Kinbound-debug.apk" --export-debug
@@ -41,6 +47,16 @@ fi
 # exe must actually be a PE binary, not a stray file
 if [ -s "$OUT/Kinbound.exe" ] && ! file "$OUT/Kinbound.exe" | grep -q "PE32+"; then
 	echo "FAIL windows artifact is not PE32+"; fails=$((fails + 1))
+fi
+# apk must be a whole zip, not a partial write — signature was verified
+# manually in S111 (apksigner); integrity is the automatable half
+if [ -s "$OUT/android/Kinbound-debug.apk" ] \
+	&& ! unzip -t "$OUT/android/Kinbound-debug.apk" > /dev/null 2>&1; then
+	echo "FAIL android artifact fails zip integrity"; fails=$((fails + 1))
+fi
+if [ -s "$OUT/android/Kinbound-debug.apk" ] \
+	&& ! unzip -l "$OUT/android/Kinbound-debug.apk" | grep -q "META-INF/.*\.RSA\|META-INF/.*\.SF"; then
+	echo "FAIL android artifact carries no signature block"; fails=$((fails + 1))
 fi
 echo "==== EXPORT: $fails failures ===="
 exit $fails

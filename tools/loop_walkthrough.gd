@@ -25,6 +25,12 @@ func _shot(name: String) -> void:
 	img.save_png("/tmp/plg-loop-%s.png" % name)
 	print("shot %s" % name)
 
+func _stamp() -> void: # run manifest — proves which tree produced the shots
+	var out: Array = []
+	OS.execute("git", ["rev-parse", "--short", "HEAD"], out, true)
+	print("LOOP run %s sha=%s" % [Time.get_datetime_string_from_system(),
+		str(out[0]).strip_edges() if out.size() > 0 else "?"])
+
 func _tap_key(k: Key) -> void: # real keycode — a dead binding must fail
 	var ev := InputEventKey.new()
 	ev.keycode = k
@@ -129,6 +135,7 @@ func _face_at(from: Vector2, to: Vector2) -> Vector2:
 	return f if f.length_squared() > 0.01 else Vector2(1, 0)
 
 func _boot() -> void:
+	_stamp()
 	var ps = load("res://scenes/main.tscn")
 	main = ps.instantiate()
 	root.add_child(main)
@@ -174,8 +181,8 @@ func _boot() -> void:
 		# weaken with real melee taps — CHASE by teleport: a fleeing kin
 		# outruns reach, so re-stand next to it before every click
 		for s in 10:
-			if prey.hp < prey.max_hp * 0.30:
-				break
+			if not is_instance_valid(prey) or prey.hp < prey.max_hp * 0.30:
+				break # a swing can kill — stop before freed-ref access
 			game.player.pos = _stand_spot(prey.pos)
 			game.player.facing = _face_at(game.player.pos, prey.pos)
 			game.player.atk_cd = 0.0
@@ -185,12 +192,12 @@ func _boot() -> void:
 			var mp := _world_px(prey.pos)
 			await _click(mp.x, mp.y)
 			await create_timer(0.5).timeout
-		_gate("melee weakens the prey", prey.hp < hp0,
-			"hp %.0f→%.0f" % [hp0, prey.hp])
+		_gate("melee weakens the prey", is_instance_valid(prey) and prey.hp < hp0,
+			"hp %.0f→%s" % [hp0, "%.0f" % prey.hp if is_instance_valid(prey) else "gone"])
 		# aim + throw until the ball holds — capture is a chance, the
 		# keeper retries like a player would
 		for attempt in 8:
-			if captured:
+			if captured or not is_instance_valid(prey):
 				break
 			if not (prey.mode == "wild" and prey.hp > 0):
 				break
@@ -209,7 +216,7 @@ func _boot() -> void:
 			await create_timer(3.2).timeout # the ball rocks its beat
 			for j in 10:
 				await process_frame
-			captured = prey.mode != "wild" or game.catch_counts.get(prey.species_id, 0) > 0
+			captured = is_instance_valid(prey) and prey.mode != "wild"
 	_gate("orb captures the prey", captured,
 		"mode=%s" % (prey.mode if prey != null and is_instance_valid(prey) else "gone"))
 	await _shot("catch")
@@ -234,8 +241,8 @@ func _boot() -> void:
 		await _click(gp.x, gp.y)
 		for i in 8:
 			await process_frame
-			hudn.mouse_tile(), cell, str(game.messages)])
-	_gate("ghost plants the kinbox", game.has_structure("kinbox"))
+	_gate("ghost plants the kinbox", game.structures.get(cell, {}).get("id") == "kinbox",
+		"at cell %s" % str(game.structures.get(cell, {}).get("id")))
 	await _tap_key(KEY_ESCAPE)
 	for i in 4:
 		await process_frame

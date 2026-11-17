@@ -91,6 +91,20 @@ func run() -> void:
 			missing_sites.append(wt)
 	check("work types have sites", missing_sites.is_empty(), ",".join(missing_sites))
 
+	# harness hygiene: the sibling walkthrough scripts must still PARSE —
+	# --check-only exits 0 even on parse failure, so gate on error text.
+	# (audit-64: a sed-stripped debug line orphaned loop_walkthrough.gd
+	# for a whole commit while ROADMAP quoted its gate count.)
+	for harness in ["tools/play_walkthrough.gd", "tools/loop_walkthrough.gd"]:
+		var pc_out: Array = []
+		OS.execute(OS.get_executable_path(), ["--headless", "--path", ".",
+			"--check-only", "-s", harness], pc_out, true)
+		var pc_bad := false
+		for ln in pc_out:
+			if "SCRIPT ERROR" in str(ln) or "Failed to load script" in str(ln):
+				pc_bad = true
+		check("harness parses: %s" % harness, not pc_bad, "")
+
 	# movement + blocked — if the spawn is boxed in, relocate to open ground
 	if [Vector2(1,0), Vector2(-1,0), Vector2(0,1), Vector2(0,-1)].all(
 			func(d0): return game.world.blocked(int(p.pos.x + d0.x), int(p.pos.y + d0.y))):
