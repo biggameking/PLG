@@ -91,6 +91,7 @@ func dodge() -> bool: # the roll verb itself — one price for every input class
 		return false
 	dodge_t = 0.35
 	stamina -= 15.0; stam_wait = 0.8 # a roll costs a chunk of stamina
+	game.sfx_play("dodge")
 	return true
 
 func melee() -> void:

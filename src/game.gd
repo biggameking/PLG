@@ -269,6 +269,11 @@ func _ready() -> void:
 		"coin": SfxLib.tone(1174, 0.09, 0.3, 1.3),
 		"eat": SfxLib.noise(0.09, 0.3, 9.0),
 		"drop": SfxLib.tone(180, 0.09, 0.35, 0.5),
+		"hurt": SfxLib.noise(0.16, 0.55, 9.0),
+		"dodge": SfxLib.noise(0.09, 0.22, 5.0),
+		"sleep": SfxLib.tone(330, 0.5, 0.25, 0.5),
+		"slam": SfxLib.noise(0.4, 0.65, 5.0),
+		"chop": SfxLib.noise(0.06, 0.4, 16.0),
 	}
 	# audio buses: Master owns Music + SFX; settings.cfg holds the mix
 	if AudioServer.get_bus_index("Music") == -1:
@@ -1495,6 +1500,7 @@ func apply_player_damage(dmg_before_armor: int) -> int:
 	player.hit_flash = 0.4
 	screen_shake(0.35)
 	rumble(0.0, 0.45, 0.15) # getting bit should thump, not just flash
+	sfx_play("hurt")
 	floater(player.pos, tr("-") + str(final), "#e64533")
 	player.wear_armor() # the island: the plate takes the wear, not the skin
 	if player.hp <= 0:
@@ -1724,6 +1730,7 @@ func sleep_to_morning() -> void:
 	day += 1
 	tod = 6.0
 	player.hp = player.max_hp
+	sfx_play("sleep") # dawn needs a cue — the day counter alone is silent
 	for q in pals:
 		if q.mode == "base" or q.mode == "partner":
 			q.hp = q.max_hp
@@ -2185,6 +2192,7 @@ func harvest_cell(tx: int, ty: int) -> void:
 	var i := world.idx(tx, ty)
 	world.hp[i] = max(0, world.hp[i] - 10)
 	floater(Vector2(tx + 0.5, ty + 0.5), tr("thwack"), "#c8d3d5")
+	sfx_play("chop")
 	if world.hp[i] == 0:
 		var loot: String = {World.Decor.TREE_A: "wood", World.Decor.TREE_B: "wood",
 			World.Decor.ROCK: "stone", World.Decor.ORE_GOLD: "ore",

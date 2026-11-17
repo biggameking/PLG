@@ -200,7 +200,8 @@ func pact_slam() -> int:
 	# slam asks a different question of the roster you brought. Returns the
 	# victim count so tests can see the zone hit who it should.
 	game.floater(pos, tr("PACT SLAM"), "#ff5544")
-	var hits := 0
+	game.sfx_play("slam") # the ring landing needs its own thud — the
+	var hits := 0        # telegraph floater alone is a silent warning
 	var ail := ""
 	if game.spire_tag_ok(spire_tag): # int() eats garbage→0; the validator doesn't
 		var si := int(spire_tag.trim_prefix("spire_"))

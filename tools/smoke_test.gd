@@ -7430,6 +7430,24 @@ func run() -> void:
 		src_f.close()
 	check("sfx keys all resolve", sfx_bad.is_empty(), "bad=%s" % str(sfx_bad))
 
+	# coverage direction: every synthesized cue must have a call site — an
+	# orphaned SFX key is a sound nobody can ever hear (dead synthesis code)
+	var sfx_used := {}
+	for sf2 in ["res://src/game.gd", "res://src/hud.gd", "res://src/kin.gd",
+			"res://src/net.gd", "res://src/player.gd"]:
+		var src_f2 := FileAccess.open(sf2, FileAccess.READ)
+		if src_f2 == null:
+			continue
+		while not src_f2.eof_reached():
+			for sm2 in sfx_re.search_all(src_f2.get_line()):
+				sfx_used[sm2.get_string(1)] = true
+		src_f2.close()
+	var sfx_orphan := []
+	for k in game.SFX.keys():
+		if not sfx_used.has(k):
+			sfx_orphan.append(k)
+	check("sfx cues all wired", sfx_orphan.is_empty(), "orphan=%s" % str(sfx_orphan))
+
 	# hero accessories: the crown jewels and back wings are real pixels, not
 	# a comment — scalbeak wears white jewel dots, vermtrot carries a back fan
 	var h1t: Texture2D = load("res://assets/kin/scalbeak_f0.png")
