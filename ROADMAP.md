@@ -1711,3 +1711,30 @@ export_templates/4.7.2.stable` 后全绿。
 
 **脚本化**：`tools/export_check.sh` 三 preset + web bundle 完整性 +
 exe PE32+ 形态闸——本次验证 0 failures。
+
+## S112 — 核心循环端到端（capture→kinbox→deploy→sleep 全输入链）
+
+**验收**：`tools/loop_walkthrough.gd` —— **LOOP: 0 failures, 13 门**，
+真实窗口+事件注入，无内部方法直调：
+
+| 门 | 证据 |
+|---|---|
+| NEW GAME 真点进入 | title→play |
+| 野生 kin 近战削弱 | hp 100→29（追击传送+真 melee） |
+| Q 瞄准+LMB 掷球捕获 | orbs 15→14, mode=partner, "★ CAUGHT" |
+| B 开建造栏→行点选 kinbox→投影 LMB 放置 | "Built Kinbox"+"Base established!" |
+| E 开 kinbox→点 deploy 行 | base=1, "Bubwrith deployed at base" |
+| straw_bed 行选→放置→夜间 E | **day 1→2, tod=6.0**, "You sleep until dawn" |
+
+**夹出真缺陷**：
+1. kinbox 成本第三项 stone 被早期 dump 截断漏授——改从
+   `StructureData.STRUCTURES[sid].cost` 实读全量授予，成本表漂移
+   自动跟随。
+2. smoke 既有 lightning-rod 检查"clear sky 基线"裸用环境天气——
+   新天气钉 roll 出 storm 时基线计数失真。**上游钉暴露下游固定
+   fixture 的环境依赖**；修为先钉 `weather="clear"` 再 tick。
+
+**证据**：`docs/reviews/s112-loop-*.png` ×4（捕获瞬间/kinbox 放置
+/部署面板 BASE(1/9)/Day2 黎明床畔+MISSION DONE+quest 推进）。
+
+**smoke 999/0/0skip · 审档 audit-64 待派**

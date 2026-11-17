@@ -1540,6 +1540,7 @@ func run() -> void:
 	if lr_st != null:
 		var w0: String = game.weather
 		var o0 := game.item_count("electric_organ")
+		game.weather = "clear" # baseline must not lean on ambient sky
 		lr_st["timer"] = 44.9
 		game.tick_production(0.2) # clear sky — no drink
 		var o1 := game.item_count("electric_organ")
