@@ -1684,3 +1684,22 @@ atk_cd 会被自由跑的物理帧先读空——行为闸要打在战斗副作�
 采集/建造栏/瞄准线/暂停壳/触屏虚拟按键+提示语切换）。
 
 **smoke 1000/0/1skip · audit_data ALL CLEAN**
+
+## S111 — 导出管线实测（三 preset 全真产物）
+
+**验收**：`tools/export_check.sh` 逐 preset 真跑导出并验产物形态——
+- **Windows Desktop (Steam)** → `/tmp/plg-export/Kinbound.exe`
+  118.5MB PE32+ x86-64 GUI 可执行，零错误
+- **Web** → `index.html` + `index.wasm` 39.5MB + `index.pck` 9.3MB +
+  worklet/icon 全家桶——可静态托管的完整包
+- **Android debug** → 31.2MB APK 经 apksigner 签名+验证通过；
+  release 变体同样打出 29.3MB 但未签名——release keystore 是
+  owner 外部项，管线本体已证明通到签名前最后一步
+
+**修复**：export templates 装在 `/Volumes/.../Godot/editor_data/`
+（非默认查找位），`--editor-data-path` 模式下 PCK 嵌入的临时文件
+rename 失败——软链到 `~/Library/Application Support/Godot/
+export_templates/4.7.2.stable` 后全绿。
+
+**脚本化**：`tools/export_check.sh` 三 preset + web bundle 完整性 +
+exe PE32+ 形态闸——本次验证 0 failures。
