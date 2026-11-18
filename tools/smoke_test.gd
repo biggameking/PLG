@@ -4058,6 +4058,18 @@ func run() -> void:
 	lvl_pal.xp = lvl_pal.level * 25 - 10
 	game.gain_xp(40)
 	check("kin levels via xp", lvl_pal.level > plv0, "Lv%d->%d xp%d" % [plv0, lvl_pal.level, lvl_pal.xp])
+	# sim_pacing's kin_xp_to mirrors `level*25` — pin the exact boundary so a
+	# formula drift fails here instead of silently invalidating the probe
+	var xp_pin: Kin = game.base_pals()[0] if game.base_pals().size() > 0 else lvl_pal
+	var xp_pin_lv: int = xp_pin.level
+	xp_pin.hp = xp_pin.max_hp # pal_gain_xp ignores the downed — the pin needs a live subject
+	xp_pin.xp = 0
+	game.pal_gain_xp(xp_pin, xp_pin_lv * 25 - 1)
+	check("level*25-1 xp does not level", xp_pin.level == xp_pin_lv,
+		"lv=%d xp=%d" % [xp_pin.level, xp_pin.xp])
+	game.pal_gain_xp(xp_pin, 1)
+	check("level*25 xp levels exactly once", xp_pin.level == xp_pin_lv + 1
+		and xp_pin.xp == 0, "lv=%d xp=%d" % [xp_pin.level, xp_pin.xp])
 	# save/load preserves kin sex/passives + chest store + job links
 	game.box.clear()
 	var sv_pal: Kin = null
