@@ -258,6 +258,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_ESCAPE or pk <= 0:
 			rebind_wait = ""
 			return
+		if OS.get_keycode_string(pk) == "":
+			# dead physical keycodes bind live then silently vanish at the next
+			# boot — refuse them up front with the same rule load_settings uses
+			game.log_msg(tr("That key can't be bound"))
+			rebind_wait = ""
+			return
 		var clash := ""
 		for a in Game.REBIND_ACTIONS:
 			if a == rebind_wait:
@@ -740,8 +746,8 @@ const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_host", "
 
 var new_game_armed := false # first tap arms — the second confirms the overwrite
 
-func _key_of(e: InputEventKey) -> int: # physical wins; keycode-only
-	return int(e.physical_keycode) if e.physical_keycode != 0 else int(e.keycode)
+func _key_of(e: InputEventKey) -> int: # canonical form lives on Game —
+	return Game.key_of(e)             # hud and cfg coercion share one truth
 	# defaults (project.godot) need the fallback — they never set physical
 
 const BIND_TEXT := { # action → tr key for the controls panel rows
@@ -760,8 +766,8 @@ const BIND_TEXT := { # action → tr key for the controls panel rows
 
 # keycode lanes that live outside InputMap — chat Enter, join K, guide N/G,
 # the 1-9 party/build hotbar. Rebinding onto one double-fires both lanes.
-const RAW_KEY_LANES := [KEY_ENTER, KEY_KP_ENTER, KEY_K, KEY_N, KEY_G,
-	KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
+const RAW_KEY_LANES := Game.RAW_KEY_LANES # canonical list moved to Game —
+	# load_settings' cfg coercion scans the same lanes the panel does
 
 func shell_act(act: String) -> void:
 	if act != "new_game":
@@ -1389,7 +1395,11 @@ func _draw() -> void:
 			var per := 3
 			for i in range(0, chunks.size(), per):
 				lines.append("   ".join(chunks.slice(i, i + per)))
-			lines.append(tr("1-%d sends that party kin out — one ball on the field") % game.party_cap())
+			# live-map rows cover InputMap actions only — the mouse and raw
+			# keycode lanes (melee/throw lmb, build digits, chat enter) ride
+			# no action and still need their line (audit-71 L9)
+			lines.append(tr("MELEE/CHOP lmb  THROW lmb  BUILD 1-9 pick + rmb cancel"))
+			lines.append(tr("CHAT enter   1-%d sends that party kin out — one ball on the field") % game.party_cap())
 			lines.append(tr("GLIDER descends cliffs. Sick kin need medicine."))
 		if game.using_pad:
 			lines.append(tr("PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin"))

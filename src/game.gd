@@ -4399,19 +4399,43 @@ func load_settings() -> void:
 				settings[k] = str(v) if str(v) in WSIZES else "1280x720"
 			elif k == "binds":
 				settings[k] = {}
-				var seen_keys := {} # cfg could also bind ALL actions to one
-				if v is Dictionary:  # key — same clash rule as the panel
-					for ak in v:
+				if v is Dictionary:
+					# the panel refuses keys that already live on another
+					# action — a hostile cfg gets the same gate, or a bind to
+					# e.g. S would double-fire unbound move_down's default
+					# (audit-71 L5). ui_* lanes and hardcoded RAW_KEY_LANES
+					# count as occupied too; the bound action's OWN keys are
+					# excluded per-bind like the panel skips rebind_wait.
+					var occupied := {}
+					for act2 in InputMap.get_actions():
+						var an2 := str(act2)
+						if not (an2 in REBIND_ACTIONS or an2.begins_with("ui_")):
+							continue
+						for e2 in InputMap.action_get_events(act2):
+							if e2 is InputEventKey:
+								occupied[key_of(e2)] = true
+					for lane in RAW_KEY_LANES:
+						occupied[lane] = true
+					var seen_keys := {} # a cfg binding every action to one key
+					for ak in v:      # only claims the first
 						var kc = v[ak]
+						var act3 := str(ak)
+						if not (act3 in REBIND_ACTIONS):
+							continue
+						var own := {} # own action's live keys don't block it
+						for e3 in InputMap.action_get_events(act3):
+							if e3 is InputEventKey:
+								own[key_of(e3)] = true
 						# the whitelist isn't enough on its own — a hostile
 						# cfg could bind ESCAPE (double-fires ui_cancel
 						# under every panel) or a dead keycode (audit-70 L5)
-						if str(ak) in REBIND_ACTIONS and (kc is int or kc is float) \
+						if (kc is int or kc is float) \
 								and int(kc) > 0 and int(kc) < 4194592 \
 								and int(kc) != KEY_ESCAPE \
 								and not seen_keys.has(int(kc)) \
+								and (not occupied.has(int(kc)) or own.has(int(kc))) \
 								and OS.get_keycode_string(int(kc)) != "":
-							settings[k][str(ak)] = int(kc)
+							settings[k][act3] = int(kc)
 							seen_keys[int(kc)] = true
 			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
@@ -4421,9 +4445,24 @@ func load_settings() -> void:
 	apply_settings()
 	apply_binds()
 
-var _def_key_evts := {} # act → the project.godot default key events —
+# raw keycode lanes the HUD consumes outside InputMap actions — chat Enter,
+# guide N/G, party hotbar 1-9. Rebinds (panel AND cfg coercion) must refuse
+# these or a bound key double-fires a hardcoded consumer (audit-70 M3)
+const RAW_KEY_LANES := [KEY_ENTER, KEY_KP_ENTER, KEY_K, KEY_N, KEY_G,
+	KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
+
+static func key_of(e: InputEventKey) -> int:
+	# default binds ride `keycode`, captured ones `physical_keycode` — a
+	# clash check that reads only one field misses half the map
+	return int(e.physical_keycode) if e.physical_keycode != 0 else int(e.keycode)
+
+static var _def_key_evts := {} # act → the project.godot default key events —
 	# snapshot at first apply so alternates (the arrow half of wasd/arrows)
-	# survive any rebind history (audit-70 L4)
+	# survive any rebind history (audit-70 L4). STATIC: Game is a scene child —
+	# reload_current_scene() gives a fresh instance whose lazy snapshot would
+	# capture the already-bound map as "defaults", welding the last bind in
+	# and losing the alternates. The snapshot's lifetime is the process's,
+	# like the InputMap it describes (audit-71 H1).
 
 func apply_binds() -> void:
 	# a bind replaces the action's keyboard set with: default ALTERNATES +
@@ -4666,7 +4705,13 @@ func save_game() -> void:
 	f.close()
 	if FileAccess.file_exists("user://savegame.plg"):
 		DirAccess.remove_absolute("user://savegame.plg.bak")
-		DirAccess.rename_absolute("user://savegame.plg", "user://savegame.plg.bak")
+		if DirAccess.rename_absolute("user://savegame.plg",
+				"user://savegame.plg.bak") != OK:
+			# a stranded old .bak or a locked main would leave tmp unable to
+			# land — refuse rather than half-rotate (audit-71 L6)
+			DirAccess.remove_absolute("user://savegame.plg.tmp")
+			log_msg(tr("SAVE FAILED") + tr(" — %s") % "rotate")
+			return
 	if DirAccess.rename_absolute("user://savegame.plg.tmp",
 			"user://savegame.plg") != OK:
 		log_msg(tr("SAVE FAILED") + tr(" — %s") % "rename")

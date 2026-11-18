@@ -79,6 +79,11 @@ func _free_key() -> int: # occupancy = every InputMap action (ui_* included)
 	return 0
 
 func _boot() -> void:
+	# headless defaults to a 64×64 window — positioned mouse events outside
+	# it get discarded before _unhandled_input, and click_rects computed from
+	# get_viewport_rect() collapse to zero rows (audit-71 L7: same pin the
+	# other eight harnesses carry)
+	root.size = Vector2i(1280, 720)
 	# never eat the operator's real settings — backup, restore at the end
 	var cfg_backup = FileAccess.get_file_as_bytes("user://settings.cfg") \
 		if FileAccess.file_exists("user://settings.cfg") else PackedByteArray()

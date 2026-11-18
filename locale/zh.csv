@@ -999,3 +999,6 @@ MENU/HOTKEYS,MENU/HOTKEYS,菜单/快捷键
 unbound,unbound,未绑定
 
 1-%d sends that party kin out — one ball on the field,1-%d sends that party kin out — one ball on the field,1-%d 放出对应位置的伙伴——场上只能有一只球
+That key can't be bound,That key can't be bound,该键无法绑定
+MELEE/CHOP lmb  THROW lmb  BUILD 1-9 pick + rmb cancel,MELEE/CHOP lmb  THROW lmb  BUILD 1-9 pick + rmb cancel,近战/砍 lmb  投掷 lmb  建造 1-9 选择 + rmb 取消
+CHAT enter   1-%d sends that party kin out — one ball on the field,CHAT enter   1-%d sends that party kin out — one ball on the field,聊天 enter   1-%d 放出对应位置的伙伴——场上只能有一只球

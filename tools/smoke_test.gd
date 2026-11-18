@@ -2608,6 +2608,20 @@ func run() -> void:
 		and cbuf["rows"] == [["h"], ["m"], ["t"]])
 	check("stale head behind by half-range still drops",
 		game.net._sync_chunk(cbuf, [["z"]], 0, 1, (8 + 128) & 0xFF) == false)
+	# audit-71 M1: a mid whose `total` disagrees with the head's is forged —
+	# a short total would "complete" over null slots, a long one wedges the
+	# batch. Both must bounce off the slot map and leave the batch viable.
+	game.net._sync_chunk(cbuf, [["h9"]], 0, 3, 9)
+	check("mid with forged short total is refused",
+		game.net._sync_chunk(cbuf, [["bad"]], 1, 2, 9) == false
+		and int(cbuf["got"]) == 1 and cbuf["parts"][1] == null)
+	check("mid with forged long total is refused",
+		game.net._sync_chunk(cbuf, [["bad2"]], 1, 8, 9) == false
+		and int(cbuf["got"]) == 1)
+	check("honest mids still complete the batch",
+		game.net._sync_chunk(cbuf, [["m9"]], 1, 3, 9) == false
+		and game.net._sync_chunk(cbuf, [["t9"]], 2, 3, 9) == true
+		and cbuf["rows"] == [["h9"], ["m9"], ["t9"]])
 	# end-to-end on an unreliable lane: ep7 drop batch opens, a delayed ep5
 	# head arrives, ep7 tail lands — the roster must hold batch 7, not 5
 	game.net.is_host = false
@@ -5301,27 +5315,81 @@ func run() -> void:
 	# audit-69 M1/M2: wsize coerces, binds persist + apply + reset — all
 	# inside the cfg backup window so the real settings.cfg is untouched
 	game.settings["wsize"] = "9999x1"
-	game.settings["binds"] = {"dodge": 74, "fake_action": 65} # J + garbage
+	# the fixture key must be ACTUALLY free — the map's live keys plus the
+	# raw lanes all count as occupied now (audit-71 L5): J used to slip in
+	# as dodge's bind while already owning join_net (rebind_walkthrough's
+	# _free_key lesson — never hardcode a "probably free" key)
+	var taken_k := {}
+	for act_k in InputMap.get_actions():
+		for e_k in InputMap.action_get_events(act_k):
+			if e_k is InputEventKey:
+				taken_k[Game.key_of(e_k)] = true
+	for lane_k in Game.RAW_KEY_LANES:
+		taken_k[lane_k] = true
+	var free_k := 0
+	for cand_k in range(KEY_0 + 50, 4194592):
+		if not taken_k.has(cand_k) and OS.get_keycode_string(cand_k) != "":
+			free_k = cand_k
+			break
+	game.settings["binds"] = {"dodge": free_k, "fake_action": 65}
 	game.save_settings()
 	game.settings["wsize"] = "1280x720"; game.settings["binds"] = {}
 	game.load_settings()
 	check("wsize coerces to list", str(game.settings["wsize"]) in Game.WSIZES
 		and str(game.settings["wsize"]) != "9999x1",
 		"wsize=%s" % game.settings["wsize"])
-	check("binds persist+coerce", int(game.settings["binds"].get("dodge", 0)) == 74
+	check("binds persist+coerce", int(game.settings["binds"].get("dodge", 0)) == free_k
+		and free_k != 0
 		and not game.settings["binds"].has("fake_action"),
-		"binds=%s" % str(game.settings["binds"]))
+		"binds=%s free_k=%d" % [str(game.settings["binds"]), free_k])
 	var dge := false
 	for e in InputMap.action_get_events("dodge"):
-		if e is InputEventKey and int(e.physical_keycode) == 74:
+		if e is InputEventKey and Game.key_of(e) == free_k:
 			dge = true
 	check("bind applied to InputMap", dge)
+	# audit-71 L5: cfg coercion scans OTHER actions' live keys like the panel
+	# — move_up→S would double-fire unbound move_down's default S
+	game.settings["binds"] = {"move_up": int(KEY_S), "dodge": int(KEY_8)}
+	game.save_settings()
+	game.settings["binds"] = {}
+	game.load_settings()
+	check("cfg clash with another action's default is refused",
+		not game.settings["binds"].has("move_up")
+		and not game.settings["binds"].has("dodge"),
+		"binds=%s" % str(game.settings["binds"]))
 	game.reset_binds()
 	var ddef := false
 	for e in InputMap.action_get_events("dodge"):
 		if e is InputEventKey and int(e.keycode) == 32:
 			ddef = true
 	check("reset restores default dodge", ddef)
+	# audit-71 H1: the default-key snapshot is STATIC — a fresh Game node
+	# (the shape reload_current_scene produces) must share the pristine
+	# boot snapshot, never re-capture the already-bound map. Under an
+	# instance var the fresh node's lazy snapshot would absorb the rebind,
+	# weld it in as a pseudo-default, and erase the arrow alternate forever.
+	game.settings["binds"] = {"move_up": int(KEY_K)}
+	game.apply_binds()
+	var g2 := Game.new()
+	g2.settings = {"binds": {"move_up": int(KEY_J)}}
+	g2.apply_binds() # instance-var poison: snapshot would catch [UP,K]
+	var mu_arrow := false
+	var mu_j := false
+	for e in InputMap.action_get_events("move_up"):
+		if e is InputEventKey:
+			var kc := Game.key_of(e)
+			if kc == int(KEY_UP): mu_arrow = true
+			if kc == int(KEY_J):  mu_j = true
+	check("fresh Game can't poison the snapshot — alternates survive",
+		mu_arrow and mu_j,
+		"move_up evs=%s" % str(InputMap.action_get_events("move_up")))
+	g2.free()
+	game.reset_binds()
+	var mu_def := false
+	for e in InputMap.action_get_events("move_up"):
+		if e is InputEventKey and Game.key_of(e) == int(KEY_UP):
+			mu_def = true
+	check("reset restores move_up defaults", mu_def)
 	if cfg_backup.is_empty():
 		DirAccess.remove_absolute("user://settings.cfg")
 	else:

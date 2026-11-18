@@ -106,12 +106,14 @@ func _sync_chunk(buf: Dictionary, arr: Array, idx: int, total: int,
 		buf["parts"].resize(total)
 		buf["got"] = 0
 	elif ep != buf["ep"] or idx >= buf["parts"].size() \
-			or buf["parts"][idx] != null:
-		return false # foreign epoch, forged index, or a retransmitted mid —
-		# the slot already filled (audit-70 M5: dup mids can't double-apply)
+			or total != buf["parts"].size() or buf["parts"][idx] != null:
+		return false # foreign epoch, forged index/size, or a retransmitted
+		# mid — the slot already filled (audit-70 M5: dup mids can't double-
+		# apply). total must match the head's too — a forged short total would
+		# "complete" over null slots; a long one wedges the batch (audit-71 M1)
 	buf["parts"][idx] = arr
 	buf["got"] = int(buf["got"]) + 1
-	if buf["got"] < total:
+	if buf["got"] < buf["parts"].size():
 		return false # chunks still missing — a partial roster never applies
 	buf["rows"].clear()
 	for part in buf["parts"]: # reassemble in wire order, not arrival order
@@ -187,8 +189,9 @@ func _close_peer() -> void:
 	# to_title, which razes the whole tree a line later)
 	pending_pays.clear()
 	for b in [_pal_buf, _drop_buf, _struct_buf, _decor_buf]:
-		b["rows"].clear(); b["ep"] = -1 # a half batch carried into the next
-	# session would despawn/spawn against a stale roster
+		b["rows"].clear(); b["parts"].clear(); b["got"] = 0; b["ep"] = -1
+		# a half batch carried into the next session would despawn/spawn
+		# against a stale roster — every slot-map key goes back to zero
 	unl_sig = -1 # the next session's first env_sync re-announces the tech set
 	mount_pending = false
 	mount_pending_uid = -1

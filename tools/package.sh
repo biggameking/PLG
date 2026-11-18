@@ -47,15 +47,23 @@ pack_android_release() {
 	# The env lane is the engine's own override triple (audit-70 M2) —
 	# GODOT_ANDROID_KEYSTORE_RELEASE_PATH/_USER/_PASSWORD — and the path
 	# must point at a real file, not just exist as a string.
-	if ! grep -q 'keystore/release="[^"]' export_presets.cfg; then
-		if [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-}" ] \
-				|| [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_USER:-}" ] \
-				|| [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD:-}" ] \
-				|| [ ! -f "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-/nonexistent}" ]; then
-			echo "refusing release build: pin keystore/release in the preset" \
-				"or set GODOT_ANDROID_KEYSTORE_RELEASE_PATH/_USER/_PASSWORD" >&2
+	if grep -q 'keystore/release="[^"]' export_presets.cfg; then
+		# a pinned preset still fails closed — a path written but never
+		# provisioned dies inside Godot an hour into the build (audit-71 L3)
+		PRESET_KS="$(sed -n 's/.*keystore\/release="\([^"]*\)".*/\1/p' \
+			export_presets.cfg | head -1)"
+		if [ ! -f "$PRESET_KS" ]; then
+			echo "refusing release build: preset keystore/release points at" \
+				"'$PRESET_KS' which does not exist" >&2
 			exit 3
 		fi
+	elif [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-}" ] \
+			|| [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_USER:-}" ] \
+			|| [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD:-}" ] \
+			|| [ ! -f "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-/nonexistent}" ]; then
+		echo "refusing release build: pin keystore/release in the preset" \
+			"or set GODOT_ANDROID_KEYSTORE_RELEASE_PATH/_USER/_PASSWORD" >&2
+		exit 3
 	fi
 	mkdir -p export/android
 	"$GODOT" --headless --path . --export-release "Android" "export/android/kinbound-$VER-release.apk"
