@@ -1367,7 +1367,9 @@ func _draw() -> void:
 	for i in range(game.messages.size()):
 		var m: String = game.messages[game.messages.size() - 1 - i]
 		wtext(Vector2(14, my - i * 18), m, Color(1, 1, 1, 0.85))
-	var py := 38
+	# party column flows BELOW the hint cluster — absolute y=38 collided
+	# with wrapped hint rows (audit-76 F5)
+	var py: float = max(38.0, hy + 4.0)
 	for pr in party_rows(): # ● out / ○ in its ball — the island fields one
 		Ink.tag(self, Rect2(r.x - 150, py, 138, 16))
 		draw_portrait(Vector2(r.x - 172, py), str(pr.get("sid", "")))
