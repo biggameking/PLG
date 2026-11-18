@@ -40,15 +40,22 @@ pack_android_debug() {
 # the release pins `keystore/release`, `keystore/release_user`,
 # `keystore/release_password` in their LOCAL export_presets.cfg or Editor
 # Settings before running an --export-release Android build. The debug APK
-# above is unsigned-by-design and safe to build anywhere.
+# above signs with the debug keystore and is safe to build anywhere.
 pack_android_release() {
 	# guarded: refuse to sign with ambient editor defaults — the operator
 	# must have pinned the release keystore locally (see contract above).
-	if ! grep -q 'keystore/release="[^"]' export_presets.cfg \
-			&& [ -z "${GODOT_ANDROID_RELEASE_KEYSTORE:-}" ]; then
-		echo "refusing release build: pin keystore/release in the preset" \
-			"or set GODOT_ANDROID_RELEASE_KEYSTORE" >&2
-		exit 3
+	# The env lane is the engine's own override triple (audit-70 M2) —
+	# GODOT_ANDROID_KEYSTORE_RELEASE_PATH/_USER/_PASSWORD — and the path
+	# must point at a real file, not just exist as a string.
+	if ! grep -q 'keystore/release="[^"]' export_presets.cfg; then
+		if [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-}" ] \
+				|| [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_USER:-}" ] \
+				|| [ -z "${GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD:-}" ] \
+				|| [ ! -f "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-/nonexistent}" ]; then
+			echo "refusing release build: pin keystore/release in the preset" \
+				"or set GODOT_ANDROID_KEYSTORE_RELEASE_PATH/_USER/_PASSWORD" >&2
+			exit 3
+		fi
 	fi
 	mkdir -p export/android
 	"$GODOT" --headless --path . --export-release "Android" "export/android/kinbound-$VER-release.apk"

@@ -630,10 +630,7 @@ ROLY POLY!,ROLY POLY!,滚滚撞击！
 safe travels…,safe travels…,一路平安……
 Save file corrupt - starting fresh,Save file corrupt - starting fresh,存档损坏——重新开始
 Main save was unreadable — recovered the backup,Main save was unreadable — recovered the backup,主存档无法读取——已从备份恢复
-Save has wrong field types - starting fresh,Save has wrong field types - starting fresh,存档字段类型不对——重新开始
-Save is from a newer build - not loading,Save is from a newer build - not loading,存档来自更新的版本——无法读取
 Save layout predates the current world format - fresh terrain,Save layout predates the current world format - fresh terrain,存档布局早于当前世界格式——重新生成地形
-Save missing field '%s' - starting fresh,Save missing field '%s' - starting fresh,存档缺少字段 '%s'——重新开始
 Send out a kin first,Send out a kin first,先放出一只精灵
 SHATTERED,SHATTERED,粉碎
 Skipped unknown species in save: %s,Skipped unknown species in save: %s,跳过存档中的未知物种：%s
@@ -997,3 +994,8 @@ RESET KEYS,RESET KEYS,重置按键
 "%s — now bound to %s","%s — now bound to %s","%s——现在绑定为 %s"
 press a key…,press a key…,按任意键……
 "%s  [>]","%s  [>]","%s  [>]"
+Interrupted save recovered,Interrupted save recovered,已恢复被中断的存档
+MENU/HOTKEYS,MENU/HOTKEYS,菜单/快捷键
+unbound,unbound,未绑定
+
+1-%d sends that party kin out — one ball on the field,1-%d sends that party kin out — one ball on the field,1-%d 放出对应位置的伙伴——场上只能有一只球

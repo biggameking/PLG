@@ -248,6 +248,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_release_stick()
 	# rebind capture owns the next key press — above every panel/typing lane
 	# so the captured key can't also toggle something underneath (audit-69 M2)
+	if rebind_wait != "" and event is InputEventJoypadButton and event.pressed:
+		rebind_wait = "" # pad-only sessions have no Esc — any pad press cancels
+		_eat_input()     # the armed capture (audit-70 L6); rebinds stay keys
+		return
 	if rebind_wait != "" and event is InputEventKey and event.pressed and not event.echo:
 		_eat_input()
 		var pk := int(event.physical_keycode)
@@ -266,6 +270,19 @@ func _unhandled_input(event: InputEvent) -> void:
 					break
 			if clash != "":
 				break
+		if clash == "": # the rebindable list isn't the whole keyboard
+			for a in InputMap.get_actions(): # contract: ui_* and the raw
+				var an: String = str(a)      # keycode lanes below double-
+				if not an.begins_with("ui_"): # fire silently (audit-70 M3)
+					continue
+				for e in InputMap.action_get_events(a):
+					if e is InputEventKey and _key_of(e) == pk:
+						clash = an
+						break
+				if clash != "":
+					break
+		if clash == "" and pk in RAW_KEY_LANES:
+			clash = "raw keys"
 		if clash != "":
 			game.log_msg(tr("%s is already bound to %s") % [
 				OS.get_keycode_string(pk), tr(BIND_TEXT.get(clash, clash))])
@@ -592,31 +609,16 @@ func run_click(cr: Dictionary) -> void:
 				game.log_msg(tr("Research is the host's to direct"))
 			else:
 				game.unlock(cr["arg"])
-		"box_out":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "box_to_party", int(cr["arg"].uid))
-			else:
-				game.box_to_party(cr["arg"])
+		"box_out": # the is_client() lanes are gone — KINBOX_OPS intercepts
+			game.box_to_party(cr["arg"]) # all eight acts above (audit-70 L7)
 		"party_in":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "party_to_box", int(cr["arg"]))
-			else:
-				game.party_to_box(cr["arg"])
+			game.party_to_box(cr["arg"])
 		"lead":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "make_active", int(cr["arg"]))
-			else:
-				game.make_active(cr["arg"])
+			game.make_active(cr["arg"])
 		"deploy":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "deploy_to_base", int(cr["arg"].uid))
-			else:
-				game.deploy_to_base(cr["arg"])
+			game.deploy_to_base(cr["arg"])
 		"base_in":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "base_to_box", int(cr["arg"].uid))
-			else:
-				game.base_to_box(cr["arg"])
+			game.base_to_box(cr["arg"])
 		"use_item":
 			use_item(cr["arg"])
 		"buy":
@@ -753,7 +755,13 @@ const BIND_TEXT := { # action → tr key for the controls panel rows
 	"partner_skill": "KIN SKILL", "pal_stance": "KIN ORDERS",
 	"guide": "GUIDE", "help": "HELP", "zoom_in": "ZOOM IN",
 	"zoom_out": "ZOOM OUT", "save": "QUICK SAVE", "load_save": "QUICK LOAD",
-	"host_net": "HOST GAME", "join_net": "JOIN GAME"}
+	"host_net": "HOST GAME", "join_net": "JOIN GAME",
+	"raw keys": "MENU/HOTKEYS"}
+
+# keycode lanes that live outside InputMap — chat Enter, join K, guide N/G,
+# the 1-9 party/build hotbar. Rebinding onto one double-fires both lanes.
+const RAW_KEY_LANES := [KEY_ENTER, KEY_KP_ENTER, KEY_K, KEY_N, KEY_G,
+	KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
 
 func shell_act(act: String) -> void:
 	if act != "new_game":
@@ -1357,18 +1365,32 @@ func _draw() -> void:
 		"controls":
 			draw_controls(r)
 	if show_help:
-		var lines := [
-			tr("MOVE wasd/arrows  SPRINT shift  DODGE space"),
-			tr("MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab"),
-			tr("BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t"),
-			tr("INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h"),
-			tr("MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter"),
-			tr("1-%d sends that party kin out (press again to recall) — one ball on the field") % game.party_cap(),
-			tr("v cycles the field kin's orders: auto / aggressive / passive"),
-			tr("HOST j   JOIN k (type host IP, enter)  MERCHANT e   F1 save / F4 reload(armed)"),
-			tr("GUIDE n — the field manual"),
-			tr("GLIDER descends cliffs. Sick kin need medicine."),
-		]
+		var lines: Array = []
+		if game.settings.get("binds", {}).is_empty():
+			# defaults: the curated two-liner set reads tighter than a dump
+			lines = [
+				tr("MOVE wasd/arrows  SPRINT shift  DODGE space"),
+				tr("MELEE/CHOP lmb  AIM q  THROW lmb  BALL tab"),
+				tr("BUILD b (1-9 pick, lmb place, rmb cancel)  INV i  TECH t"),
+				tr("INTERACT e (workbench=craft, kinbox=manage)  ASSIGN f  HELP h"),
+				tr("MAP m    DEMOLISH x (under cursor)  RIDE r  KIN-SKILL g  STATUES u  KINDEX p  CHAT enter"),
+				tr("1-%d sends that party kin out (press again to recall) — one ball on the field") % game.party_cap(),
+				tr("v cycles the field kin's orders: auto / aggressive / passive"),
+				tr("HOST j   JOIN k (type host IP, enter)  MERCHANT e   F1 save / F4 reload(armed)"),
+				tr("GUIDE n — the field manual"),
+				tr("GLIDER descends cliffs. Sick kin need medicine."),
+			]
+		else:
+			# custom binds: help must quote the LIVE map or it lies
+			# (audit-70 L4) — generated from InputMap, not prose
+			var chunks: Array = []
+			for a in Game.REBIND_ACTIONS:
+				chunks.append("%s %s" % [tr(BIND_TEXT.get(a, a)), _keys_label(a)])
+			var per := 3
+			for i in range(0, chunks.size(), per):
+				lines.append("   ".join(chunks.slice(i, i + per)))
+			lines.append(tr("1-%d sends that party kin out — one ball on the field") % game.party_cap())
+			lines.append(tr("GLIDER descends cliffs. Sick kin need medicine."))
 		if game.using_pad:
 			lines.append(tr("PAD  dpad: up=bag right=ride left=kin-skill down=map   L3 demolish   R3 swap kin"))
 		Ink.card(self, Rect2(10, r.y - 30 - lines.size() * 17, 580, lines.size() * 17 + 22))
@@ -1869,6 +1891,16 @@ func draw_settings(r: Vector2) -> void:
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})
 	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), tr("[ %s ]") % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 
+func _keys_label(a: String) -> String: # live InputMap → "SPACE / L" —
+	# help and the controls panel quote the same source (audit-70 L4)
+	var keys := ""
+	for e in InputMap.action_get_events(a):
+		if e is InputEventKey:
+			var ks := OS.get_keycode_string(_key_of(e))
+			if ks != "":
+				keys += (" / " if keys != "" else "") + ks
+	return keys if keys != "" else tr("unbound")
+
 func draw_controls(r: Vector2) -> void:
 	var rr := Rect2((r.x - 500.0) / 2, 46, 500, r.y - 92)
 	Ink.card(self, rr)
@@ -1885,14 +1917,11 @@ func draw_controls(r: Vector2) -> void:
 		click_rects.append({"rect": row, "act": "rebind", "arg": a})
 		if rebind_wait == a:
 			draw_rect(row, Color(1.0, 0.85, 0.4, 0.3))
-		var keys := ""
-		for e in InputMap.action_get_events(a):
-			if e is InputEventKey:
-				keys += OS.get_keycode_string(_key_of(e)) + " "
+		var keys := _keys_label(a)
 		draw_string(font, row.position + Vector2(6, 17), tr(BIND_TEXT.get(a, a)),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 		draw_string(font, row.position + Vector2(250, 17),
-			tr("press a key…") if rebind_wait == a else keys.strip_edges(),
+			tr("press a key…") if rebind_wait == a else keys,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 		y += 26
 	_scroll_btns(rr, "ctrl_up", "ctrl_dn")

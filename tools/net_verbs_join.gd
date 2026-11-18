@@ -24,6 +24,11 @@ func _gate(name: String, cond: bool, info := "") -> void:
 	if not cond:
 		fails += 1
 
+# RUN WINDOWED, not --headless: the throw/aim path reads the LIVE cursor
+# (get_global_mouse_position), and headless warp_mouse never reaches the
+# logical pointer — clicks hit rects fine but every orb lands at a stale
+# point. save_walkthrough's rect-only clicks do work headless; this one
+# needs a real window.
 func _click(x: float, y: float) -> void:
 	root.warp_mouse(Vector2i(int(x), int(y)))
 	await process_frame
@@ -84,6 +89,8 @@ func _w2s(p: Vector2, e := 0.0) -> Vector2:
 	return root.get_canvas_transform() * Iso.to_screen(p.x, p.y, e)
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	change_scene_to_file("res://scenes/main.tscn")
 	for i in 12:
 		await process_frame

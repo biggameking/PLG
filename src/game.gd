@@ -325,7 +325,9 @@ func _ready() -> void:
 	load_settings()
 	bind_gamepad()
 	has_save = FileAccess.file_exists("user://savegame.plg") \
-		or FileAccess.file_exists("user://savegame.plg.bak") # stat once at boot
+		or FileAccess.file_exists("user://savegame.plg.bak") \
+		or FileAccess.file_exists("user://savegame.plg.tmp") # stat once at
+		# boot — a crash-stranded .tmp is still a recoverable campaign
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
 	# player
@@ -4397,12 +4399,20 @@ func load_settings() -> void:
 				settings[k] = str(v) if str(v) in WSIZES else "1280x720"
 			elif k == "binds":
 				settings[k] = {}
-				if v is Dictionary:
+				var seen_keys := {} # cfg could also bind ALL actions to one
+				if v is Dictionary:  # key — same clash rule as the panel
 					for ak in v:
 						var kc = v[ak]
+						# the whitelist isn't enough on its own — a hostile
+						# cfg could bind ESCAPE (double-fires ui_cancel
+						# under every panel) or a dead keycode (audit-70 L5)
 						if str(ak) in REBIND_ACTIONS and (kc is int or kc is float) \
-								and int(kc) > 0 and int(kc) < 4194592:
+								and int(kc) > 0 and int(kc) < 4194592 \
+								and int(kc) != KEY_ESCAPE \
+								and not seen_keys.has(int(kc)) \
+								and OS.get_keycode_string(int(kc)) != "":
 							settings[k][str(ak)] = int(kc)
+							seen_keys[int(kc)] = true
 			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:
@@ -4411,11 +4421,23 @@ func load_settings() -> void:
 	apply_settings()
 	apply_binds()
 
+var _def_key_evts := {} # act → the project.godot default key events —
+	# snapshot at first apply so alternates (the arrow half of wasd/arrows)
+	# survive any rebind history (audit-70 L4)
+
 func apply_binds() -> void:
-	# a bind replaces the action's KEYBOARD events only — joypad events
-	# bound by bind_gamepad stay (rule 19 untouched)
+	# a bind replaces the action's keyboard set with: default ALTERNATES +
+	# the user's key. Erasing all InputEventKey and re-adding alternates
+	# keeps the call idempotent across boots — no alternate ever erodes,
+	# and a stale prior bind can't stack (rule 19 pad events untouched)
 	var binds: Dictionary = settings.get("binds", {})
 	for act in REBIND_ACTIONS:
+		if not _def_key_evts.has(act):
+			var keys: Array = []
+			for e in InputMap.action_get_events(act):
+				if e is InputEventKey:
+					keys.append(e)
+			_def_key_evts[act] = keys
 		if not binds.has(act):
 			continue
 		var key := int(binds[act])
@@ -4424,6 +4446,9 @@ func apply_binds() -> void:
 		for e in InputMap.action_get_events(act):
 			if e is InputEventKey:
 				InputMap.action_erase_event(act, e)
+		var defs: Array = _def_key_evts[act]
+		for i in range(1, defs.size()):
+			InputMap.action_add_event(act, defs[i])
 		var ev := InputEventKey.new()
 		ev.physical_keycode = key
 		InputMap.action_add_event(act, ev)
@@ -4632,6 +4657,12 @@ func save_game() -> void:
 		log_msg(tr("SAVE FAILED") + tr(" — %s") % error_string(FileAccess.get_open_error()))
 		return
 	f.store_var(d)
+	if f.get_error() != OK: # a torn tmp must never rotate in as the main
+		var werr := f.get_error()  # save — without this check a full disk
+		f.close()                # still logs "Saved." (audit-70 M4)
+		DirAccess.remove_absolute("user://savegame.plg.tmp")
+		log_msg(tr("SAVE FAILED") + tr(" — %s") % error_string(werr))
+		return
 	f.close()
 	if FileAccess.file_exists("user://savegame.plg"):
 		DirAccess.remove_absolute("user://savegame.plg.bak")
@@ -4643,6 +4674,32 @@ func save_game() -> void:
 	has_save = true
 	log_msg(tr("Saved."))
 
+func _read_save(path: String): # Dictionary or null — the full validation
+	# chain for ONE save file so every fallback level is equally strict
+	if not FileAccess.file_exists(path):
+		return null
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return null
+	var dv = f.get_var()
+	f.close()
+	if dv is not Dictionary or not dv.has("seed"):
+		return null
+	var d: Dictionary = Migrate.save_dict(dv) # pre-rename saves keep working under new ids
+	if _i(d.get("v", 0)) > SAVE_VER:
+		push_warning("save %s from a newer build — refusing" % path)
+		return null # a future schema misreads silently as v2
+	for req in ["day", "tod", "tech_points", "unlocked", "items", "party", "player", "kin", "structures"]:
+		if not d.has(req):
+			push_warning("save %s missing field '%s'" % [path, req])
+			return null # below this point every field is assumed present
+	if d["player"] is not Dictionary or d["kin"] is not Array or d["structures"] is not Dictionary \
+			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array \
+			or not _fin(d["seed"]):
+		push_warning("save %s has wrong field types" % path)
+		return null # seed reaches a typed int parameter — refusing beats a mid-load abort
+	return d
+
 func load_game() -> bool:
 	if net != null and net.is_client():
 		log_msg(tr("The world lives on the host — nothing to load locally"))
@@ -4650,41 +4707,22 @@ func load_game() -> bool:
 	if multiplayer.multiplayer_peer != null and multiplayer.get_peers().size() > 0:
 		log_msg(tr("Guests connected — end the session before loading"))
 		return false # reloading under guests desyncs their world for good
-	var path := "user://savegame.plg"
-	if not FileAccess.file_exists(path):
-		if not FileAccess.file_exists("user://savegame.plg.bak"):
-			return false
-		path = "user://savegame.plg.bak" # main save lost entirely — the
-		# atomic-write backup still has the last-good campaign (audit-69 H1)
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return false
-	var dv = f.get_var()
-	f.close()
-	if (dv is not Dictionary or not dv.has("seed")) \
-			and path != "user://savegame.plg.bak" \
-			and FileAccess.file_exists("user://savegame.plg.bak"):
-		var fb := FileAccess.open("user://savegame.plg.bak", FileAccess.READ)
-		if fb != null: # torn main save — the backup still parses
-			dv = fb.get_var()
-			fb.close()
+	# every validation layer gets backup coverage: a save that parses but
+	# fails version/field/type gates is just as unreadable as a torn file
+	# (audit-70 L1) — and a crash between rotate & rename can strand the
+	# NEWEST state in .tmp, which outranks the older .bak (audit-70 L2)
+	var d = _read_save("user://savegame.plg")
+	if d == null and FileAccess.file_exists("user://savegame.plg.tmp"):
+		d = _read_save("user://savegame.plg.tmp")
+		if d != null:
+			log_msg(tr("Interrupted save recovered"))
+	if d == null and FileAccess.file_exists("user://savegame.plg.bak"):
+		d = _read_save("user://savegame.plg.bak")
+		if d != null:
 			log_msg(tr("Main save was unreadable — recovered the backup"))
-	if dv is not Dictionary or not dv.has("seed"):
+	if d == null:
 		log_msg(tr("Save file corrupt - starting fresh"))
 		return false
-	var d: Dictionary = Migrate.save_dict(dv) # pre-rename saves keep working under new ids
-	if _i(d.get("v", 0)) > SAVE_VER:
-		log_msg(tr("Save is from a newer build - not loading"))
-		return false # a future schema misreads silently as v2 — refuse it
-	for req in ["day", "tod", "tech_points", "unlocked", "items", "party", "player", "kin", "structures"]:
-		if not d.has(req):
-			log_msg(tr("Save missing field '%s' - starting fresh") % req)
-			return false # below this point every field is assumed present
-	if d["player"] is not Dictionary or d["kin"] is not Array or d["structures"] is not Dictionary \
-			or d["items"] is not Dictionary or d["party"] is not Array or d["unlocked"] is not Array \
-			or not _fin(d["seed"]):
-		log_msg(tr("Save has wrong field types - starting fresh"))
-		return false # seed reaches a typed int parameter — refusing here beats a mid-load abort
 	player.mount = null # pals are about to be freed and rebuilt — mount ref would dangle
 	despawn_merchant() # the trader's stock and node don't cross a load
 	for p in pals:

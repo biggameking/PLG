@@ -58,6 +58,8 @@ func _world_px(tp: Vector2) -> Vector2: # tile coords → viewport px via the li
 	return root.get_canvas_transform() * wp
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	var ps = load("res://scenes/main.tscn")
 	main = ps.instantiate()
 	root.add_child(main)

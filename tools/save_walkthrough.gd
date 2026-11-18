@@ -92,6 +92,8 @@ func _restore_save() -> void: # audit-66: RAM-only backup dies with the
 		DirAccess.remove_absolute("user://savegame.plg.bak")
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	_stamp()
 	if FileAccess.file_exists("user://savegame.plg"): # never eat a real save
 		var f0 := FileAccess.open("user://savegame.plg.savbak", FileAccess.WRITE)

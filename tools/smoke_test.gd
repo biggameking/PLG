@@ -60,6 +60,10 @@ func run() -> void:
 		_slog.seek_end()
 	var save_backup := FileAccess.get_file_as_bytes("user://savegame.plg") \
 		if FileAccess.file_exists("user://savegame.plg") else PackedByteArray()
+	var bak_backup := FileAccess.get_file_as_bytes("user://savegame.plg.bak") \
+		if FileAccess.file_exists("user://savegame.plg.bak") else PackedByteArray()
+	var tmp_backup := FileAccess.get_file_as_bytes("user://savegame.plg.tmp") \
+		if FileAccess.file_exists("user://savegame.plg.tmp") else PackedByteArray()
 	results.append("main=%s" % main)
 	game = main.get_node("Game")
 	game.state = "play" # boot lands on the title screen; tests drive the sim itself
@@ -2575,7 +2579,50 @@ func run() -> void:
 		and game.world.decor[dc_b] == World.Decor.NONE)
 	game.world.decor[dc_a] = dva; game.world.decor[dc_b] = dvb
 	game.net._decor_buf["rows"].clear(); game.net._decor_buf["ep"] = -1
-	# the unl diff-gate's contract: an empty tech list on the wire means
+	game.net._decor_buf["parts"].clear(); game.net._decor_buf["got"] = 0
+	# audit-70 M5: the reorder matrix rides the UNRELIABLE lanes — pin the
+	# shared choke directly (stale head, dup mid, lost mid, out-of-order)
+	# plus one end-to-end drop_sync so a stale head can't regress state
+	var cbuf := {"rows": [], "parts": [], "got": 0, "ep": -1}
+	check("fresh buffer takes a head",
+		game.net._sync_chunk(cbuf, [["a"]], 0, 3, 7) == false
+		and cbuf["ep"] == 7)
+	check("stale head can't clobber an in-flight batch",
+		game.net._sync_chunk(cbuf, [["x"]], 0, 3, 5) == false
+		and cbuf["ep"] == 7 and cbuf["got"] == 1)
+	check("dup mid-chunk of the same epoch drops",
+		game.net._sync_chunk(cbuf, [["b1"]], 1, 3, 7) == false
+		and cbuf["got"] == 2
+		and game.net._sync_chunk(cbuf, [["b2"]], 1, 3, 7) == false
+		and cbuf["got"] == 2) # slot filled — a retransmit can't double-apply
+	check("ep7 batch completes whole",
+		game.net._sync_chunk(cbuf, [["c"]], 2, 3, 7) == true
+		and cbuf["rows"] == [["a"], ["b1"], ["c"]])
+	# ep8: the TAIL lands before the missing mid — arrival order is not
+	# wire order, and an incomplete batch must never apply (audit-70 M5)
+	game.net._sync_chunk(cbuf, [["h"]], 0, 3, 8)
+	check("tail arriving with a hole still doesn't apply",
+		game.net._sync_chunk(cbuf, [["t"]], 2, 3, 8) == false)
+	check("the late mid completes in wire order",
+		game.net._sync_chunk(cbuf, [["m"]], 1, 3, 8) == true
+		and cbuf["rows"] == [["h"], ["m"], ["t"]])
+	check("stale head behind by half-range still drops",
+		game.net._sync_chunk(cbuf, [["z"]], 0, 1, (8 + 128) & 0xFF) == false)
+	# end-to-end on an unreliable lane: ep7 drop batch opens, a delayed ep5
+	# head arrives, ep7 tail lands — the roster must hold batch 7, not 5
+	game.net.is_host = false
+	game.net.drop_sync([[900001, "wood", 1, 0.0, 0.0]], 0, 2, 7)
+	game.net.drop_sync([[900002, "stone", 1, 0.0, 0.0]], 0, 2, 5)
+	game.net.drop_sync([[900003, "fiber", 1, 0.0, 0.0]], 1, 2, 7)
+	check("stale-head interleave applies the newer batch",
+		game.net_drops.has(900001) and game.net_drops.has(900003)
+		and not game.net_drops.has(900002))
+	for did2 in [900001, 900003]: # test-spawned replicas die with the check
+		if game.net_drops.has(did2):
+			var dn = game.net_drops[did2].get("node")
+			if is_instance_valid(dn):
+				dn.queue_free()
+			game.net_drops.erase(did2)
 	# "unchanged", never "wipe" — env_sync already honored it, now it's pinned
 	game.net_unlocked = ["smoke_fake_tech"]
 	game.net.env_sync(5.0, 1, "clear", false, {}, {}, -1, [])
@@ -4803,6 +4850,10 @@ func run() -> void:
 	rpv.free()
 
 	# corrupt save: missing fields / wrong types must be refused, not crash the world
+	# (refusal needs NO fallback in reach — .bak/.tmp would legitimately load)
+	for sp in ["user://savegame.plg.bak", "user://savegame.plg.tmp"]:
+		if FileAccess.file_exists(sp):
+			DirAccess.remove_absolute(sp)
 	var pals_before := game.pals.size()
 	var cf := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 	cf.store_var({"seed": game.world.seed, "kin": [{"sp": "fenjelly"}], "player": "oops"})
@@ -4903,6 +4954,9 @@ func run() -> void:
 	else:
 		check("respawn tick survives rebuilt row", false, "no rows")
 	# a non-numeric seed refuses BEFORE teardown — the live world must survive (audit-17 C1)
+	for sp2 in ["user://savegame.plg.bak", "user://savegame.plg.tmp"]:
+		if FileAccess.file_exists(sp2): # no fallback in reach or refusal isn't refusal
+			DirAccess.remove_absolute(sp2)
 	var hf2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 	hf2.store_var({"seed": "abc", "v": 2, "day": 1, "tod": 8.0, "tech_points": 0,
 		"unlocked": [], "items": {}, "party": [], "player": {}, "kin": [], "structures": {}})
@@ -8437,8 +8491,11 @@ func run() -> void:
 
 	# L10: the title footer picks its line off the real save flag — a fresh
 	# boot can't promise a continue that doesn't exist
-	check("footer tracks the real save flag", game.has_save == FileAccess.file_exists("user://savegame.plg"),
-		"has_save=%s" % game.has_save)
+	check("footer tracks the real save flag", game.has_save == (
+		FileAccess.file_exists("user://savegame.plg")
+		or FileAccess.file_exists("user://savegame.plg.bak")
+		or FileAccess.file_exists("user://savegame.plg.tmp")),
+		"has_save=%s" % game.has_save) # .bak/.tmp count too — recoverable is recoverable
 
 	# ---------- audit-32 follow-ups: the mid-game trial batch ----------
 	var items_a32: Dictionary = game.items.duplicate()
@@ -9621,12 +9678,23 @@ func run() -> void:
 		"day=%d want=%d" % [game.day, day_n])
 
 	# restore the dev's real save the moment the LAST save-mutating test is
-	# done — a crash after this point leaves user:// untouched
+	# done — a crash after this point leaves user:// untouched. The atomic-
+	# write siblings (.bak/.tmp) carry the same sovereignty contract.
 	if save_backup.is_empty():
 		DirAccess.remove_absolute("user://savegame.plg")
 	else:
 		var sv2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
 		sv2.store_buffer(save_backup); sv2.close()
+	if bak_backup.is_empty():
+		DirAccess.remove_absolute("user://savegame.plg.bak")
+	else:
+		var sv3 := FileAccess.open("user://savegame.plg.bak", FileAccess.WRITE)
+		sv3.store_buffer(bak_backup); sv3.close()
+	if tmp_backup.is_empty():
+		DirAccess.remove_absolute("user://savegame.plg.tmp")
+	else:
+		var sv4 := FileAccess.open("user://savegame.plg.tmp", FileAccess.WRITE)
+		sv4.store_buffer(tmp_backup); sv4.close()
 
 	# join-path determinism: regenerate(world.seed) is what a joining guest
 	# runs — two seeded regens must land the same grotto/markers/structures.

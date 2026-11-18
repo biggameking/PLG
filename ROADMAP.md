@@ -1962,3 +1962,16 @@ smoke **1009/0/0skip**（+2 解析钉）。审档 `s117-net-walkthrough.md`
 - 自抓：设置卡 300px 装不下 7 行→456px；rebind_wait 随面板转换清理（rule 23）；CSV `\,` 非转义（rule 32）。
 
 证据 `s119-settings.png` / `s119-controls.png`。审档 `audit-69-launch-readiness.md`。smoke **1015/0/1skip**（grotto 地形 fixture，旧有）。
+
+## audit-70 — 冷审 S119+epoch 批次：NEEDS-FIX → 全修
+
+epoch 补丁自己留了 stale-head 洞（head 无条件清批），Android env 车道名错（引擎真名是 `GODOT_ANDROID_KEYSTORE_RELEASE_*` 三元组），rebind 冲突检查漏 `ui_*` 与裸键道（Enter/K/N/G/1-9 双触发可达）。
+
+- **`_sync_chunk` 重构**：`parts[]` 槽位图——head 仅当 epoch 前进（mod-256）才开批，dup mid 拒，缺 mid 永不部分应用，乱序按 wire 序重组。stale-head 不能回滚更新的名册。
+- **重绑冲突**：扫全部 `ui_*` action + RAW_KEY_LANES（Enter/K/N/G/1-9）；cfg 加载拒 Escape/死键/一键多绑；apply_binds 保默认副键（方向键组不蚀）；HELP 面板改绑后按活 InputMap 生成。
+- **存档回退三层**：`_read_save` 全校验单文件 → main→`.tmp`(最新)→`.bak` 逐级；`store_var` 写错不再假报 Saved；`has_save` 认 .tmp。
+- **输入链验收**：rebind_walkthrough 升 19 门（free-key 动态选取 + ui_accept 冲突拒 + 捕获态保持）；smoke 拒载 fixture 先清 .bak/.tmp 后备份/恢复三件套。
+
+**顺带诊断**：headless 窗是 64×64——定位型鼠标事件全丢；8 个 harness 加 `root.size` 钉后 SAVE-LOOP headless 17/0。但 live-cursor 路径（投掷读 `get_global_mouse_position`）仍须窗口跑——net_verbs 已注记。
+
+验证：smoke **1024/0/0skip**（本轮 grotto fixture 地形合规通过）· SAVE **17/0** · REBIND **19/0** · net_verbs 窗口双进程 **16+16/0**。审档 `audit-70-launch-hardening.md`。

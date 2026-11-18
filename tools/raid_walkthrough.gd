@@ -97,6 +97,8 @@ func _face_at(from: Vector2, to: Vector2) -> Vector2:
 	return f if f.length_squared() > 0.01 else Vector2(1, 0)
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	_stamp()
 	change_scene_to_file("res://scenes/main.tscn")
 	for i in 12:

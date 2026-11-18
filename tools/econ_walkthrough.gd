@@ -91,6 +91,8 @@ func _stand_spot(near: Vector2) -> Vector2:
 	# fail the downstream gate loudly instead
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	_stamp()
 	change_scene_to_file("res://scenes/main.tscn")
 	for i in 12:

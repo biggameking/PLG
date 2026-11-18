@@ -15,6 +15,8 @@ func _shot(name: String) -> void:
 	print("shot %s %s" % [name, img.get_size()])
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	var ps = load("res://scenes/main.tscn")
 	main = ps.instantiate()
 	root.add_child(main)

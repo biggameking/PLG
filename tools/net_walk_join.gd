@@ -87,6 +87,8 @@ func _tree_stand(from: Vector2, r: int, max_step: float) -> Dictionary:
 	return {}
 
 func _boot() -> void:
+	root.size = Vector2i(1280, 720) # headless boots a 64x64 window —
+	# piped mouse events outside it never reach _unhandled_input
 	change_scene_to_file("res://scenes/main.tscn")
 	for i in 12:
 		await process_frame

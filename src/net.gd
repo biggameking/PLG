@@ -85,26 +85,43 @@ const SYNC_BUF_CAP := 640 # a buffer is one roster, not an accumulator
 # the buffered rows belong to. Unreliable delivery is unordered: a stale
 # chunk from broadcast N could otherwise land between chunks of N+1 and
 # merge a dead roster into the live apply (audit-68).
-var _pal_buf := {"rows": [], "ep": -1}
-var _drop_buf := {"rows": [], "ep": -1}
-var _struct_buf := {"rows": [], "ep": -1}
-var _decor_buf := {"rows": [], "ep": -1}
+var _pal_buf := {"rows": [], "parts": [], "got": 0, "ep": -1}
+var _drop_buf := {"rows": [], "parts": [], "got": 0, "ep": -1}
+var _struct_buf := {"rows": [], "parts": [], "got": 0, "ep": -1}
+var _decor_buf := {"rows": [], "parts": [], "got": 0, "ep": -1}
 var _send_eps := {} # per-channel rolling epoch, wraps at 255
 func _sync_chunk(buf: Dictionary, arr: Array, idx: int, total: int,
 		ep: int) -> bool:
 	if total < 1 or total > SYNC_MAX_CHUNKS or idx < 0 or idx >= total:
 		return false # a forged chunk index is not a batch — drop it whole
 	if idx == 0:
-		buf["ep"] = ep # the head always opens a fresh batch — a wrapped
-		buf["rows"].clear() # epoch (255→0) can't strand the buffer either
-	elif ep != buf["ep"]:
-		return false # mid-batch chunk of an unknown broadcast — drop
-	buf["rows"].append_array(arr)
+		# a head opens a batch only if its epoch isn't BEHIND the in-flight
+		# one — a delayed stale head must not clobber a newer roster mid-apply
+		# (audit-70 M1). mod-256: 255→0 wraps forward, ==ep restarts cleanly.
+		var d: int = (ep - int(buf["ep"])) & 0xFF
+		if int(buf["ep"]) >= 0 and d >= 128:
+			return false
+		buf["ep"] = ep
+		buf["parts"] = []
+		buf["parts"].resize(total)
+		buf["got"] = 0
+	elif ep != buf["ep"] or idx >= buf["parts"].size() \
+			or buf["parts"][idx] != null:
+		return false # foreign epoch, forged index, or a retransmitted mid —
+		# the slot already filled (audit-70 M5: dup mids can't double-apply)
+	buf["parts"][idx] = arr
+	buf["got"] = int(buf["got"]) + 1
+	if buf["got"] < total:
+		return false # chunks still missing — a partial roster never applies
+	buf["rows"].clear()
+	for part in buf["parts"]: # reassemble in wire order, not arrival order
+		buf["rows"].append_array(part)
+	buf["parts"].clear()
 	if buf["rows"].size() > SYNC_BUF_CAP:
 		buf["rows"].clear()
 		buf["ep"] = -1
 		return false
-	return idx == total - 1 # rows now holds one complete broadcast
+	return true # rows now holds one complete broadcast
 
 func _send_chunked(m: String, rows: Array) -> void:
 	var chunks: Array = []
