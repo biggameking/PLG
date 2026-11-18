@@ -81,22 +81,30 @@ const SYNC_BUDGET := 1100 # bytes per datagram — MTU minus header slack;
 # row widths wander (store dicts ride struct rows), so pack by size, not count
 const SYNC_MAX_CHUNKS := 32 # ≥ the biggest roster ÷ budget on the wire
 const SYNC_BUF_CAP := 640 # a buffer is one roster, not an accumulator
-var _pal_buf: Array = []
-var _drop_buf: Array = []
-var _struct_buf: Array = []
-var _decor_buf: Array = []
-func _sync_chunk(buf: Array, arr: Array, idx: int, total: int) -> bool:
+# Each buffer is {"rows": Array, "ep": int} — the epoch tags which broadcast
+# the buffered rows belong to. Unreliable delivery is unordered: a stale
+# chunk from broadcast N could otherwise land between chunks of N+1 and
+# merge a dead roster into the live apply (audit-68).
+var _pal_buf := {"rows": [], "ep": -1}
+var _drop_buf := {"rows": [], "ep": -1}
+var _struct_buf := {"rows": [], "ep": -1}
+var _decor_buf := {"rows": [], "ep": -1}
+var _send_eps := {} # per-channel rolling epoch, wraps at 255
+func _sync_chunk(buf: Dictionary, arr: Array, idx: int, total: int,
+		ep: int) -> bool:
 	if total < 1 or total > SYNC_MAX_CHUNKS or idx < 0 or idx >= total:
 		return false # a forged chunk index is not a batch — drop it whole
 	if idx == 0:
-		buf.clear()
-	buf.append_array(arr)
-	if buf.size() > SYNC_BUF_CAP:
-		buf.clear()
+		buf["ep"] = ep # the head always opens a fresh batch — a wrapped
+		buf["rows"].clear() # epoch (255→0) can't strand the buffer either
+	elif ep != buf["ep"]:
+		return false # mid-batch chunk of an unknown broadcast — drop
+	buf["rows"].append_array(arr)
+	if buf["rows"].size() > SYNC_BUF_CAP:
+		buf["rows"].clear()
+		buf["ep"] = -1
 		return false
-	if idx != total - 1:
-		return false
-	return true # buf now holds one complete broadcast
+	return idx == total - 1 # rows now holds one complete broadcast
 
 func _send_chunked(m: String, rows: Array) -> void:
 	var chunks: Array = []
@@ -112,8 +120,10 @@ func _send_chunked(m: String, rows: Array) -> void:
 		bytes += rb
 	if cur.size() > 0 or chunks.is_empty():
 		chunks.append(cur)
+	var ep: int = _send_eps.get(m, 0)
+	_send_eps[m] = (ep + 1) & 0xFF
 	for i in chunks.size():
-		rpc(m, chunks[i], i, chunks.size())
+		rpc(m, chunks[i], i, chunks.size(), ep)
 
 func setup(g: Game, layer: Node2D) -> void:
 	game = g
@@ -159,8 +169,9 @@ func _close_peer() -> void:
 	# scene reload — every caller here either has no live session or is
 	# to_title, which razes the whole tree a line later)
 	pending_pays.clear()
-	_pal_buf.clear(); _drop_buf.clear(); _struct_buf.clear(); _decor_buf.clear() # a half batch
-	# carried into the next session would despawn/spawn against a stale roster
+	for b in [_pal_buf, _drop_buf, _struct_buf, _decor_buf]:
+		b["rows"].clear(); b["ep"] = -1 # a half batch carried into the next
+	# session would despawn/spawn against a stale roster
 	unl_sig = -1 # the next session's first env_sync re-announces the tech set
 	mount_pending = false
 	mount_pending_uid = -1
@@ -424,10 +435,10 @@ func pal_state_pack() -> Array:
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
-func pal_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
+func pal_sync(arr: Array, idx: int = 0, total: int = 1, ep: int = 0) -> void:
 	if is_host:
 		return # the host's own broadcast echoes back — it's the authority already
-	if not _sync_chunk(_pal_buf, arr, idx, total):
+	if not _sync_chunk(_pal_buf, arr, idx, total, ep):
 		return # mid-batch chunk — the apply waits for the tail
 	var seen := {}
 	var byid := {} # one O(pals) pass per packet — find_net_pal's per-row linear
@@ -435,7 +446,7 @@ func pal_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
 	for q in game.pals:
 		if q.net_id > 0:
 			byid[q.net_id] = q
-	for e in _pal_buf:
+	for e in _pal_buf["rows"]:
 		if not (e is Array) or e.size() < 6 or not Game._fin(e[0]):
 			continue
 		var nid := int(e[0])
@@ -782,11 +793,11 @@ func drop_state_pack() -> Array:
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
-func drop_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
+func drop_sync(arr: Array, idx: int = 0, total: int = 1, ep: int = 0) -> void:
 	if is_host:
 		return
-	if _sync_chunk(_drop_buf, arr, idx, total):
-		game.drop_sync(_drop_buf)
+	if _sync_chunk(_drop_buf, arr, idx, total, ep):
+		game.drop_sync(_drop_buf["rows"])
 
 @rpc("any_peer", "call_remote", "reliable")
 func take_drop(did: int) -> void:
@@ -838,18 +849,18 @@ func struct_state_pack() -> Array:
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
-func struct_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
+func struct_sync(arr: Array, idx: int = 0, total: int = 1, ep: int = 0) -> void:
 	if is_host:
 		return
-	if _sync_chunk(_struct_buf, arr, idx, total):
-		game.struct_sync(_struct_buf)
+	if _sync_chunk(_struct_buf, arr, idx, total, ep):
+		game.struct_sync(_struct_buf["rows"])
 
 @rpc("authority", "call_remote", "reliable")
-func decor_delta(arr: Array, idx: int = 0, total: int = 1) -> void:
+func decor_delta(arr: Array, idx: int = 0, total: int = 1, ep: int = 0) -> void:
 	if is_host:
 		return
-	if _sync_chunk(_decor_buf, arr, idx, total):
-		game.decor_sync(_decor_buf)
+	if _sync_chunk(_decor_buf, arr, idx, total, ep):
+		game.decor_sync(_decor_buf["rows"])
 
 @rpc("any_peer", "call_remote", "reliable")
 func harvest_req(tx: int, ty: int) -> void:

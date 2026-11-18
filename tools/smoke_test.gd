@@ -2559,7 +2559,21 @@ func run() -> void:
 	game.world.decor[dc_a] = dva; game.world.decor[dc_b] = dvb
 	game.net.decor_delta([[dc_a, World.Decor.NONE]], 5, 2) # forged idx dies whole
 	check("decor forged chunk dropped", game.world.decor[dc_a] == dva)
-	game.net._decor_buf.clear()
+	game.net._decor_buf["rows"].clear(); game.net._decor_buf["ep"] = -1
+	# batch epoch: an out-of-order chunk from an older broadcast must not
+	# merge into a newer batch mid-flight (unreliable is unordered —
+	# audit-68 left this hole documented, now it's closed)
+	game.net.decor_delta([[dc_a, World.Decor.NONE]], 0, 2, 7) # batch 7 opens
+	check("decor ep7 head holds", game.world.decor[dc_a] == dva)
+	game.net.decor_delta([[dc_b, World.Decor.NONE]], 1, 2, 5) # stale ep5 tail
+	check("decor stale-epoch tail dropped", game.world.decor[dc_b] == dvb
+		and game.world.decor[dc_a] == dva)
+	game.net.decor_delta([[dc_b, World.Decor.NONE]], 1, 2, 7) # real ep7 tail
+	check("decor ep7 batch applies whole",
+		game.world.decor[dc_a] == World.Decor.NONE
+		and game.world.decor[dc_b] == World.Decor.NONE)
+	game.world.decor[dc_a] = dva; game.world.decor[dc_b] = dvb
+	game.net._decor_buf["rows"].clear(); game.net._decor_buf["ep"] = -1
 	# the unl diff-gate's contract: an empty tech list on the wire means
 	# "unchanged", never "wipe" — env_sync already honored it, now it's pinned
 	game.net_unlocked = ["smoke_fake_tech"]
