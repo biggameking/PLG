@@ -5369,6 +5369,54 @@ func run() -> void:
 		not game.settings["binds"].has("move_up")
 		and not game.settings["binds"].has("dodge"),
 		"binds=%s" % str(game.settings["binds"]))
+	# audit-72 L-a: sequential semantics — rebinding move_up frees W, so a
+	# later cfg entry MAY claim it (the panel would allow the same sequence).
+	# free_k is already dodge's applied bind by now — rescan the LIVE map
+	# for a different lane (never reuse a stale "probably free" key)
+	taken_k.clear()
+	for act_k in InputMap.get_actions():
+		for e_k in InputMap.action_get_events(act_k):
+			if e_k is InputEventKey:
+				taken_k[Game.key_of(e_k)] = true
+	for lane_k in Game.RAW_KEY_LANES:
+		taken_k[lane_k] = true
+	var free2 := 0
+	for cand_k in range(KEY_0 + 50, 4194592):
+		if not taken_k.has(cand_k) and OS.get_keycode_string(cand_k) != "":
+			free2 = cand_k
+			break
+	# move_down owns S exclusively (no ui_* shares it) — rebinding it first
+	# must free S for a LATER entry, exactly like the panel's live sequence
+	game.settings["binds"] = {"move_down": free2, "dodge": int(KEY_S)}
+	game.save_settings()
+	game.settings["binds"] = {}
+	game.load_settings()
+	check("cfg sequential rebind frees the old lane",
+		int(game.settings["binds"].get("move_down", 0)) == free2
+		and int(game.settings["binds"].get("dodge", 0)) == int(KEY_S),
+		"binds=%s" % str(game.settings["binds"]))
+	# end-state semantics pins: reset to factory first — fixtures must not
+	# interlock through the live map. A full rotation is a legal end state;
+	# a half-refused swap is not — the winner's claim must die with it or
+	# the map lands double-fired
+	game.reset_binds()
+	game.settings["binds"] = {"move_down": int(KEY_Q), "aim": int(KEY_S)}
+	game.save_settings()
+	game.settings["binds"] = {}
+	game.load_settings()
+	check("cfg swap rotation resolves",
+		int(game.settings["binds"].get("move_down", 0)) == int(KEY_Q)
+		and int(game.settings["binds"].get("aim", 0)) == int(KEY_S),
+		"binds=%s" % str(game.settings["binds"]))
+	game.reset_binds()
+	game.settings["binds"] = {"dodge": int(KEY_Q), "aim": int(KEY_SPACE)}
+	game.save_settings()
+	game.settings["binds"] = {}
+	game.load_settings()
+	check("half-refused swap stays refused",
+		not game.settings["binds"].has("dodge")
+		and not game.settings["binds"].has("aim"),
+		"binds=%s" % str(game.settings["binds"]))
 	game.reset_binds()
 	var ddef := false
 	for e in InputMap.action_get_events("dodge"):

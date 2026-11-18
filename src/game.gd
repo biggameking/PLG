@@ -4404,39 +4404,85 @@ func load_settings() -> void:
 					# action — a hostile cfg gets the same gate, or a bind to
 					# e.g. S would double-fire unbound move_down's default
 					# (audit-71 L5). ui_* lanes and hardcoded RAW_KEY_LANES
-					# count as occupied too; the bound action's OWN keys are
-					# excluded per-bind like the panel skips rebind_wait.
-					var occupied := {}
+					# count as permanently occupied too.
+					# a cfg is an unordered SET — ConfigFile serializes dict
+					# keys sorted, so entry order means nothing (audit-72
+					# L-a). Validate the END STATE instead: a claim is free iff
+					# its key's owner is vacating inside this same cfg. Keys
+					# owned by non-movers/ui_*/raw lanes are permanently
+					# occupied; a mover's keys are freed only when its own
+					# claim lands, so a half-rejected swap can't mint a
+					# double-fire. Fixed-point loop, then a simultaneous
+					# pass for true swaps (A→keyB, B→keyA is a legal end state).
+					var movers := {}
+					for ak0 in v:
+						var an0 := str(ak0)
+						if an0 in REBIND_ACTIONS:
+							movers[an0] = true
+					var owner_of := {} # permanently occupied keys
+					var key_owner := {} # key -> owning action (live map)
 					for act2 in InputMap.get_actions():
 						var an2 := str(act2)
 						if not (an2 in REBIND_ACTIONS or an2.begins_with("ui_")):
 							continue
 						for e2 in InputMap.action_get_events(act2):
 							if e2 is InputEventKey:
-								occupied[key_of(e2)] = true
+								var kk2 := key_of(e2)
+								key_owner[kk2] = an2
+								if not movers.has(an2):
+									owner_of[kk2] = true
 					for lane in RAW_KEY_LANES:
-						occupied[lane] = true
-					var seen_keys := {} # a cfg binding every action to one key
-					for ak in v:      # only claims the first
-						var kc = v[ak]
-						var act3 := str(ak)
-						if not (act3 in REBIND_ACTIONS):
-							continue
-						var own := {} # own action's live keys don't block it
-						for e3 in InputMap.action_get_events(act3):
-							if e3 is InputEventKey:
-								own[key_of(e3)] = true
-						# the whitelist isn't enough on its own — a hostile
-						# cfg could bind ESCAPE (double-fires ui_cancel
-						# under every panel) or a dead keycode (audit-70 L5)
-						if (kc is int or kc is float) \
-								and int(kc) > 0 and int(kc) < 4194592 \
+						owner_of[lane] = true
+						key_owner[lane] = "raw"
+					var claimed := {}
+					var failed := {}
+					var pending: Array = movers.keys()
+					var resolved := {}
+					var progress := true
+					while progress:
+						progress = false
+						for act3 in pending.duplicate():
+							var kc = v[act3]
+							var bad := not ((kc is int or kc is float) \
+								and int(kc) > 0 and int(kc) < 4194816 \
 								and int(kc) != KEY_ESCAPE \
-								and not seen_keys.has(int(kc)) \
-								and (not occupied.has(int(kc)) or own.has(int(kc))) \
-								and OS.get_keycode_string(int(kc)) != "":
-							settings[k][act3] = int(kc)
-							seen_keys[int(kc)] = true
+								and OS.get_keycode_string(int(kc)) != "")
+							# a malformed/forbidden claim fails at once — the
+							# owner never vacates, so its keys re-own for the
+							# rest of the resolution
+							if bad or owner_of.has(int(kc)) or claimed.has(int(kc)):
+								pending.erase(act3)
+								failed[act3] = true
+								for e4 in InputMap.action_get_events(act3):
+									if e4 is InputEventKey:
+										owner_of[key_of(e4)] = true
+								progress = true
+								continue
+							# waiting on a lane another pending mover still owns
+							var ko := str(key_owner.get(int(kc), ""))
+							if movers.has(ko) and ko != act3 and not resolved.has(ko):
+								continue # its owner hasn't moved yet — next round
+							resolved[act3] = int(kc)
+							claimed[int(kc)] = true
+							pending.erase(act3)
+							progress = true
+					# deadlock pass: still-pending claims each wait on a lane
+					# whose owner is also pending — a legal rotation resolves
+					# them simultaneously iff no two share the same target key
+					var targets := {}
+					var cycle_ok := not pending.is_empty()
+					for act4 in pending:
+						var k2 = v[act4]
+						var koi := str(key_owner.get(int(k2), ""))
+						if not pending.has(koi) or targets.has(int(k2)):
+							cycle_ok = false
+						targets[int(k2)] = true
+					if cycle_ok:
+						for act5 in pending:
+							resolved[act5] = int(v[act5])
+						pending.clear()
+					for act6 in resolved:
+						settings[k][act6] = resolved[act6]
 			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:

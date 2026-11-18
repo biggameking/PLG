@@ -50,7 +50,7 @@ pack_android_release() {
 	if grep -q 'keystore/release="[^"]' export_presets.cfg; then
 		# a pinned preset still fails closed — a path written but never
 		# provisioned dies inside Godot an hour into the build (audit-71 L3)
-		PRESET_KS="$(sed -n 's/.*keystore\/release="\([^"]*\)".*/\1/p' \
+		PRESET_KS="$(sed -n 's/.*keystore\/release="\([^"]\{1,\}\)".*/\1/p' \
 			export_presets.cfg | head -1)"
 		if [ ! -f "$PRESET_KS" ]; then
 			echo "refusing release build: preset keystore/release points at" \
@@ -76,7 +76,7 @@ case "$WHAT" in
 	android) pack_android_debug ;;
 	android-release) pack_android_release ;;
 	all) pack_windows; pack_web; pack_android_debug ;;
-	*) echo "usage: $0 [windows|web|android|all]" >&2; exit 2 ;;
+	*) echo "usage: $0 [windows|web|android|android-release|all]" >&2; exit 2 ;;
 esac
 (cd dist && shasum -a 256 kinbound-*.zip kinbound-*.apk 2>/dev/null > SHA256SUMS)
 cat dist/SHA256SUMS
