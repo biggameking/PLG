@@ -1915,3 +1915,27 @@ smoke **1004/0/0skip**
 | **修后再跑自抓**：游荡 kin/商人 1.55 半径吃挥击 | 选位缓冲 3.5+merchant；每挥有界等待游荡者离开 |
 
 smoke **1009/0/0skip**（+2 解析钉）。审档 `s117-net-walkthrough.md`
+
+## S118 — 联机动词验收（真双进程会话）
+
+- `tools/net_verbs_host.gd` + `net_verbs_join.gd`：guest 实质动词全链——身份 tag 绑定、fixture 钉怪、瞄准点击抛球、`net_catch` 归 `remote_parties[tag]`（owner_tag 非 pid）、build 面板选 torch、`placed_tag` 归属、支付持留结算/拒绝退款、锁定 build 拒、超距 catch/hit 拒、伪造 `pal_hit` 钳到 honest 上限、断线孤儿名册存活。
+- HOST **16/0** + JOIN **16/0** ×多种子（85934/53937/85138/2871 全绿）。
+
+### 真产品缺陷（探针实锤后修）
+
+| 缺陷 | 根因 | 修法 |
+|---|---|---|
+| **guest tech 树永久失同步** | `unl_send` 走 unreliable env 差分，`unl_sig` 发送即记账——丢一个包就再不发 | 新 reliable `unl_sync` rpc（env 差分降级为提示） |
+| **guest 装饰永久失同步** | `decor_delta` 是唯一发一次不可靠 delta 道，`dirty_decor_pack` 发送即清脏集 | `decor_delta` → `reliable` |
+
+### harness 新课（全部加固非粉饰）
+
+- `split()` 返回 `PackedStringArray`（`is Array` 恒 false）。
+- fixture 诱饵必须过 `catchable()` 正典门——最近野 kin 抽中 alpha/巢裔烧光全部诚实投掷。
+- `Iso.from_screen` 用玩家海拔反解——按目标格海拔投影点击偏一台地静默不投。
+- 标记格=意图非落点：`mouse_tile` 可诚实偏一格——断言 `placed_tag`/新增结构差分。
+- `build_bkt` 节流会拒窗口内探针并退款——退款探针改确定性 >9-ring proximity 拒。
+- `pal_hit` 不可靠道：重发须副本 hp 观测到账，盲发至多一发（同帧叠加钳击伪造出 471 单帧=三发诚实 157）。
+- 钳制语义按"最大单帧命中增量"断言，非总伤。
+
+证据 `s118-verb-{catch,build,gone}.png`（tag 归属火把+鬼影+孤儿名册）。审档 `s118-net-verbs.md`。smoke **1008/0/0skip**（+2 解析钉入双 harness）。

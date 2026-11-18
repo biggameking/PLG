@@ -523,6 +523,13 @@ func env_sync(tod: float, day: int, weather: String, danger: bool = false,
 	if not unl.is_empty(): # mid-session research reaches guests inside a tick
 		game.net_unlocked = unl.duplicate()
 
+@rpc("authority", "call_remote", "reliable")
+func unl_sync(unl: Array) -> void:
+	if is_host:
+		return
+	game.net_unlocked = unl.duplicate() # tech rides the reliable lane — one
+	# dropped datagram on env_sync must not desync a guest's whole tree
+
 @rpc("authority", "call_remote", "unreliable")
 func peer_pos(id: int, x: float, y: float, elev: float) -> void:
 	if not (is_finite(float(x)) and is_finite(float(y)) and is_finite(float(elev))):
@@ -837,7 +844,7 @@ func struct_sync(arr: Array, idx: int = 0, total: int = 1) -> void:
 	if _sync_chunk(_struct_buf, arr, idx, total):
 		game.struct_sync(_struct_buf)
 
-@rpc("authority", "call_remote", "unreliable")
+@rpc("authority", "call_remote", "reliable")
 func decor_delta(arr: Array, idx: int = 0, total: int = 1) -> void:
 	if is_host:
 		return
@@ -1583,6 +1590,9 @@ func _process(dt: float) -> void:
 			if game.unlocked.size() != unl_sig:
 				unl_sig = game.unlocked.size()
 				unl_send = game.unlocked
+				rpc("unl_sync", game.unlocked) # the diff payload is a hint;
+				# the reliable copy is the guarantee (S118: a lost unreliable
+				# datagram used to desync the guest tech tree permanently)
 			rpc("env_sync", game.tod, game.day, game.weather, game.danger_active(),
 				bq_send, mp2, game.work_mode, unl_send,
 				game.crowned, game.accord,
