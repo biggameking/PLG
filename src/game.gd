@@ -992,6 +992,10 @@ func spawn_net_pal(d) -> void:
 	np.soul_boost = clampi(_i(d[12]), 0, 10) if d.size() > 12 else 0 # the
 		# statue panel prices off the replica — a stale 0 under-charged guests
 		# for every infusion until the row rode the wire (audit-41)
+	if d.size() > 13 and d[13] is bool and d[13]:
+		np.set_meta("ascendant", true) # the altar's claim rides the wire —
+		if np.sprite != null:
+			np.sprite.scale *= 1.3 # a guest's screen reads the same bigger heir
 	np.visible = np.mounted_by == 0 # a ridden mount hides under its rider
 	pals.append(np)
 
@@ -1452,6 +1456,9 @@ func tick_accord() -> void:
 	floater(player.pos, tr("THE WILDMERE ACCORD"), "#ffd76e")
 	log_msg(tr("THE WILDMERE ACCORD — the island kneels to its keeper."))
 	log_msg(tr("Your party can field SIX kin from now on."))
+	# the loop after the loop — the altar is the only door to star-lit
+	# heirs, so the seal names it once instead of leaving it to the tech list
+	log_msg(tr("An Ascension Altar will answer sigils and orbs — call heirs brighter than any den's."))
 	sfx_play("horn")
 	rumble(0.5, 0.9, 0.6)
 	if net != null and multiplayer.multiplayer_peer != null:
@@ -1464,7 +1471,9 @@ func tick_accord() -> void:
 
 func _ascendant_live() -> Kin:
 	for p in pals:
-		if p.has_meta("ascendant") and p.hp > 0:
+		# wild-mode only: a caught heir keeps its star but the altar's claim
+		# died at capture — a fielded partner must not seal the next ring
+		if p.mode == "wild" and p.has_meta("ascendant") and p.hp > 0:
 			return p
 	return null
 
@@ -1546,16 +1555,20 @@ func _spawn_ascendant(sid: String, at: Vector2) -> Kin:
 # state so the host's own seal gates every keeper on the island
 func ascension_req_remote(pid: int) -> bool:
 	var at := _ghost_at(pid)
+	# the sigil+orbs cost rides the guest's own bag — client-authoritative
+	# inventory like shrine/gacha; the host gates what IT owns: seal, ghost
+	# reach, the live ring, and roster capacity
 	if at.x < -1e8 or not accord or _ascendant_live() != null \
-			or _nearest_struct("ascension_altar", at).x < 0 \
 			or pals.size() >= MAX_PALS:
+		return false
+	var cell := _nearest_struct("ascension_altar", at, 5.0)
+	if cell.x < 0:
 		return false
 	var sid := ascension_pick()
 	if sid == "":
 		return false
 	var n := mini(int(den_ascensions.get(sid, 0)) + 1, 99)
 	den_ascensions[sid] = n
-	var cell := _nearest_struct("ascension_altar", at)
 	_spawn_ascendant(sid, Vector2(cell.x + 1.0, cell.y + 1.0))
 	return true
 
@@ -2212,6 +2225,10 @@ func release_event_flags(p: Kin) -> void:
 		p.remove_meta("raid_t0")
 	if p.has_meta("summoner"):
 		p.remove_meta("summoner") # a caught add stops counting for its boss
+	if p.has_meta("ascendant"):
+		p.remove_meta("ascendant") # ownership ends the altar's claim — the kin
+		# keeps its star, but a released heir can't re-block the ring or pay
+		# the star-scaled bounty a second time (audit-73)
 
 func catch_xp(lv: float) -> int:
 	# streak rewards a steady hand: +5% per consecutive catch, cap +50%

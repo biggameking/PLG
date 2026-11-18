@@ -332,6 +332,48 @@ func _boot() -> void:
 		"nid=%d hits=%.0f max_drop=%.0f hp %.0f→%.0f" % [tank_nid, seen,
 			max_drop, tk_hp_fix, tk2.hp if tk2 != null else -1.0])
 
+	# ---- ascension altar: the guest's sigil+orbs ring the host's world
+	# truth — seal, ghost reach, one live ring — then the wire carries the
+	# asc flag so the replica reads as big as the host's heir (audit-73)
+	game.accord = true # the seal is world state — the altar answers to it
+	var gp_asc: Vector2 = game._ghost_at(gid)
+	var ac_cell := Vector2i(-1, -1)
+	for ac_d in range(2, 5):
+		for ac_s in range(8):
+			var ac_try := Vector2i(int(gp_asc.x) + ac_d, int(gp_asc.y) - 3 + ac_s)
+			if game.place_free("ascension_altar", ac_try.x, ac_try.y):
+				ac_cell = ac_try
+				break
+		if ac_cell.x >= 0:
+			break
+	_gate("ascension altar planted in the ghost's reach",
+		ac_cell.x >= 0 and gp_asc.distance_to(
+			Vector2(ac_cell.x + 0.5, ac_cell.y + 0.5)) <= 5.0,
+		"cell=%s ghost=%s" % [str(ac_cell), str(gp_asc)])
+	var af := FileAccess.open("res://tools/net_verb_asc.txt", FileAccess.WRITE)
+	af.store_string("ready"); af.close()
+	var asc_live = await _until(8000, func(): return game._ascendant_live())
+	var asc_tot := 0
+	for ak in game.den_ascensions:
+		asc_tot += int(game.den_ascensions[ak])
+	_gate("guest ring calls an ascendant on host truth",
+		asc_live != null and asc_live is Kin and asc_live.mode == "wild"
+			and asc_live.alpha and asc_live.raid
+			and asc_live.species_id in Game.LEGENDARY_DEN and asc_tot == 1,
+		"asc=%s tot=%d" % [str(asc_live != null), asc_tot])
+	# the second ring must refuse — the joiner fires it after settling
+	await _until(8000, func():
+		return _marker("res://tools/net_verb_asc2.txt") == "fired2")
+	await _wait_ms(600) # let any late wire land before the census
+	var asc_cnt := 0; var asc_tot2 := 0
+	for ap2 in game.pals:
+		if ap2.has_meta("ascendant") and ap2.hp > 0:
+			asc_cnt += 1
+	for ak2 in game.den_ascensions:
+		asc_tot2 += int(game.den_ascensions[ak2])
+	_gate("a second guest ring is refused — one walks, ledger still",
+		asc_cnt == 1 and asc_tot2 == 1, "cnt=%d tot=%d" % [asc_cnt, asc_tot2])
+
 	# ---- disconnect: ghost+tag release, and the guest's catch ORPHANS
 	# under the tag in the box — the roster survives the keeper
 	t0 = Time.get_ticks_msec()

@@ -39,11 +39,13 @@ build: stone 40 + lumenite 12 + ingot 8, 2×2, lit). Interact:
 
 ## Verification
 
-- smoke **1045 checks, 0 failures, 0 skipped** — pins: seed placement,
+- smoke **1045 checks, 0 failures, 1 skipped** — pins: seed placement,
   pre-seal refusal with item preservation, summon shape (alpha+raid+
   legend+star 1+ledger 1+spend), live-block, KO bounty `eff+5/parts+3`
   with `boss_respawns` untouched, star cap at 4, `catchable()` admits,
-  save round-trip coercion + forged-ledger wipe.
+  save round-trip coercion + forged-ledger wipe. (The 1 skip is the
+  seeded grotto-terrain fixture; total count drifts 1045↔1048 with
+  worldgen RNG — see audit-73 LOW-8.)
 - In-game shot `s121-ascension.png`: altar planted, Dreadwyrm Lv60
   ascendant beside the keeper, log `ASCENSION — Dreadwyrm answers the
   altar (star 3)`.

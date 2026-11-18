@@ -3270,9 +3270,48 @@ func run() -> void:
 	if asc2 != null:
 		# the payoff IS the catch lane — an ascendant must stay ball-able
 		check("ascendant stays catchable", game.catchable(asc2))
+		# audit-73: ownership ends the altar's claim — a fielded partner
+		# still carrying the meta sealed every later ring forever
+		asc2.mode = "partner" # send_out lands a caught kin back in pals
+		game.release_event_flags(asc2)
+		check("caught heir releases the altar's claim",
+			not asc2.has_meta("ascendant")
+			and game._ascendant_live() == null)
+		game.add_item("boss_sigil", 1)
+		game.add_item("legendary_orb", 2)
+		check("the ring re-opens after the catch", game.ascension_trial())
+		var asc3: Kin = null
+		for qp3 in game.pals:
+			if qp3.has_meta("ascendant"):
+				asc3 = qp3
+		check("the re-opened ring fields a real heir", asc3 != null and asc3 != asc2)
+		if asc3 != null:
+			game.pals.erase(asc3)
+			if asc3.get_parent(): asc3.get_parent().remove_child(asc3)
+			asc3.free()
 		game.pals.erase(asc2)
 		if asc2.get_parent(): asc2.get_parent().remove_child(asc2)
 		asc2.free()
+	# wire field 14 — a forged replica row must mint the same bigger shadow
+	# the host spawned; compare two replicas so species base scale can't lie
+	var wa: Kin = null; var wa2: Kin = null
+	game.spawn_net_pal([Game.LEGENDARY_DEN[0], p.pos.x + 3, p.pos.y, 60, "wild",
+		false, 900001, false, true, "", 0, 0, 0, true])
+	game.spawn_net_pal([Game.LEGENDARY_DEN[0], p.pos.x + 5, p.pos.y, 60, "wild",
+		false, 900002, false, true, "", 0, 0, 0, false])
+	for wq in game.pals:
+		if wq.net_id == 900001: wa = wq
+		if wq.net_id == 900002: wa2 = wq
+	check("the asc flag rides the wire — bigger shadow, meta minted",
+		wa != null and wa2 != null and wa.has_meta("ascendant")
+		and not wa2.has_meta("ascendant")
+		and wa.sprite != null and wa2.sprite != null
+		and wa.sprite.scale.x > wa2.sprite.scale.x * 1.2)
+	for wq2 in [wa, wa2]:
+		if wq2 != null:
+			game.pals.erase(wq2)
+			if wq2.get_parent(): wq2.get_parent().remove_child(wq2)
+			wq2.free()
 	# fixture-neutral: raze the altar, restore ledger/seal/pos/items
 	game.demolish_at(Vector2(as_al.x + 1.0, as_al.y + 1.0))
 	game.den_ascensions = da_bak
@@ -7160,7 +7199,8 @@ func run() -> void:
 		game.accord and ac_cap0 == 5 and game.party_cap() == 6)
 	check("accord banner + epilogue landed",
 		game.floaters.back()["t"] == tr("THE WILDMERE ACCORD")
-		and game.messages.back().contains("SIX"))
+		and game.messages.back().contains("Ascension Altar")
+		and game.messages[game.messages.size() - 2].contains("SIX"))
 	var ac_fl0: int = game.floaters.size()
 	game.tick_accord()
 	check("the accord seals once per save", game.floaters.size() == ac_fl0)

@@ -451,7 +451,9 @@ func pal_state_pack() -> Array:
 				var rg = ghosts[p.mounted_by]
 				p.pos = Vector2(rg.net_pos.x, rg.net_pos.y)
 			arr.append([p.uid, p.species_id, p.pos.x, p.pos.y, p.level, p.mode, p.hp, p.lucky, p.boss,
-				p.alpha, p.spire_tag, p.mounted_by, p.owner_id, p.soul_boost])
+				p.alpha, p.spire_tag, p.mounted_by, p.owner_id, p.soul_boost,
+				p.has_meta("ascendant")]) # field 14 — the altar's bigger shadow
+				# must read bigger on every screen, not only the host's
 	return arr
 
 @rpc("authority", "call_remote", "unreliable")
@@ -476,7 +478,7 @@ func pal_sync(arr: Array, idx: int = 0, total: int = 1, ep: int = 0) -> void:
 		var p: Kin = byid.get(nid)
 		if p == null:
 			# [species, x, y, lv, mode, lucky, net_id, boss, alpha, spire_tag,
-			#  mounted_by, owner_id, soul_boost] — spawn_net_pal's wire shape
+			#  mounted_by, owner_id, soul_boost, ascendant] — spawn_net_pal's wire shape
 			game.spawn_net_pal([e[1], e[2], e[3], e[4], e[5],
 				e[7] if e.size() > 7 else false, nid,
 				e[8] if e.size() > 8 else false,
@@ -484,7 +486,8 @@ func pal_sync(arr: Array, idx: int = 0, total: int = 1, ep: int = 0) -> void:
 				e[10] if e.size() > 10 else "",
 				e[11] if e.size() > 11 else 0,
 				e[12] if e.size() > 12 else 0,
-				e[13] if e.size() > 13 else 0])
+				e[13] if e.size() > 13 else 0,
+				e[14] if e.size() > 14 else false])
 		else:
 			p.net_target = Vector2(Game._f(e[2]), Game._f(e[3]))
 			p.hp = maxf(0.0, Game._f(e[6])) if e.size() > 6 else p.hp
@@ -1094,6 +1097,7 @@ func ascension_done() -> void:
 	if is_host:
 		return
 	pay_settle("ascend", false) # the sigil + orbs left the bag at request time
+	game.log_msg(tr("The altar takes your offering — an heir brighter than any den's walks the island"))
 
 @rpc("any_peer", "call_remote", "reliable")
 func work_req() -> void:

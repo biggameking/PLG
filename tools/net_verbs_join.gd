@@ -431,6 +431,62 @@ func _boot() -> void:
 	else:
 		_gate("forged pal_hit wire lands", false, "no tank nid")
 
+	# ---- ascension: seed the bag honestly, hold the pay, ring the altar;
+	# the refusal must refund, and the replica must carry field 14 (audit-73)
+	var asc_ready := false
+	var t_asc := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t_asc < 25000:
+		await process_frame
+		var amf := FileAccess.open("res://tools/net_verb_asc.txt", FileAccess.READ)
+		if amf != null:
+			asc_ready = amf.get_as_text().strip_edges() == "ready"
+			amf.close()
+			if asc_ready:
+				break
+	if asc_ready:
+		game.add_item("boss_sigil", 1)
+		game.add_item("legendary_orb", 2)
+		if game.net.pay("ascend", {"boss_sigil": 1, "legendary_orb": 2}):
+			game.net.rpc("ascension_req")
+			var asc_seen = await _until(8000, func():
+				var found := false
+				for rp in game.pals:
+					if rp.has_meta("ascendant"):
+						found = true
+				return game.net.pay_hold("ascend").is_empty() and found)
+			var arep: Kin = null
+			for rp2 in game.pals:
+				if rp2.has_meta("ascendant"):
+					arep = rp2
+					break
+			_gate("guest ring settles + replica carries the asc flag",
+				asc_seen == true and arep != null and arep.alpha
+					and arep.net_id > 0,
+				"seen=%s rep=%s" % [str(asc_seen), str(arep != null)])
+			# second ring while one walks → host refuses → the hold refunds
+			game.add_item("boss_sigil", 1)
+			game.add_item("legendary_orb", 2)
+			if game.net.pay("ascend", {"boss_sigil": 1, "legendary_orb": 2}):
+				game.net.rpc("ascension_req")
+				var refunded = await _until(8000, func(): return (
+					game.net.pay_hold("ascend").is_empty()
+						and game.item_count("legendary_orb") >= 2
+						and game.item_count("boss_sigil") >= 1))
+				_gate("a second ring is refused — the hold refunds",
+					refunded == true,
+					"orbs=%d sigils=%d" % [game.item_count("legendary_orb"),
+						game.item_count("boss_sigil")])
+			else:
+				_gate("a second ring is refused — the hold refunds", false,
+					"second pay refused")
+			_write("res://tools/net_verb_asc2.txt", "fired2")
+		else:
+			_gate("guest ring settles + replica carries the asc flag", false,
+				"pay refused")
+	else:
+		_gate("guest ring settles + replica carries the asc flag", false,
+			"no altar marker")
+
 	await _wait_ms(2000) # let the host read every marker, then leave
 	_finish()
 
