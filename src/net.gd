@@ -1076,6 +1076,26 @@ func shrine_done(nw: String) -> void:
 	game.log_msg(tr("The altar drinks your lumenite — the sky shifts"))
 
 @rpc("any_peer", "call_remote", "reliable")
+func ascension_req() -> void:
+	if not is_host:
+		return
+	var pid := multiplayer.get_remote_sender_id()
+	if not _throttle(pid, "act_bkt", 8.0, 10.0):
+		_pay_rej(pid, "ascend")
+		return
+	if game.ascension_req_remote(pid):
+		if multiplayer.get_peers().has(pid):
+			rpc_id(pid, "ascension_done")
+	else:
+		_pay_rej(pid, "ascend")
+
+@rpc("authority", "call_remote", "reliable")
+func ascension_done() -> void:
+	if is_host:
+		return
+	pay_settle("ascend", false) # the sigil + orbs left the bag at request time
+
+@rpc("any_peer", "call_remote", "reliable")
 func work_req() -> void:
 	if not is_host:
 		return

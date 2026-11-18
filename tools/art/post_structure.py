@@ -38,6 +38,7 @@ DIMS = {
     "weather_shrine": (80, 104), "kin_gacha": (80, 104),
     "fossil_bed": (80, 104), "spyglass": (80, 104),
     "lightning_rod": (80, 104), "expedition_post": (112, 120),
+    "ascension_altar": (80, 104),
 }
 
 

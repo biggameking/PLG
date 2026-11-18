@@ -1975,3 +1975,19 @@ epoch 补丁自己留了 stale-head 洞（head 无条件清批），Android env 
 **顺带诊断**：headless 窗是 64×64——定位型鼠标事件全丢；8 个 harness 加 `root.size` 钉后 SAVE-LOOP headless 17/0。但 live-cursor 路径（投掷读 `get_global_mouse_position`）仍须窗口跑——net_verbs 已注记。
 
 验证：smoke **1024/0/0skip**（本轮 grotto fixture 地形合规通过）· SAVE **17/0** · REBIND **19/0** · net_verbs 窗口双进程 **16+16/0**。审档 `audit-70-launch-hardening.md`。
+
+## S120 — 战役节奏探针：真公式跑全曲线 22/0
+
+`tools/sim_pacing.gd` 用真实 Combat/Game/SpeciesGen 数据量化新档→Accord 全程：kin XP 链（Lv19→60）、野外 vs raid 杀数、科技点 130/70 节点全覆盖、零件 23=23 精确购齐、分 zone 球位阶梯（kin→mega→giga→ultra 精确映射）、传说捕获（顶档球 0.83 软怪、中档 0.23）、gauntlet/sigil 循环、凝聚饲料界、玩家曲线缓于 kin。探针自身两轮修正（零件门按 tier≤5 实测收入、orb 门改真 den capturePower）。smoke XP 边界钉绑定 level*25 公式防漂移。审档 `s120-campaign-pacing.md`。
+
+## audit-71 — 冷审 audit-70：NEEDS-FIX → 全修
+
+`_def_key_evts` 实例变量在 scene 重载后把已绑态当默认快照（方向键副键永久蚀）→ static var；mid chunk 自报 total 伪造空槽"完成"→ 槽数按头声明判；`_close_peer` 清 parts/got/ep；preset keystore `-f` 存在校验；捕获态拒死键码；cfg 校验扫与面板同一占用面（`RAW_KEY_LANES` 收敛 game.gd 单源）；轮换 rename 返回值 fail-closed。smoke **1030/0/0skip** · net_verbs **16+16/0**。审档 `audit-71-cold-review.md`。
+
+## audit-72 — 冷审 audit-71：NEEDS-FIX → 终态解析器
+
+`ConfigFile` 序列化 Dictionary 按 key 排序——cfg 是**无序声明集**，"逐条释放键位"在解读噪声且半拒交换留赢家（双触发）。改为不动点终态解析：mover 落地前不拥有任何键、永久占用者（非 mover/ui_*/raw lane）不腾让、死锁轮换仅当无撞车才同时落地。smoke **1036/0/1skip** · REBIND **19/0** · SAVE **17/0**。审档 `audit-72-bind-semantics.md`。
+
+## S121 — 升星祭坛：后 Accord 可重复终局循环
+
+Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的"仍未解决。新结构 `ascension_altar`（tier-8 科技 cost 5 + parts 3；stone40+lumenite12+ingot8）：消耗 1 霸主符印 + 2 传说球召唤 **ASCENDANT 升星者**——Lv60 alpha 巢穴传说种、star=min(运行数,4)（抓到 4 星=省 84 只同种饲料，全游戏唯一预星传说通道）、raid 立足（阻眠/不重生巢）、最少升星者优先轮转。KO 付 effigy 2+star / 零件 1+star（球耗真沉）；`asc` meta 随 pals_data 存档防匿名双召；`den_ascensions` 账簿存载夹取+无印清空；guest 走 `ascension_req` 幽灵站位+印章双验 + `net.pay` 持留结算。smoke **1045/0/0skip**（12 门新钉：预印拒/召唤形/存活门/星级夹取/捕捉通/账簿往返/锻造清空）。证据 `s121-ascension.png`（祭坛+Dreadwyrm Lv60 star3）。审档 `s121-ascension-altar.md`。

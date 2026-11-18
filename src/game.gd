@@ -1084,6 +1084,15 @@ func kill_pal(p: Kin, by_player: bool, pid := 0) -> void:
 			log_msg(tr("Found a %s!") % tr(str(ItemData.ITEMS[sch2]["name"])))
 		if p.boss:
 			_kill_loot(pid, "ancient_part", rng.int_range(2, 4))
+		if p.has_meta("ascendant"):
+			# the altar's bounty — KO'd ascendants pay parts and effigies
+			# scaled to the star they carried; the orb cost stays spent
+			# either way (a caught one pays in starlight instead)
+			var st_k := maxi(1, p.star)
+			_kill_loot(pid, "sprigmelt_effigy", 2 + st_k)
+			_kill_loot(pid, "ancient_part", 1 + st_k)
+			floater(p.pos, tr("ASCENDANT FELLED"), "#d8b8ff")
+			log_msg(tr("ASCENDANT FELLED — the altar's bounty spills out"))
 		if by_player or pid > 0: # a guest's kill is still a keeper's kill
 			board_hunt_credit(p.species_id, pid)
 		_kill_xp(pid, p.level * 4)
@@ -1339,6 +1348,16 @@ func ownable_species_count() -> int:
 var accord := false     # the Wildmere Accord — crown + every legend heir
 # + the EX gauntlet. Sealed once per save; the island fields a sixth slot.
 
+# post-Accord repeatable loop: the Ascension Altar rings for a sigil + two
+# legendary orbs and answers with an ASCENDANT heir — the only channel to a
+# pre-starred legend (fodder for a 4-star legend costs 84 heirs; the altar
+# trades top-tier currency instead). Per-species count drives the star rank
+# the summon carries; caught ascendants keep it, KO'd ones pay scaled loot.
+const ASCEND_SIGIL := "boss_sigil"
+const ASCEND_ORBS := 2
+const ASCEND_MAX_STAR := 4
+var den_ascensions := {} # {legend sid: runs completed} — capped on read
+
 func party_cap() -> int:
 	return 6 if accord else 5
 
@@ -1442,6 +1461,103 @@ func tick_accord() -> void:
 		for acp in multiplayer.get_peers():
 			note_remote(acp, "THE WILDMERE ACCORD — the island kneels to its keeper.")
 			note_remote(acp, "Your party can field SIX kin from now on.")
+
+func _ascendant_live() -> Kin:
+	for p in pals:
+		if p.has_meta("ascendant") and p.hp > 0:
+			return p
+	return null
+
+func ascension_pick() -> String:
+	# the altar's cadence favors the least-ascended heir — same pilgrimage
+	# rule the den refills run on, so one species can't soak every ring
+	var best := ""
+	var best_n := 1 << 30
+	var cands: Array = []
+	for ls in LEGENDARY_DEN:
+		if SpeciesData.species_of(ls).is_empty():
+			continue
+		var n := mini(int(den_ascensions.get(ls, 0)), 99)
+		if n < best_n:
+			best_n = n
+			cands = [ls]
+		elif n == best_n:
+			cands.append(ls)
+	if cands.is_empty():
+		return ""
+	best = cands[rng.int_range(0, cands.size() - 1)]
+	return best
+
+func ascension_trial() -> bool:
+	# the altar's own gate — a guest's path runs through ascension_req_remote
+	if client_locked():
+		return false
+	if not accord:
+		log_msg(tr("The altar sleeps until the island signs its Accord"))
+		return false
+	if _ascendant_live() != null:
+		log_msg(tr("An ascendant heir already walks the island"))
+		return false
+	if item_count(ASCEND_SIGIL) < 1 or item_count("legendary_orb") < ASCEND_ORBS:
+		log_msg(tr("The altar wants a Boss Sigil and %d Legendary Orbs") % ASCEND_ORBS)
+		return false
+	var cell := _nearest_struct("ascension_altar", player.pos, 5.0)
+	if cell.x < 0:
+		log_msg(tr("No Ascension Altar in reach"))
+		return false
+	if pals.size() >= MAX_PALS:
+		log_msg(tr("The island is too crowded for an ascendant"))
+		return false
+	var sid := ascension_pick()
+	if sid == "":
+		return false
+	add_item(ASCEND_SIGIL, -1)
+	add_item("legendary_orb", -ASCEND_ORBS)
+	var n := mini(int(den_ascensions.get(sid, 0)) + 1, 99)
+	den_ascensions[sid] = n
+	_spawn_ascendant(sid, Vector2(cell.x + 1.0, cell.y + 1.0))
+	return true
+
+func _spawn_ascendant(sid: String, at: Vector2) -> Kin:
+	var np := preload("res://src/kin.gd").new()
+	np.alpha = true # a legend heir is only ball-able as an alpha — keep the gate honest
+	entity_layer.add_child(np)
+	np.setup(self, sid, 60, nearest_free(at.x, at.y))
+	np.star = clampi(int(den_ascensions.get(sid, 1)), 1, ASCEND_MAX_STAR)
+	np.talent = rng.int_range(80, 100)
+	np.apply_bonuses()
+	np.hp = np.max_hp
+	np.home = Vector2.ZERO # ascendants answer to the altar, never to a den ring
+	np.raid = true # raid flag: blocks sleeping, skips den respawn (rule 37
+	# handles catch — release_event_flags already demobilizes on capture)
+	np.aggro = 0
+	np.aggro_pid = np.nearest_body_pid()
+	np.set_meta("ascendant", true)
+	if np.sprite != null:
+		np.sprite.scale *= 1.3 # an ascendant reads bigger than a den heir
+	pals.append(np)
+	floater(np.pos, tr("ASCENDANT"), "#d8b8ff")
+	log_msg(tr("ASCENSION — %s answers the altar (star %d)") % [tr(str(np.spec["name"])), np.star])
+	sfx_play("horn")
+	rumble(0.4, 0.8, 0.5)
+	return np
+
+# a guest rings the host's altar — ghost must stand AT it; accord is world
+# state so the host's own seal gates every keeper on the island
+func ascension_req_remote(pid: int) -> bool:
+	var at := _ghost_at(pid)
+	if at.x < -1e8 or not accord or _ascendant_live() != null \
+			or _nearest_struct("ascension_altar", at).x < 0 \
+			or pals.size() >= MAX_PALS:
+		return false
+	var sid := ascension_pick()
+	if sid == "":
+		return false
+	var n := mini(int(den_ascensions.get(sid, 0)) + 1, 99)
+	den_ascensions[sid] = n
+	var cell := _nearest_struct("ascension_altar", at)
+	_spawn_ascendant(sid, Vector2(cell.x + 1.0, cell.y + 1.0))
+	return true
 
 func reveal_at(c: Vector2, r: float) -> void:
 	# the island fog of war: walking peels the dark back a sight-radius at a time
@@ -4629,6 +4745,8 @@ func save_game() -> void:
 			"lucky": p.lucky, "extra": p.extra_skills, "stance": p.stance,
 			"bnt": p.bounty, "eq": p.equipped, "own": p.owner_tag,
 			"stag": p.spire_tag, "ph": p.phase, # spire guardians keep their campaign tag; a phase-2 boss must not re-summon on reload
+			"asc": p.has_meta("ascendant"), # the altar's claim survives a save —
+			# else a reload mints an anonymous second ascendant off the one-kin gate
 			"rt0": t - p.get_meta("raid_t0", t) if p.raid else 0.0})
 	for bp in box:
 		pals_data.append({"sp": bp.species_id, "lv": bp.level, "pos": [0, 0],
@@ -4721,6 +4839,7 @@ func save_game() -> void:
 		"missions": mission_idx, "mflags": mission_flags,
 		"dex_seen": dex_seen.keys(), "dex_claimed": dex_claimed, "dex_full": dex_full,
 		"spires": spires_done.keys(), "crowned": crowned, "accord": accord,
+		"ascensions": den_ascensions,
 		"spos": spos_sv,
 		"weather": weather, "wthr_t": weather_t, "wmode": work_mode, "blev": base_level,
 		"pray_left": maxf(0.0, pray_cd - t),
@@ -4996,6 +5115,17 @@ func load_game() -> bool:
 	accord = crowned and mission_flags.get("gauntlet_ex", false) \
 		and heirs >= mini(LEGENDARY_DEN.size(), 10) \
 		and d.get("accord") is bool and d["accord"]
+	den_ascensions.clear()
+	if d.get("ascensions") is Dictionary:
+		for ak9 in d["ascensions"]: # altar tallies — legend keys only, 0..99
+			if ak9 is String and ak9 in LEGENDARY_DEN \
+					and _fin(d["ascensions"][ak9]):
+				den_ascensions[ak9] = clampi(_i(d["ascensions"][ak9]), 0, 99)
+	# a forged tally can't be allowed without the seal — the ascensions
+	# gate is `accord` live, but pre-loading a fake count would still
+	# cheat the star progression on a legit seal
+	if not accord:
+		den_ascensions.clear()
 	var seq = d.get("equip", {})
 	if seq is Dictionary: # merge over defaults — a foreign equip dict missing a slot would throw on equipment["slot"] reads
 		for slot in ["weapon", "armor", "acc1", "acc2"]:
@@ -5119,6 +5249,14 @@ func load_game() -> bool:
 			np.sprite.position.y = -48.0
 		if np.raid:
 			np.set_meta("raid_t0", t - clampf(_f(pd.get("rt0", 0.0)), 0.0, 600.0)) # a negative rt0 would pin the raider past its 240s sweep forever
+		# the altar tag is meta — but only a REAL ascendant re-earns it: a
+		# forged "asc":true on a rostered or non-legend kin is decoration,
+		# never the gate's bypass
+		if pd.get("asc") is bool and pd["asc"] and np.mode == "wild" \
+				and np.species_id in LEGENDARY_DEN and np.alpha and np.star > 0:
+			np.set_meta("ascendant", true)
+			if np.sprite != null:
+				np.sprite.scale *= 1.3
 		var rvs = pd.get("revive", 0.0)
 		np.revive_t = t + float(rvs) if _fin(rvs) and float(rvs) > 0.0 else 0.0 # revive_t=t+0 fires the moment the pal later enters the box — wiping a healthy pal to 30% hp
 		np.apply_bonuses()
@@ -6883,6 +7021,7 @@ func regenerate(s: int) -> void:
 	spire_pos.clear() # and fresh markers for them
 	crowned = false
 	accord = false # a new island owes nobody its last contract
+	den_ascensions.clear() # the altar's ledger dies with the world's seal
 	gauntlet = {} # and so did any trial in progress
 	remote_parties.clear() # guest rosters describe the old world's kin
 	clear_net_drops()

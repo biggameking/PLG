@@ -68,6 +68,7 @@ CFG = {
     "spyglass":     {"build": "spyglass", "ortho": 1.7, "tz": 0.55},
     "lightning_rod":{"build": "lightning_rod", "ortho": 2.2, "tz": 0.8},
     "expedition_post":{"build": "expedition", "ortho": 2.2, "tz": 0.65},
+    "ascension_altar":{"build": "ascension_altar", "ortho": 2.0, "tz": 0.75},
 }
 
 WOOD = (0.45, 0.32, 0.20)
@@ -540,6 +541,29 @@ def build(kind, cfg):
                 mat((0.6, 0.45, 0.3), "pack"), 1)
         cyl("flag", (0.55, 0, 1.55), 0.02, 0.4, wd, 6)
         cube("flagc", (0.66, 0, 1.65), (0.2, 0.01, 0.12), mat((0.85, 0.35, 0.25), "flagc"))
+    elif kind == "ascension_altar":
+        # star-cut dais + floating star-crystal over a sigil slab —
+        # the altar reads as a shrine that has already eaten light
+        dark = mat((0.28, 0.24, 0.34), "altarstone")
+        crys = mat((0.75, 0.55, 0.98), "starcrys", emit=1.8)
+        cyl("dais1", (0, 0, 0.10), 0.55, 0.20, dark, 8)
+        cyl("dais2", (0, 0, 0.28), 0.40, 0.16, st, 8)
+        cyl("sigil", (0, 0, 0.37), 0.22, 0.03, crys, 8)
+        for i in range(4):
+            a = i * math.tau / 4 + math.tau / 8
+            cyl("pillar", (math.cos(a) * 0.42, math.sin(a) * 0.42, 0.55),
+                0.06, 0.75, st, 6)
+            ico("tip", (math.cos(a) * 0.42, math.sin(a) * 0.42, 0.97),
+                0.045, crys, 1)
+        star = ico("star", (0, 0, 1.30), 0.28, crys, 1)
+        star.scale.z = 1.6 # elongated shard — the altar's whole silhouette
+        bpy.context.view_layer.objects.active = star
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        for i in range(5):
+            a = i * math.tau / 5
+            r = cyl("ray", (math.cos(a) * 0.20, math.sin(a) * 0.20, 1.30),
+                    0.02, 0.42, crys, 5)
+            r.rotation_euler = (math.sin(a) * 1.1, math.cos(a) * 1.1, 0)
     else:
         raise RuntimeError("unknown build kind %s" % kind)
 

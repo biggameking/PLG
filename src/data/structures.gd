@@ -1160,6 +1160,31 @@ const STRUCTURES = {
   "hp": 300,
   "light": 1,
   "desc": "Looses an arrow at the nearest raider or riled wild kin every few seconds."
+ },
+ "ascension_altar": {
+  "id": "ascension_altar",
+  "name": "Ascension Altar",
+  "glyph": "♛",
+  "color": "#d8b8ff",
+  "w": 2,
+  "h": 2,
+  "hp": 400,
+  "cost": [
+   [
+    "stone",
+    40
+   ],
+   [
+    "lumenite",
+    12
+   ],
+   [
+    "ingot",
+    8
+   ]
+  ],
+  "light": 1,
+  "desc": "A star-cut altar — only a keeper the island has already signed may ring it. Offer a Boss Sigil and two Legendary Orbs and it calls an ASCENDANT heir: harder than any den warden, and the one it yields to a caught orb carries real starlight."
  }
 }
 
@@ -1445,6 +1470,13 @@ const TECH = [
   "name": "Legendary Orb",
   "tier": 8,
   "cost": 5
+ },
+ {
+  "id": "ascension_altar",
+  "name": "Ascension Altar",
+  "tier": 8,
+  "cost": 5,
+  "parts": 3
  },
  {
   "id": "watch_tower",

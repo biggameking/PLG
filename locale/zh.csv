@@ -1002,3 +1002,13 @@ unbound,unbound,未绑定
 That key can't be bound,That key can't be bound,该键无法绑定
 MELEE/CHOP lmb  THROW lmb  BUILD 1-9 pick + rmb cancel,MELEE/CHOP lmb  THROW lmb  BUILD 1-9 pick + rmb cancel,近战/砍 lmb  投掷 lmb  建造 1-9 选择 + rmb 取消
 CHAT enter   1-%d sends that party kin out — one ball on the field,CHAT enter   1-%d sends that party kin out — one ball on the field,聊天 enter   1-%d 放出对应位置的伙伴——场上只能有一只球
+Ascension Altar,Ascension Altar,升星祭坛
+The altar sleeps until the island signs its Accord,The altar sleeps until the island signs its Accord,岛屿尚未签订圣约——祭坛仍在沉睡
+An ascendant heir already walks the island,An ascendant heir already walks the island,岛上已有一名升星者游荡
+The altar wants a Boss Sigil and %d Legendary Orbs,The altar wants a Boss Sigil and %d Legendary Orbs,祭坛需要一枚霸主符印和%d枚传说球
+No Ascension Altar in reach,No Ascension Altar in reach,附近没有升星祭坛
+The island is too crowded for an ascendant,The island is too crowded for an ascendant,岛上太拥挤——无法召唤升星者
+ASCENDANT,ASCENDANT,升星者
+ASCENSION — %s answers the altar (star %d),ASCENSION — %s answers the altar (star %d),升星仪式——%s回应祭坛（%d星）
+ASCENDANT FELLED,ASCENDANT FELLED,升星者陨落
+ASCENDANT FELLED — the altar's bounty spills out,ASCENDANT FELLED — the altar's bounty spills out,升星者陨落——祭坛的赏金倾泻而出

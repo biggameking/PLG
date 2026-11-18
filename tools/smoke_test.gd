@@ -3197,6 +3197,89 @@ func run() -> void:
 		game.boss_respawns.resize(rb9) # a caught legend re-dens — unschedule it
 		if leg2.get_parent(): leg2.get_parent().remove_child(leg2)
 		leg2.free()
+	# S121 ascension altar — the post-accord repeatable heir channel. Drive
+	# the REAL verb: seal + altar + cost → a starred alpha ascendant, KO
+	# bounty scaled by star, no den respawn, every pre-seal gate refusing
+	var as_al := Vector2i(-1, -1)
+	for rad7 in range(3, 14):
+		for ang7 in range(16):
+			var c7 := Vector2i(int(p.pos.x + cos(ang7 * TAU / 16.0) * rad7),
+				int(p.pos.y + sin(ang7 * TAU / 16.0) * rad7))
+			var ok7 := true
+			for dy7 in range(2):
+				for dx7 in range(2):
+					var k7 := Vector2i(c7.x + dx7, c7.y + dy7)
+					if game.structures.has(k7) or not game.world.in_bounds(k7.x, k7.y):
+						ok7 = false
+			if ok7 and game.place_free("ascension_altar", c7.x, c7.y):
+				as_al = c7
+				break
+		if as_al.x >= 0:
+			break
+	var as_ppos: Vector2 = p.pos
+	check("ascension altar seeds a spot", as_al.x >= 0,
+		"structures near=%d" % game.structures.size())
+	p.pos = Vector2(as_al.x + 2.5, as_al.y + 0.5) # stand at the altar
+	var acc_bak: bool = game.accord
+	var da_bak: Dictionary = game.den_ascensions.duplicate()
+	var as_sig0: int = game.item_count("boss_sigil")
+	var as_orb0: int = game.item_count("legendary_orb")
+	# stack caps are real (sigil tops at 5) — seed an exact count so the
+	# spend math below is honest, not "whatever the bag had room for"
+	game.add_item("boss_sigil", -as_sig0); game.add_item("boss_sigil", 3)
+	game.add_item("legendary_orb", -as_orb0); game.add_item("legendary_orb", 4)
+	game.accord = false
+	check("altar sleeps before the Accord", not game.ascension_trial()
+		and game.item_count("boss_sigil") == 3
+		and game.item_count("legendary_orb") == 4)
+	game.accord = true
+	check("first ring calls an ascendant", game.ascension_trial())
+	var asc: Kin = null
+	for qp in game.pals:
+		if qp.has_meta("ascendant"):
+			asc = qp
+	check("ascendant is a starred alpha legend on raid footing",
+		asc != null and asc.alpha and asc.raid
+		and asc.species_id in Game.LEGENDARY_DEN and asc.star == 1
+		and int(game.den_ascensions.get(asc.species_id, 0)) == 1
+		and game.item_count("boss_sigil") == 2
+		and game.item_count("legendary_orb") == 2)
+	check("a live ascendant blocks the next ring", not game.ascension_trial()
+		and game.item_count("boss_sigil") == 2)
+	if asc != null:
+		var eff0: int = game.item_count("sprigmelt_effigy")
+		var ap0: int = game.item_count("ancient_part")
+		var rb0: int = game.boss_respawns.size()
+		game.kill_pal(asc, true)
+		check("felled ascendant pays scaled bounty, never re-dens",
+			game.item_count("sprigmelt_effigy") == eff0 + 5
+			and game.item_count("ancient_part") >= ap0 + 3
+			and game.boss_respawns.size() == rb0,
+			"eff=%d parts=%d br=%d" % [game.item_count("sprigmelt_effigy"),
+				game.item_count("ancient_part"), game.boss_respawns.size()])
+	# star cap: a maxed ledger still rings — the heir carries the cap rank
+	for ls9 in Game.LEGENDARY_DEN:
+		game.den_ascensions[ls9] = 4
+	check("capped ledger rings the star ceiling", game.ascension_trial())
+	var asc2: Kin = null
+	for qp2 in game.pals:
+		if qp2.has_meta("ascendant"):
+			asc2 = qp2
+	check("ascendant star clamps at the cap",
+		asc2 != null and asc2.star == Game.ASCEND_MAX_STAR)
+	if asc2 != null:
+		# the payoff IS the catch lane — an ascendant must stay ball-able
+		check("ascendant stays catchable", game.catchable(asc2))
+		game.pals.erase(asc2)
+		if asc2.get_parent(): asc2.get_parent().remove_child(asc2)
+		asc2.free()
+	# fixture-neutral: raze the altar, restore ledger/seal/pos/items
+	game.demolish_at(Vector2(as_al.x + 1.0, as_al.y + 1.0))
+	game.den_ascensions = da_bak
+	game.accord = acc_bak
+	p.pos = as_ppos
+	game.add_item("boss_sigil", as_sig0 - game.item_count("boss_sigil"))
+	game.add_item("legendary_orb", as_orb0 - game.item_count("legendary_orb"))
 	# boss sphere-immune — a synthetic fixture, not ambient worldgen luck;
 	# assert the IMMUNE floater, not merely "box unchanged" (a failed roll
 	# passes that vacuously)
@@ -4528,6 +4611,7 @@ func run() -> void:
 		"weather_shrine": [80, 104], "kin_gacha": [80, 104],
 		"fossil_bed": [80, 104], "spyglass": [80, 104],
 		"lightning_rod": [80, 104], "expedition_post": [112, 120],
+		"ascension_altar": [80, 104],
 	}
 	for skey in struct_dims.keys():
 		var stex: Texture2D = load("res://assets/structures/%s.png" % skey)
@@ -7160,6 +7244,23 @@ func run() -> void:
 	game.load_game()
 	check("a 10-roster seal survives roster growth", game.accord,
 		"accord=%s heirs=%d" % [game.accord, 10])
+	# the altar ledger rides the same save — legend keys only, counts
+	# clamped, foreign ids dropped; and a tally without the seal clears
+	ac_gfd["ascensions"] = {"scalbeak": 3, "hacked_sid": 99, "scalcrest": 200}
+	var ac_gfw2 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	ac_gfw2.store_var(ac_gfd); ac_gfw2.close()
+	game.load_game()
+	check("ascension ledger round-trips coerced",
+		int(game.den_ascensions.get("scalbeak", 0)) == 3
+		and int(game.den_ascensions.get("scalcrest", 0)) == 99
+		and not game.den_ascensions.has("hacked_sid"),
+		"da=%s" % str(game.den_ascensions))
+	ac_gfd["accord"] = false
+	var ac_gfw3 := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	ac_gfw3.store_var(ac_gfd); ac_gfw3.close()
+	game.load_game()
+	check("a ledger without the seal can't ride in",
+		game.den_ascensions.is_empty(), "da=%s" % str(game.den_ascensions))
 	game.crowned = ac_cr
 	game.spires_done.clear()
 	for ac_sk in ac_sd:

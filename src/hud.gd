@@ -981,6 +981,19 @@ func interact() -> void:
 				else:
 					game.pray_weather()
 				return
+			"ascension_altar":
+				if game.net != null and game.net.is_client():
+					if not game.accord:
+						game.log_msg(tr("The altar sleeps until the island signs its Accord"))
+					elif game.item_count("boss_sigil") < 1 \
+							or game.item_count("legendary_orb") < Game.ASCEND_ORBS:
+						game.log_msg(tr("The altar wants a Boss Sigil and %d Legendary Orbs") % Game.ASCEND_ORBS)
+					elif game.net.pay("ascend", {"boss_sigil": 1,
+							"legendary_orb": Game.ASCEND_ORBS}):
+						game.net.rpc("ascension_req")
+				else:
+					game.ascension_trial()
+				return
 			"notice_board":
 				if game.net != null and game.net.is_client():
 					game.net.rpc("board_req") # the shared posting answers host-side
