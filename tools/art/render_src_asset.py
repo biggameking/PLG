@@ -85,10 +85,12 @@ CFG = {
         "mat_map": {"Brown": (0.20, 0.34, 0.52), "LightYellow": (0.55, 0.62, 0.72), "Black": (0.10, 0.12, 0.20), "White": (0.92, 0.92, 0.88)},
         "accessory": "fins",
         "subd_wool": 2, "displace": None,
-        "rot_z": -90.0, "action": "Idle", "frames": (5, 25),
+        # a fish is long and low — height-normalization at 0.80 left it a
+        # sliver of the frame; 1.35 fills it like the other kin (S122 probe)
+        "rot_z": -90.0, "action": "Swimming", "frames": (10, 30),
         "head_bone": "Bone",
         "eye_r": 0.055, "eye_gap": 0.10, "eye_fwd": 0.10, "eye_up": 0.06,
-        "target_h": 0.80,
+        "target_h": 1.35,
     },
     "piplump": {     # Cow.blend — dairy kin
         "mat_map": {"White": (0.90, 0.84, 0.72), "Black": (0.24, 0.22, 0.28), "Pink": (0.95, 0.62, 0.66)},
@@ -108,10 +110,15 @@ CFG = {
         "nose_r": 0.06, "nose_up": 0.01,
         "target_h": 1.35,
     },
-    "dozantler": {   # Horse.blend — antlered draft kin (antlers via accessory later)
+    "dozantler": {   # Horse.blend — antlered draft kin
         "mat_map": {"Material.003": (0.78, 0.66, 0.38), "Material.006": (0.42, 0.32, 0.20)},
+        # the fore-aft horn pair reads as antlers from the profile views a
+        # quadruped poses in — the name's identity mark (S122)
+        "accessory": "horns",
         "subd_wool": 2, "displace": None,
-        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
+        # rot 0 posed it rear-to-camera with the head low (a hump); 45 shows
+        # the side-on silhouette the probe grid found clean (S122)
+        "rot_z": 45.0, "action": "Idle", "frames": (20, 80),
         "head_bone": "Head",
         "eye_r": 0.05, "eye_gap": 0.12, "eye_fwd": -0.14, "eye_up": 0.14,
         "nose_r": 0.05, "nose_up": 0.02,
@@ -137,7 +144,9 @@ CFG = {
         "norm_obj": True,
         "no_eyes": True,  # baked Eyes mesh is armature-driven and follows
         "subd_wool": 2, "displace": None,
-        "rot_z": 0.0, "action": "Dragon_Flying", "frames": (10, 40),
+        # frame 10 folds the wings over the body (a blob at 80px); 20/30
+        # spread the wings and show the belly (S122 probe)
+        "rot_z": 0.0, "action": "Dragon_Flying", "frames": (20, 30),
         "head_bone": "Head",
         "eye_r": 0.05, "eye_gap": 0.10, "eye_fwd": -0.10, "eye_up": 0.10,
         "target_h": 1.5,
@@ -148,27 +157,31 @@ CFG = {
         "no_eyes": True,
         "subd_wool": 2, "displace": None,
         # Bat_Flying range is 0–30; the 'Face' bone is the real head driver
-        "rot_z": 0.0, "action": "Bat_Flying", "frames": (10, 30),
+        # an upright bat is narrow — 1.2 left it a speck; 1.5 fills the frame
+        "rot_z": 0.0, "action": "Bat_Flying", "frames": (0, 15),
         "head_bone": "Face",
         "eye_r": 0.05, "eye_gap": 0.10, "eye_fwd": -0.10, "eye_up": 0.10,
-        "target_h": 1.2,
+        "target_h": 1.5,
     },
     "cragmaw": {     # Cyclops.blend — granite moss giant, ONE bead eye
         "mat_map": {"Texture": (0.38, 0.46, 0.30)},
         "subd_wool": 2, "displace": None,
-        "rot_z": 35.0, "action": "Idle", "frames": (5, 25),
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
         "head_bone": "Head",
         # chibi rig: bone tail sits INSIDE the giant head — positive eye_fwd
-        # pushes the bead out to the face surface at -Y (probed -0.79×k)
-        "eye_r": 0.13, "eye_gap": 0.0, "eye_fwd": 0.72, "eye_up": 0.10,
+        # pushes the bead out to the face surface at -Y (probed -0.79×k);
+        # 0.72/0.13 buried it at 80px — 0.95/0.17 clears the brow (S122)
+        "eye_r": 0.17, "eye_gap": 0.0, "eye_fwd": 0.95, "eye_up": 0.10,
         "target_h": 1.6,
     },
     "hexfiend": {    # Demon.blend — cinder fiend prince
         "mat_map": {"Texture": (0.32, 0.11, 0.19)},
         "subd_wool": 2, "displace": None,
-        "rot_z": 35.0, "action": "Idle", "frames": (5, 25),
+        # rot 35 hid the horned face behind its own brow — dead-on reads
+        # the maw and horns (S122 probe); beads pushed out + bigger
+        "rot_z": 0.0, "action": "Idle", "frames": (5, 25),
         "head_bone": "Head",
-        "eye_r": 0.055, "eye_gap": 0.22, "eye_fwd": 0.62, "eye_up": 0.10,
+        "eye_r": 0.10, "eye_gap": 0.22, "eye_fwd": 0.90, "eye_up": 0.10,
         "target_h": 1.5,
     },
 }
