@@ -12,7 +12,7 @@ all four S108 den wardens — produced unreadable sprites:
 |---|---|---|
 | `dreadwyrm` | wings folded over the body at `Dragon_Flying` f10 — a red lump | frames (20,30) spread wings + show belly |
 | `tidscale` | `target_h` 0.80 normalized a long fish to a sliver; `Idle` action doesn't exist in the blend | `Swimming` (10,30), `target_h` 1.35 |
-| `dozantler` | rear-to-camera grazing pose read as a hump; name's antlers never delivered | `rot_z` 45 side profile, `horns` accessory, frames (20,80) |
+| `dozantler` | rear-to-camera grazing pose read as a hump; name's antlers never delivered | `rot_z` 90 side profile (45 was still rear-biased), `horns` accessory + bone `acc_col`, frames (20,80) |
 | `gloamwing` | upright bat at `target_h` 1.2 rendered a speck | 1.5, frames (0,15) |
 | `cragmaw` | single `eye_fwd` 0.72/r0.13 bead buried behind the chibi brow; rot 35 hid the face | rot 0 front-on, bead 0.95/0.17 clears the brow |
 | `hexfiend` | same class — rot 35 + buried beads left a pink ball | rot 0, beads 0.90/0.10 |

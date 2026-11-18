@@ -114,11 +114,12 @@ CFG = {
         "mat_map": {"Material.003": (0.78, 0.66, 0.38), "Material.006": (0.42, 0.32, 0.20)},
         # the fore-aft horn pair reads as antlers from the profile views a
         # quadruped poses in — the name's identity mark (S122)
-        "accessory": "horns",
+        "accessory": "horns", "acc_col": (0.62, 0.50, 0.34),
         "subd_wool": 2, "displace": None,
-        # rot 0 posed it rear-to-camera with the head low (a hump); 45 shows
-        # the side-on silhouette the probe grid found clean (S122)
-        "rot_z": 45.0, "action": "Idle", "frames": (20, 80),
+        # rot 0 posed it rear-to-camera with the head low (a hump); 45 was
+        # still a rear three-quarter — 90 shows the side profile the probe
+        # grid found clean (S122)
+        "rot_z": 90.0, "action": "Idle", "frames": (20, 80),
         "head_bone": "Head",
         "eye_r": 0.05, "eye_gap": 0.12, "eye_fwd": -0.14, "eye_up": 0.14,
         "nose_r": 0.05, "nose_up": 0.02,
