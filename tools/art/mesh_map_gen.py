@@ -48,6 +48,7 @@ TEMPLATES = {
                                    "Pink": (0.95, 0.62, 0.66)}),
     "deer": (FARM + "Horse.blend", "Head", 1.55,
              lambda c, dark, lite: {"Material.003": c, "Material.006": dark}),
+
     "boar": (FARM + "Pig.blend", "Head", 1.30,
              lambda c, dark, lite: {"Material.003": dark, "Material": c}),
     "ghost": (CUTE + "Ghost.blend", "Head", 1.30,
@@ -60,7 +61,10 @@ TEMPLATES = {
                  lambda c, dark, lite: {"Texture": c}),
     "monkey": (CUTE + "Yeti.blend", "Head", 1.45,
                lambda c, dark, lite: {"Texture": c}),
-    "serpent": (VOL2 + "Piranha.blend", "Bone", 0.80,
+    # a fish is long and low — 0.80 height-normalized it to a sliver
+    # (audit-74 MED-2: tidscale's fix had to land here or 5 siblings stayed
+    # static slivers)
+    "serpent": (VOL2 + "Piranha.blend", "Bone", 1.35,
                 lambda c, dark, lite: {"Brown": c, "LightYellow": lite,
                                        "Black": dark, "White": (0.92, 0.92, 0.88)}),
 }
@@ -89,15 +93,25 @@ def main():
         blend, head_bone, th, mk = TEMPLATES[body]
         c = hex2rgb(d["color"])
         mats = mk(c, shade(c, 0.45), shade(c, 1.25))
-        rot = {"bird": 90.0, "serpent": -90.0,
+        # deer on Horse.blend: rot 0 posed every deer rear-to-camera with
+        # the head low — the same hump dozantler had (audit-74 MED-2)
+        # Piranha faces +Y: rot -90 was head-ON to the camera (the blob the
+        # audit saw); rot 0 is the clean side profile, head left like the
+        # quadrupeds (audit-74 MED-2 probe over 5 rotations)
+        rot = {"bird": 90.0, "serpent": 0.0, "deer": 90.0,
                "human": 35.0, "monkey": 35.0}.get(body, 0.0)
-        action = {"blob": "Slime_Idle"}.get(body, "Idle")
+        action = {"blob": "Slime_Idle", "serpent": "Swimming"}.get(body, "Idle")
+        # Idle(5,25) is the quiet window that fits most rigs; Swimming's
+        # glide and the Horse graze need their own windows (audit-74)
+        frames = {"serpent": (10, 30), "deer": (20, 80)}.get(body, (5, 25))
         mats_s = "{" + ", ".join(
             '"%s": (%.3f, %.3f, %.3f)' % (k, *v) for k, v in mats.items()) + "}"
         nose = ('"nose_r": 0.045, "nose_up": 0.02, ' if body in
                 ("quadruped", "kitty", "cow", "deer", "boar", "mouse") else '')
         no_eyes = ', "no_eyes": True' if body == "blob" else ''
-        acc = rig_auto.ACCESSORY.get(sid)
+        # per-sid legendary marks first; body marks second — every fish on
+        # Piranha.blend needs pectoral fins or it renders as a lump
+        acc = rig_auto.ACCESSORY.get(sid) or {"serpent": "fins"}.get(body)
         acc_s = ', "accessory": "%s"' % acc if acc else ''
         # head-bone tail = muzzle tip on quadrupeds (eyes trail it: fwd<0),
         # but skull top on upright/round rigs (eyes drop below + face -Y:
@@ -105,11 +119,13 @@ def main():
         eye_fwd, eye_up = {
             "human": (0.06, -0.14), "ghost": (0.06, -0.10),
             "monkey": (0.06, -0.12), "hedgehog": (0.06, -0.10),
-            "serpent": (0.10, 0.10), "deer": (-0.14, 0.10),
+            # serpent eyes: at side profile fwd 0.10 floated them past the
+            # snout; 0.05 seats them on the head silhouette (audit-74)
+            "serpent": (0.05, 0.06), "deer": (-0.14, 0.10),
         }.get(body, (-0.12, 0.10))
         entry = (f'    "{sid}": {{"blend": "{blend}", "mat_map": {mats_s}, {nose}\n'
                  f'        "head_bone": "{head_bone}", "rot_z": {rot},\n'
-                 f'        "action": "{action}", "frames": (5, 25),\n'
+                 f'        "action": "{action}", "frames": {frames},\n'
                  f'        "eye_r": 0.05, "eye_gap": 0.11, '
                  f'"eye_fwd": {eye_fwd}, "eye_up": {eye_up}, "target_h": {th},\n'
                  f'        "subd_wool": 2, "displace": None{no_eyes}{acc_s}}},')

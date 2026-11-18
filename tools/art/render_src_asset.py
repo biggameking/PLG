@@ -87,9 +87,10 @@ CFG = {
         "subd_wool": 2, "displace": None,
         # a fish is long and low — height-normalization at 0.80 left it a
         # sliver of the frame; 1.35 fills it like the other kin (S122 probe)
-        "rot_z": -90.0, "action": "Swimming", "frames": (10, 30),
+        # rot -90 faced the camera head-on (audit-74 rot probe) — 0 = profile
+        "rot_z": 0.0, "action": "Swimming", "frames": (10, 30),
         "head_bone": "Bone",
-        "eye_r": 0.055, "eye_gap": 0.10, "eye_fwd": 0.10, "eye_up": 0.06,
+        "eye_r": 0.055, "eye_gap": 0.10, "eye_fwd": 0.05, "eye_up": 0.06,
         "target_h": 1.35,
     },
     "piplump": {     # Cow.blend — dairy kin

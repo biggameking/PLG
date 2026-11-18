@@ -1991,3 +1991,7 @@ epoch 补丁自己留了 stale-head 洞（head 无条件清批），Android env 
 ## S121 — 升星祭坛：后 Accord 可重复终局循环
 
 Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的"仍未解决。新结构 `ascension_altar`（tier-8 科技 cost 5 + parts 3；stone40+lumenite12+ingot8）：消耗 1 霸主符印 + 2 传说球召唤 **ASCENDANT 升星者**——Lv60 alpha 巢穴传说种、star=min(运行数,4)（抓到 4 星=省 84 只同种饲料，全游戏唯一预星传说通道）、raid 立足（阻眠/不重生巢）、最少升星者优先轮转。KO 付 effigy 2+star / 零件 1+star（球耗真沉）；`asc` meta 随 pals_data 存档防匿名双召；`den_ascensions` 账簿存载夹取+无印清空；guest 走 `ascension_req` 幽灵站位+印章双验 + `net.pay` 持留结算。smoke **1045/0/0skip**（12 门新钉：预印拒/召唤形/存活门/星级夹取/捕捉通/账簿往返/锻造清空）。证据 `s121-ascension.png`（祭坛+Dreadwyrm Lv60 star3）。审档 `s121-ascension-altar.md`。
+
+## S122 — kin 渲染源网格重建 + audit-74 修复轮
+
+源网格化后 9 个物种仍带生成模板坏默认：serpent 族（5 只，Piranha.blend）`Idle`+`target_h 0.8` 渲成贴地薄片、deer 族（4 只，Horse.blend）`rot 0` 后躯怼镜头。模板修复并全族重渲——**探针发现真正病灶**：`rot -90` 是正面冲镜头（tidscale 手调同病），`rot 0` 才是侧视鱼；serpent 加 `Swimming`(10,30)/h1.35/鱼鳍 body 级附属/眼位贴头，deer 改 rot 90 侧视+frames(20,80)。实机证据 `s122-ingame-noctfang.png`/`s122-ingame-petalantler.png` + 对比表 `s122-kin-serp.png`/`s122-kin-after2.png`。smoke **1049/0/0skip**。审档 `audit-74-kin-render.md`。
