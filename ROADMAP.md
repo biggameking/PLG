@@ -1998,4 +1998,4 @@ Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的
 
 ## S123 — 1.0.0 导出实证 + 首会话捕获
 
-`package.sh all` 首产 1.0.0 三平台工件（win 39M/web 12M/apk 30M+SHA256）。**web pck 实启动抓到真缺陷**：`.ttf` 经 font importer 后 pck 内只剩 fontdata，`load_dynamic_font` 读原始路径全灭→zh 字形在导出端 tofu；zh.csv 靠 `keep` importer 幸存。修：fallback 链走 `load()` 重映射 + 3 枚 `ResourceLoader.exists` 钉。首会话截图另抓提示卡逐字硬切（"swings — fre"）——改 `_wrap_font` 词界换行+缩进续行+词界省略，3 行容量装下 kinbox 配方。smoke **1055/0/0skip**。证据 `s123-{title,spawn,hint,guide}.png`。审档 `s123-export-verify.md`。
+`package.sh all` 首产 1.0.0 三平台工件（win 39M（内嵌 118MB exe）/web 12M/apk 30M+SHA256）。**web pck 实启动抓到真缺陷**：`.ttf` 经 font importer 后 pck 内只剩 fontdata，`load_dynamic_font` 读原始路径全灭→zh 字形在导出端 tofu；zh.csv 靠 `keep` importer 幸存。修：fallback 链走 `load()` 重映射 + 3 枚 `ResourceLoader.exists` 钉。首会话截图另抓提示卡逐字硬切（"swings — fre"）——改 `_wrap_font` 词界换行+缩进续行+词界省略，4 行容量装下 kinbox 配方。smoke **1055/0/0skip**。证据 `s123-{title,spawn,hint,guide}.png`。审档 `s123-export-verify.md`。

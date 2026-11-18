@@ -14,14 +14,14 @@ hint card had never been reviewed as rendered output.
 ## Fixed
 
 - `hud.gd`: fallback chain built via `load()` (walks the .import remap) instead of `load_dynamic_font`. Comment corrected — sidecars ARE the export path.
-- `_wrap_font(txt, w, size, max_lines)`: greedy word-wrap for the hint column — word boundaries, indented continuations, word-clip + `…` on real overflow. Hints get 3 rows (carries the kinbox recipe); mission row keeps its single-line contract.
+- `_wrap_font(txt, w, size, max_lines)`: greedy word-wrap for the hint column — word boundaries, indented continuations, word-clip + `…` on real overflow. Hints get 4 rows (carries the whole kinbox recipe); mission row keeps its single-line contract. audit-76 follow-up: spaceless CJK tokens pre-split at glyph boundaries (zh hints no longer bleed off the screen edge), and the last-line clip falls back to glyph-clip when no word boundary exists past the indent.
 - `tools/shot_firstmin.gd`: windowed capture of title/spawn/hint/guide — the first-session evidence loop.
 
 ## Verification
 
 - `tools/package.sh all` → `kinbound-1.0.0-{windows,web,debug.apk}` + SHA256SUMS, zero export warnings
 - web `index.pck` booted via `--main-pack --quit-after 600`: **zero errors** (was 2 font errors)
-- Windows artifact: 118MB embedded-pck exe (standard release shape; same export run)
+- Windows artifact: 39MB zip containing the 118MB embedded-pck exe (standard release shape; same export run)
 - smoke **1055/0/0skip** — new pins: 3 font import-remap resolves, wrap column-fit/indent/ellipsis
 - Evidence: `s123-{title,spawn,hint,guide}.png` — wrapped hint card renders continuations indented + ellipsized
 

@@ -58,27 +58,67 @@ func struct_tex(sid: String) -> Texture2D:
 		_struct_tex[sid] = load(path) if ResourceLoader.exists(path) else null
 	return _struct_tex[sid]
 
+# pixel-fit helpers for the HUD column: _fit_px = the longest glyph prefix
+# of `word` still fitting after `prefix`; _clip_px = that prefix itself.
+# Binary search — get_string_size is the only cost.
+func _fit_px(prefix: String, word: String, w: float, size: int) -> int:
+	var lo := 0
+	var hi := word.length()
+	while lo < hi:
+		var mid := (lo + hi + 1) / 2
+		if font.get_string_size(prefix + word.left(mid),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= w:
+			lo = mid
+		else:
+			hi = mid - 1
+	return lo
+
+func _clip_px(s: String, w: float, size: int) -> String:
+	return s.left(_fit_px("", s, w, size))
+
 # greedy word-wrap for the HUD column: lines that fit w px at font size,
 # continuation rows indented so a wrapped hint can't pass for a new one.
-# Last line hard-clips at a word boundary + ellipsis if the text still runs.
+# Tokens that can't fit a row at all (CJK clauses have no spaces to wrap
+# on — audit-76 MED-1) are pre-split at glyph boundaries; the last line
+# clips at a word boundary, or a glyph one, then adds the ellipsis.
 func _wrap_font(txt: String, w: float, size: int, max_lines := 2) -> Array:
 	var fits := func(s: String) -> bool:
 		return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= w
 	if fits.call(txt):
 		return [txt]
-	var words := txt.split(" ")
+	var words := []
+	for w0 in txt.split(" "):
+		var t := w0
+		# every emitted piece must fit WITH the continuation indent — a
+		# bare-fit token would still overflow once the "  " lands on it
+		while not fits.call("  " + t):
+			var n: int = max(1, _fit_px("  ", t, w, size))
+			words.append(t.left(n))
+			t = t.right(t.length() - n)
+		words.append(t)
 	var lines := [""]
-	for word in words:
-		var cand: String = word if lines[-1] == "" else lines[-1] + " " + word
-		if fits.call(cand) or lines[-1] == "":
+	var i := 0
+	while i < words.size():
+		var word: String = words[i]
+		var sep := "" if lines[-1] == "" else " "
+		var cand: String = lines[-1] + sep + word
+		if fits.call(cand):
 			lines[-1] = cand
+			i += 1
 		elif lines.size() < max_lines:
 			lines.append("  " + word) # continuation indent
+			i += 1
 		else:
-			# last line full — clip at the last word that fits + ellipsis
+			# last line full — clip at the last word that fits, or at glyph
+			# boundaries when the row holds a spaceless run (CJK) — a bare
+			# "…" would drop the line's whole content (audit-76)
+			var ell_w := font.get_string_size("…", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 			while not fits.call(lines[-1] + "…"):
 				var cut: int = lines[-1].rfind(" ")
-				if cut < 1:
+				if cut < 2:
+					# no word boundary past the indent — glyph-clip keeps the
+					# row's content; left(cut) would collapse it to a bare "…"
+					lines[-1] = _clip_px(lines[-1], w - ell_w, size)
 					break
 				lines[-1] = lines[-1].left(cut)
 			lines[-1] = lines[-1].strip_edges(false, true) + "…" # right-strip only — keep the continuation indent
@@ -1257,9 +1297,9 @@ func _draw() -> void:
 		for h in game.active_hints():
 			var htxt: String = tr("» ") + tr(str(h.get(hkey, h["text"])) if hkey != "" else str(h["text"]))
 			# word-wrap into the column instead of mid-word clipping — a hint
-			# truncated at "swings — fre" stops teaching; three rows carry
-			# the kinbox recipe's whole material list (S123)
-			for ln in _wrap_font(htxt, 200.0, 11, 3):
+			# truncated at "swings — fre" stops teaching; four rows carry
+			# the kinbox recipe's whole material list (S123, audit-76)
+			for ln in _wrap_font(htxt, 200.0, 11, 4):
 				_memo_hints.append(ln)
 	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0 and _memo_raid_txt != "": # the island raid horn
 		var raid_r := Rect2(r.x / 2 - 80, 8, 160, 22)

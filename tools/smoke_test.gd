@@ -7789,6 +7789,15 @@ func run() -> void:
 	check("hint wrap indents continuations", wrap_lines.size() < 2 or wrap_lines[1].begins_with("  "), "")
 	var wrap_long: Array = hudn._wrap_font("» one two three four five six seven eight nine ten eleven twelve", 200.0, 11, 2)
 	check("hint wrap ellipsizes real overflow", wrap_long[-1].ends_with("…"), str(wrap_long))
+	# audit-76: CJK hint text has NO spaces to wrap on — a spaceless run must
+	# glyph-split and stay inside the column, never bleed off the screen edge
+	var cjk_lines: Array = hudn._wrap_font("» 瞄准——先把野生精灵打残再丢球（血越少越好抓）", 200.0, 11, 3)
+	var cjk_ok := cjk_lines.size() >= 2
+	for cl in cjk_lines:
+		cjk_ok = cjk_ok and hudn.font.get_string_size(cl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x <= 202.0
+	check("hint wrap keeps CJK inside the column", cjk_ok, str(cjk_lines))
+	check("CJK wrap keeps content, not bare ellipsis", not cjk_lines[0].begins_with("…")
+			and cjk_lines[-1].length() > 2, str(cjk_lines))
 	# the export presets must keep dev-only payloads out of the PCK — docs/
 	# holds migration lexicon notes + third-party reference screenshots;
 	# prototype/ is uncompiled TypeScript (audit-45 H1)
