@@ -2002,3 +2002,13 @@ Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的
 ## S124 — 脚本化核心循环试玩：端到端抓到真崩溃
 
 `tools/playthrough.gd` 走真实动词链（`melee()`→`try_harvest`→走拾→`place_structure`→`melee` 削弱→`throw_sphere`→`resolve_sphere`→`deploy_to_base`），零 mock、仅 atk_cd 时间压缩 + 真实召回动词长凳化伙伴。**13/13**：任务 0/1/2（建箱/捕 3/部署）在新岛全清。试玩抓到真缺陷：飞行中球的目标被伙伴补刀/二球/联机抢捕 free 后，`var tg: Kin = sp["target"]` 类型化赋值在 is_instance_valid 之前就每帧报错（整 ~1.35s 摇摆期）；修为非类型化读取+死标立即收割，`resolve_sphere` 同型隐患同批修。smoke 钉「dead-mark orb reaped」。证据 `s124-{build,catch,deploy}.png`（窗口运行，headless 无 framebuffer）。
+
+## S125 — 试玩纵深：任务 3-7 中期链全绿，顺手抓到三个真行为
+
+`tools/playthrough.gd` 推进到任务 3-7：磨级→`unlock`→伐木场→`craft` 走真实工坊队列（9s work）→牧场→兽床→精英讨伐。三窗口三 headless 共 **30/30×3**：build/craft/部署/精英全走真动词。过程中抓到：
+
+- **搬运工种吞材料**：部署的搬运系 kin 把 24 格内掉落搬进 `carry`（无箱则永久滞留）——`_carried()` 诊断把"消失的木头"当场现形（`{ "stone": 3 }`），这是真玩家也会踩的机制，探针如实记录而非绕开。
+- **探针自身节奏缺陷**：240tps 加速后 9s 队列工时需要 ~2160 帧，旧的 1200 帧轮询预算不够——帧预算必须随 tick 率缩放；raid 每 4-7min 一波把 30+min 探针淹没在 raid 战斗中，关 raid 保任务链确定性（raid 有独立覆盖）。
+- **elite 判定的读释放后对象**：`kill_pal` free 节点后 `elite.species_id` 崩——物种名先取存。自然 alpha 打不过时 fixture 低等 alpha 重打（击杀路径全真）。
+
+材料诚实车道：木石 melee-harvest、纤维杀 sprigmelt/briargoo 掉落、流明石砸岩石 12%/块；荒种子下诚实车道耗尽才打标注 fixture 补差（orb/sprigmelt/材料顶账，全部打印可见）。证据 `s125-elite.png`（精英讨伐+Bounty+MISSION done 同框）。smoke **1061/0/1skip**。
