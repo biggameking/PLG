@@ -35,6 +35,14 @@ func _boot() -> void:
 	for i in 60:
 		await process_frame
 	await _shot("hint")
+	# zh locale — the CJK wrap path is the audit-76 fix under evidence
+	game.settings["lang"] = "zh"
+	game.apply_settings()
+	for i in 20:
+		await process_frame
+	await _shot("hint-zh")
+	game.settings["lang"] = "en"
+	game.apply_settings()
 	# open the guide overlay the way N does
 	game.panel = "guide"
 	for i in 10:
