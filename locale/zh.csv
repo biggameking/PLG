@@ -13,6 +13,7 @@ MASTER,MASTER,主音量
 MUSIC,MUSIC,音乐
 SFX,SFX,音效
 FULLSCREEN,FULLSCREEN,全屏
+WINDOW SIZE,WINDOW SIZE,窗口大小
 BASE RAIDS,BASE RAIDS,基地袭击
 LANGUAGE,LANGUAGE,语言
 ON,ON,开
@@ -628,6 +629,7 @@ Riding %s,Riding %s,骑乘 %s
 ROLY POLY!,ROLY POLY!,滚滚撞击！
 safe travels…,safe travels…,一路平安……
 Save file corrupt - starting fresh,Save file corrupt - starting fresh,存档损坏——重新开始
+Main save was unreadable — recovered the backup,Main save was unreadable — recovered the backup,主存档无法读取——已从备份恢复
 Save has wrong field types - starting fresh,Save has wrong field types - starting fresh,存档字段类型不对——重新开始
 Save is from a newer build - not loading,Save is from a newer build - not loading,存档来自更新的版本——无法读取
 Save layout predates the current world format - fresh terrain,Save layout predates the current world format - fresh terrain,存档布局早于当前世界格式——重新生成地形
@@ -967,3 +969,31 @@ You're starving — eat berries or cooked food (dpad-up opens the bag),You're st
 "%s%s%s %s%s Lv%d T%d %s%d/%d","%s%s%s %s%s Lv%d T%d %s%d/%d","%s%s%s %s%s Lv%d T%d %s%d/%d"
 " den  "," den  "," 巢穴 "
 " egg  "," egg  "," 蛋孵 "
+MOVE LEFT,MOVE LEFT,左移
+MOVE RIGHT,MOVE RIGHT,右移
+MOVE UP,MOVE UP,上移
+MOVE DOWN,MOVE DOWN,下移
+SPRINT,SPRINT,疾跑
+DODGE,DODGE,翻滚
+CYCLE ORB,CYCLE ORB,切换捕获球
+INTERACT,INTERACT,互动
+BUILD,BUILD,建造
+DEMOLISH,DEMOLISH,拆除
+PARTY KIN,PARTY KIN,出战伙伴
+RIDE,RIDE,骑乘
+KIN SKILL,KIN SKILL,伙伴技能
+KIN ORDERS,KIN ORDERS,伙伴指令
+HELP,HELP,帮助
+ZOOM IN,ZOOM IN,放大
+ZOOM OUT,ZOOM OUT,缩小
+QUICK SAVE,QUICK SAVE,快速存档
+QUICK LOAD,QUICK LOAD,快速读档
+HOST GAME,HOST GAME,开设主机
+JOIN GAME,JOIN GAME,加入游戏
+CONTROLS,CONTROLS,控制
+RESET KEYS,RESET KEYS,重置按键
+"CONTROLS — click a row to rebind  (Esc cancels)","CONTROLS — click a row to rebind  (Esc cancels)",控制——点击一行后按下按键（Esc 取消）
+"%s is already bound to %s","%s is already bound to %s","%s 已绑定给 %s"
+"%s — now bound to %s","%s — now bound to %s","%s——现在绑定为 %s"
+press a key…,press a key…,按任意键……
+"%s  [>]","%s  [>]","%s  [>]"

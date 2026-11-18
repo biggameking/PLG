@@ -82,6 +82,14 @@ func _restore_save() -> void: # audit-66: RAM-only backup dies with the
 		DirAccess.remove_absolute("user://savegame.plg.savbak")
 	elif FileAccess.file_exists("user://savegame.plg"):
 		DirAccess.remove_absolute("user://savegame.plg")
+	# the game's own .bak rotation is operator state too — same contract
+	if FileAccess.file_exists("user://savegame.plg.bak.savbak"):
+		var db := FileAccess.open("user://savegame.plg.bak", FileAccess.WRITE)
+		db.store_buffer(FileAccess.get_file_as_bytes("user://savegame.plg.bak.savbak"))
+		db.close()
+		DirAccess.remove_absolute("user://savegame.plg.bak.savbak")
+	elif FileAccess.file_exists("user://savegame.plg.bak"):
+		DirAccess.remove_absolute("user://savegame.plg.bak")
 
 func _boot() -> void:
 	_stamp()
@@ -89,6 +97,10 @@ func _boot() -> void:
 		var f0 := FileAccess.open("user://savegame.plg.savbak", FileAccess.WRITE)
 		f0.store_buffer(FileAccess.get_file_as_bytes("user://savegame.plg"))
 		f0.close()
+	if FileAccess.file_exists("user://savegame.plg.bak"): # …nor its backup
+		var fb := FileAccess.open("user://savegame.plg.bak.savbak", FileAccess.WRITE)
+		fb.store_buffer(FileAccess.get_file_as_bytes("user://savegame.plg.bak"))
+		fb.close()
 	change_scene_to_file("res://scenes/main.tscn") # a real current_scene —
 	for i in 12:                                  # reload_current_scene must
 		await process_frame                     # work for to_title's leg
@@ -206,7 +218,8 @@ func _boot() -> void:
 			game.item_count("wood"), game.tod])
 	await _shot("continued")
 
-	# ---- corrupt save: hostile file must fail closed, not crash
+	# ---- corrupt saves: a torn main must recover via .bak (audit-69 H1);
+	# only BOTH files dead may fail closed
 	game.to_title() # NB to_title() saves first — corrupt AFTER it lands
 	for i in 30:
 		await process_frame
@@ -220,11 +233,31 @@ func _boot() -> void:
 		f.store_string("KINBOUND-CORRUPTED-BLOB")
 		f.close()
 	game.day = 55 # canary (audit-66): a post-validation reject that left the
-	_gate("CONTINUE on corrupt save", await _click_row("continue")) # world
-	for i in 25:                                                   # half-rebuilt
-		await process_frame                                         # would still
-	_gate("corrupt save fails closed", game.state == "title"       # pass on
-		and game.day == 55, "state=%s day=%d" % [game.state, game.day]) # state alone
+	_gate("CONTINUE on torn main", await _click_row("continue")) # world
+	for i in 25:                                                # half-rebuilt
+		await process_frame                                     # would still
+	_gate("torn main recovers via .bak", game.state == "play"   # pass on
+		and game.day != 55, "state=%s day=%d" % [game.state, game.day])
+	# now burn BOTH files — nothing left to recover from
+	game.to_title() # a good save + a good .bak land again
+	for i in 30:
+		await process_frame
+	main = current_scene
+	game = main.get_node("Game")
+	hudn = main.get_node("UILayer/HUD")
+	for i in 10:
+		await process_frame
+	for p2 in ["user://savegame.plg", "user://savegame.plg.bak"]:
+		var f2 := FileAccess.open(p2, FileAccess.WRITE)
+		if f2:
+			f2.store_string("KINBOUND-CORRUPTED-BLOB")
+			f2.close()
+	game.day = 55
+	_gate("CONTINUE on both-dead saves", await _click_row("continue"))
+	for i in 25:
+		await process_frame
+	_gate("both-dead saves fail closed", game.state == "title"
+		and game.day == 55, "state=%s day=%d" % [game.state, game.day])
 
 	_restore_save()
 	print("==== SAVE-LOOP: %d failures ====" % fails)

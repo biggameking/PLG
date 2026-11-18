@@ -1947,3 +1947,18 @@ smoke **1009/0/0skip**（+2 解析钉）。审档 `s117-net-walkthrough.md`
 - M3 far-catch 冻结靶怪 + 断言实测 d>9.0（d=10.5/88.8 实锤是 ring 拒非诚实掷空）。
 - L6 locked 格按副本 `structures` 挑证空位；L3 悬空引用 `is_instance_valid`；L1 标记读只收正整数。
 - 修后双种子 **HOST 16/0 + JOIN 16/0**，smoke **1010/0**（1 skip=旧 worldgen fixture）。
+
+## S119 — 发布就绪度收口（audit-69 NEEDS-FIX → H1+M+L 全修）
+
+整品冷审：核心玩法全过（蛋门/捕捉链/终局可达/存档强转/联机权威/有界集合/本地化/美术/输入卫生），缺口是平台适配+一个存档耐久缺陷。
+
+- **H1 存档耐久**：`save_game()` 改原子写（tmp→rotate `.bak`→rename），`load_game()` 主档缺/损回退 `.bak`，`has_save` 认备份——中道断电不再灭档。save_walkthrough 新增两腿实锤：`torn main recovers via .bak` + `both-dead saves fail closed`（17/0）。
+- **M1 分辨率**：`WINDOW SIZE` 行循环 1280×720→2560×1440，apply 写 window.size+居中，cfg 强转，不覆盖 OS 拖拽。
+- **M2 键位重绑**：CONTROLS 面板 28 action——点击行捕获下一键、冲突拒绑（`_key_of` 归一 keycode/physical 双族）、RESET KEYS 恢复 project.godot 默认+重绑 pad。`settings["binds"]` 持久化。
+- **M3 Android 签名**：package.sh 写明 keystore 契约 + `android-release` 拒绝环境默认签名。
+- **L1** 版本元数据 0.9.0→**1.0.0**（code 3）。
+- **L2** KINBOX_OPS 拦截后 sell_pal/butcher/fav 的 client 死臂删除。
+- **L4** pad-only 会话也唤起虚拟键盘（Steam Deck/主机文本输入）。
+- 自抓：设置卡 300px 装不下 7 行→456px；rebind_wait 随面板转换清理（rule 23）；CSV `\,` 非转义（rule 32）。
+
+证据 `s119-settings.png` / `s119-controls.png`。审档 `audit-69-launch-readiness.md`。smoke **1015/0/1skip**（grotto 地形 fixture，旧有）。

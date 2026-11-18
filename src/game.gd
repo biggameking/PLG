@@ -70,7 +70,17 @@ var unlocked := ["kinbox", "kin_bed", "feed_box", "campfire", "workbench", "stra
 var craft_target: Node2D = null
 var state := "title" # title | play | paused — sim and player input gate on this
 var panel := ""
-var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true, "lang": "en", "touch": "auto"}
+var settings := {"master": 1.0, "music": 1.0, "sfx": 1.0, "fullscreen": false, "raids": true, "lang": "en", "touch": "auto", "wsize": "1280x720", "binds": {}}
+const REBIND_ACTIONS := ["move_left", "move_right", "move_up", "move_down",
+	"sprint", "dodge", "aim", "cycle_sphere", "interact", "build", "inv",
+	"tech", "dex", "statues", "map", "demolish", "party_toggle", "ride",
+	"partner_skill", "pal_stance", "guide", "help", "zoom_in", "zoom_out",
+	"save", "load_save", "host_net", "join_net"] # keyboard-rebindable —
+# joypad events on the same action are never touched (audit-69 M2)
+const WSIZES := ["1280x720", "1600x900", "1920x1080", "2560x1440"] # canvas is
+# 1280x720 — the picker only offers integer-friendly windowed sizes (audit-69 M1)
+var _applied_wsize := "" # last size pushed to the window — volume/lang
+# toggles share apply_settings and must not stomp an OS-drag resize
 var craft_station := ""
 var chest_ref = null
 var condense_arm := 0.0
@@ -314,7 +324,8 @@ func _ready() -> void:
 		music_danger.play()
 	load_settings()
 	bind_gamepad()
-	has_save = FileAccess.file_exists("user://savegame.plg") # stat once at boot
+	has_save = FileAccess.file_exists("user://savegame.plg") \
+		or FileAccess.file_exists("user://savegame.plg.bak") # stat once at boot
 	var spawn := world.generate(rng.int_range(1, 99999))
 	drawer.setup(world)
 	# player
@@ -4382,12 +4393,46 @@ func load_settings() -> void:
 				settings[k] = str(v) if str(v) in ["en", "zh"] else "en"
 			elif k == "touch":
 				settings[k] = str(v) if str(v) in ["auto", "on", "off"] else "auto"
+			elif k == "wsize":
+				settings[k] = str(v) if str(v) in WSIZES else "1280x720"
+			elif k == "binds":
+				settings[k] = {}
+				if v is Dictionary:
+					for ak in v:
+						var kc = v[ak]
+						if str(ak) in REBIND_ACTIONS and (kc is int or kc is float) \
+								and int(kc) > 0 and int(kc) < 4194592:
+							settings[k][str(ak)] = int(kc)
 			elif settings[k] is bool:
 				settings[k] = v if v is bool else settings[k]
 			elif settings[k] is float or settings[k] is int:
 				settings[k] = clampf(float(v) if _fin(v) else settings[k], 0.0, 1.0) # NaN is not a volume
 	load_csv_translations()
 	apply_settings()
+	apply_binds()
+
+func apply_binds() -> void:
+	# a bind replaces the action's KEYBOARD events only — joypad events
+	# bound by bind_gamepad stay (rule 19 untouched)
+	var binds: Dictionary = settings.get("binds", {})
+	for act in REBIND_ACTIONS:
+		if not binds.has(act):
+			continue
+		var key := int(binds[act])
+		if key <= 0:
+			continue
+		for e in InputMap.action_get_events(act):
+			if e is InputEventKey:
+				InputMap.action_erase_event(act, e)
+		var ev := InputEventKey.new()
+		ev.physical_keycode = key
+		InputMap.action_add_event(act, ev)
+
+func reset_binds() -> void:
+	settings["binds"] = {}
+	InputMap.load_from_project_settings() # back to project.godot defaults —
+	bind_gamepad()                        # which also drops the pad events,
+	save_settings()                       # so re-bind them right after
 
 func load_csv_translations() -> void:
 	# the csv is the source of truth — the editor's csv_translation importer is
@@ -4423,9 +4468,17 @@ func apply_settings() -> void:
 	var tmode := str(settings.get("touch", "auto"))
 	touch_ui = tmode == "on" or (tmode == "auto" and DisplayServer.is_touchscreen_available())
 	var w := get_window()
-	if w != null and DisplayServer.get_name() != "headless" \
-			and (w.mode == Window.MODE_FULLSCREEN) != settings["fullscreen"]:
-		w.mode = Window.MODE_FULLSCREEN if settings["fullscreen"] else Window.MODE_WINDOWED
+	if w != null and DisplayServer.get_name() != "headless":
+		if (w.mode == Window.MODE_FULLSCREEN) != settings["fullscreen"]:
+			w.mode = Window.MODE_FULLSCREEN if settings["fullscreen"] else Window.MODE_WINDOWED
+		var ws := str(settings.get("wsize", "1280x720"))
+		if w.mode == Window.MODE_WINDOWED and ws != _applied_wsize:
+			var wh := ws.split("x")
+			if wh.size() == 2 and wh[0].is_valid_int() and wh[1].is_valid_int():
+				w.size = Vector2i(maxi(640, int(wh[0])), maxi(360, int(wh[1])))
+				w.position = (DisplayServer.screen_get_size(
+					w.current_screen) - w.size) / 2 # a resize keeps top-left
+				_applied_wsize = ws               # otherwise — re-center it
 
 func quit_game() -> void:
 	save_game()
@@ -4571,12 +4624,22 @@ func save_game() -> void:
 			"meal": player.meal_buff, "meal_t": player.meal_t},
 		"decor": world.decor.duplicate(), "hp_map": world.hp.duplicate(),
 	}
-	var f := FileAccess.open("user://savegame.plg", FileAccess.WRITE)
+	# atomic write: tmp → rotate last-good to .bak → swap in. A crash or
+	# power cut mid-write then costs the tmp file, never the campaign —
+	# load_game falls back to .bak before declaring corruption (audit-69 H1)
+	var f := FileAccess.open("user://savegame.plg.tmp", FileAccess.WRITE)
 	if f == null:
 		log_msg(tr("SAVE FAILED") + tr(" — %s") % error_string(FileAccess.get_open_error()))
 		return
 	f.store_var(d)
 	f.close()
+	if FileAccess.file_exists("user://savegame.plg"):
+		DirAccess.remove_absolute("user://savegame.plg.bak")
+		DirAccess.rename_absolute("user://savegame.plg", "user://savegame.plg.bak")
+	if DirAccess.rename_absolute("user://savegame.plg.tmp",
+			"user://savegame.plg") != OK:
+		log_msg(tr("SAVE FAILED") + tr(" — %s") % "rename")
+		return
 	has_save = true
 	log_msg(tr("Saved."))
 
@@ -4587,13 +4650,25 @@ func load_game() -> bool:
 	if multiplayer.multiplayer_peer != null and multiplayer.get_peers().size() > 0:
 		log_msg(tr("Guests connected — end the session before loading"))
 		return false # reloading under guests desyncs their world for good
-	if not FileAccess.file_exists("user://savegame.plg"):
-		return false
-	var f := FileAccess.open("user://savegame.plg", FileAccess.READ)
+	var path := "user://savegame.plg"
+	if not FileAccess.file_exists(path):
+		if not FileAccess.file_exists("user://savegame.plg.bak"):
+			return false
+		path = "user://savegame.plg.bak" # main save lost entirely — the
+		# atomic-write backup still has the last-good campaign (audit-69 H1)
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return false
 	var dv = f.get_var()
 	f.close()
+	if (dv is not Dictionary or not dv.has("seed")) \
+			and path != "user://savegame.plg.bak" \
+			and FileAccess.file_exists("user://savegame.plg.bak"):
+		var fb := FileAccess.open("user://savegame.plg.bak", FileAccess.READ)
+		if fb != null: # torn main save — the backup still parses
+			dv = fb.get_var()
+			fb.close()
+			log_msg(tr("Main save was unreadable — recovered the backup"))
 	if dv is not Dictionary or not dv.has("seed"):
 		log_msg(tr("Save file corrupt - starting fresh"))
 		return false

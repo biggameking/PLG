@@ -15,6 +15,8 @@ var inv_scroll := 0
 var kin_scroll := 0
 var tech_scroll := 0
 var stat_scroll := 0
+var ctrl_scroll := 0
+var rebind_wait := "" # action name mid-capture — the next key press owns it
 var build_sel := -1
 var build_scroll := 0 # page offset into buildable_list() — 9 slots per page
 var build_sel_sid := "" # the sid the pick pointed at — a list reorder must
@@ -207,9 +209,10 @@ func _process(dt: float) -> void:
 	var texty := game != null and game.panel in ["join", "chat"]
 	if texty != _vkbd_open:
 		_vkbd_open = texty
-		if game.touch_ui:
-			if texty: DisplayServer.virtual_keyboard_show("")
-			else: DisplayServer.virtual_keyboard_hide()
+		if game.touch_ui or game.using_pad: # pad-only sessions have no keys —
+			if texty: DisplayServer.virtual_keyboard_show("") # Steam Deck /
+			else: DisplayServer.virtual_keyboard_hide()     # consoles surface
+			# the OS keyboard on this call; desktops no-op it anyway (audit-69 L4)
 
 var _menu_key := "" # last drawn "state|panel" — rects belong to exactly one menu
 var _vkbd_open := false
@@ -241,7 +244,40 @@ func _unhandled_input(event: InputEvent) -> void:
 		_menu_key = mk
 		click_rects.clear()
 		menu_sel = 0
+		rebind_wait = "" # a pending capture dies with its panel (rule 23)
 		_release_stick()
+	# rebind capture owns the next key press — above every panel/typing lane
+	# so the captured key can't also toggle something underneath (audit-69 M2)
+	if rebind_wait != "" and event is InputEventKey and event.pressed and not event.echo:
+		_eat_input()
+		var pk := int(event.physical_keycode)
+		if event.keycode == KEY_ESCAPE or pk <= 0:
+			rebind_wait = ""
+			return
+		var clash := ""
+		for a in Game.REBIND_ACTIONS:
+			if a == rebind_wait:
+				continue
+			for e in InputMap.action_get_events(a):
+				# default binds ride `keycode`, captured ones `physical_keycode`
+				# — a clash check that only reads one field misses half the map
+				if e is InputEventKey and _key_of(e) == pk:
+					clash = a
+					break
+			if clash != "":
+				break
+		if clash != "":
+			game.log_msg(tr("%s is already bound to %s") % [
+				OS.get_keycode_string(pk), tr(BIND_TEXT.get(clash, clash))])
+			return
+		var bd: Dictionary = game.settings.get("binds", {}).duplicate()
+		bd[rebind_wait] = pk
+		game.settings["binds"] = bd
+		game.apply_binds(); game.save_settings()
+		game.log_msg(tr("%s — now bound to %s") % [
+			tr(BIND_TEXT.get(rebind_wait, rebind_wait)), OS.get_keycode_string(pk)])
+		rebind_wait = ""
+		return
 	if game.touch_ui and (game.state == "play" or game.panel != ""):
 		if event is InputEventScreenTouch:
 			if event.pressed:
@@ -499,6 +535,7 @@ func _panel_scroll(dir: int) -> void: # wheel/tap scroller — draw clamps to re
 		"tech": tech_scroll = maxi(0, tech_scroll + dir)
 		"statues": stat_scroll = maxi(0, stat_scroll + dir)
 		"guide": guide_scroll = maxi(0, guide_scroll + dir)
+		"controls": ctrl_scroll = maxi(0, ctrl_scroll + dir)
 
 func _scroll_btns(rr: Rect2, up_act: String, dn_act: String, bx := -1.0, stacked := false) -> void:
 	# tap scrollers — lists taller than the panel need a slab-reachable tail
@@ -600,20 +637,11 @@ func run_click(cr: Dictionary) -> void:
 		"sell":
 			game.sell_to_merchant(cr["arg"]) # your bag + your gold — local is honest
 		"sell_pal":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "sell_pal", int(cr["arg"]))
-			else:
-				game.sell_pal_to_merchant(cr["arg"])
-		"butcher":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "butcher_pal", int(cr["arg"]))
-			else:
-				game.butcher_pal(cr["arg"])
+			game.sell_pal_to_merchant(cr["arg"]) # clients already took the
+		"butcher":                            # KINBOX_OPS lane above — these
+			game.butcher_pal(cr["arg"])        # three arms are local-only
 		"fav":
-			if game.net != null and game.net.is_client():
-				game.net.rpc("box_req", "toggle_fav", int(cr["arg"]))
-			else:
-				game.toggle_fav(cr["arg"])
+			game.toggle_fav(cr["arg"])
 		"skills":
 			game.skill_target = cr["arg"]
 			game.panel = "skills"
@@ -656,6 +684,10 @@ func run_click(cr: Dictionary) -> void:
 		"tech_dn": _panel_scroll(1)
 		"stat_up": _panel_scroll(-1)
 		"stat_dn": _panel_scroll(1)
+		"ctrl_up": _panel_scroll(-1)
+		"ctrl_dn": _panel_scroll(1)
+		"rebind":
+			rebind_wait = str(cr["arg"])
 		"build_pick": # tap toggles — there's no right-click on glass
 			build_sel = -1 if build_sel == int(cr["arg"]) else int(cr["arg"])
 			var bll := game.buildable_list()
@@ -701,9 +733,27 @@ func run_click(cr: Dictionary) -> void:
 const SHELL_ACTS := ["new_game", "continue", "m_settings", "m_join", "m_host", "m_chat",
 	"m_tech", "m_dex", "m_statues", "m_guide", "m_inv", "set_back", "resume",
 	"m_save", "to_title", "quit", "vol_master_m", "vol_master_p", "vol_music_m",
-	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl"]
+	"vol_music_p", "vol_sfx_m", "vol_sfx_p", "fullscreen", "raids_tgl", "lang_tgl", "touch_tgl", "wsize_tgl",
+	"controls_open", "controls_back", "binds_reset"]
 
 var new_game_armed := false # first tap arms — the second confirms the overwrite
+
+func _key_of(e: InputEventKey) -> int: # physical wins; keycode-only
+	return int(e.physical_keycode) if e.physical_keycode != 0 else int(e.keycode)
+	# defaults (project.godot) need the fallback — they never set physical
+
+const BIND_TEXT := { # action → tr key for the controls panel rows
+	"move_left": "MOVE LEFT", "move_right": "MOVE RIGHT",
+	"move_up": "MOVE UP", "move_down": "MOVE DOWN",
+	"sprint": "SPRINT", "dodge": "DODGE", "aim": "AIM",
+	"cycle_sphere": "CYCLE ORB", "interact": "INTERACT", "build": "BUILD",
+	"inv": "INVENTORY", "tech": "TECH TREE", "dex": "KINDEX",
+	"statues": "STATUES", "map": "MAP", "demolish": "DEMOLISH",
+	"party_toggle": "PARTY KIN", "ride": "RIDE",
+	"partner_skill": "KIN SKILL", "pal_stance": "KIN ORDERS",
+	"guide": "GUIDE", "help": "HELP", "zoom_in": "ZOOM IN",
+	"zoom_out": "ZOOM OUT", "save": "QUICK SAVE", "load_save": "QUICK LOAD",
+	"host_net": "HOST GAME", "join_net": "JOIN GAME"}
 
 func shell_act(act: String) -> void:
 	if act != "new_game":
@@ -768,6 +818,17 @@ func shell_act(act: String) -> void:
 			var order := ["auto", "on", "off"]
 			game.settings["touch"] = order[(order.find(game.settings.get("touch", "auto")) + 1) % 3]
 			game.apply_settings(); game.save_settings()
+		"wsize_tgl":
+			var wlist: Array = Game.WSIZES
+			var wi := wlist.find(game.settings.get("wsize", "1280x720"))
+			game.settings["wsize"] = wlist[(maxi(wi, 0) + 1) % wlist.size()]
+			game.apply_settings(); game.save_settings()
+		"controls_open":
+			game.panel = "controls"; ctrl_scroll = 0
+		"controls_back":
+			game.panel = "settings"; rebind_wait = ""
+		"binds_reset":
+			game.reset_binds(); rebind_wait = ""
 
 func chest_bulk(act: String) -> void:
 	var st = game.chest_ref
@@ -1293,6 +1354,8 @@ func _draw() -> void:
 			draw_guide(r)
 		"settings":
 			draw_settings(r)
+		"controls":
+			draw_controls(r)
 	if show_help:
 		var lines := [
 			tr("MOVE wasd/arrows  SPRINT shift  DODGE space"),
@@ -1753,7 +1816,8 @@ func pause_rows() -> Array:
 	return rows
 
 func draw_settings(r: Vector2) -> void:
-	var rr := Rect2(r.x / 2 - 190, r.y * 0.25, 380, 300)
+	var rr := Rect2(r.x / 2 - 190, (r.y - 456.0) / 2, 380, 456) # 7 rows deep now —
+	# wsize + controls joined the toggles; 300px clipped the tail (audit-69 M1)
 	Ink.card(self, rr)
 	draw_string(font, Vector2(rr.position + Vector2(16, 26)), tr("SETTINGS"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Ink.GOLD)
 	var y := rr.position.y + 54
@@ -1777,6 +1841,11 @@ func draw_settings(r: Vector2) -> void:
 	draw_string(font, Vector2(fs.position.x, fs.position.y + 18), tr("%s  [%s]") % [tr("FULLSCREEN"), tr("ON") if game.settings["fullscreen"] else tr("off")],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.settings["fullscreen"] else Ink.INK)
 	y += 32
+	var wz := Rect2(rr.position.x + 24, y, 200, 26)
+	click_rects.append({"rect": wz, "act": "wsize_tgl", "arg": null})
+	draw_string(font, Vector2(wz.position.x, wz.position.y + 18), tr("%s  [%s]") % [tr("WINDOW SIZE"), str(game.settings.get("wsize", "1280x720"))],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK_SOFT if game.settings["fullscreen"] else Ink.INK)
+	y += 32
 	var rd := Rect2(rr.position.x + 24, y, 200, 26)
 	click_rects.append({"rect": rd, "act": "raids_tgl", "arg": null})
 	draw_string(font, Vector2(rd.position.x, rd.position.y + 18), tr("%s  [%s]") % [tr("BASE RAIDS"), tr("ON") if game.settings["raids"] else tr("off")],
@@ -1791,10 +1860,50 @@ func draw_settings(r: Vector2) -> void:
 	click_rects.append({"rect": tg, "act": "touch_tgl", "arg": null})
 	draw_string(font, Vector2(tg.position.x, tg.position.y + 18), tr("%s  [%s]") % [tr("TOUCH CONTROLS"), tr(str(game.settings.get("touch", "auto")).to_upper())],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.GREEN if game.touch_ui else Ink.INK_SOFT)
+	y += 32
+	var ct := Rect2(rr.position.x + 24, y, 200, 26)
+	click_rects.append({"rect": ct, "act": "controls_open", "arg": null})
+	draw_string(font, Vector2(ct.position.x, ct.position.y + 18), tr("%s  [>]") % tr("CONTROLS"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
 	y += 44
 	var bk := Rect2(rr.position.x + 24, y, 120, 28)
 	click_rects.append({"rect": bk, "act": "set_back", "arg": null})
 	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19), tr("[ %s ]") % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
+
+func draw_controls(r: Vector2) -> void:
+	var rr := Rect2((r.x - 500.0) / 2, 46, 500, r.y - 92)
+	Ink.card(self, rr)
+	draw_string(font, rr.position + Vector2(24, 34),
+		tr("CONTROLS — click a row to rebind  (Esc cancels)"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Ink.INK)
+	var acts: Array = Game.REBIND_ACTIONS
+	var rows_h := int((rr.size.y - 140) / 26)
+	ctrl_scroll = clampi(ctrl_scroll, 0, maxi(0, acts.size() - rows_h))
+	var y := rr.position.y + 50
+	for i in range(ctrl_scroll, mini(ctrl_scroll + rows_h, acts.size())):
+		var a: String = acts[i]
+		var row := Rect2(rr.position.x + 24, y, rr.size.x - 64, 24)
+		click_rects.append({"rect": row, "act": "rebind", "arg": a})
+		if rebind_wait == a:
+			draw_rect(row, Color(1.0, 0.85, 0.4, 0.3))
+		var keys := ""
+		for e in InputMap.action_get_events(a):
+			if e is InputEventKey:
+				keys += OS.get_keycode_string(_key_of(e)) + " "
+		draw_string(font, row.position + Vector2(6, 17), tr(BIND_TEXT.get(a, a)),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK)
+		draw_string(font, row.position + Vector2(250, 17),
+			tr("press a key…") if rebind_wait == a else keys.strip_edges(),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
+		y += 26
+	_scroll_btns(rr, "ctrl_up", "ctrl_dn")
+	var rs := Rect2(rr.position.x + 24, rr.end.y - 62, 200, 26)
+	click_rects.append({"rect": rs, "act": "binds_reset", "arg": null})
+	draw_string(font, Vector2(rs.position.x, rs.position.y + 18),
+		tr("[ %s ]") % tr("RESET KEYS"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.INK_SOFT)
+	var bk := Rect2(rr.position.x + 24, rr.end.y - 32, 120, 26)
+	click_rects.append({"rect": bk, "act": "controls_back", "arg": null})
+	draw_string(font, Vector2(bk.position.x + 8, bk.position.y + 19),
+		tr("[ %s ]") % tr("BACK"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Ink.TEAL)
 
 func draw_build_bar(r: Vector2) -> void:
 	var lst := game.buildable_list()

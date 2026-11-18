@@ -5243,11 +5243,36 @@ func run() -> void:
 	game.load_settings()
 	check("settings round-trip", absf(game.settings["sfx"] - 0.4) < 0.001, "sfx=%s" % game.settings["sfx"])
 	game.settings["sfx"] = 1.0
+	# audit-69 M1/M2: wsize coerces, binds persist + apply + reset — all
+	# inside the cfg backup window so the real settings.cfg is untouched
+	game.settings["wsize"] = "9999x1"
+	game.settings["binds"] = {"dodge": 74, "fake_action": 65} # J + garbage
+	game.save_settings()
+	game.settings["wsize"] = "1280x720"; game.settings["binds"] = {}
+	game.load_settings()
+	check("wsize coerces to list", str(game.settings["wsize"]) in Game.WSIZES
+		and str(game.settings["wsize"]) != "9999x1",
+		"wsize=%s" % game.settings["wsize"])
+	check("binds persist+coerce", int(game.settings["binds"].get("dodge", 0)) == 74
+		and not game.settings["binds"].has("fake_action"),
+		"binds=%s" % str(game.settings["binds"]))
+	var dge := false
+	for e in InputMap.action_get_events("dodge"):
+		if e is InputEventKey and int(e.physical_keycode) == 74:
+			dge = true
+	check("bind applied to InputMap", dge)
+	game.reset_binds()
+	var ddef := false
+	for e in InputMap.action_get_events("dodge"):
+		if e is InputEventKey and int(e.keycode) == 32:
+			ddef = true
+	check("reset restores default dodge", ddef)
 	if cfg_backup.is_empty():
 		DirAccess.remove_absolute("user://settings.cfg")
 	else:
 		var cf2 := FileAccess.open("user://settings.cfg", FileAccess.WRITE)
 		cf2.store_buffer(cfg_backup); cf2.close()
+	game.load_settings() # the restored cfg is also the live one again
 	check("audio buses routed", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("SFX") >= 0)
 
 	# ---- S3: egg genetics stay mortal; peaceful mode holds the horn ----
