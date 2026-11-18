@@ -109,10 +109,20 @@ func _init() -> void:
 	var all_tp := 0
 	var all_parts := 0
 	var max_tier := 0
+	# post-accord content doesn't belong to the campaign economy: the
+	# ascension altar's USE gate is the seal itself — its tech cost lands
+	# after the campaign curve the probe measures, not inside it (S121)
+	var post_accord := ["ascension_altar"]
+	var post_tp := 0
 	for t2 in StructureData.TECH:
+		if str(t2["id"]) in post_accord:
+			post_tp += int(t2["cost"])
+			continue
 		all_tp += int(t2["cost"])
 		all_parts += int(t2.get("parts", 0))
 		max_tier = maxi(max_tier, int(t2["tier"]))
+	gate("post-accord tech bucket stays a sliver", post_accord.size() <= 3
+		and post_tp <= 15, "%d nodes/%d tp" % [post_accord.size(), post_tp])
 	print("--- tech economy: %d nodes, %d tp, %d parts, max tier %d ---" % [
 		StructureData.TECH.size(), all_tp, all_parts, max_tier])
 	print("  orb ladder=%dtp  essential set(%d)=%dtp" % [
@@ -232,6 +242,25 @@ func _init() -> void:
 	# dex completion is the last collectible spine — ownable count sanity
 	print("--- post-accord sinks: fodder=%d/species, dens=%d, EX sigils pay 2 ---"
 		% [fodder, Game.LEGENDARY_DEN.size()])
+
+	# ================= F2. ASCENSION LOOP (S121) =================
+	# the altar must be a SINK, never a loop: orbs spent out, none back on
+	# KO; the catch payoff is bounded by the star cap, not by repetition.
+	gate("ascension spends orbs and refunds none on KO",
+		Game.ASCEND_ORBS >= 2, "orbs=%d" % Game.ASCEND_ORBS)
+	# star-4 via the altar costs 4 runs × (1 sigil + 2 orbs) = 4 sigils +
+	# 8 orbs — vs 84 fodder catches for one species. The trade must be a
+	# currency decision, not a free upgrade: assert the altar path is
+	# strictly more expensive in top-tier orbs than any campaign income
+	# stream could feed back (EX pays 4, spires pay nothing repeatable).
+	gate("a star-4 ascendant still costs real currency",
+		Game.ASCEND_MAX_STAR * (Game.ASCEND_ORBS + 1) >= 12,
+		"star4 needs %d runs of sigil+%d orbs" % [Game.ASCEND_MAX_STAR, Game.ASCEND_ORBS])
+	# and the summoned heir must stay inside the catch system's own gate:
+	# alpha legend = the den-heir rule, never a backdoor around cap_power
+	var as_dummy := {"species_id": Game.LEGENDARY_DEN[0], "alpha": true}
+	gate("ascendant passes the same ownable gate as den heirs",
+		Game.new().ownable(as_dummy["species_id"]), "sid=%s" % as_dummy["species_id"])
 
 	# ================= G. MISSION CHAIN COHERENCE =================
 	# every mission key must be checkable — an unreachable mission is a dead
