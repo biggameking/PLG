@@ -95,6 +95,7 @@ const MAX_DROPS := 400        # ground loot; oldest decays first anyway
 const MAX_PROJECTILES := 200  # raid volleys can spike these hard
 const MAX_FLOATERS := 80      # cosmetic text — cheap insurance
 const MAX_PALS := 220         # wild + owned + raid; AI tick cost scales with this
+const MAX_SPHERES := 16       # click-spam cap: the oldest ball misses
 const DEMOLISH_REACH := 4.5   # razing needs a hand on the structure — all input paths share this
 const MAX_BOX := 400          # stored pals are out-of-tree nodes — real bytes
 const MAX_EGG_QUEUE := 32     # ranch parentage queue (eggs can also be sold/eaten)
@@ -1680,7 +1681,7 @@ func sphere_fly(sid: String, target: Kin) -> void:
 	var p0 := Iso.to_screen(player.pos.x, player.pos.y, world.elev_at(int(player.pos.x), int(player.pos.y)))
 	spr.position = Vector2(p0.x, p0.y - 14)
 	entity_layer.add_child(spr)
-	if spheres_flying.size() >= 16: # click-spam cap: the oldest ball misses
+	if spheres_flying.size() >= MAX_SPHERES:
 		var old = spheres_flying.pop_front()
 		if is_instance_valid(old["node"]):
 			old["node"].queue_free()
@@ -1927,26 +1928,27 @@ func tick_spheres(dt: float) -> void:
 				sp["node"].queue_free()
 			spheres_flying.erase(sp)
 			continue # dead mark — the orb drops spent, no roll
-		if is_instance_valid(tg):
-			var f: float = minf(1.0, sp["t"] / 0.45)
-			var tp: Vector2 = tg.pos
-			var fp: Vector2 = sp["from"]
-			var cur: Vector2 = fp + (tp - fp) * f
-			var arc: float = sin(f * PI) * 24.0 # lobbed arc — cosmetic; the orb
-			# itself is a projectile: it dies on the same walls a bolt does.
-			# Lobbing over a sealed ring to poke (or bag) what the ring locks
-			# in was free cheese (audit-43)
-			var ci43 := Vector2i(int(cur.x), int(cur.y))
-			if not world.in_bounds(ci43.x, ci43.y) \
-					or world.decor_at(ci43.x, ci43.y) != World.Decor.NONE \
-					or world.solid_structure(world.idx(ci43.x, ci43.y)) \
-					or world.elev_at(ci43.x, ci43.y) > world.elev_at(int(fp.x), int(fp.y)):
-				if is_instance_valid(sp["node"]):
-					sp["node"].queue_free()
-				spheres_flying.erase(sp)
-				floater(cur, tr("clink!"), "#cfd6dd")
-				continue # the wall caught it — no roll, no refund (it left your hand)
-			var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
+		var f: float = minf(1.0, sp["t"] / 0.45) # tg is live past this line —
+		# the dead-mark reap above already continue'd; nothing between can free it
+		var tp: Vector2 = tg.pos
+		var fp: Vector2 = sp["from"]
+		var cur: Vector2 = fp + (tp - fp) * f
+		var arc: float = sin(f * PI) * 24.0 # lobbed arc — cosmetic; the orb
+		# itself is a projectile: it dies on the same walls a bolt does.
+		# Lobbing over a sealed ring to poke (or bag) what the ring locks
+		# in was free cheese (audit-43)
+		var ci43 := Vector2i(int(cur.x), int(cur.y))
+		if not world.in_bounds(ci43.x, ci43.y) \
+				or world.decor_at(ci43.x, ci43.y) != World.Decor.NONE \
+				or world.solid_structure(world.idx(ci43.x, ci43.y)) \
+				or world.elev_at(ci43.x, ci43.y) > world.elev_at(int(fp.x), int(fp.y)):
+			if is_instance_valid(sp["node"]):
+				sp["node"].queue_free()
+			spheres_flying.erase(sp)
+			floater(cur, tr("clink!"), "#cfd6dd")
+			continue # the wall caught it — no roll, no refund (it left your hand)
+		var pp := Iso.to_screen(cur.x, cur.y, world.elev_at(int(cur.x), int(cur.y)))
+		if is_instance_valid(sp["node"]):
 			sp["node"].position = Vector2(pp.x, pp.y - 14 - arc)
 		if sp["t"] > 0.45:
 			# the island wobble theatre: the ball lands and rocks a beat before
@@ -1954,7 +1956,7 @@ func tick_spheres(dt: float) -> void:
 			if not sp.has("wt"):
 				sp["wt"] = 0.0
 			sp["wt"] += dt
-			if is_instance_valid(tg) and is_instance_valid(sp["node"]):
+			if is_instance_valid(sp["node"]):
 				var rock: float = sin(sp["wt"] * 18.0) * (6.0 if sp["wt"] < 0.9 else 3.0)
 				var wpp := Iso.to_screen(tg.pos.x, tg.pos.y,
 					world.elev_at(int(tg.pos.x), int(tg.pos.y)))

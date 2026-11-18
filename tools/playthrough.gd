@@ -239,6 +239,10 @@ func _shot(path: String) -> void:
 		return
 	await process_frame
 	await process_frame
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 	var img := root.get_texture().get_image()
-	img.save_png(path)
+	if img == null or img.save_png(path) != OK:
+		print("shot %s FAILED — framebuffer read or save_png errored" % path)
+		fail_n += 1
+		return
 	print("shot %s (%d, %d)" % [path, img.get_width(), img.get_height()])
