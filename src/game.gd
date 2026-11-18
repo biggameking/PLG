@@ -1919,7 +1919,14 @@ func tick_spheres(dt: float) -> void:
 	# contract the frame loop pays (audit-43)
 	for sp in spheres_flying.duplicate():
 		sp["t"] += dt
-		var tg: Kin = sp["target"]
+		var tg = sp["target"] # untyped on purpose: a freed kin assigned to a
+		# typed var errors before is_instance_valid can see it — the mark your
+		# partner (or a second orb) finished mid-flight sat here forever
+		if not is_instance_valid(tg):
+			if is_instance_valid(sp["node"]):
+				sp["node"].queue_free()
+			spheres_flying.erase(sp)
+			continue # dead mark — the orb drops spent, no roll
 		if is_instance_valid(tg):
 			var f: float = minf(1.0, sp["t"] / 0.45)
 			var tp: Vector2 = tg.pos
@@ -2121,7 +2128,7 @@ func cap_power_of(target: Kin) -> float:
 	return Combat.cap_power(float(target.spec["capturePower"]), target.level, target.lucky)
 
 func resolve_sphere(sp) -> void:
-	var target: Kin = sp["target"]
+	var target = sp["target"] # untyped: a freed kin can't sit in a typed var
 	if not is_instance_valid(target) or target.hp <= 0 or target.mode != "wild":
 		return # dead, freed, or already caught by another orb in flight
 	if target.net_id > 0 and net != null and net.is_client():
@@ -2137,7 +2144,7 @@ func resolve_sphere(sp) -> void:
 		floater(target.pos, tr("IMMUNE"), "#e8452f")
 		return
 	var behind: bool = sign(player.pos.x - target.pos.x) == -target.dir # behind = player opposite the facing side
-	var hp_frac := maxf(0, target.hp) / target.max_hp
+	var hp_frac: float = maxf(0.0, float(target.hp)) / maxf(1.0, float(target.max_hp))
 	var cap_pow: float = cap_power_of(target)
 	var chance: float = minf(0.97, Combat.catch_chance(hp_frac, cap_pow,
 		ItemData.ITEMS[sp["sid"]].get("spherePower", 26), target.any_status(), behind, player.capture_level))
@@ -2159,7 +2166,7 @@ func resolve_sphere(sp) -> void:
 		catch_counts[target.species_id] = catch_counts.get(target.species_id, 0) + 1
 		board_hunt_credit(target.species_id) # a boxed pal still thins the herd
 		if catch_counts[target.species_id] % 10 == 0:
-			var bonus := target.level * 8
+			var bonus: int = int(target.level) * 8
 			gain_xp(bonus)
 			floater(target.pos, tr("CATCH x%d! +%dxp") % [catch_counts[target.species_id], bonus], "#ffd76e")
 			log_msg(tr("%dth %s caught - bonus XP!") % [catch_counts[target.species_id], tr(str(target.spec["name"]))])

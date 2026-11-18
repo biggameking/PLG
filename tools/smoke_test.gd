@@ -234,6 +234,23 @@ func run() -> void:
 		if is_instance_valid(spx["node"]):
 			spx["node"].queue_free()
 	game.spheres_flying.clear()
+	# audit-77/S124: a mark finished mid-flight (partner kill, second orb,
+	# MP rival catch) freed the kin — the typed `var tg: Kin` read errored
+	# every frame for the whole wobble instead of reaping the entry
+	var dpm: Kin = game.gen_pal("fenjelly", 2, lthrow + Vector2(3, 0))
+	dpm.mode = "wild"; dpm.aggro = -1
+	game.pals.append(dpm)
+	game.spheres_flying.append({"sid": "kin_orb", "target": dpm, "t": 0.1,
+		"node": Sprite2D.new(), "from": p.pos})
+	game.pals.erase(dpm)
+	if dpm.get_parent():
+		dpm.get_parent().remove_child(dpm)
+	dpm.free() # partner finished it before the orb landed — gone NOW
+	game._process(0.016)
+	check("dead-mark orb reaped", game.spheres_flying.is_empty(),
+		"still flying=%d" % game.spheres_flying.size())
+	game.pals.erase(dpm)
+	game.spheres_flying.clear()
 	game.pals.erase(lp)
 	# a lucky catch shelves the kin — pull its roster entries before freeing
 	game.bench.erase(lp); game.box.erase(lp); game.party.erase(lp.uid)
