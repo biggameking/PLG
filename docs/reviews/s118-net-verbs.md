@@ -67,3 +67,33 @@ Harness lessons (all hardened, not papered):
 - `s118-verb-gone.png` — post-disconnect: ghost gone, orphan roster kept
 
 smoke: **1008 checks, 0 failures, 0 skipped** (parse pins cover both harnesses)
+
+## audit-68 repair pass (cold review verdict: production CORRECT, harness NEEDS-FIX)
+
+- **M1 real-token deletion** — the joiner `DirAccess.remove_absolute`'d
+  `user://plg_net.cfg` and left the operator's install tag gone (a
+  regenerated tag would orphan real roster claims on next join). Now the
+  file is read+backed up before removal and rewritten in `_finish` —
+  even on mid-run abort the backup is the first field restored.
+- **M2 tautological gates** — `_gate("far catch+hit wires sent", true)` and
+  `_gate("locked build wire sent", is_client())` certified nothing. Both
+  relabelled to setup-gate names ("…picked + wire fired") that carry real
+  predicates (a far replica actually found, an empty locked cell actually
+  picked); the refusal verdict stays host-side where it always was.
+- **M3 far-catch could false-pass** — the far target wandered freely; if
+  it drifted inside the 9.0 ring the host would roll honestly and a failed
+  roll still read as "refused". The host now freezes the marked target
+  (`PROCESS_MODE_DISABLED`) at marker-read and asserts measured
+  ghost-distance > 9.0 in the same gate — runs show `d=10.5` / `d=88.8`.
+- **L6 locked cell picked blind** — `(6,0)` from player pos could collide
+  with an existing structure and fail the host gate for the wrong reason.
+  Joiner now scans 5 candidate offsets against `game.structures` (replica
+  world) and picks a provably-empty cell; marker carries the real cell.
+- **L3 dangling ref across awaits** — `tk == tank` compared a possibly-
+  freed Kin; now `is_instance_valid(tank)` guards the identity check.
+- **L1 partial marker read** — `int(fr.get_line())` accepted ""→0 as a
+  seed; now `is_valid_int() and int(ln) > 0` retries on mid-write reads.
+
+Verification after repairs: seeds 77350 + one rerun — **HOST 16/0,
+JOIN 16/0 both runs**; smoke **1010 checks, 0 failures** (grotto room 2
+skipped on terrain fit, a pre-existing worldgen-dependent fixture).

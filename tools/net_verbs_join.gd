@@ -11,6 +11,8 @@ var fails := 0
 var game: Node
 var main: Node
 var results := []
+var _tag_backup := ""
+var _tag_existed := false
 
 func _initialize() -> void:
 	call_deferred("_boot")
@@ -91,6 +93,13 @@ func _boot() -> void:
 		await process_frame
 	# stay in "title": join() save_game()s any non-title state — see
 	# net_walk_join; _arrive_guest flips to play on world_sync
+	# a fresh install tag keeps the roster claims unique — but the REAL
+	# token file belongs to the operator: back it up, restore at _finish
+	var bf := FileAccess.open("user://plg_net.cfg", FileAccess.READ)
+	if bf:
+		_tag_backup = bf.get_as_text()
+		bf.close()
+		_tag_existed = true
 	DirAccess.remove_absolute("user://plg_net.cfg")
 	DirAccess.remove_absolute("res://tools/net_verb_join_out.txt")
 
@@ -99,9 +108,12 @@ func _boot() -> void:
 	while Time.get_ticks_msec() - t0 < 30000 and host_seed < 0:
 		var fr := FileAccess.open("res://tools/net_host_state.txt", FileAccess.READ)
 		if fr:
-			host_seed = int(fr.get_line())
+			# mid-write reads hand back "" — accept only a real seed
+			var ln := fr.get_line()
 			fr.close()
-			break
+			if ln.is_valid_int() and int(ln) > 0:
+				host_seed = int(ln)
+				break
 		await process_frame
 	_gate("host marker found", host_seed >= 0)
 	if host_seed < 0:
@@ -321,18 +333,28 @@ func _boot() -> void:
 			locked_sid = sid
 			break
 	if locked_sid != "":
-		var lcell := Vector2i(int(game.player.pos.x) + 6,
-			int(game.player.pos.y))
+		# the marker cell doubles as the host's no-structure assertion —
+		# pick a cell the replica world proves empty or the gate fails for
+		# the wrong reason (audit-68 L6)
+		var lcell := Vector2i(-1, -1)
+		for off in [Vector2i(6, 0), Vector2i(7, 0), Vector2i(6, 1),
+				Vector2i(-6, 0), Vector2i(7, 2)]:
+			var cc: Vector2i = Vector2i(int(game.player.pos.x),
+				int(game.player.pos.y)) + off
+			if game.world.in_bounds(cc.x, cc.y) \
+					and game.structures.get(cc) == null:
+				lcell = cc
+				break
 		_write("res://tools/net_verb_locked.txt",
 			"%s,%d,%d" % [locked_sid, lcell.x, lcell.y])
 		await _wait_ms(1800) # past the 0.7s build bucket — the wire must die
 		# at the unlocked check itself, not at the throttle ahead of it
 		game.net.rpc("build_req", locked_sid, lcell.x, lcell.y)
 		await _wait_ms(1000)
-		_gate("locked build wire sent", game.net.is_client(),
-			"sid=%s" % locked_sid)
+		_gate("locked sid picked + wire fired", lcell.x >= 0,
+			"sid=%s cell=%s" % [locked_sid, str(lcell)])
 	else:
-		_gate("locked build wire sent", false, "no locked sid found")
+		_gate("locked sid picked + wire fired", false, "no locked sid found")
 
 	# ---- FAR verbs: a replica kin >9 out — catch + hit must both die at
 	# the host's proximity ring. Replica net_id IS the wire id.
@@ -349,9 +371,11 @@ func _boot() -> void:
 		_write("res://tools/net_verb_farhit.txt", str(far_p.net_id))
 		await _wait_ms(1500)
 		game.net.rpc("pal_hit", far_p.net_id, 50.0, 0.0)
-		_gate("far catch+hit wires sent", true, "nid=%d" % far_p.net_id)
+		_gate("far replica picked + wires fired", true,
+			"nid=%d" % far_p.net_id) # the refusal verdicts live host-side —
+		# this gate only certifies a real target was found (audit-68)
 	else:
-		_gate("far catch+hit wires sent", false, "no far replica found")
+		_gate("far replica picked + wires fired", false, "no far replica found")
 
 	# ---- TANK probe: the pinned tank is IN ring — the only gate between
 	# 1e9 and honest damage is the claim clamp itself. pal_hit rides the
@@ -404,6 +428,11 @@ func _boot() -> void:
 	_finish()
 
 func _finish() -> void:
+	if _tag_existed: # the operator's real install token goes home
+		var rf := FileAccess.open("user://plg_net.cfg", FileAccess.WRITE)
+		if rf:
+			rf.store_string(_tag_backup)
+			rf.close()
 	var fo := FileAccess.open("res://tools/net_verb_join_out.txt", FileAccess.WRITE)
 	for r in results:
 		fo.store_line(r)

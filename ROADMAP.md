@@ -1939,3 +1939,11 @@ smoke **1009/0/0skip**（+2 解析钉）。审档 `s117-net-walkthrough.md`
 - 钳制语义按"最大单帧命中增量"断言，非总伤。
 
 证据 `s118-verb-{catch,build,gone}.png`（tag 归属火把+鬼影+孤儿名册）。审档 `s118-net-verbs.md`。smoke **1008/0/0skip**（+2 解析钉入双 harness）。
+
+### audit-68 冷审修复（产品 CORRECT / harness NEEDS-FIX → 全修）
+
+- M1 真 token 删除→joiner 备份 `plg_net.cfg` 并在 `_finish` 恢复（防毁操作员真名册归属）。
+- M2 恒真门改名按实测语义（"picked + wire fired"），拒绝判决留 host 侧。
+- M3 far-catch 冻结靶怪 + 断言实测 d>9.0（d=10.5/88.8 实锤是 ring 拒非诚实掷空）。
+- L6 locked 格按副本 `structures` 挑证空位；L3 悬空引用 `is_instance_valid`；L1 标记读只收正整数。
+- 修后双种子 **HOST 16/0 + JOIN 16/0**，smoke **1010/0**（1 skip=旧 worldgen fixture）。

@@ -248,12 +248,23 @@ func _boot() -> void:
 	var far_p: Kin = game.find_pal(far_nid) if far_nid > 0 else null
 	var far_mode := far_p.mode if far_p != null else ""
 	var far_hp: float = far_p.hp if far_p != null else -1.0
+	var far_dist := -1.0
+	if far_p != null:
+		# freeze the target in place — a wandering far-pal drifting inside
+		# the 9.0 ring would turn "refused" into an honest failed roll and
+		# the gate can't tell the difference (audit-68 M3)
+		far_p.process_mode = Node.PROCESS_MODE_DISABLED
+		var fg = game.net.ghosts.get(gid)
+		if fg != null:
+			far_dist = Vector2(fg.net_pos.x, fg.net_pos.y).distance_to(far_p.pos)
 	await _wait_ms(2500)
 	var far_p2: Kin = game.find_pal(far_nid) if far_nid > 0 else null
 	_gate("far sphere_catch refused",
 		far_nid > 0 and far_p2 != null and far_p2.mode == far_mode \
-			and far_p2.hp == far_hp and far_p2.mode == "wild",
-		"nid=%d mode=%s" % [far_nid, far_p2.mode if far_p2 != null else "gone"])
+			and far_p2.hp == far_hp and far_p2.mode == "wild" \
+			and far_dist > 9.0,
+		"nid=%d mode=%s d=%.1f" % [far_nid,
+			far_p2.mode if far_p2 != null else "gone", far_dist])
 
 	# ---- locked build: sid the host never unlocked — _pay_rej, no plant
 	var lc := Vector2i(-1, -1)
@@ -297,7 +308,7 @@ func _boot() -> void:
 			break
 		await process_frame
 	var tk: Kin = game.find_pal(tank_nid) if tank_nid > 0 else null
-	var tk_live: bool = tk != null and tank != null and tk == tank
+	var tk_live: bool = tk != null and is_instance_valid(tank) and tk == tank
 	# the joiner re-sends until a landing syncs back — measure the LARGEST
 	# single-frame drop, not the total: the clamp's promise is per-hit,
 	# and a stacked second landing must not read as an unclamped 1e9
