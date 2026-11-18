@@ -98,7 +98,8 @@ func run() -> void:
 	for harness in ["tools/play_walkthrough.gd", "tools/loop_walkthrough.gd",
 			"tools/save_walkthrough.gd", "tools/raid_walkthrough.gd", "tools/econ_walkthrough.gd",
 			"tools/net_walk_host.gd", "tools/net_walk_join.gd",
-			"tools/net_verbs_host.gd", "tools/net_verbs_join.gd"]:
+			"tools/net_verbs_host.gd", "tools/net_verbs_join.gd",
+			"tools/rebind_walkthrough.gd"]:
 		var pc_out: Array = []
 		OS.execute(OS.get_executable_path(), ["--headless", "--path", ".",
 			"--check-only", "-s", harness], pc_out, true)
