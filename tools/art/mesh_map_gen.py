@@ -109,9 +109,12 @@ def main():
         nose = ('"nose_r": 0.045, "nose_up": 0.02, ' if body in
                 ("quadruped", "kitty", "cow", "deer", "boar", "mouse") else '')
         no_eyes = ', "no_eyes": True' if body == "blob" else ''
-        # per-sid legendary marks first; body marks second — every fish on
-        # Piranha.blend needs pectoral fins or it renders as a lump
-        acc = rig_auto.ACCESSORY.get(sid) or {"serpent": "fins"}.get(body)
+        # body marks stack UNDER per-sid marks as a space-separated
+        # composite — every Piranha needs fins AND a legendary fish still
+        # gets its crown (audit-75 LOW-1: single-slot dropped the fins)
+        acc = " ".join(x for x in (
+            {"serpent": "fins"}.get(body),
+            rig_auto.ACCESSORY.get(sid)) if x)
         acc_s = ', "accessory": "%s"' % acc if acc else ''
         # head-bone tail = muzzle tip on quadrupeds (eyes trail it: fwd<0),
         # but skull top on upright/round rigs (eyes drop below + face -Y:

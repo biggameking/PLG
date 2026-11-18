@@ -599,9 +599,13 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
     as primitive parts bone-parented to the head so they ride the action.
     Anchored at the skull top (silhouette hi_z, not the bone tail — muzzle
     bones would put a crown on the snout tip)."""
-    kind = cfg.get("accessory")
-    if not kind:
+    kind_s = cfg.get("accessory")
+    if not kind_s:
         return
+    # space-separated composite — a body mark (fins) plus a per-sid mark
+    # (halo) must stack, or the per-sid mark silently drops the body mark
+    # (audit-75 LOW-1: the single-slot precedence trap)
+    kinds = kind_s.split()
     head_span = head_group_span(arm, objs[0], bone_name)
     face, fwd, lat, tail = head_anchor(arm, bone_name, cfg, zcap, head_span)
     hi_z = zcap[1] if zcap else face.z + 0.2
@@ -685,20 +689,21 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
 
     # head-column top anchor: crown/halo/horns sit ON the skull, not the
     # body mid (quadruped heads project forward of mid)
-    if kind == "crown":
+    for kind in kinds:
+      if kind == "crown":
         put("cyl", htop + mathutils.Vector((0, 0, 0.04 * s)),
             (0.13 * s, 0.11 * s))
         for dx in (-0.10, 0.0, 0.10):
             put("cyl", htop + fwd * (dx * s) + mathutils.Vector(
                 (0, 0, 0.17 * s)), (0.045 * s, 0.18 * s))
-    elif kind == "halo":
+      elif kind == "halo":
         # ring in the fwd-z plane so it reads as a full arc in profile too
         hr = max(0.18 * s, hw_lat * 1.15)
         for i in range(5):
             a = i * 1.2566
             put("sph", htop + fwd * (hr * math.cos(a)) + mathutils.Vector(
                 (0, 0, 0.10 * s + 0.05 * s * math.sin(a))), (0.045 * s,) * 3)
-    elif kind == "horns":
+      elif kind == "horns":
         # splay in the fwd-z plane (fore-aft V): a lateral horn pair is
         # invisible from the profile views quadrupeds use (tips tilt along
         # the view axis); a fore-aft pair reads as horns from any angle.
@@ -707,10 +712,10 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
             put("cyl", htop + fwd * (0.12 * s * sx) + mathutils.Vector(
                 (0, 0, 0.05 * s)), (0.07 * s, 0.40 * s),
                 mathutils.Matrix.Rotation(sx * 0.5, 4, lat))
-    elif kind == "crest":
+      elif kind == "crest":
         put("sph", htop + mathutils.Vector((0, 0, 0.05 * s)),
             (0.06 * s, 0.17 * s, 0.20 * s))
-    elif kind == "fins":
+      elif kind == "fins":
         # pectoral fins hug the body sides just behind the head — the
         # skull-band lat can be inflated by fins already on the source
         # mesh (Piranha's own fins counted as "head width"), so cap it
@@ -719,7 +724,7 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
                 0.03 * s * sx) - mathutils.Vector((0, 0, 0.04 * s)),
                 (0.05 * s, 0.16 * s, 0.13 * s),
                 mathutils.Matrix.Rotation(sx * 0.5, 4, 'Z'))
-    elif kind == "hat":
+      elif kind == "hat":
         # rancher hat: wide brim + crown on the skull top (player identity).
         # Anchor to the head-band top (vgroup/skull column), NOT the global
         # silhouette top — on rigs where an appendage rises past the head,
@@ -735,20 +740,19 @@ def add_accessory(arm, bone_name, cfg, accent_m, zcap, objs):
             (0.20 * s, 0.16 * s))
         # the alien's sculpted mouth socket now sits BELOW the eyes — it
         # reads as the character's open mouth, no plug needed
-    elif kind == "mask":
+      elif kind == "mask":
         put("sph", hpos + fwd * (hw_fwd + 0.03 * s) - mathutils.Vector(
             (0, 0, 0.14 * s)), (0.28 * s, 0.06 * s, 0.11 * s))
-    elif kind == "wings":
+      elif kind == "wings":
         # tilt about local X (= world lat once the basis maps it) so the
         # wing sheet rakes back instead of spinning around an axis it no
         # longer owns in the lat/fwd frame (audit-53)
         put("sph", hpos - fwd * (0.45 * s) - mathutils.Vector(
             (0, 0, 0.02 * s)), (0.36 * s, 0.07 * s, 0.20 * s),
             mathutils.Matrix.Rotation(0.5, 4, 'X'))
-    else:
+      else:
         print("WARN accessory '%s' unknown — none placed" % kind)
-        return
-    print("ACCESSORY %s placed %d parts" % (kind, placed))
+    print("ACCESSORY %s placed %d parts" % (kind_s, placed))
 
 
 def fluff_shell(arm, wool, cfg, m):
