@@ -7770,6 +7770,25 @@ func run() -> void:
 	check("hud font chain rasterizes zh", zh_font,
 		"SystemFont-less targets tofu otherwise")
 	check("hud font chain rasterizes the icon set", sym_font, "")
+	# S123: exported pcks ship only the IMPORTED fontdata — a raw-path reader
+	# (load_dynamic_font/FileAccess) finds nothing there. The fallback chain
+	# must be built via the remap path or web/android boot with tofu.
+	for fnt in ["res://fonts/FusionPixel12px.ttf",
+			"res://fonts/DejaVuSymbols.ttf", "res://fonts/PressStart2P-Regular.ttf"]:
+		check("font import-remap resolves: " + fnt.get_file(),
+			ResourceLoader.exists(fnt) and load(fnt) is FontFile,
+			"exported pcks would boot without this face")
+	# S123: hint rows wrap at word boundaries — the old mid-word clip cut
+	# "free the catch" to "fre". Every line must fit the column, continuations
+	# are indented, and real overflow ends in an ellipsis.
+	var wrap_lines: Array = hudn._wrap_font("» LMB swings — free the catch when it kneels", 200.0, 11)
+	var wrap_ok := wrap_lines.size() >= 2
+	for wl in wrap_lines:
+		wrap_ok = wrap_ok and hudn.font.get_string_size(wl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x <= 202.0
+	check("hint wrap keeps every line inside the column", wrap_ok, str(wrap_lines))
+	check("hint wrap indents continuations", wrap_lines.size() < 2 or wrap_lines[1].begins_with("  "), "")
+	var wrap_long: Array = hudn._wrap_font("» one two three four five six seven eight nine ten eleven twelve", 200.0, 11, 2)
+	check("hint wrap ellipsizes real overflow", wrap_long[-1].ends_with("…"), str(wrap_long))
 	# the export presets must keep dev-only payloads out of the PCK — docs/
 	# holds migration lexicon notes + third-party reference screenshots;
 	# prototype/ is uncompiled TypeScript (audit-45 H1)

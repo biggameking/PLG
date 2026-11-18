@@ -1995,3 +1995,7 @@ Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的
 ## S122 — kin 渲染源网格重建 + audit-74 修复轮
 
 源网格化后 9 个物种仍带生成模板坏默认：serpent 族（5 只，Piranha.blend）`Idle`+`target_h 0.8` 渲成贴地薄片、deer 族（4 只，Horse.blend）`rot 0` 后躯怼镜头。模板修复并全族重渲——**探针发现真正病灶**：`rot -90` 是正面冲镜头（tidscale 手调同病），`rot 0` 才是侧视鱼；serpent 加 `Swimming`(10,30)/h1.35/鱼鳍 body 级附属/眼位贴头，deer 改 rot 90 侧视+frames(20,80)。实机证据 `s122-ingame-noctfang.png`/`s122-ingame-petalantler.png` + 对比表 `s122-kin-serp.png`/`s122-kin-after2.png`。smoke **1049/0/0skip**。审档 `audit-74-kin-render.md`。
+
+## S123 — 1.0.0 导出实证 + 首会话捕获
+
+`package.sh all` 首产 1.0.0 三平台工件（win 39M/web 12M/apk 30M+SHA256）。**web pck 实启动抓到真缺陷**：`.ttf` 经 font importer 后 pck 内只剩 fontdata，`load_dynamic_font` 读原始路径全灭→zh 字形在导出端 tofu；zh.csv 靠 `keep` importer 幸存。修：fallback 链走 `load()` 重映射 + 3 枚 `ResourceLoader.exists` 钉。首会话截图另抓提示卡逐字硬切（"swings — fre"）——改 `_wrap_font` 词界换行+缩进续行+词界省略，3 行容量装下 kinbox 配方。smoke **1055/0/0skip**。证据 `s123-{title,spawn,hint,guide}.png`。审档 `s123-export-verify.md`。

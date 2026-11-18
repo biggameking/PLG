@@ -58,6 +58,33 @@ func struct_tex(sid: String) -> Texture2D:
 		_struct_tex[sid] = load(path) if ResourceLoader.exists(path) else null
 	return _struct_tex[sid]
 
+# greedy word-wrap for the HUD column: lines that fit w px at font size,
+# continuation rows indented so a wrapped hint can't pass for a new one.
+# Last line hard-clips at a word boundary + ellipsis if the text still runs.
+func _wrap_font(txt: String, w: float, size: int, max_lines := 2) -> Array:
+	var fits := func(s: String) -> bool:
+		return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= w
+	if fits.call(txt):
+		return [txt]
+	var words := txt.split(" ")
+	var lines := [""]
+	for word in words:
+		var cand: String = word if lines[-1] == "" else lines[-1] + " " + word
+		if fits.call(cand) or lines[-1] == "":
+			lines[-1] = cand
+		elif lines.size() < max_lines:
+			lines.append("  " + word) # continuation indent
+		else:
+			# last line full — clip at the last word that fits + ellipsis
+			while not fits.call(lines[-1] + "…"):
+				var cut: int = lines[-1].rfind(" ")
+				if cut < 1:
+					break
+				lines[-1] = lines[-1].left(cut)
+			lines[-1] = lines[-1].strip_edges(false, true) + "…" # right-strip only — keep the continuation indent
+			break
+	return lines
+
 func draw_portrait(pos: Vector2, sid: String, w := 20.0, h := 16.0) -> void:
 	var t := kin_tex(sid)
 	if t != null:
@@ -155,14 +182,16 @@ func _ready() -> void:
 	if pf != null:
 		# fallback ladder: pixel Latin → bundled pixel CJK → bundled symbols →
 		# system face. SystemFont can't rasterize on web/Android (audit-45) —
-		# the bundled subsets carry every zh + HUD glyph there. load_dynamic_font
-		# reads the raw .ttf, so no .import sidecar is needed in the export.
-		var cjk := FontFile.new()
+		# the bundled subsets carry every zh + HUD glyph there. load() walks
+		# the .import remap — exported pcks ship the imported fontdata, NOT the
+		# raw .ttf, so load_dynamic_font's FileAccess read fails there (S123:
+		# first real export-pck boot found the chain empty).
+		var cjk: FontFile = load("res://fonts/FusionPixel12px.ttf")
 		var chain: Array[Font] = []
-		if cjk.load_dynamic_font("res://fonts/FusionPixel12px.ttf") == OK:
+		if cjk != null:
 			chain.append(cjk)
-		var syms := FontFile.new()
-		if syms.load_dynamic_font("res://fonts/DejaVuSymbols.ttf") == OK:
+		var syms: FontFile = load("res://fonts/DejaVuSymbols.ttf")
+		if syms != null:
 			chain.append(syms)
 		chain.append(font)
 		pf.fallbacks = chain
@@ -1227,9 +1256,11 @@ func _draw() -> void:
 		var hkey: String = "touch" if game.touch_ui else ("pad" if game.using_pad else "")
 		for h in game.active_hints():
 			var htxt: String = tr("» ") + tr(str(h.get(hkey, h["text"])) if hkey != "" else str(h["text"]))
-			while htxt.length() > 4 and font.get_string_size(htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > 200.0:
-				htxt = htxt.left(htxt.length() - 2) # clip to the column — unbounded text ran off the screen edge
-			_memo_hints.append(htxt)
+			# word-wrap into the column instead of mid-word clipping — a hint
+			# truncated at "swings — fre" stops teaching; three rows carry
+			# the kinbox recipe's whole material list (S123)
+			for ln in _wrap_font(htxt, 200.0, 11, 3):
+				_memo_hints.append(ln)
 	if game.raid_t < 30.0 and game.kinbox_pos.x >= 0 and _memo_raid_txt != "": # the island raid horn
 		var raid_r := Rect2(r.x / 2 - 80, 8, 160, 22)
 		draw_rect(raid_r, Color(Ink.RED, 0.85))
