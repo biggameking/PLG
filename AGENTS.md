@@ -18,6 +18,11 @@ Godot 4.7.2, GDScript, headless-verified. Run the smoke suite before committing:
 # One-off stage scripts live in tools/archive/ — not part of the gate.
 ```
 
+Development is agent-assisted: Devin (Cognition's coding agent) drives the
+audit / fix-round / scripted-playthrough sessions logged in ROADMAP.md and
+commits under the `Generated with Devin` trailer — every gate in this file
+binds it exactly as a human.
+
 ## Memory-safety contract (hard rules — the game must never crash or leak)
 
 1. **Every runtime collection is bounded.** If a list accepts appends during
