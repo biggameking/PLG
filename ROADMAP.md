@@ -2026,3 +2026,9 @@ Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的
 - **判定口径**：`game.box` 存对象非 uid、`find_pal` 不见 bench→`send_out` 直发、`_pair_on_ranch` 改 M/F 双座、fiber/石料判据改世界总量（bag+地上袋+爪上货+结构库）、fixture alpha 复刻 `spawn_wild` 构造序。
 
 验证：headless **49/49**（终版）+ 窗口版 **48/49→49/49 等效**（唯一 FAIL 是旧纤维判据，已修并重跑验证），smoke **1062/0/1skip**。证据 `s126-egg.png`（MISSION done+产蛋/孵化日志同框+偷吃警告）、`s126-gauntlet.png`（GAUNTLET CLEARED+三波战报）。
+
+## S127 — kin 表面丰富度：逐体型 displace + 语义附件 + 鸟眼修复
+
+"模型的面再丰富一下"落到生成器层而非精灵手绘：`mesh_map_gen` 新增**逐体型 displace 表**（fur 0.07 / feather 0.05 / hide 0.05 / yeti 0.08 / ghost 0.06 / scale 0.04，subd_wool 提 3）——史莱姆保持光滑、刺猬刺与 pact 护甲保持人工面。附件覆盖 13→42 种：未标记鸟全上 crest、hoof/mane/antler/fang 名上 horns、wisp/haunt 幽灵上 halo、grim/shade 人形上 mask。**顺手修了鸟眼悬浮真缺陷**：Bone.005 尾端在颈下深处，默认 eye_fwd=-0.12 把墨珠甩出头外成悬浮 chip（每只鹰 sprite 上都有），-1.15 沿骨爬回头面。
+
+共 75 种重渲+post。证据 `docs/reviews/s127-kin-detail.png`（12 组新旧对比：悬浮 chip 消失、角/冠/光环上身、毛羽糙面可读）。smoke 钉硬化随单：crown 扫描带适配新构图、"lob clears a stump" 从抖动帧窗改断言解决产物（IMMUNE floater 于 boss 位——墙吞球永远无法产生），车道搜索补上 orb 真实契约（平/下坡+落点格干净）。smoke **1061/0/1skip**。
