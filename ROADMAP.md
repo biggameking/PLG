@@ -2032,3 +2032,18 @@ Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的
 "模型的面再丰富一下"落到生成器层而非精灵手绘：`mesh_map_gen` 新增**逐体型 displace 表**（fur 0.07 / feather 0.05 / hide 0.05 / yeti 0.08 / ghost 0.06 / scale 0.04，subd_wool 提 3）——史莱姆保持光滑、刺猬刺与 pact 护甲保持人工面。附件覆盖 13→42 种：未标记鸟全上 crest、hoof/mane/antler/fang 名上 horns、wisp/haunt 幽灵上 halo、grim/shade 人形上 mask。**顺手修了鸟眼悬浮真缺陷**：Bone.005 尾端在颈下深处，默认 eye_fwd=-0.12 把墨珠甩出头外成悬浮 chip（每只鹰 sprite 上都有），-1.15 沿骨爬回头面。
 
 共 75 种重渲+post。证据 `docs/reviews/s127-kin-detail.png`（12 组新旧对比：悬浮 chip 消失、角/冠/光环上身、毛羽糙面可读）。smoke 钉硬化随单：crown 扫描带适配新构图、"lob clears a stump" 从抖动帧窗改断言解决产物（IMMUNE floater 于 boss 位——墙吞球永远无法产生），车道搜索补上 orb 真实契约（平/下坡+落点格干净）。smoke **1061/0/1skip**。
+
+## S128 — 终局试玩链：五塔→加冕→EX→14子嗣→Accord→升星，headless 70/70
+
+playthrough.gd 从"任务0-9"延到**全战役**：五契约塔守卫（lv25-50 boss+alpha）、加冕、EX试炼第四波、den warden 击杀+时钟跳转+真子嗣游走捕捉、**14/14 传说子嗣**、WILDMERE ACCORD 封印（party_cap→6）、升星祭坛（lv60 一星升星捕获）。**连续三轮 5/5 塔+冕+EX 全通**，末轮 70/70，smoke 1063/0/0，audit_data ALL CLEAN。
+
+14 条真实发现全部实锤修复而非遮掩——最重几条：
+
+- **球的暗坑**：`throw_sphere` 目标滑出 5 格朝向锥时静默返回不出手；"clink!"无判定无日志。探针以球数变化作唯一诚实"已出手"信号，`_orb_lane_ok` 复刻弹丸规则（路径格 DECOR_SOLID/实心结构/高于起点即死）选站位，`_orb_mint_spot` 保证 fixture 铸在有投掷走廊处。
+- **真机制解真难题**：lv50 子嗣逃跑拖追踪球撞墙，36%/球×12 掷数学上必过却屡逃——答案是游戏自带的 **tranq_gun**：真镖弹命中睡眠（×1.2 加成+定身保球路），`_tranq` 在每轮捕捉前射真镖。
+- **铁盟免疫**：wild-catch 候选须过 `catchable()` 生产谓词（铁盟怪 wild-mode 但免疫）。
+- **饥饿反向轴**：`player.hunger` 是饱食度(100满)，Kin.hunger 是饥饿度(0满)——同名反向，探针差点把 keeper 饿死。
+- **塔战预算**：boss+alpha 守卫血量超单 200 挥→`_kill_any` 六轮换；伙伴倒地循环内顶班；party 空→`box_to_party` 真动词提将+箱内 KO 复活。
+- **悬空防护**：所有 await 后 `is_instance_valid`（捕食者会吃掉削弱中的 fixture 怪）；捕捉判定认**目标本身**易主（锥内误捕别怪不算）。
+
+证据：审档 `audit-78-s125-playthrough.md` S128 节 14 行发现表；窗口版截图 s128-crowned/accord/ascend.png 随终验补。
