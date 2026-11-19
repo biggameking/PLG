@@ -151,8 +151,9 @@ func _initialize() -> void:
 	await _place("workbench")
 	game.unlock("workbench")
 	# the orb recipe asks the same lanes a build does — run the full
-	# lane+reclaim+labeled-topup chain so a picked-clean grove can't stall it
-	await _ensure_mats({"cost": [["wood", 3], ["stone", 3], ["lumenite", 3]]})
+	# lane+reclaim+labeled-topup chain so a picked-clean grove can't stall it.
+	# Recipe comes from the data, not a copy — a re-cost shouldn't break this
+	await _ensure_mats(game.recipe("kin_orb"))
 	ok(game.item_count("lumenite") >= 3, "rubble yielded %d lumenite" % game.item_count("lumenite"))
 	for k in game.structures:
 		if game.structures[k]["id"] == "workbench":
@@ -332,8 +333,10 @@ func _initialize() -> void:
 		if game.item_count("gauntlet_sigil") <= 0:
 			print("  fixture: +1 gauntlet_sigil (no drop rolled / merchant never stocked)")
 			game.add_item("gauntlet_sigil", 1)
-		game.add_item("gauntlet_sigil", -1) # what hud.use_item does before the call
-		ok(game.start_gauntlet(), "gauntlet started")
+		var sigil_started: bool = game.start_gauntlet()
+		if sigil_started:
+			game.add_item("gauntlet_sigil", -1) # hud.use_item debits on success
+		ok(sigil_started, "gauntlet started")
 		if not game.gauntlet.is_empty():
 			var lead3: Kin = game.party_pal()
 			if lead3 == null:
@@ -344,7 +347,7 @@ func _initialize() -> void:
 						break
 			if lead3 != null:
 				var guard_xp := 0 # real xp verb — a keeper would grind for days
-				while lead3.level < 45 and guard_xp < 60:
+				while lead3.level < 45 and guard_xp < 65:
 					guard_xp += 1
 					game.pal_gain_xp(lead3, 400)
 				lead3.hp = lead3.max_hp
@@ -366,8 +369,9 @@ func _initialize() -> void:
 				else:
 					await process_frame
 				if gguard % 4000 == 3999:
+					# tick_gauntlet may have emptied the dict mid-await — .get() it
 					print("  gauntlet grind... wave=%d left=%d live=%d"
-						% [int(game.gauntlet["wave"]), int(game.gauntlet["left"]),
+						% [int(game.gauntlet.get("wave", -1)), int(game.gauntlet.get("left", 0)),
 							game.pals.filter(func(x): return is_instance_valid(x) and x.has_meta("gauntlet") and x.hp > 0).size()])
 			ok(game.mission_flags.has("gauntlet"),
 				"gauntlet cleared (flag=%s wave=%d)" % [str(game.mission_flags.has("gauntlet")), last_wave])
@@ -410,7 +414,8 @@ func _chop_until(item: String, need: int) -> int:
 		var cell := _nearest_decor(kinds, skip)
 		if cell.x < 0:
 			break
-		while game.world.decor_at(cell.x, cell.y) in kinds and swings < 60:
+		var cell_swings := 0 # per-cell budget — a stubborn outcrop shouldn't eat the whole guard
+		while game.world.decor_at(cell.x, cell.y) in kinds and cell_swings < 60:
 			# stand on a free NEIGHBOR cell: try_harvest resolves the target as
 			# int(at)+sign(face) — only a true cardinal neighbor hits this cell
 			var stand := Vector2.ZERO
@@ -427,6 +432,7 @@ func _chop_until(item: String, need: int) -> int:
 			game.player.atk_cd = 0.0 # compress the 0.45s swing timer
 			game.player.melee()
 			swings += 1
+			cell_swings += 1
 			await process_frame
 		await _collect_drops(6.0)
 	return swings
@@ -479,12 +485,13 @@ func _weaken(p: Kin) -> bool:
 		else:
 			dry += 1
 			if dry >= 20:
-				break # whiffing through a stump shadow — no point finishing
+				break # whiffing through a sight blocker — no point finishing
 	return is_instance_valid(p) and p.hp > 0 and float(p.hp) / p.max_hp <= 0.55
 
 func _catch_one(p: Kin) -> bool:
 	# stand behind: sign(player - target) == -target.dir doubles the odds.
-	# The stand must also see the mark — an orb can't thread a stump either.
+	# The stand must also see the mark — an orb can't thread a tree or rock
+	# (stumps/berries are ground cover — SHOT_BLOCKERS).
 	var behind: Vector2 = p.pos + Vector2(-p.dir, 0) * 1.2
 	var stand: Vector2 = game.nearest_free(behind.x, behind.y, p.pos)
 	game.player.pos = stand
@@ -535,8 +542,9 @@ func _grind_level(lv: int) -> int:
 # bench has one. Returns true when the mark is dead or no longer wild.
 var _keeper_deaths := 0
 # pick a swing cell by LINE OF SIGHT, not just free-ness — los_clear counts
-# decor as a wall, so a mark behind a low stump is a melee shadow: every
-# neighbor walkable, zero damage possible (h10's 200-whiff stall)
+# TALL decor (SHOT_BLOCKERS: trees/rocks/ores) as a wall, so a mark behind a
+# trunk is a melee shadow: every neighbor walkable, zero damage possible
+# (h10's 200-whiff stall). Stumps/berries don't shadow shots any more.
 func _stand_for_hit(p: Kin) -> bool:
 	var cell := Vector2i(int(p.pos.x), int(p.pos.y))
 	var fallback := Vector2(-1, -1)
@@ -681,6 +689,8 @@ func _fiber_prey() -> Kin:
 		if dd < bd:
 			bd = dd; t = wp
 	if t != null and not _approach_cell(t):
+		if _fiber_failed.size() >= 24:
+			return null # blacklist full — can't exclude it, don't recurse forever
 		_fiber_failed.append(t)
 		print("  fiber prey sealed (cage?): %s at %s" % [t.species_id, str(t.pos)])
 		return _fiber_prey()
@@ -793,7 +803,8 @@ func _reclaim_all_drops() -> void:
 	for p in game.base_pals():
 		if is_instance_valid(p) and p.carry != null and p.job_site == null:
 			game.base_to_box(p) # the box return pays the cargo into the bag
-			game.deploy_to_base(p) # then straight back to work
+			if p.mode == "box":
+				game.deploy_to_base(p) # then straight back to work
 	# snapshot-sweep: an unpickable drop (weight cap, sealed cell) must not
 	# abort the rest of the pile — skip it and keep walking
 	for d in game.drops.duplicate():
@@ -810,6 +821,8 @@ func _reclaim_all_drops() -> void:
 # gen_pal sets up before the flag exists, so the bonuses must be re-applied.
 func _mint_alpha(lv := 10) -> Kin:
 	if game.pals.size() >= game.MAX_PALS - 4:
+		print("  _mint_alpha: pals at cap (%d/%d) — refusing to mint"
+			% [game.pals.size(), game.MAX_PALS])
 		return null
 	var pool: Array = SpeciesGen.zone_pool(0)
 	if pool.is_empty():
@@ -824,6 +837,7 @@ func _mint_alpha(lv := 10) -> Kin:
 	p.sprite.position.y = -51.0
 	p.mode = "wild"
 	game.pals.append(p)
+	print("  fixture: minted alpha %s lv%d" % [p.species_id, lv])
 	return p
 
 # first structure cell of the given id (probe places one of each)
@@ -888,6 +902,10 @@ func _ensure_mf_pair(ranch_cell: Vector2i) -> Array:
 				else:
 					print("  wild %s catch failed — falling to fixture" % need_sex)
 		if roster.is_empty():
+			if game.pals.size() >= game.MAX_PALS - 4:
+				print("  _ensure_mf_pair: pals at cap (%d/%d) — refusing to mint"
+					% [game.pals.size(), game.MAX_PALS])
+				break
 			# bounded fixture: mint a zone-0 catchable of the needed sex and
 			# catch it — the capture path stays real, only the sex is forced
 			var at5: Vector2 = game.nearest_free(game.player.pos.x + 2.0, game.player.pos.y,

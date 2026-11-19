@@ -77,10 +77,11 @@ func swim_open(x: int, y: int) -> bool:
 	return tiles[i] == Tile.WATER and decor[i] == Decor.NONE and not solid_structure(i)
 
 func los_clear(a: Vector2, b: Vector2) -> bool:
-	# sight-open cells only: no decor, no solid structure, no unramped
-	# elevation step — the same wall set blocked() enforces. Combat verbs
-	# (melee, bites, novas, orbs, partner actives) must not reach through a
-	# sealed ring; detection scans stay distance-only by design (audit-43)
+	# sight-open cells only: no SHOT_BLOCKERS decor, no solid structure, no
+	# unramped elevation step — deliberately narrower than blocked(), which
+	# still counts every decor (you path around a stump but shoot over it).
+	# Combat verbs (melee, bites, novas, orbs, partner actives) must not reach
+	# through a sealed ring; detection scans stay distance-only (audit-43)
 	var span := a.distance_to(b)
 	var steps := maxi(1, int(ceil(span * 8.0)))
 	var pc := Vector2i(-9999, -9999)
