@@ -154,6 +154,7 @@ func _initialize() -> void:
 	# lane+reclaim+labeled-topup chain so a picked-clean grove can't stall it.
 	# Recipe comes from the data, not a copy — a re-cost shouldn't break this
 	await _ensure_mats(game.recipe("kin_orb"))
+	await _reclaim_all_drops() # a mid-lane death spills the bag — recover before judging
 	ok(game.item_count("lumenite") >= 3, "rubble yielded %d lumenite" % game.item_count("lumenite"))
 	for k in game.structures:
 		if game.structures[k]["id"] == "workbench":
@@ -379,6 +380,262 @@ func _initialize() -> void:
 			ok(game.mission_idx >= 10, "mission 9 (gauntlet) -> idx %d" % game.mission_idx)
 			await _shot("docs/reviews/s126-gauntlet.png")
 
+	# --- P11: break the five pact spires (crowned) — the campaign's real
+	# endgame spine. Every guardian is an orb-immune alpha boss that dies to
+	# real melee; only a guardian that vanished gets a labeled fixture mint
+	# at its own arena center (the kill's spire_tag path records the break).
+	if game.mission_idx >= 10 and not game.crowned:
+		# revive the wounded first — a KO'd partner can't send_out (gauntlet
+		# waves can down it between the probe's top-ups). Labeled medicine
+		# stand-in, same class as the swing-time hp resets.
+		var revived11 := 0
+		for uid11r in game.party:
+			var rp11: Kin = game.find_pal(uid11r)
+			if rp11 == null:
+				rp11 = game.bench_pal_of(uid11r)
+			if rp11 != null and rp11.hp <= 0:
+				rp11.hp = int(rp11.max_hp * 0.5)
+				revived11 += 1
+		for rb11 in game.box: # box kin are KO candidates too — a promote needs hp>0
+			if is_instance_valid(rb11) and rb11.hp <= 0:
+				rb11.hp = int(rb11.max_hp * 0.5)
+				revived11 += 1
+		if revived11 > 0:
+			print("  fixture: revived %d KO'd party kin (medicine stand-in)" % revived11)
+		# grind the keeper + lead for the lv50 dragon guardian — a keeper
+		# would arrive at a spire endgame-fit, not mission-9 fit
+		var lead11: Kin = game.party_pal()
+		if lead11 == null:
+			for uid11 in game.party.duplicate():
+				game.send_out(uid11)
+				lead11 = game.party_pal()
+				if lead11 != null:
+					break
+		if lead11 == null:
+			# everyone earned so far sits in the box or on a post — pull the
+			# strongest standing kin through the real promote verb, the same
+			# trip a keeper makes before marching on a spire
+			var best11: Kin = null
+			for b11 in game.box:
+				if is_instance_valid(b11) and b11.hp > 0 \
+						and (best11 == null or b11.level > best11.level):
+					best11 = b11
+			if best11 != null:
+				print("  fixture: promoted %s lv%d from the box for the spire run"
+					% [best11.species_id, best11.level])
+				game.box_to_party(best11)
+				if game.party_pal() == null:
+					game.send_out(best11.uid)
+				lead11 = game.party_pal()
+		if lead11 != null and lead11.level < 55:
+			var gx11 := 0
+			while lead11.level < 55 and gx11 < 30:
+				gx11 += 1
+				game.pal_gain_xp(lead11, 800)
+			lead11.hp = lead11.max_hp
+			print("  partner %s -> lv%d for the spire run" % [lead11.species_id, lead11.level])
+		for si in game.SPIRE_DEFS.size():
+			var tag := "spire_%d" % si
+			if game.spires_done.has(tag):
+				continue
+			var guard11: Kin = null
+			for p11 in game.pals:
+				if is_instance_valid(p11) and p11.spire_tag == tag \
+						and p11.mode == "wild" and p11.hp > 0:
+					guard11 = p11
+					break
+			if guard11 == null:
+				guard11 = _mint_spire_guard(tag, si)
+			if guard11 == null:
+				print("  spire %s: no guardian and mint refused — skipped" % tag)
+				continue
+			var sp11: Vector2i = game.spire_pos.get(tag, Vector2i(-1, -1))
+			print("  spire %s (%s, guardian lv%d): engaging at %s"
+				% [tag, str(game.SPIRE_DEFS[si].get("elem")),
+					guard11.level, str(sp11)])
+			var killed11: bool = await _kill_any(guard11) # boss+alpha hp pool needs more than one 200-swing budget
+			ok(killed11 or game.spires_done.has(tag),
+				"spire %s broken (done=%d/5)" % [tag, game.spires_done.size()])
+			await _collect_drops(6.0)
+		ok(game.spires_done.size() >= game.SPIRE_DEFS.size(),
+			"all five spires broken (done=%d)" % game.spires_done.size())
+		ok(game.crowned, "island crowned")
+		if game.crowned:
+			print("  crown payout: legendary_orb=%d gold=%d parts=%d"
+				% [game.item_count("legendary_orb"), game.item_count("gold_coin"),
+					game.item_count("ancient_part")])
+			await _shot("docs/reviews/s128-crowned.png")
+
+	# --- P12: the crowned keeper's EX trial — the tower asks a FOURTH wave;
+	# sigil provenance is real economy (each broken spire pays one).
+	if game.crowned and not game.mission_flags.get("gauntlet_ex", false):
+		if game.item_count("gauntlet_sigil") <= 0:
+			print("  fixture: +1 gauntlet_sigil (spire purse spent elsewhere)")
+			game.add_item("gauntlet_sigil", 1)
+		var ex_started: bool = game.start_gauntlet()
+		if ex_started:
+			game.add_item("gauntlet_sigil", -1)
+		ok(ex_started, "EX gauntlet started")
+		var ex_guard := 0
+		var ex_wave := -1
+		while not game.gauntlet.is_empty() and ex_guard < 40000:
+			ex_guard += 1
+			if int(game.gauntlet["wave"]) != ex_wave:
+				ex_wave = int(game.gauntlet["wave"])
+				print("  EX wave %d — %d left" % [ex_wave, int(game.gauntlet["left"])])
+			var foe12: Kin = null
+			for q12 in game.pals:
+				if is_instance_valid(q12) and q12.has_meta("gauntlet") and q12.hp > 0:
+					foe12 = q12
+					break
+			if foe12 != null:
+				await _kill_any(foe12)
+			else:
+				await process_frame
+			if ex_guard % 4000 == 3999:
+				print("  EX grind... wave=%d left=%d"
+					% [int(game.gauntlet.get("wave", -1)), int(game.gauntlet.get("left", 0))])
+		ok(ex_wave >= 4, "EX trial asked its fourth wave (saw wave %d)" % ex_wave)
+		ok(game.mission_flags.get("gauntlet_ex", false), "EX gauntlet cleared")
+
+	# --- P13: every legend heir on record (the accord's third seal).
+	# Lane A runs the REAL den loop once: kill the immune warden, jump the
+	# den's clock (fixture on the timer only — tick_boss_respawns does the
+	# real spawn), catch the roaming heir. Lane B mints the remaining heirs
+	# as labeled fixtures and catches each through the real weaken→orb→
+	# resolve chain — every catch lands in the production ledger.
+	var heirs_need := 0
+	for ls13 in game.LEGENDARY_DEN:
+		if int(game.catch_counts.get(ls13, 0)) <= 0:
+			heirs_need += 1
+	print("  legend heirs still unproven: %d/14" % heirs_need)
+	if heirs_need > 0 and game.mission_flags.get("gauntlet_ex", false):
+		# lane A — the den's real loop, if its warden still stands
+		var warden13: Kin = null
+		for p13 in game.pals:
+			if is_instance_valid(p13) and p13.mode == "wild" and p13.hp > 0 \
+					and p13.boss and p13.alpha \
+					and p13.species_id in game.LEGENDARY_DEN \
+					and p13.home != Vector2.ZERO:
+				warden13 = p13
+				break
+		if warden13 != null:
+			print("  den warden: %s lv%d at %s — the immune kill-fight"
+				% [warden13.species_id, warden13.level, str(warden13.pos)])
+			game.player.pos = game.nearest_free(warden13.pos.x + 2.0,
+				warden13.pos.y, warden13.pos)
+			if await _kill_any(warden13): # boss+alpha warden out-tanks one 200-swing budget
+				ok(true, "den warden fell")
+				var jumped := false
+				for br13 in game.boss_respawns:
+					if str(br13.get("sid", "")) in game.LEGENDARY_DEN \
+							and float(br13.get("at", 0.0)) > game.t:
+						br13["at"] = game.t
+						jumped = true
+				if jumped:
+					print("  fixture: den clock jumped (1.5 days outruns the probe)")
+				game.tick_boss_respawns()
+				await process_frame
+			else:
+				print("  den warden survived the swing cap — lane A skipped")
+		# lane A heir: a NEW catchable alpha legend should now roam the den
+		var heir13: Kin = null
+		for h13 in game.pals:
+			if is_instance_valid(h13) and h13.mode == "wild" and h13.hp > 0 \
+					and h13.alpha and not h13.boss \
+					and h13.species_id in game.LEGENDARY_DEN \
+					and int(game.catch_counts.get(h13.species_id, 0)) <= 0:
+				heir13 = h13
+				break
+		if heir13 != null:
+			print("  den heir roams: %s lv%d — catching for real"
+				% [heir13.species_id, heir13.level])
+			game.player.pos = game.nearest_free(heir13.pos.x + 2.0,
+				heir13.pos.y, heir13.pos)
+			if await _weaken_and_catch_orb(heir13, "legendary_orb", 6):
+				ok(true, "den heir caught (%s)" % heir13.species_id)
+			else:
+				print("  den heir escaped the orbs — lane B will mint it")
+		# lane B — mint each still-unproven heir and catch it for real
+		var minted13 := 0
+		for ls13b in game.LEGENDARY_DEN:
+			if int(game.catch_counts.get(ls13b, 0)) > 0:
+				continue
+			var heir13b := _mint_legend(ls13b, 50)
+			if heir13b == null:
+				print("  legend mint refused for %s (cap) — aborting lane B" % ls13b)
+				break
+			minted13 += 1
+			if await _weaken_and_catch_orb(heir13b, "legendary_orb", 6):
+				print("  heir %s caught (%d/14 proven)"
+					% [ls13b, game.den_caught()])
+			else:
+				print("  heir %s escaped 6 catch rounds — flagged" % ls13b)
+		ok(game.den_caught() >= game.LEGENDARY_DEN.size(),
+			"every legend heir caught (%d/%d)" % [game.den_caught(), game.LEGENDARY_DEN.size()])
+	# the accord checks on the dex's 1s cadence — give the seal a real beat
+	var accord_wait := 0.0
+	var t_accord: float = game.t
+	while not game.accord and game.t - t_accord < 4.0:
+		await process_frame
+		accord_wait = game.t - t_accord
+	if heirs_need <= 0 or game.den_caught() >= game.LEGENDARY_DEN.size():
+		ok(game.accord, "WILDMERE ACCORD sealed (%.1fs wait)" % accord_wait)
+		ok(game.party_cap() == 6, "accord widens the field roster to six")
+		if game.accord:
+			await _shot("docs/reviews/s128-accord.png")
+
+	# --- P14: the Ascension Altar — the post-accord repeatable loop: sigil +
+	# orbs ring the altar, an ascendant heir answers, the catch lands in the
+	# real ledger and the den_ascensions tally climbs.
+	if game.accord:
+		if "ascension_altar" not in game.unlocked:
+			if game.tech_points < 5:
+				print("  fixture: +%d tech (altar tier asks 5)" % (5 - game.tech_points))
+				game.tech_points = 5
+			if game.item_count("ancient_part") < 3:
+				print("  fixture: +%d ancient_part (tier-8 gate)" % (3 - game.item_count("ancient_part")))
+				game.add_item("ancient_part", 3 - game.item_count("ancient_part"))
+			game.unlock("ascension_altar")
+		ok("ascension_altar" in game.unlocked, "unlocked ascension_altar")
+		var altar14 := _find_struct("ascension_altar")
+		if altar14.x < 0:
+			await _ensure_mats(StructureData.STRUCTURES["ascension_altar"])
+			if await _place("ascension_altar"):
+				altar14 = _find_struct("ascension_altar")
+		ok(altar14.x >= 0, "ascension altar placed at %s" % str(altar14))
+		if altar14.x >= 0:
+			# the altar answers within 5 tiles of the keeper — stand at it
+			game.player.pos = game.nearest_free(altar14.x + 1.0, altar14.y + 2.0,
+				Vector2(altar14.x + 1.0, altar14.y + 1.0))
+			if game.item_count("boss_sigil") < 1:
+				print("  fixture: +1 boss_sigil (none dropped along the run)")
+				game.add_item("boss_sigil", 1)
+			if game.item_count("legendary_orb") < game.ASCEND_ORBS:
+				print("  fixture: +%d legendary_orb (catch spend drained the purse)"
+					% (game.ASCEND_ORBS - game.item_count("legendary_orb")))
+				game.add_item("legendary_orb",
+					game.ASCEND_ORBS - game.item_count("legendary_orb"))
+			var fired14: bool = game.ascension_trial()
+			ok(fired14, "ascension trial fired (sigil+2 orbs spent)")
+			var asc14: Kin = null
+			for a14 in game.pals:
+				if is_instance_valid(a14) and a14.mode == "wild" \
+						and a14.has_meta("ascendant") and a14.hp > 0:
+					asc14 = a14
+					break
+			ok(asc14 != null, "ascendant answers the altar")
+			if asc14 != null:
+				print("  ascendant: %s lv%d star %d" % [asc14.species_id,
+					asc14.level, asc14.star])
+				var before14 := int(game.catch_counts.get(asc14.species_id, 0))
+				if await _weaken_and_catch_orb(asc14, "legendary_orb", 3):
+					ok(int(game.catch_counts.get(asc14.species_id, 0)) > before14,
+						"ascendant %s caught" % asc14.species_id)
+				else:
+					ok(false, "ascendant %s escaped 3 throws" % asc14.species_id)
+				await _shot("docs/reviews/s128-ascend.png")
+
 	print("==== PLAYTHROUGH %d/%d ====" % [pass_n, pass_n + fail_n])
 	quit(0 if fail_n == 0 else 1)
 
@@ -479,6 +736,8 @@ func _weaken(p: Kin) -> bool:
 		game.player.melee()
 		swings += 1
 		await process_frame
+		if not is_instance_valid(p):
+			return false # something else finished the mark mid-weaken
 		if p.hp < last_hp:
 			dry = 0
 			last_hp = p.hp
@@ -488,23 +747,98 @@ func _weaken(p: Kin) -> bool:
 				break # whiffing through a sight blocker — no point finishing
 	return is_instance_valid(p) and p.hp > 0 and float(p.hp) / p.max_hp <= 0.55
 
+# find a mint spot near the keeper that at least one stand can lob an orb
+# into — a fixture caged behind tall decor or sunk under every approach's
+# elevation can never come home, and the probe would read its own
+# placement as a catch-table defect. Fan out, keep the first reachable.
+func _orb_mint_spot(dist: float) -> Vector2:
+	for ang in 16:
+		var a: float = TAU * ang / 16.0
+		var cand: Vector2 = game.player.pos + Vector2(cos(a), sin(a)) * dist
+		var cx := int(cand.x)
+		var cy := int(cand.y)
+		if not game.world.in_bounds(cx, cy) or game.world.blocked(cx, cy):
+			continue
+		for ang2 in 12:
+			var s2: Vector2 = cand + Vector2(cos(TAU * ang2 / 12.0), sin(TAU * ang2 / 12.0)) * 1.3
+			if game.world.in_bounds(int(s2.x), int(s2.y)) \
+					and not game.world.blocked(int(s2.x), int(s2.y)) \
+					and _orb_lane_ok(s2, cand):
+				return cand
+	return game.nearest_free(game.player.pos.x + dist, game.player.pos.y,
+		game.player.pos) # packed ground — fall back and let the fail speak
+
+func _orb_total() -> int:
+	var n := 0
+	for t in game.sphere_tiers():
+		n += game.item_count(t)
+	return n
+
+# tick_spheres kills the lob on any path cell that is solid decor, a solid
+# structure, or HIGHER than the throw cell — "clink!" with no roll and no
+# log. LOS-clear is not orb-clear: the probe must pick its stand by the
+# projectile's own rule or every uphill mark reads as a catch-table bug.
+func _orb_lane_ok(a: Vector2, b: Vector2) -> bool:
+	var e0: float = game.world.elev_at(int(a.x), int(a.y))
+	var steps := int(ceil(a.distance_to(b) * 3.0)) + 1
+	for i in range(1, steps + 1):
+		var cur: Vector2 = a + (b - a) * (float(i) / steps)
+		var ci := Vector2i(int(cur.x), int(cur.y))
+		if not game.world.in_bounds(ci.x, ci.y) \
+				or game.world.decor_at(ci.x, ci.y) in game.DECOR_SOLID \
+				or game.world.solid_structure(game.world.idx(ci.x, ci.y)) \
+				or game.world.elev_at(ci.x, ci.y) > e0:
+			return false
+	return true
+
 func _catch_one(p: Kin) -> bool:
 	# stand behind: sign(player - target) == -target.dir doubles the odds.
 	# The stand must also see the mark — an orb can't thread a tree or rock
-	# (stumps/berries are ground cover — SHOT_BLOCKERS).
-	var behind: Vector2 = p.pos + Vector2(-p.dir, 0) * 1.2
-	var stand: Vector2 = game.nearest_free(behind.x, behind.y, p.pos)
-	game.player.pos = stand
-	game.player.facing = (p.pos - game.player.pos).normalized()
-	var before := _owned_count()
-	game.player.throw_sphere(true)
-	for i in 600: # orb flight + resolve ~1.8 real-s; at ~240fps that is ~430 frames
-		await process_frame
-		if _owned_count() > before or game.spheres_flying.is_empty():
-			break
-	for i in 10:
-		await process_frame
-	return _owned_count() > before
+	# (stumps/berries are ground cover — SHOT_BLOCKERS). A weakened mark
+	# flees, so every toss re-derives the stand; throw_sphere silently
+	# returns when the mark has slipped the 5-tile aim cone — the orb
+	# count is the only honest "it left the hand" signal.
+	for toss in 3:
+		if not is_instance_valid(p) or p.mode != "wild" or p.hp <= 0:
+			return false
+		if _orb_total() < 1:
+			return false
+		# pick the stand by the ORB's rule, not the eye's: behind-angle first
+		# (the x1.15 bonus is real money), then a 12-ray fan — first lane
+		# that lets a lob reach the mark wins. A mark caged behind tall
+		# decor or uphill of every approach is genuinely uncatchable here.
+		var stand := Vector2.ZERO
+		var behind: Vector2 = p.pos + Vector2(-p.dir, 0) * 1.2
+		var cands := [game.nearest_free(behind.x, behind.y, p.pos)]
+		for ang in 12:
+			var a2: float = TAU * ang / 12.0
+			cands.append(p.pos + Vector2(cos(a2), sin(a2)) * 1.3)
+		for cand in cands:
+			var cx := int(cand.x)
+			var cy := int(cand.y)
+			if not game.world.in_bounds(cx, cy) or game.world.blocked(cx, cy):
+				continue
+			if _orb_lane_ok(cand, p.pos):
+				stand = cand
+				break
+		if stand == Vector2.ZERO:
+			return false # every approach lane clinks — mark is orb-proof here
+		game.player.pos = stand
+		game.player.facing = (p.pos - game.player.pos).normalized()
+		game.player.hp = game.player.max_hp # can't dodge mid-throw — eat-to-heal stand-in
+		var orbs_before := _orb_total()
+		game.player.throw_sphere(true)
+		if _orb_total() >= orbs_before:
+			continue # nothing thrown — mark outside the cone; re-stand and chase
+		for i in 600: # orb flight + resolve ~1.8 real-s; at ~240fps that is ~430 frames
+			await process_frame
+			if not is_instance_valid(p) or p.mode != "wild" or game.spheres_flying.is_empty():
+				break
+		for i in 10:
+			await process_frame
+		if is_instance_valid(p) and p.mode != "wild":
+			return true # the mark itself came home — a stray catch doesn't count
+	return false
 
 func _shot(path: String) -> void:
 	if DisplayServer.get_name() == "headless":
@@ -546,13 +880,24 @@ var _keeper_deaths := 0
 # trunk is a melee shadow: every neighbor walkable, zero damage possible
 # (h10's 200-whiff stall). Stumps/berries don't shadow shots any more.
 func _stand_for_hit(p: Kin) -> bool:
+	# cell-center candidates first (cardinal + diagonal), then a radial ring:
+	# a mark hugging a spire's rock ring clips every cardinal's corner LOS,
+	# and the probe may stand anywhere — the wall cell just can't contain us
 	var cell := Vector2i(int(p.pos.x), int(p.pos.y))
-	var fallback := Vector2(-1, -1)
-	for nb in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+	var cands: Array = []
+	for nb in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1),
+			Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1)]:
 		var nc: Vector2i = cell + nb
-		if not (game.world.in_bounds(nc.x, nc.y) and not game.world.blocked(nc.x, nc.y)):
-			continue
-		var stand := Vector2(nc.x + 0.5, nc.y + 0.5)
+		if game.world.in_bounds(nc.x, nc.y) and not game.world.blocked(nc.x, nc.y):
+			cands.append(Vector2(nc.x + 0.5, nc.y + 0.5))
+	for ang in 16: # radial ring just inside melee reach — beats corner clips
+		var a := TAU * ang / 16.0
+		var pt := p.pos + Vector2(cos(a), sin(a)) * 1.1
+		if game.world.in_bounds(int(pt.x), int(pt.y)) \
+				and not game.world.blocked(int(pt.x), int(pt.y)):
+			cands.append(pt)
+	var fallback := Vector2(-1, -1)
+	for stand in cands:
 		if fallback.x < 0:
 			fallback = stand
 		if game.world.los_clear(stand, p.pos):
@@ -562,7 +907,7 @@ func _stand_for_hit(p: Kin) -> bool:
 		game.player.pos = fallback
 	return false
 
-func _kill(p: Kin) -> bool:
+func _kill(p: Kin, escort: Kin = null) -> bool:
 	if game.party_pal() == null:
 		for uid in game.party.duplicate():
 			game.send_out(uid) # bench members are invisible to find_pal
@@ -573,6 +918,28 @@ func _kill(p: Kin) -> bool:
 	var dry := 0
 	while is_instance_valid(p) and p.mode == "wild" and p.hp > 0 and swings < 200:
 		_stand_for_hit(p)
+		# the partner only fights what it can reach — the keeper teleports,
+		# the partner does not. Snap the escort into the arena (position is
+		# the fixture, its damage is real AI combat) and top it up like the
+		# keeper — a lv30+ boss two-shots it before it ever lands a hit.
+		var esc: Kin = escort if escort != null else game.party_pal()
+		if esc == null or not is_instance_valid(esc) or esc.hp <= 0 \
+				or esc.mode != "partner":
+			# the field pal went down mid-fight — send the next bench kin out
+			# (send_out refuses KO'd members, so this only cycles the living)
+			esc = null
+			for uidr in game.party.duplicate():
+				game.send_out(uidr)
+				esc = game.party_pal()
+				if esc != null and esc.hp > 0:
+					break
+				esc = null
+		if esc != null and is_instance_valid(esc) and esc.hp > 0:
+			# drop it at the keeper's feet — _stand_for_hit already proved
+			# this spot has LOS on the mark (a ring-side snap could wall it)
+			if esc.pos.distance_to(p.pos) > 4.0:
+				esc.pos = game.player.pos + Vector2(0.3, 0.3)
+			esc.hp = esc.max_hp
 		game.player.facing = (p.pos - game.player.pos).normalized()
 		game.player.atk_cd = 0.0
 		if game.player.hp <= 0: # a real death happened between swings — count it
@@ -734,6 +1101,12 @@ func _place(sid: String) -> bool:
 # A barren seed can still exhaust the honest lane — the top-up at the end is
 # a labeled fixture, never the first resort.
 func _ensure_mats(s: Dictionary) -> void:
+	if game.player.hp < game.player.max_hp:
+		# a starving/grazed keeper dies mid-lane and spills the whole bag —
+		# topping up is the same time-compression stand-in _kill uses
+		print("  fixture: keeper hp topped before mats lane")
+		game.player.hp = game.player.max_hp
+		game.player.hunger = 100.0 # player.hunger is SATIETY — 100 full, 0 starving (Kin polarity is flipped)
 	for c in s.get("cost", []):
 		var id: String = c[0]
 		var need: int = c[1]
@@ -890,7 +1263,8 @@ func _ensure_mf_pair(ranch_cell: Vector2i) -> Array:
 			var w4: Kin = null
 			for wp in game.pals:
 				if is_instance_valid(wp) and wp.mode == "wild" and wp.sex == need_sex \
-						and wp.hp > 0 and not wp.alpha and not wp.boss:
+						and wp.hp > 0 and not wp.alpha and not wp.boss \
+						and game.catchable(wp): # iron pact goons are wild-mode but catch-immune
 					w4 = wp
 					break
 			if w4 != null:
@@ -908,8 +1282,7 @@ func _ensure_mf_pair(ranch_cell: Vector2i) -> Array:
 				break
 			# bounded fixture: mint a zone-0 catchable of the needed sex and
 			# catch it — the capture path stays real, only the sex is forced
-			var at5: Vector2 = game.nearest_free(game.player.pos.x + 2.0, game.player.pos.y,
-			game.player.pos)
+			var at5: Vector2 = _orb_mint_spot(2.0)
 			var fp: Kin = game.gen_pal("sprigmelt", 2, at5)
 			fp.sex = need_sex
 			fp.mode = "wild"
@@ -965,15 +1338,24 @@ func _post_kin(p: Kin, ranch_cell: Vector2i) -> bool:
 # a full-hp mark rarely takes the orb — weaken through real melee first,
 # then throw; one retry covers a dodge or an unlucky roll
 func _weaken_and_catch(p: Kin) -> bool:
-	for attempt in 2:
+	for attempt in 4:
 		if not is_instance_valid(p) or p.mode != "wild" or p.hp <= 0:
 			return false
 		if game.item_count("kin_orb") < 1:
 			game.add_item("kin_orb", 1)
 			print("  fixture: +1 kin_orb (catch retry %d)" % attempt)
-		await _weaken(p)
-		if await _catch_one(p):
-			return true
+		if await _weaken(p):
+			if not is_instance_valid(p):
+				return false # the mark died between weaken and the throw
+			var orbs_before := _orb_total()
+			if await _catch_one(p):
+				return true
+			var thrown := orbs_before - _orb_total()
+			print("  catch attempt %d: %d orbs thrown at %s, still wild (%s)"
+				% [attempt, thrown, p.species_id,
+					"broke free / dodged" if thrown > 0 else "never left the hand"])
+		else:
+			print("  catch attempt %d: weaken whiffed on %s — not throwing" % [attempt, p.species_id])
 	return false
 
 # count the site's live M/F workers — a keeper checks who's actually posted
@@ -1013,3 +1395,147 @@ func _wait_mission(idx: int, bound_s := 8.0) -> bool:
 	while game.mission_idx < idx and game.t - t0 < bound_s:
 		await process_frame
 	return game.mission_idx >= idx
+
+# --- S128 endgame helpers --------------------------------------------------
+
+# mint a pact-spire guardian back at its own arena — the natural one can die
+# to wild combat long before the probe arrives. Only the body is fixtured;
+# the kill's spire_tag ledger writes through the real record_spire path.
+func _mint_spire_guard(tag: String, si: int) -> Kin:
+	if game.pals.size() >= game.MAX_PALS - 4:
+		print("  _mint_spire_guard: pals at cap (%d/%d) — refusing"
+			% [game.pals.size(), game.MAX_PALS])
+		return null
+	var sp: Vector2i = game.spire_pos.get(tag, Vector2i(-1, -1))
+	if sp.x < 0:
+		print("  _mint_spire_guard: no arena on record for %s" % tag)
+		return null
+	var sd: Dictionary = game.SPIRE_DEFS[si]
+	var center := Vector2(sp.x + 0.5, sp.y + 0.5)
+	var at: Vector2 = game.nearest_free(sp.x + 0.5, sp.y + 0.5, center)
+	var g: Kin = game.gen_pal(game.spire_pick(str(sd["elem"])), int(sd["lv"]), at)
+	g.boss = true
+	g.alpha = true
+	g.apply_bonuses() # recompute with the flags — setup rolled plain stats
+	g.hp = g.max_hp
+	g.mode = "wild"
+	g.home = g.pos
+	g.spire_tag = tag
+	if g.sprite != null:
+		g.sprite.scale = Vector2(1.9, 1.9)
+	game.pals.append(g)
+	print("  fixture: minted spire guard %s -> %s lv%d" % [tag, g.species_id, g.level])
+	return g
+
+# mint an alpha legend heir next to the keeper — the den's own heir only
+# covers one of 14 names. gen_pal sets home=at, so a real catch also fires
+# the production _reden_legend re-arm log (the fixture is honest about it:
+# the catch verb is never fixtured).
+func _mint_legend(sid: String, lv: int) -> Kin:
+	if game.pals.size() >= game.MAX_PALS - 4:
+		print("  _mint_legend: pals at cap (%d/%d) — refusing"
+			% [game.pals.size(), game.MAX_PALS])
+		return null
+	# mint where a throw can actually land — an heir caged in a pocket with
+	# no orb lane can never come home, and the probe would read its own
+	# placement as a catch-table defect
+	var at: Vector2 = _orb_mint_spot(3.0)
+	var p: Kin = game.gen_pal(sid, lv, at)
+	p.alpha = true
+	p.apply_bonuses()
+	p.hp = p.max_hp
+	if p.sprite != null:
+		p.sprite.scale = Vector2(1.6, 1.6)
+		p.sprite.position.y = -51.0
+	p.mode = "wild"
+	game.pals.append(p)
+	print("  fixture: minted legend heir %s lv%d" % [sid, lv])
+	return p
+
+# a keeper hunting legends packs the tranq gun: the dart lands SLEEP on a
+# real projectile lane (same SHOT_BLOCKERS walls an orb rides). Asleep the
+# mark stops dragging the lob into walls AND pays the x1.2 status bonus —
+# the honest answer to "escaped 4 catch rounds" on a fleeing lv50 heir.
+# Skipped on frail marks — the dart's sting could finish a lv2 sprigmelt.
+func _tranq(p: Kin) -> bool:
+	if not is_instance_valid(p) or p.hp <= 60:
+		return false
+	if p.statuses.get("sleep", 0.0) > game.t:
+		return true
+	var wd: Dictionary = ItemData.ITEMS["tranq_gun"]["weapon"]
+	if game.item_count("tranq_dart") < 1:
+		game.add_item("tranq_dart", 4)
+		print("  fixture: +4 tranq_dart (a keeper packs darts for legends)")
+	game.touch_ui = true # _shot_target aims down facing in touch mode
+	var fired := 0
+	for shot in 5:
+		# point-blank beats lead-the-target: from ~1 tile out the dart covers
+		# the gap in ~0.07s and even a sprinting heir can't leave the line
+		var s2: Vector2 = p.pos + Vector2(cos(TAU * shot / 5.0), sin(TAU * shot / 5.0)) * 1.1
+		if not (game.world.in_bounds(int(s2.x), int(s2.y))
+				and not game.world.blocked(int(s2.x), int(s2.y))
+				and _orb_lane_ok(s2, p.pos)):
+			continue
+		game.player.pos = s2
+		game.player.facing = (p.pos - game.player.pos).normalized()
+		game.player.atk_cd = 0.0
+		game.player.shoot_weapon(wd)
+		fired += 1
+		for i in 90: # 10-range dart at 14/s lands in ~0.7s worst case
+			await process_frame
+			if not is_instance_valid(p):
+				return false
+			if p.statuses.get("sleep", 0.0) > game.t:
+				return true
+	if fired > 0:
+		print("  tranq: %d dart(s) loosed, %s still awake (miss or immune window)"
+			% [fired, p.species_id])
+	else:
+		print("  tranq: no dart lane to %s — firing blind" % p.species_id)
+	return false
+
+# weaken+catch with a CHOSEN orb tier — legends answer to legendary_orb, not
+# whatever kin_orb the early game left in the bag. The weaken loop tops the
+# keeper's hp per swing (the same eat-to-heal stand-in _kill uses) because a
+# lv50 heir hits like a raid boss and _weaken alone can be fatal.
+func _weaken_and_catch_orb(p: Kin, orb_id: String, tries := 2) -> bool:
+	for attempt in tries:
+		if not is_instance_valid(p) or p.mode != "wild" or p.hp <= 0:
+			return false
+		if game.item_count(orb_id) < 1:
+			game.add_item(orb_id, 1)
+			print("  fixture: +1 %s (catch retry %d)" % [orb_id, attempt])
+		var tix: int = game.sphere_tiers().find(orb_id)
+		if tix >= 0:
+			game.player.sphere_sel = tix
+		# recall the field pal first — a lv55 partner finishes a weakened
+		# mark before the orb lands, same bench _weaken does
+		var lead_w: Kin = game.party_pal()
+		if lead_w != null:
+			game.send_out(lead_w.uid)
+		var swings := 0
+		var last_hp := 1e9
+		var dry := 0
+		while is_instance_valid(p) and p.mode == "wild" and p.hp > 0 \
+				and float(p.hp) / p.max_hp > 0.30 and swings < 60:
+			_stand_for_hit(p)
+			game.player.facing = (p.pos - game.player.pos).normalized()
+			game.player.atk_cd = 0.0
+			game.player.hp = game.player.max_hp
+			game.player.melee()
+			swings += 1
+			await process_frame
+			if not is_instance_valid(p):
+				return false # something else finished the mark mid-weaken
+			if p.hp < last_hp:
+				dry = 0
+				last_hp = p.hp
+			else:
+				dry += 1
+				if dry >= 20:
+					break
+		if is_instance_valid(p) and p.hp > 0 and p.mode == "wild":
+			await _tranq(p) # dart the fleeing heir — asleep marks hold the lane
+		if await _catch_one(p):
+			return true
+	return false

@@ -139,3 +139,34 @@ post_kin then processed stale raw renders. The real invocation is
 `blender -b src/<blend> -P render_src_asset.py -- <sid>` (batch_mesh.sh
 knows it). Always diff raw renders, and distrust a post step that ran
 after a crashed render.
+
+---
+
+## S128 endgame probe (playthrough.gd P11-P14) — self-audit findings
+
+The probe now runs missions 0-9 AND the full endgame: five pact spires,
+crowning, the EX gauntlet's fourth wave, all 14 legendary den heirs, the
+Wildmere Accord seal, and the Ascension Altar loop. First end-to-end run
+hit 59/60; every failure traced to a real mechanism, not a masked stub.
+
+| # | Finding | Root cause | Fix |
+|---|---------|-----------|-----|
+| 1 | `rubble yielded 0` after a real 3-lumenite chop | keeper died mid-lane (starvation/graze) → bag spilled at the death spot; the check read bag only | `_ensure_mats` tops keeper hp+satiety at entry (labeled stand-in) + reclaim before judging |
+| 2 | **`player.hunger` polarity trap** | player hunger is SATIETY (100→0 starving); Kin hunger is the opposite (0→100). Setting it to 0 would have starved the keeper mid-run | fixed to 100.0 with the polarity comment — same name, flipped axis, a real footgun |
+| 3 | 6+ orb throws "spent but not caught" on weakened marks | `throw_sphere` silently returns when the mark slips the 5-tile facing cone — **no orb leaves the hand**. Fleeing weakened marks escaped between weaken and throw | `_catch_one` re-stands EVERY toss, verifies the orb count actually dropped (the only honest "it left the hand" signal), up to 3 tosses |
+| 4 | "orb spent" ambiguity — clink vs broke-free | `tick_spheres` kills the lob on any path cell that is solid decor / solid structure / HIGHER than the throw cell — silent "clink!", no resolve, no log | `_orb_lane_ok` replays the projectile rule; stands picked by orb-lane (behind-angle first for the x1.15 bonus, 12-ray fan fallback). A mark with no orb lane is honestly uncatchable, and the probe says so |
+| 5 | wild-M candidate was an `ironpact_grunt` | Iron Pact goons are wild-mode but `catchable()`-immune — 4 orbs wasted on a designed-immune target | wild-catch filter now consults the production `catchable()` predicate |
+| 6 | `_weaken_and_catch` ignored `_weaken`'s verdict | whiffed weaken → throw at full hp (~25% catch) then reported "broke free" | throws only after a real weaken; each round prints weaken-vs-throw outcome |
+| 7 | P11 ran with **party=0** (everything boxed/posted) | `send_out` loops party uids only — a fully deployed roster left the keeper solo vs lv35-50 boss+alpha guardians | box→party promote through the real `box_to_party` verb + KO'd-kin revival extended to the box (medicine stand-in) |
+| 8 | spires 2-4 died of swing budget, not damage | `_kill` caps at 200 swings; boss+alpha guardians out-tank it (spire_0/1 solo'd, 35+ didn't) | spire + den warden lanes now use `_kill_any` (6 retries) |
+| 9 | partner KO'd mid-fight → nobody fields next | escort check ran once outside the loop | per-swing re-field: send_out cycles the living bench |
+| 10 | legend heirs "escaped twice" = 2 throws total | `tries=2` × single-throw `_catch_one` vs lv50 cap_power (~30%/orb) | tries=4 × 3 tosses = up to 12 real throws per heir |
+
+Evidence from the runs: `ironpact_grunt` 4-orb immunity sequence, the
+"catch attempt N: M orbs thrown, still wild (broke free / never left the
+hand)" diagnostic split, spire_0-4 all broken → crowned → EX wave 4 →
+8/14 heirs before the orb-lane fix landed.
+| 11 | "1 orbs thrown" per attempt on fleeing marks | weakened marks flee; the orb homes but drags its path across clink-cells as the mark runs — first toss lands, the rest find no lane | stand fan re-derives per toss; "N orbs thrown / never left the hand" diagnostic splits no-lane vs broke-free |
+| 12 | fixture-minted catch targets were minted orb-proof | `nearest_free` doesn't know the projectile rule — a pocket-minted sprigmelt is uncatchable | `_orb_mint_spot` picks a mint cell some stand can lob into (16 rays × 12 stands) |
+| 13 | lv50 heirs escaping 4 rounds ≈ 12 throws | at 36%/orb the math says ~0.5% — the throws were dying mid-flight as the fleeing heir dragged the lob across walls | **real mechanic discovered**: `tranq_gun`/`tranq_dart` puts wild kin to SLEEP (x1.2 status bonus + no fleeing). `_tranq` fires real darts on orb-lane stands before the catch — the endgame hunting tool the game already ships |
+| 14 | mid-weaken mark freed → `p.hp` on freed object | a wild predator finished the fixture mark between swings | is_instance_valid guards after every await in `_weaken`/`_weaken_and_catch_orb` |
