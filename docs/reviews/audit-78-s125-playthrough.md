@@ -103,3 +103,39 @@ Verdict: **NEEDS-FIX → all fixed in `8abaf34`**.
 | LOW | `guard_xp` 60 → lv44 not lv45 (24750xp needed) | raised to 65 |
 
 Post-round: headless playthrough **49/49**, smoke **1061/0** (1 seed-skip).
+
+---
+
+## audit-80 — cold review of S127 (kin surface richness, `4103d7e`)
+
+Reviewer: independent subagent, zero context, read-only, pointed at 4103d7e.
+Verdict: **CORRECT — one MED pin-fidelity caveat + five LOWs; all resolved this round.**
+
+### Verified clean by the reviewer
+- Generator tables (`displace` per body, `subd=3 if disp`, name-semantic
+  accessories guarded by `if not acc`) emit exactly what the cfg contains;
+  the `if not acc` guard makes double-marking impossible by construction.
+- Render consumption verified on all three material paths (zone/mats,
+  mat_map, wool-split); accessory can't crash on a weak head bone
+  (WARN+skip, `real_head_bone` weight-vote remap).
+- `the lob clears a stump` is discriminating and fail-closed: re-adding
+  STUMP to SHOT_BLOCKERS → orb dies with only a clink floater → FAIL;
+  timeout guard ≈4s vs ~1.8s needed; boss pinned before each lob.
+
+### Findings fixed this round
+| sev | finding | fix |
+|---|---|---|
+| MED | `hero crown pixels` might have been a beak proxy (beak g/r≈0.8 matched the loose predicate) | **disproven by control render** — crown-less scalbeak produces 0 matching px in-band, crowned produces 11. Predicate still tightened (`g<r*0.7`, beak can never inflate) with threshold 4; comment records the control result |
+| LOW | `displace()`'s `detail` was a dead knob — hardcoded `noise_depth=2` while cfgs declared 3-4 | wired `noise_depth = clamp(int(detail))`; depth-3 A/B shows visibly finer nap → all 72 displaced species re-rendered |
+| LOW | bird `eye_fwd` -1.15 saturates the xy-clamp (~-0.58) | generator comment: literal means "max backward" |
+| LOW | IMMUNE leg scanned all floaters — a stale IMMUNE near bpos could spoof a pass | count IMMUNE-near-bpos before/after; require a NEW one |
+| LOW | `-x/-y` lanes put `tb43` on the w2/far2 boundary → `int()` snapped into w2 → los_clear exempted the wall under test | endpoint offset 0.5→0.45 keeps it inside far2 in every direction |
+| LOW | `no_eyes` also disabled accessories (`hb` forced None) | hb kept real; only the ink-bead call is gated |
+
+### Process note
+The first control render "proved" the crown rendered zero pixels — because
+`blender -b` without the .blend arg silently renders an empty scene and
+post_kin then processed stale raw renders. The real invocation is
+`blender -b src/<blend> -P render_src_asset.py -- <sid>` (batch_mesh.sh
+knows it). Always diff raw renders, and distrust a post step that ran
+after a crashed render.

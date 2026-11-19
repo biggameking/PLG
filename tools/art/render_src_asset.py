@@ -253,7 +253,9 @@ def subdiv(ob, lv):
 def displace(ob, scale, strength, detail):
     tex = bpy.data.textures.new("nap", type='CLOUDS')
     tex.noise_scale = scale
-    tex.noise_depth = 2
+    # noise_depth IS the detail knob — fractal octaves on the cloud tex
+    # (hard range 0-30); it was hardcoded 2 while cfgs declared 3-4 (audit-80)
+    tex.noise_depth = max(0, min(30, int(round(detail))))
     m = ob.modifiers.new("nap", 'DISPLACE')
     m.texture = tex
     m.strength = strength
@@ -1010,9 +1012,10 @@ def main():
     # report head-bone world position POST-normalize — tune eye params off it
     head_bn = real_head_bone(arm, objs[0], cfg.get("head_bone", "Head"))
     hb = arm.pose.bones.get(head_bn)
-    if cfg.get("no_eyes"):
-        hb = None
-    if hb is None and not cfg.get("no_eyes"):
+    # no_eyes suppresses the ink beads only — the head bone still anchors
+    # accessories and the z-span; forcing hb=None would silently drop a
+    # mark on any eyeless body (audit-80)
+    if hb is None:
         print("WARN head_bone '%s' missing — sprite will render EYELESS" % head_bn)
     if hb:
         wh = arm.matrix_world @ hb.head
@@ -1045,9 +1048,10 @@ def main():
             for w in eval_verts(o):
                 zlo = w.z if zlo is None else min(zlo, w.z)
                 zhi = w.z if zhi is None else max(zhi, w.z)
-        hspan = head_group_span(arm, objs[0], head_bn)
-        add_eyes(arm, head_bn, cfg, em,
-                 (zlo, zhi) if zlo is not None else None, hspan)
+        if not cfg.get("no_eyes"):
+            hspan = head_group_span(arm, objs[0], head_bn)
+            add_eyes(arm, head_bn, cfg, em,
+                     (zlo, zhi) if zlo is not None else None, hspan)
     if cfg.get("accessory"):
         if hb is None:
             print("WARN accessory '%s' skipped — head bone missing" %

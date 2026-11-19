@@ -7894,14 +7894,18 @@ func run() -> void:
 	var h1: Image = h1t.get_image() if h1t != null else null
 	var h2: Image = h2t.get_image() if h2t != null else null
 	var crown_px := 0 # the crown+head-top accents — band covers the sprite's
-	# own composition (eye-fix tightened the crop, the head rides lower now)
+	# own composition (eye-fix tightened the crop, the head rides lower now).
+	# Control-rendered crown-less: 0 matching px in-band, so the pin is real —
+	# g<r*0.7 keeps warm accent hue and can never be spoofed by beak pixels
+	# (beak g/r≈0.8, accent g/r≈0.4-0.65; audit-80)
 	if h1 != null:
 		for cy2 in range(4, 24):
 			for cx2 in range(h1.get_width()):
 				var hpx := h1.get_pixel(cx2, cy2)
-				if hpx.a > 0.9 and hpx.r > 0.75 and hpx.g > 0.45 and hpx.b < 0.6:
+				if hpx.a > 0.9 and hpx.r > 0.75 and hpx.g > 0.45 \
+						and hpx.g < hpx.r * 0.7 and hpx.b < 0.6:
 					crown_px += 1
-	check("hero crown pixels", h1 != null and crown_px > 6)
+	check("hero crown pixels", h1 != null and crown_px > 4)
 	var fan_px := 0 # vermtrot's back fan is warm accent pixels above the spine
 	if h2 != null:
 		for fy2 in range(6, 34):
@@ -9874,7 +9878,10 @@ func run() -> void:
 				var od2: int = game.world.decor[wi2]
 				game.world.decor[wi2] = World.Decor.NONE
 				var tp43 := Vector2(base.x + 0.5, base.y + 0.5) + Vector2(d43) * 0.45
-				var tb43 := Vector2(far2.x + 0.5, far2.y + 0.5) - Vector2(d43) * 0.5
+				# 0.5 put a -x/-y lane's endpoint exactly on the w2/far2
+				# boundary — int() snapped it into w2 and los_clear then
+				# exempted the very wall under test (audit-80)
+				var tb43 := Vector2(far2.x + 0.5, far2.y + 0.5) - Vector2(d43) * 0.45
 				var ok43 := game.world.los_clear(tp43, tb43)
 				game.world.decor[wi2] = od2
 				# orbs also refuse any cell higher than the throw — the lane
@@ -9957,6 +9964,13 @@ func run() -> void:
 		game.world.decor[widx43] = World.Decor.STUMP
 		boss43.pos = bpos43 # same pinned lane the wall test just verified
 		var before43 := game.messages.duplicate() # 6-deep ring — diff, not slice
+		# floaters are an 80-cap ring too — count IMMUNE hits near the mark
+		# BEFORE the lob so a stale one can't spoof the verdict (audit-80)
+		var imm_before43 := 0
+		for fb43 in game.floaters:
+			if str(fb43.get("t", "")).contains("IMMUNE") \
+					and (fb43.get("p", Vector2.ZERO) as Vector2).distance_to(bpos43) < 1.0:
+				imm_before43 += 1
 		game.sphere_fly("mega_orb", boss43)
 		var lob_guard43 := 0
 		while not game.spheres_flying.is_empty() and lob_guard43 < 80:
@@ -9969,12 +9983,15 @@ func run() -> void:
 			if str(m43).contains("broke free") or str(m43).contains("Caught"):
 				lob_hit43 = true
 		# bosses resolve as an IMMUNE floater, never a log line — the floater
-		# spawns AT the mark, so an IMMUNE near bpos43 is this lob's verdict
-		# and one a wall-eaten orb can't produce
+		# spawns AT the mark, so a NEW IMMUNE near bpos43 is this lob's
+		# verdict and one a wall-eaten orb can't produce (audit-80 diff)
+		var imm_after43 := 0
 		for f43 in game.floaters:
 			if str(f43.get("t", "")).contains("IMMUNE") \
 					and (f43.get("p", Vector2.ZERO) as Vector2).distance_to(bpos43) < 1.0:
-				lob_hit43 = true
+				imm_after43 += 1
+		if imm_after43 > imm_before43:
+			lob_hit43 = true
 		check("the lob clears a stump", lob_hit43
 			or not is_instance_valid(boss43) or boss43.mode != "wild",
 			"resolved=%s mode=%s" % [lob_hit43,

@@ -147,7 +147,9 @@ def main():
             # snout; 0.05 seats them on the head silhouette (audit-74).
             # bird eyes: the Bone.005 tail is far down the neck, so the
             # default -0.12 trail dumped the eyes off the head entirely —
-            # -1.15 climbs the bone back onto the skull (S127 A/B probe)
+            # -1.15 climbs the bone back onto the skull (S127 A/B probe).
+            # The literal saturates the renderer's xy-clamp (0.6*span ≈0.35):
+            # anything ≤-0.58 lands identically — read it as "max backward"
             "serpent": (0.05, 0.06), "deer": (-0.14, 0.10), "bird": (-1.15, 0.12),
         }.get(body, (-0.12, 0.10))
         entry = (f'    "{sid}": {{"blend": "{blend}", "mat_map": {mats_s}, {nose}\n'
