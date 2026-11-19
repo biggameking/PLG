@@ -71,3 +71,35 @@ S125 的 verdict 链有效（全走真动词），但探针工程有"计时语�
 蛋糕-饥饿-产蛋窗的三角死锁只在工人恰好在产蛋窗内饿过线时才显形。
 修复后 headless 完成 **49/49**（任务 0-9 含蛋链+试炼全通），且修复项均被
 日志实锤触发（"pair broken → re-run"、"cake 2 restocked"）。
+
+---
+
+## audit-79 — cold review of the S126 final state (post-rescue)
+
+Reviewer: independent subagent, zero context, read-only, pointed at 08b533f.
+Verdict: **NEEDS-FIX → all fixed in `8abaf34`**.
+
+### Verified correct
+- SHOT_BLOCKERS semantics audited across every los_clear/decor call site —
+  no consumer wanted all-decor blocking; movement still uses `blocked()`.
+- Every claimed production verb is the real entry point (melee→harvest,
+  place_structure, chest_deposit/withdraw, assign_worker toggle, send_out,
+  throw_sphere→resolve_sphere, craft queue, deposit_egg, start_gauntlet).
+- Fixtures bounded and labeled; waits correctly bound on real `game.t`.
+- Cake-theft QoL reachable once per bite, bounded by the message ring.
+
+### Findings fixed this round
+| sev | finding | fix |
+|---|---|---|
+| MED | gauntlet grind print read `gauntlet["wave"]` after await — dict empties on the clearing frame → latent crash | `.get("wave", -1)` / `.get("left", 0)` |
+| LOW | sigil debited before start, real use_item debits on success | debit only when `start_gauntlet()` returns true |
+| LOW | `_ensure_mf_pair` fixture mint lacked the MAX_PALS-4 guard | guard + refusal print |
+| LOW | `_mint_alpha` minted silently | per-mint print |
+| LOW | `_fiber_prey` recursion could loop on a sealed prey once blacklist full | return null at cap |
+| LOW | `_chop_until` swing budget accumulated across cells | per-cell counter |
+| LOW | orb cost table hardcoded in the probe | `_ensure_mats(game.recipe("kin_orb"))` |
+| LOW | 3 stale comments after SHOT_BLOCKERS (stump shadow / "same wall set") | reworded in probe + world.gd |
+| NIT | reclaim redeployed a carrier after a kinbox-full refusal | gate redeploy on `p.mode == "box"` |
+| LOW | `guard_xp` 60 → lv44 not lv45 (24750xp needed) | raised to 65 |
+
+Post-round: headless playthrough **49/49**, smoke **1061/0** (1 seed-skip).
