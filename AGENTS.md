@@ -23,6 +23,13 @@ audit / fix-round / scripted-playthrough sessions logged in ROADMAP.md and
 commits under the `Generated with Devin` trailer — every gate in this file
 binds it exactly as a human.
 
+We are onboarding **Devin Bots** (Cognition's persistent teammates) on top of
+that: an always-on bot is planned to own the recurring lanes — scheduled
+`playthrough.gd` campaign rounds (the S124–S128 pattern: real crashes filed
+back into ROADMAP.md as findings), periodic audit-NN sweeps against the
+rules below with fix rounds, and gate keeping that runs the smoke suite +
+lane probes before anything lands on main.
+
 ## Memory-safety contract (hard rules — the game must never crash or leak)
 
 1. **Every runtime collection is bounded.** If a list accepts appends during
