@@ -21,6 +21,12 @@ var terrain_gen := 0 # bumped by generate() — the drawer repaints only when
 enum Tile { GRASS, TALLGRASS, FLOWER, SAND, WATER, STONEFIELD, DIRT, FARMLAND }
 enum Decor { NONE, TREE_A, TREE_B, ROCK, ORE_GOLD, ORE_COAL, BERRY, STUMP }
 const SOLID_TILES := [Tile.WATER]
+# shot-blockers: TALL decor swats orbs/bolts/swings — stumps and berry
+# bushes are shin-high ground cover, everything flies over them. blocked()
+# still counts all decor: you path around debris, you just don't shoot
+# into it. The clear-cut dead zone this produced is the S125 finding.
+const SHOT_BLOCKERS := [Decor.TREE_A, Decor.TREE_B, Decor.ROCK,
+	Decor.ORE_GOLD, Decor.ORE_COAL]
 
 func _init() -> void:
 	tiles.resize(WORLD_W * WORLD_H)
@@ -92,7 +98,7 @@ func los_clear(a: Vector2, b: Vector2) -> bool:
 			return false
 		var i := idx(c.x, c.y)
 		if c != first_c and c != last_c \
-				and (decor[i] != Decor.NONE or solid_structure(i)):
+				and (decor[i] in SHOT_BLOCKERS or solid_structure(i)):
 			return false
 		if pe != -9999 and elev[i] != pe and not ramp[i] and not ramp[idx(pc.x, pc.y)]:
 			return false # a sheer face is a wall even to a nova

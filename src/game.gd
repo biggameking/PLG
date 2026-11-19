@@ -96,6 +96,7 @@ const MAX_PROJECTILES := 200  # raid volleys can spike these hard
 const MAX_FLOATERS := 80      # cosmetic text — cheap insurance
 const MAX_PALS := 220         # wild + owned + raid; AI tick cost scales with this
 const MAX_SPHERES := 16       # click-spam cap: the oldest ball misses
+const DECOR_SOLID := World.SHOT_BLOCKERS # one source: the wall set shots check
 const DEMOLISH_REACH := 4.5   # razing needs a hand on the structure — all input paths share this
 const MAX_BOX := 400          # stored pals are out-of-tree nodes — real bytes
 const MAX_EGG_QUEUE := 32     # ranch parentage queue (eggs can also be sold/eaten)
@@ -1938,8 +1939,11 @@ func tick_spheres(dt: float) -> void:
 		# Lobbing over a sealed ring to poke (or bag) what the ring locks
 		# in was free cheese (audit-43)
 		var ci43 := Vector2i(int(cur.x), int(cur.y))
+		# only TALL decor swats an orb — a stump or berry bush is shin-high and
+		# the lob sails over; treating them as walls made every clear-cut or
+		# berry field a dead zone for catches (S125 playthrough)
 		if not world.in_bounds(ci43.x, ci43.y) \
-				or world.decor_at(ci43.x, ci43.y) != World.Decor.NONE \
+				or world.decor_at(ci43.x, ci43.y) in DECOR_SOLID \
 				or world.solid_structure(world.idx(ci43.x, ci43.y)) \
 				or world.elev_at(ci43.x, ci43.y) > world.elev_at(int(fp.x), int(fp.y)):
 			if is_instance_valid(sp["node"]):
@@ -4453,7 +4457,7 @@ func update_projectiles(dt: float) -> void:
 					dead = true; break
 				var ci: int = world.idx(c43.x, c43.y)
 				if world.elev_at(c43.x, c43.y) > pr.get("elev", 0) \
-						or world.decor[ci] != World.Decor.NONE \
+						or world.decor[ci] in DECOR_SOLID \
 						or world.solid_structure(ci):
 					dead = true; break
 		if pr["from"] is String and pr["from"] == "player":

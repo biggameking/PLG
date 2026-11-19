@@ -9930,6 +9930,19 @@ func run() -> void:
 			game.tick_spheres(0.05)
 		check("the wall eats the orb", game.spheres_flying.is_empty()
 			and boss43.mode == "wild")
+		# S125: a stump is ground cover, not a wall — the lob sails over it.
+		# Chopping a forest used to make the clear-cut an orb dead zone.
+		game.world.decor[widx43] = World.Decor.STUMP
+		game.sphere_fly("mega_orb", boss43)
+		for i43b in 14:
+			game.tick_spheres(0.05)
+		check("the lob clears a stump", not game.spheres_flying.is_empty(),
+			"flying=%d" % game.spheres_flying.size()) # 0.7s in: still flying = not wall-eaten
+		for spc43 in game.spheres_flying:
+			if is_instance_valid(spc43["node"]):
+				spc43["node"].queue_free()
+		game.spheres_flying.clear()
+		game.world.decor[widx43] = World.Decor.ROCK
 		# M10: a deploy can't blind-drop into a ring it can't see into
 		var dp43 := game.nearest_free(bpos43.x, bpos43.y, p.pos)
 		check("a deploy stays on the visible side", game.world.los_clear(p.pos, dp43))
