@@ -7893,9 +7893,10 @@ func run() -> void:
 	var h2t: Texture2D = load("res://assets/kin/vermtrot_f0.png")
 	var h1: Image = h1t.get_image() if h1t != null else null
 	var h2: Image = h2t.get_image() if h2t != null else null
-	var crown_px := 0 # the crown is warm accent pixels in the head-top band
+	var crown_px := 0 # the crown+head-top accents — band covers the sprite's
+	# own composition (eye-fix tightened the crop, the head rides lower now)
 	if h1 != null:
-		for cy2 in range(4, 16):
+		for cy2 in range(4, 24):
 			for cx2 in range(h1.get_width()):
 				var hpx := h1.get_pixel(cx2, cy2)
 				if hpx.a > 0.9 and hpx.r > 0.75 and hpx.g > 0.45 and hpx.b < 0.6:
@@ -9876,6 +9877,21 @@ func run() -> void:
 				var tb43 := Vector2(far2.x + 0.5, far2.y + 0.5) - Vector2(d43) * 0.5
 				var ok43 := game.world.los_clear(tp43, tb43)
 				game.world.decor[wi2] = od2
+				# orbs also refuse any cell higher than the throw — the lane
+				# must be flat-or-downhill or the lob dies climbing before it
+				# ever tests the wall (los_clear tolerates legal ramps)
+				if ok43 and (game.world.elev_at(w2.x, w2.y) \
+						> game.world.elev_at(base.x, base.y) \
+						or game.world.elev_at(far2.x, far2.y) \
+						> game.world.elev_at(base.x, base.y)):
+					ok43 = false
+				# the orb's target cell is NOT exempt (los_clear skips the
+				# endpoints): a decorated/structured landing cell eats it on
+				# arrival even with the stump down
+				if ok43 and (game.world.decor[game.world.idx(far2.x, far2.y)] \
+						!= World.Decor.NONE \
+						or game.world.solid_structure(game.world.idx(far2.x, far2.y))):
+					ok43 = false
 				if ok43:
 					wc43 = w2; widx43 = wi2
 					old_d43 = od2; old_h43 = game.world.hp[wi2]
@@ -9924,7 +9940,10 @@ func run() -> void:
 		var php43c := p.hp
 		boss43.wild_ai(0.1)
 		check("a sealed bite stays a pace", p.hp == php43c)
-		# M7: the orb is a projectile — the ring eats it before the roll
+		# M7: the orb is a projectile — the ring eats it before the roll.
+		# Pin the boss to the searched lane first — wild_ai above let it
+		# pace off bpos43, which reroutes the lob over different blockers
+		boss43.pos = bpos43
 		game.sphere_fly("mega_orb", boss43)
 		for i43 in 14:
 			game.tick_spheres(0.05)
@@ -9932,12 +9951,34 @@ func run() -> void:
 			and boss43.mode == "wild")
 		# S125: a stump is ground cover, not a wall — the lob sails over it.
 		# Chopping a forest used to make the clear-cut an orb dead zone.
+		# Prove it by the resolution log, not a frame window: a wall-eaten orb
+		# dies silently; one that crossed the stump always resolves with a
+		# "Caught"/"broke free" line (roll speed made the old 0.7s window flaky)
 		game.world.decor[widx43] = World.Decor.STUMP
+		boss43.pos = bpos43 # same pinned lane the wall test just verified
+		var before43 := game.messages.duplicate() # 6-deep ring — diff, not slice
 		game.sphere_fly("mega_orb", boss43)
-		for i43b in 14:
+		var lob_guard43 := 0
+		while not game.spheres_flying.is_empty() and lob_guard43 < 80:
 			game.tick_spheres(0.05)
-		check("the lob clears a stump", not game.spheres_flying.is_empty(),
-			"flying=%d" % game.spheres_flying.size()) # 0.7s in: still flying = not wall-eaten
+			lob_guard43 += 1
+		var lob_hit43 := false
+		for m43 in game.messages:
+			if m43 in before43:
+				continue
+			if str(m43).contains("broke free") or str(m43).contains("Caught"):
+				lob_hit43 = true
+		# bosses resolve as an IMMUNE floater, never a log line — the floater
+		# spawns AT the mark, so an IMMUNE near bpos43 is this lob's verdict
+		# and one a wall-eaten orb can't produce
+		for f43 in game.floaters:
+			if str(f43.get("t", "")).contains("IMMUNE") \
+					and (f43.get("p", Vector2.ZERO) as Vector2).distance_to(bpos43) < 1.0:
+				lob_hit43 = true
+		check("the lob clears a stump", lob_hit43
+			or not is_instance_valid(boss43) or boss43.mode != "wild",
+			"resolved=%s mode=%s" % [lob_hit43,
+				boss43.mode if is_instance_valid(boss43) else "gone"])
 		for spc43 in game.spheres_flying:
 			if is_instance_valid(spc43["node"]):
 				spc43["node"].queue_free()

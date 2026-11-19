@@ -115,7 +115,28 @@ def main():
         acc = " ".join(x for x in (
             {"serpent": "fins"}.get(body),
             rig_auto.ACCESSORY.get(sid)) if x)
+        # name-semantic marks for unmarked species (S127 richness pass) —
+        # the name literally calls for the part: plume->crest, mane->horns…
+        if not acc:
+            if body == "bird":
+                acc = "crest" # every unmarked bird gets the head plume
+            elif body in ("quadruped", "kitty", "deer", "cow") and \
+                    any(k in sid for k in ("hoof", "mane", "antler", "fang")):
+                acc = "horns"
+            elif body == "ghost" and any(k in sid for k in ("wisp", "haunt")):
+                acc = "halo"
+            elif body == "human" and any(k in sid for k in ("grim", "shade")):
+                acc = "mask"
         acc_s = ', "accessory": "%s"' % acc if acc else ''
+        # S127 surface richness: displace where the body is textured for real
+        # — fur/feather/hide reads through the cel pass; slime stays slick,
+        # hedgehog quills and pact armor keep their manufactured surface
+        disp = {"quadruped": 0.07, "kitty": 0.06, "cow": 0.05, "deer": 0.05,
+                "boar": 0.05, "monkey": 0.08, "bird": 0.05, "ghost": 0.06,
+                "serpent": 0.04}.get(body)
+        disp_s = ('None' if disp is None else
+                  '{"scale": 0.15, "strength": %.2f, "detail": 3.0}' % disp)
+        subd = 3 if disp is not None else 2
         # head-bone tail = muzzle tip on quadrupeds (eyes trail it: fwd<0),
         # but skull top on upright/round rigs (eyes drop below + face -Y:
         # fwd>0, up<0)
@@ -123,15 +144,18 @@ def main():
             "human": (0.06, -0.14), "ghost": (0.06, -0.10),
             "monkey": (0.06, -0.12), "hedgehog": (0.06, -0.10),
             # serpent eyes: at side profile fwd 0.10 floated them past the
-            # snout; 0.05 seats them on the head silhouette (audit-74)
-            "serpent": (0.05, 0.06), "deer": (-0.14, 0.10),
+            # snout; 0.05 seats them on the head silhouette (audit-74).
+            # bird eyes: the Bone.005 tail is far down the neck, so the
+            # default -0.12 trail dumped the eyes off the head entirely —
+            # -1.15 climbs the bone back onto the skull (S127 A/B probe)
+            "serpent": (0.05, 0.06), "deer": (-0.14, 0.10), "bird": (-1.15, 0.12),
         }.get(body, (-0.12, 0.10))
         entry = (f'    "{sid}": {{"blend": "{blend}", "mat_map": {mats_s}, {nose}\n'
                  f'        "head_bone": "{head_bone}", "rot_z": {rot},\n'
                  f'        "action": "{action}", "frames": {frames},\n'
                  f'        "eye_r": 0.05, "eye_gap": 0.11, '
                  f'"eye_fwd": {eye_fwd}, "eye_up": {eye_up}, "target_h": {th},\n'
-                 f'        "subd_wool": 2, "displace": None{no_eyes}{acc_s}}},')
+                 f'        "subd_wool": {subd}, "displace": {disp_s}{no_eyes}{acc_s}}},')
         out.append(entry)
         n += 1
     out.append("}")
