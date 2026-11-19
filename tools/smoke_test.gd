@@ -103,7 +103,7 @@ func run() -> void:
 			"tools/save_walkthrough.gd", "tools/raid_walkthrough.gd", "tools/econ_walkthrough.gd",
 			"tools/net_walk_host.gd", "tools/net_walk_join.gd",
 			"tools/net_verbs_host.gd", "tools/net_verbs_join.gd",
-			"tools/rebind_walkthrough.gd"]:
+			"tools/rebind_walkthrough.gd", "tools/playthrough.gd"]:
 		var pc_out: Array = []
 		OS.execute(OS.get_executable_path(), ["--headless", "--path", ".",
 			"--check-only", "-s", harness], pc_out, true)
@@ -975,6 +975,27 @@ func run() -> void:
 			mine_st["workers"] = wsv4; mine_st["timer"] = tsv4
 			hg.job_site = null
 			game.pals.erase(hg); hg.free()
+
+	# a starving worker eats the breeding cake like any other food — the
+	# keeper must HEAR about it or "ranch needs a cake" is a silent reset
+	var fb_st := {"id": "feed_box", "pos": Vector2i(-77, -77), "store": {"cake": 1},
+		"workers": [], "timer": 0.0}
+	var saved_stores := {} # isolate: any cheaper food elsewhere would be eaten first
+	for k2 in game.structures:
+		saved_stores[k2] = game.structures[k2].get("store", {}).duplicate()
+		game.structures[k2]["store"] = {}
+	game.structures[Vector2i(-77, -77)] = fb_st
+	var cake_eater: Kin = game.gen_pal("sprigmelt", 3, game.player.pos)
+	game.pals.append(cake_eater)
+	var ate_v: int = game.eat_food_item(cake_eater)
+	check("cake theft is announced", ate_v == 80 and fb_st["store"].is_empty()
+		and str(game.messages[-1]).contains("breeding cake"),
+		"ate=%d store=%s tail=%s" % [ate_v, str(fb_st["store"]), str(game.messages[-1])])
+	game.pals.erase(cake_eater); cake_eater.free()
+	game.structures.erase(Vector2i(-77, -77))
+	for rk in saved_stores:
+		if game.structures.has(rk):
+			game.structures[rk]["store"] = saved_stores[rk]
 
 	# Sphere Works (the island assembly line): a handy kin rolls spheres
 	for c0 in StructureData.STRUCTURES["sphere_factory"]["cost"]:

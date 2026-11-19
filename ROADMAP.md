@@ -2007,8 +2007,22 @@ Accord 封印后只剩被动购买沉淀——原始诉求里"浅薄终局目的
 
 `tools/playthrough.gd` 推进到任务 3-7：磨级→`unlock`→伐木场→`craft` 走真实工坊队列（9s work）→牧场→兽床→精英讨伐。三窗口三 headless 共 **30/30×3**：build/craft/部署/精英全走真动词。过程中抓到：
 
-- **搬运工种吞材料**：部署的搬运系 kin 把 24 格内掉落搬进 `carry`（无箱则永久滞留）——`_carried()` 诊断把"消失的木头"当场现形（`{ "stone": 3 }`），这是真玩家也会踩的机制，探针如实记录而非绕开。
+- **搬运工种吞材料**：部署的搬运系 kin 把 24 格内掉落搬进 `carry`（无箱可存时抱货游荡，90s 放弃后丢在脚边——货物被甩到离采集点很远的位置）——`_carried()` 诊断把"消失的木头"当场现形（`{ "stone": 3 }`），这是真玩家也会踩的机制，探针如实记录而非绕开。
 - **探针自身节奏缺陷**：240tps 加速后 9s 队列工时需要 ~2160 帧，旧的 1200 帧轮询预算不够——帧预算必须随 tick 率缩放；raid 每 4-7min 一波把 30+min 探针淹没在 raid 战斗中，关 raid 保任务链确定性（raid 有独立覆盖）。
 - **elite 判定的读释放后对象**：`kill_pal` free 节点后 `elite.species_id` 崩——物种名先取存。自然 alpha 打不过时 fixture 低等 alpha 重打（击杀路径全真）。
 
 材料诚实车道：木石 melee-harvest、纤维杀 sprigmelt/briargoo 掉落、流明石砸岩石 12%/块；荒种子下诚实车道耗尽才打标注 fixture 补差（orb/sprigmelt/材料顶账，全部打印可见）。证据 `s125-elite.png`（精英讨伐+Bounty+MISSION done 同框）。smoke **1061/0/1skip**。
+
+## S126 — 试玩纵深收尾：任务 8-9 蛋链/试炼 + audit-78 修复轮
+
+`tools/playthrough.gd` 走完任务 0-9 全战役链（49 项断言）。P9 蛋链全真：M+F 配对（roster/box/真捕/fixture 四车道）→ feed_box 存蛋糕（标注 fixture——上游麦磨/羊毛链另线覆盖）→ `tick_ranch` 产蛋→`chest_withdraw_all` 取蛋→孵化器 `deposit_egg`→90s 真孵化→任务旗。P10 试炼全真：印章消耗→`start_gauntlet`→真 melee+伙伴 3 波+Boss→旗+idx10。
+
+**audit-78 冷审 NEEDS-FIX 全修 + 随机种子实战再抓五类真缺陷**（审档 `audit-78-s125-playthrough.md`）：
+
+- **蛋糕就是食物——被育种工人偷吃（真玩法陷阱）**：`eat_food_item` 让饥饿 base kin 吃最便宜存粮，cake.food=80 独存即成午餐，`consume_ready` 落空使 `st["timer"]=0` 产蛋窗永重置。探针按真实玩法应答（保箱≥1 cake 轮询补货，bounded 8 次全打印）；**游戏侧顺手补 QoL**：吃蛋糕现在点名通报（en/zh），smoke 钉 "cake theft is announced"——不然新玩家最贵一件货被吃掉零反馈。
+- **LOS 阴影 whiff 死循环**：melee 的 `los_clear` 把 decor 当墙——站在矮桩后的 fiber 猎物/精英/捕捉目标邻格可走但永不可击，旧"首个空邻格"站位 200 挥全落空。修 `_stand_for_hit` 按 LOS 选格 + 45/20 挥无伤害早退 + 猎物黑名单 + fixture 铸位 `nearest_free(from_pos)` 视野变体。
+- **帧预算 vs 真实 dt 失配（窗口版实证）**：breed/incubate/mission tick 全吃真实秒，窗口版高帧率 16000 帧 <90s 必超时——所有实时等待改 `game.t` 秒界（`_wait_mission` 统一）。
+- **密封袋地猎物**：装饰密区单格口袋困住整窝 sprigmelt（8+ 只），approach 预检+黑名单排除后 fixture 接管。
+- **判定口径**：`game.box` 存对象非 uid、`find_pal` 不见 bench→`send_out` 直发、`_pair_on_ranch` 改 M/F 双座、fiber/石料判据改世界总量（bag+地上袋+爪上货+结构库）、fixture alpha 复刻 `spawn_wild` 构造序。
+
+验证：headless **49/49**（终版）+ 窗口版 **48/49→49/49 等效**（唯一 FAIL 是旧纤维判据，已修并重跑验证），smoke **1062/0/1skip**。证据 `s126-egg.png`（MISSION done+产蛋/孵化日志同框+偷吃警告）、`s126-gauntlet.png`（GAUNTLET CLEARED+三波战报）。

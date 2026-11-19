@@ -2493,9 +2493,12 @@ func condense_active() -> void:
 	ap.condense()
 	log_msg(tr("%s condensed to star %d!") % [tr(str(ap.spec["name"])), ap.star])
 
-func eat_food_item() -> int:
+func eat_food_item(eater: Kin = null) -> int:
 	# feed-box rule: kin eat the cheapest stored food — feed_box store
-	# first, then any chest's store (never the player's bag remotely)
+	# first, then any chest's store (never the player's bag remotely).
+	# A cake is food too: a starving ranch crew will eat the breeding cake
+	# and the 60s lay window resets — say so once per bite or the keeper
+	# reads "ranch needs a cake" forever with no idea where the cake went.
 	var best = null; var best_id := ""; var best_v := 1 << 30
 	var stores := []
 	for k in structures:
@@ -2514,6 +2517,9 @@ func eat_food_item() -> int:
 	best["store"][best_id] -= 1
 	if best["store"][best_id] <= 0:
 		best["store"].erase(best_id)
+	if best_id == "cake" and eater != null:
+		log_msg(tr("%s ate the breeding cake — keep cheap food stocked!")
+			% tr(str(eater.spec["name"])))
 	return best_v
 
 func eat_from_bag() -> int:

@@ -917,7 +917,7 @@ func tick_needs(dt: float) -> void:
 	if hunger > 70:
 		var ate := 0
 		if mode == "base" and game.has_structure("feed_box"):
-			ate = game.eat_food_item() # stocked base food
+			ate = game.eat_food_item(self) # stocked base food
 		elif mode == "partner" and owner_id <= 0:
 			ate = game.eat_from_bag() # party pals share the player's pack
 		if ate > 0:
